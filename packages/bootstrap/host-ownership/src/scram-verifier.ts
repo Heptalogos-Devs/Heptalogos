@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Encodes PostgreSQL SCRAM-SHA-256 verifiers from secret bytes without exposing
  * plaintext credentials or moving password policy into higher-level services.

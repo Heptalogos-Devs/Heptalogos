@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Defines the schema initializer contract and runtime options without exposing
  * connection-pool or migration-provider ownership to callers.

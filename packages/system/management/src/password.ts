@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Owns Management password normalization and Node 24 Argon2id mechanics. Plaintext
  * exists only for the duration of the caller's in-process authentication flow.

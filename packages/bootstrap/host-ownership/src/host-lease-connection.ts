@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Acquires and releases the lease-bound PostgreSQL client whose session fence
  * turns Host loss into a database-visible mutation failure.

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Maps Signal listener and publication failures into shared Problem envelopes
  * without making PostgreSQL client errors part of the public API.

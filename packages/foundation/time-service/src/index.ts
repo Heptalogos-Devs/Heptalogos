@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Public injectable time contracts and system/fake constructors for Foundation
  * services that need deterministic elapsed and wall-clock semantics.

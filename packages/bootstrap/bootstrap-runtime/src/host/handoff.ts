@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Performs the ordered Bootstrap-to-Host ownership handoff and carries the
  * resulting fence context into the managed Host boundary.

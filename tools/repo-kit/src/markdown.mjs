@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Parses repository Markdown through mdast and exposes structural queries used
  * by documentation validators without maintaining a second Markdown parser.

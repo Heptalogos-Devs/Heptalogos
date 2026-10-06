@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Reads the canonical dependency routing and status Authorities for repository
  * gates without creating a parallel dependency inventory.

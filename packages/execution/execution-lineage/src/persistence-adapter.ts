@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Integrates lineage persistence with the Host-fenced transaction seam while
  * preserving atomicity between the operation and its causal record.

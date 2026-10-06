@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Provides Bootstrap-specific Problem-code classification while retaining the
  * shared Foundation Problem envelope as the error Authority.

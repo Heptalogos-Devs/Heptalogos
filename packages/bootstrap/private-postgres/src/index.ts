@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Public private-PostgreSQL toolchain, cluster, lifecycle, and maintenance
  * contracts; process and profile mechanics remain behind controller adapters.

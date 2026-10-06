@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Projects current Heptalogos configuration, model, network, and secret
  * intent into the private Subject OpenClaw runtime shape.

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Owns the process-global DBOS workflow registration and the one active
  * WorkAttemptExecutor binding, resolving the active binding at invocation time.

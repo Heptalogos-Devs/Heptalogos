@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Owns Capability provider registration and generation-scoped leases so a
  * consumer cannot retain a capability after its runtime generation retires.

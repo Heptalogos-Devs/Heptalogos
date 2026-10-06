@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Materializes the current persistent Subject and built-in Subject Chat
  * semantic records without duplicating Foundation work or Management state.

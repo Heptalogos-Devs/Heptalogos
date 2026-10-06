@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Implements bounded initialize/start/stop lifecycle operations and translates
  * process outcomes into the private PostgreSQL contract's dispositions.

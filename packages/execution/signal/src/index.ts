@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Public PostgreSQL Signal contracts, codecs, and service construction for
  * wakeup hints; listener client and query mechanics remain internal.

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /** Projects the current Messaging Subject Chat protocol onto the Host listener.
  * @module subject-chat-http
  */

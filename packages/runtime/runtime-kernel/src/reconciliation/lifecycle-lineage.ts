@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Carries Runtime lifecycle activity lineage through activation and retirement
  * so supervisor events remain causally correlated with Foundation execution.

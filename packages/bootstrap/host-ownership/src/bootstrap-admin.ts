@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Manages the short-lived PostgreSQL bootstrap-admin connection used to create
  * ownership roles and schema before the Host lease exists.

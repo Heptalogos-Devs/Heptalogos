@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Provides read-only repository file discovery through tinyglobby, centralizing
  * path normalization and symlink behavior for repository tooling.

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Executes one generation-pinned WorkHandler attempt with bounded outcome and
  * failure classification while keeping engine semantics outside the queue.

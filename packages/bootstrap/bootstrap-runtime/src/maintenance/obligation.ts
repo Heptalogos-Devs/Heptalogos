@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Inspects the durable maintenance obligation and classifies whether cleanup
  * or recovery must precede a new Bootstrap operation.

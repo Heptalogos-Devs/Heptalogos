@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Owns the small atomically published Product Host discovery files. They carry
  * discovery and first-claim material only; canonical PostgreSQL state remains

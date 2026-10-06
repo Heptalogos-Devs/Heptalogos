@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Exposes the bounded maintenance controller used during authorized windows;
  * it does not acquire Bootstrap authority or create a second process owner.

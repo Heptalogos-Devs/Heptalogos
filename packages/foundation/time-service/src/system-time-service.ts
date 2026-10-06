@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Adapts platform monotonic and wall clocks to the TimeService contract without
  * allowing domain code to call ambient clock APIs directly.

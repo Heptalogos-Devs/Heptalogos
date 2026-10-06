@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Owns branded Foundation identifiers and their UUID/content parsing rules so
  * higher packages preserve identity distinctions instead of passing strings.

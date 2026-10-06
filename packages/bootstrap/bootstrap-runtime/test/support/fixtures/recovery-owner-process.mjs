@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { createReadStream } from "node:fs";
 import { createRequire } from "node:module";
 

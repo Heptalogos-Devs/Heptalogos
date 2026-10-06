@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Implements bounded gateway NetworkAccess over Node global fetch, enforcing
  * active transport configuration before AI protocol dispatch.

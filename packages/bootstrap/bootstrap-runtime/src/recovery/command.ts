@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Parses and executes the bounded Bootstrap recovery command contract while
  * keeping command authorization and failure dispositions explicit.

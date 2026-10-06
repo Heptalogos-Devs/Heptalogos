@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Verifies dependency declarations, roles, and import restrictions against the
  * repository dependency Authorities rather than maintaining a second graph.

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Derives deterministic dispatch-attempt identities from canonical WorkItem
  * inputs so retries and duplicate dispatches remain idempotently addressable.

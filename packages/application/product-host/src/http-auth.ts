@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /** Shares the Product Host bearer-session and contract-header mechanics.
  * @module http-auth
  */

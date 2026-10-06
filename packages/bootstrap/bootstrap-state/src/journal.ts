@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Appends and reads Bootstrap lifecycle journal checkpoints so recovery can
  * replay observed progress without treating history as current authority.

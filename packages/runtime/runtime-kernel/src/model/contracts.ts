@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Defines Runtime Kernel MicroSystem, Service, Capability, generation, and
  * reconciliation contracts while hiding substrate and statechart mechanics.

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Owns Service provider registration and generation-pinned leases so Runtime
  * consumers cannot use a service after its owner retires the generation.

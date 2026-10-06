@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Public Management contracts and semantic service; HTTP, OpenAPI, client,
  * and CLI projections remain outside this package.

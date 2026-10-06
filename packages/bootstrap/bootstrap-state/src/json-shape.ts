@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Narrows unknown decoded values to the JSON object shapes required by durable
  * Bootstrap codecs before domain-level validation is attempted.

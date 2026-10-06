@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Wraps provider access with a generation fence so stale runtime handles fail
  * before invoking a retired provider or crossing the lifecycle boundary.

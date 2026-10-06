@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Owns managed Host maintenance preparation, terminal retirement, and release contracts
  * while ensuring private PostgreSQL control never occurs under a closed Host.

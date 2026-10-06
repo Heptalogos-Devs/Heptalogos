@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Owns repository subprocess execution through Execa with bounded, normalized
  * results so scripts do not create competing process wrappers.

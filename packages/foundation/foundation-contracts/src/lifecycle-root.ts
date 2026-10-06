@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Defines the finite lifecycle-root identity vocabulary used to keep ownership
  * and shutdown lineage distinct across Foundation services.

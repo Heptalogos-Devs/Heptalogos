@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Adapts Kysely transactions to the persistence-owned connection lifecycle;
  * callers receive typed transaction contracts rather than dialect objects.

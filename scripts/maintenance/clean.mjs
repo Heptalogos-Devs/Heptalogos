@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Runs the repository-owned fail-closed cleanup plan for generated build and
  * cache residue without deleting unknown material.

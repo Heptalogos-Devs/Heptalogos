@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Defines the typed schema validation result and validator contracts exposed to
  * Foundation packages while hiding Ajv implementation details.

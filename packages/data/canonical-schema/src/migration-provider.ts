@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Supplies the single current canonical migration baseline to Kysely without
  * preserving project-development chronology as a compatibility contract.

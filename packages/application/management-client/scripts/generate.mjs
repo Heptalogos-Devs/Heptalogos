@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Materializes the Management client from the ProductHost-owned OpenAPI
  * artifact. The generated output is checked in and is never hand-edited.

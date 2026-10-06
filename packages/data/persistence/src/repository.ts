@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Provides the restricted repository seam over persistence transactions so
  * domain owners cannot bypass the Host fence with direct SQL.

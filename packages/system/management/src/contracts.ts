@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Defines the current Management wire contracts and read projections.
  * Transport adapters consume these schemas without owning their semantics.

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Creates shared Problem envelopes for lineage failures so provider and
  * database details do not leak through the execution-context contract.

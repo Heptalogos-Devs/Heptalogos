@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /** Composes the WorkQueue owner with its restricted repository and attempt executor.
  * @module composition
  */

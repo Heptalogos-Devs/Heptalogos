@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Owns generation validity checks and retirement markers used to fence stale
  * services and capabilities during Runtime reconciliation and shutdown.

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Defines the current outbound NetworkAccess policy, gateway target
  * authorization, request/response knowledge, and AI custom-fetch boundary.

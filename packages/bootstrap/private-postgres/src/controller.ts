@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Coordinates bounded private PostgreSQL controller operations and verifies
  * installation identity before process lifecycle actions are admitted.

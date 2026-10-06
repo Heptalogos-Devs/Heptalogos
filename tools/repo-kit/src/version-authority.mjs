@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Reads machine-readable version Authorities and compares declared toolchain
  * projections without making package manifests a second policy source.

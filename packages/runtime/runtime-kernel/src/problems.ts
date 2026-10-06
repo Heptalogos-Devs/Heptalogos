@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Constructs Runtime Kernel Problem envelopes for illegal topology, lifecycle,
  * and generation operations without exposing framework failure objects.

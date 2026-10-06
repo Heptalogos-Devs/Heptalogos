@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Reads workspace package metadata and delegates package-manager inspection to
  * the repo-kit process owner for repository verification commands.

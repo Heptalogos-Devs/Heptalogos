@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Defines injectable monotonic, wall-clock, and timezone contracts so runtime
  * semantics do not depend on ambient process clocks.

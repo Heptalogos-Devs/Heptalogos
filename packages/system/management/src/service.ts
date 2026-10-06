@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Implements the Management semantic service over canonical persistence
  * and injected Host/Runtime read projections. HTTP and CLI remain projections.

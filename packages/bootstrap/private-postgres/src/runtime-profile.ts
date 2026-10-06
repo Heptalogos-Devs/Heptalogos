@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Reads and writes the canonical private PostgreSQL runtime profile so startup
  * uses one validated HBA and server configuration projection.

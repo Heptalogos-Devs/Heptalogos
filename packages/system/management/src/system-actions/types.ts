@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Internal SystemAction family contracts and shared canonical helpers.
  * @module system-actions/types

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Computes content digests from canonical JSON, keeping hash-domain input
  * stable across persistence, evidence, and identity projections.

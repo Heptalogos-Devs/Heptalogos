@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /** Implements canonical built-in Subject Chat semantics over the persistence owner.
  * @module service
  */

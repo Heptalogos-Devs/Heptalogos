@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /** Defines the current built-in Subject Chat and canonical MessageFact types.
  * @module contracts
  */

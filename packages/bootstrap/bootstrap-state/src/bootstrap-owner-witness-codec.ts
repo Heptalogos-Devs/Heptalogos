@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Encodes and decodes the Bootstrap owner witness with canonical bytes and
  * digest validation so recovery can distinguish authentic durable evidence.

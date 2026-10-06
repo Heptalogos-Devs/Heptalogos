@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Provides the process-local execution-context carrier while keeping context
  * propagation separate from durable lineage storage and product scheduling.

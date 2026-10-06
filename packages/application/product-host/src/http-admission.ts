@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /** Defines the Product Host HTTP admission configuration and its defaults.
  * @module http-admission
  */

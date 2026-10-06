@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Coordinates the Host-bound DBOS pool, process-global binding, and lifecycle
  * without exposing DBOS configuration or PostgreSQL implementation objects.

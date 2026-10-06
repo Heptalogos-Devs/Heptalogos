@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Bridges execution lineage to OpenTelemetry context as an observational
  * projection; telemetry never becomes the identity or persistence authority.

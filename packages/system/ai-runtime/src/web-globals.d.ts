@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Supplies the small browser-name type surface referenced by AI SDK's broad
  * client declarations when AIRuntime is compiled in the repository's Node

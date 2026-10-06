@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Exposes the explicitly routed Runtime Kernel lineage integration without
  * moving runtime lifecycle or generation Authority into execution-lineage.

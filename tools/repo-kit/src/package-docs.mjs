@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Validates package README ownership/navigation without imposing a universal
  * heading template or duplicating normative package contracts.

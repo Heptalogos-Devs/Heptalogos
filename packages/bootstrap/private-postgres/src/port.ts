@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Validates configured PostgreSQL port values against the platform and
  * PostgreSQL range contract before process startup is attempted.

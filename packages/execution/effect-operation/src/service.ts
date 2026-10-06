@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Orchestrates EffectOperation preparation, one admitted dispatch, bounded
  * uncertainty recovery, and read-only reconciliation around owned services.

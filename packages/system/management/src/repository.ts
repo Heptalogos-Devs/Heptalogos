@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Owns the Management repository boundary over the existing Host-fenced
  * PersistenceService. Authoritative mutations can only reach PostgreSQL

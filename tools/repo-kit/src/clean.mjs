@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Plans and performs fail-closed cleanup of configured generated outputs while
  * refusing symlink escapes and unknown directory material.

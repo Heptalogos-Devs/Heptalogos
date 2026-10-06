@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Writes Bootstrap state through a temporary file and atomic replacement so a
  * crash cannot expose a partially encoded durable record.

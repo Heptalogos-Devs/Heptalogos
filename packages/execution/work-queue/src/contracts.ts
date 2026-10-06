@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Defines canonical WorkItem, dispatch, retry, handler, and repository contracts
  * without coupling durable work to DBOS or a particular execution engine.

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Exposes package-private registry and generation primitives to the supervisor
  * without widening those mechanics into the Runtime Kernel public contract.

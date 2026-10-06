@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Evaluates runtime contract versions and ranges at the semantic boundary,
  * keeping compatibility decisions separate from provider implementation types.

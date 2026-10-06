@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Resolves the approved PostgreSQL executable/toolchain placement and rejects
  * ambiguous or unsafe paths before Bootstrap delegates process control.

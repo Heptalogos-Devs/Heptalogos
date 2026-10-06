@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Starts the one statically registered DBOS workflow with a minimal durable
  * dispatch envelope; queue policy and lifecycle admission live at the port.

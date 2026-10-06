@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Converges an interrupted Host maintenance operation from inspected current
  * truth. Recovery never replays historical maintenance substeps or rebuilds

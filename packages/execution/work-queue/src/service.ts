@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Constructs the WorkQueue runtime service that composes admission, repository,
  * Signal wakeups, and generation-pinned execution under one owner.

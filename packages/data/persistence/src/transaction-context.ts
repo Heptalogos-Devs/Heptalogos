@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Builds the typed transaction context passed through persistence and Foundation
  * repositories so execution lineage and Host ownership remain coupled.

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Encapsulates Host lease lifecycle transitions with XState while projecting
  * only Heptalogos ownership and fence semantics to the package boundary.

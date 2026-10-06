@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Normalizes persistence failures into shared Problem envelopes while retaining
  * enough classification to distinguish fencing, transaction, and setup errors.

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Creates the normal PostgreSQL pool from Host-authorized connection settings
  * and keeps pool lifecycle ownership inside the persistence adapter.

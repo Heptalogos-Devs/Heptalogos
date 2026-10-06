@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Admits canonical persistence work only after the Bootstrap-to-Host handoff
  * has established the ownership context required by the canonical fence.

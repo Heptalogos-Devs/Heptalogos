@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 export function parseRecoveryMaintenanceProcessArgs(argv) {
   const [anchorRoot, role, ...args] = argv;
   if (!anchorRoot || !role) {

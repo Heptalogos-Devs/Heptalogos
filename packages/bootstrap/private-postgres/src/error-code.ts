@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Extracts process error codes for private PostgreSQL disposition mapping while
  * keeping subprocess-library error shapes out of public lifecycle contracts.

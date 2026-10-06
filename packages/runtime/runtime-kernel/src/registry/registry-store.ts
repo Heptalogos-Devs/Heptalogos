@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Stores Runtime registry entries and their execution context projections while
  * preserving owner-scoped lifecycle cleanup for registered providers.

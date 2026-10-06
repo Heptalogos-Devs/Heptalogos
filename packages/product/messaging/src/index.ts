@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /** Public current Messaging contracts and canonical Subject Chat service.
  * @packageDocumentation
  */

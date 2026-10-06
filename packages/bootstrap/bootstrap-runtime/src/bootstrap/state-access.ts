@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Couples BootstrapState store access to an acquired Bootstrap lease so state
  * reads and writes cannot outlive the authority that opened them.

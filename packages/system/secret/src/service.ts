@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Implements scoped SecretRef lifecycle through OS credential generations and
  * Host-fenced canonical metadata transactions.

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { createUuidV7Id } from "@heptalogos/foundation-contracts";
 import type { BootstrapRecoveryInspection } from "../../src/recovery/bootstrap.js";

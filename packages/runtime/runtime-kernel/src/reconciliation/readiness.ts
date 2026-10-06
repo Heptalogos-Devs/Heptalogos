@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Evaluates declared Runtime readiness from service and capability state while
  * keeping readiness meaning distinct from substrate resource disposal.

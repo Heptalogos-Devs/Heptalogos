@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Public engine-neutral WorkQueue contracts, reconciliation services, and
  * generation-fenced attempt components; the concrete repository is restricted.

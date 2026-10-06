@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Owns branded Runtime, Service, Capability, Provider, and WorkItem identities
  * while preserving their namespace and UUID validation semantics.

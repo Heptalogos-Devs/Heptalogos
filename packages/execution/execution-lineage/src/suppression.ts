@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Scopes intentional lineage suppression for internal persistence plumbing so
  * nested adapter work cannot accidentally overwrite the caller's causal span.

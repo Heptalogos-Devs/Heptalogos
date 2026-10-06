@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Derives the stable advisory-lock key from installation identity so competing
  * Hosts coordinate through PostgreSQL rather than process-local coordination.

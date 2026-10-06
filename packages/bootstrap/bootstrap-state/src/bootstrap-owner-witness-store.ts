@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Owns the local durable Bootstrap owner witness store and its bounded cleanup
  * path, keeping filesystem mutation behind the BootstrapState package boundary.

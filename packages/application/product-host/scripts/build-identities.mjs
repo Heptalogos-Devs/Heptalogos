@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Computes the two build-carried generation identities owned by Product Host.
  * Runtime code imports the generated values and never scans the repository.

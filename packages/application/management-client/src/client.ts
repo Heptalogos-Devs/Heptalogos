@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Exposes the generated Management HTTP operations through a small, portable
  * client facade. The generated files remain the wire and response authority.

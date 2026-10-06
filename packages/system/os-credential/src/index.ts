@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Provides the minimal callback-scoped operating-system credential adapter
  * used by Bootstrap and local Management clients.

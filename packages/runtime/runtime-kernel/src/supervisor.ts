@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Owns Runtime Kernel supervision, activation, reconciliation, and retirement over
  * the desired graph while delegating generic resource mechanics to Substrate.

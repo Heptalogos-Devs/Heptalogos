@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Centralizes Bootstrap error-code extraction used to classify failures without
  * coupling callers to implementation-specific exception objects.

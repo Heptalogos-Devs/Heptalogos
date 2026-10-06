@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Maps NetworkAccess admission and transport failures into redacted Problems.
  * @module problems

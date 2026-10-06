@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Records Bootstrap lifecycle stages in the owned journal so recovery can
  * distinguish observed progress from authority that still must be reacquired.

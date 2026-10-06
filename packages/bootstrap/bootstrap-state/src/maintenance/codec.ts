@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Encodes and parses the compact, versioned maintenance witness. Canonical
  * serialization and a domain-separated digest make the current phase
