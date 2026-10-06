@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Encodes and validates Signal hints through canonical JSON and SchemaRuntime,
  * keeping notification payloads typed, bounded, and non-authoritative.

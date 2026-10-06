@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Provisions and verifies the DBOS vendor schema through the installed CLI
  * while preserving the Host migration Authority and product-schema boundary.

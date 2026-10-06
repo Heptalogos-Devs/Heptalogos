@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Owns deterministic JSON canonicalization used by digests and durable
  * envelopes so equivalent values produce identical persisted bytes.

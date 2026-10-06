@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Defines the managed Host lifecycle and maintenance contracts shared across
  * handoff, terminal retirement, and recovery without exposing controller

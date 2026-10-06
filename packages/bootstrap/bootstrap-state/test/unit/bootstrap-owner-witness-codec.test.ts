@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { createBootId, createUuidV7Id } from "@heptalogos/foundation-contracts";
 import { describe, expect, it } from "vitest";
 import {

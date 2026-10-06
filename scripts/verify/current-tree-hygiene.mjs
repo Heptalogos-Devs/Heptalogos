@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Runs current-tree identity and compatibility-register checks against the
  * repository's executable surfaces and reports only observed findings.

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Resolves the installed DBOS package and its package-contained CLI without
  * consulting PATH, a global installation, or a package-manager store path.

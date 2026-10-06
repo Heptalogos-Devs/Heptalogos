@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Serializes mutations independently per logical key while preserving FIFO
  * ordering after rejection, preventing concurrent store writes from crossing.

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Tracks in-flight private PostgreSQL process operations with elapsed-time
  * bounds so shutdown and recovery cannot wait indefinitely on a child process.

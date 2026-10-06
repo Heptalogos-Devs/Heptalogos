@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Implements the Host-fenced persistence service and bounded pool lifecycle,
  * rejecting mutations after ownership loss through the canonical fence.

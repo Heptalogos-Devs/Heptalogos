@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /** Owns AIRuntime route selection, profile/binding semantics, and commit fences.
  * @module routing
  */

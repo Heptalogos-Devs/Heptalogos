@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Verifies the local installation-owner witness used to authorize Bootstrap
  * recovery without turning process-local identity into durable ownership.

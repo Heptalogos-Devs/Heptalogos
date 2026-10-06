@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Product Host-local adapter for the adopted atomic file publication package.
  * @module atomic-file

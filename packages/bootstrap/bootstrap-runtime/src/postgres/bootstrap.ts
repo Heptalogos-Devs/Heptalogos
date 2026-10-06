@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Prepares private PostgreSQL for an owned Bootstrap prelude and records the
  * handoff-ready session without moving process-control authority into Runtime.

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Centralizes numeric bounds shared with PostgreSQL-backed contracts so range
  * policy is named once rather than hidden in individual adapters.

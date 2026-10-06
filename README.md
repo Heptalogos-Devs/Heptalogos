@@ -22,3 +22,8 @@ Start with the [global repository INDEX](INDEX.md) to route a question:
 
 Package ownership and implementation handoffs begin at
 [packages/README.md](packages/README.md).
+
+## License
+
+This project is licensed under AGPL-3.0-only. See [LICENSE](LICENSE) for the
+full license text and [NOTICE](NOTICE) for the copyright and SPDX declaration.

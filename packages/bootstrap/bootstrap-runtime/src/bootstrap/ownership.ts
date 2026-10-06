@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Owns the installation-scoped Bootstrap lease and its release/fencing rules;
  * higher orchestration must establish this authority before touching private

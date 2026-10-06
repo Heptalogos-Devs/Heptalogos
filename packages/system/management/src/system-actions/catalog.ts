@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Finite runtime catalog for the current Product SystemAction identifiers.
  * This is a closed internal mapping, not a plugin registration mechanism.

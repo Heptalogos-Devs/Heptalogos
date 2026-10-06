@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Owns the dedicated PostgreSQL LISTEN connection and reconnect/rescan lifecycle
  * while keeping notification loss safe through canonical consumer re-query.

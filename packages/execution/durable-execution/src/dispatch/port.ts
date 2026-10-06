@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Enforces Host/lifecycle/profile admission and maps a WorkQueue dispatch to
  * the static DBOS workflow without moving canonical WorkItem Authority.

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Runtime handlers for the current Configuration SystemAction family.
  * @module system-actions/configuration

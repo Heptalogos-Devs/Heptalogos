@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Shares the bounded cursor mechanics used by WorkQueue reconciliation lanes.
  * Each lane scans to a snapshot ceiling before starting a new cycle, so rows

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 // Intentional duplication: this integration uses a source-tree alias map that
 // is deliberately independent from the Product Host integration's alias map.
 /* jscpd:ignore-start */

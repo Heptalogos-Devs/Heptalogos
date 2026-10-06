@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Validates the process identity evidence used by Bootstrap recovery so a
  * stale or reused process identifier cannot authorize a recovery action.

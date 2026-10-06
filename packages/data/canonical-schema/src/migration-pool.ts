@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Adapts the Host-authorized PostgreSQL pool to Kysely migration operations;
  * it is an internal schema mechanic rather than a general transaction owner.

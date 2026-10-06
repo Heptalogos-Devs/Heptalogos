@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * TypeScript 7's bundled runtime library omits the small DOM fetch aliases
  * referenced by the exact OpenClaw public declaration surface. These aliases

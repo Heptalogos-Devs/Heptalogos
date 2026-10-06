@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Adapts Cordis Fiber activation and disposal into the narrow Substrate
  * contract, retaining only Heptalogos task admission and settlement policy.

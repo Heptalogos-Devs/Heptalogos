@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Materializes the current Foundation PostgreSQL schema, including constraints
  * that make ownership, lineage, evidence, and durable work canonical.

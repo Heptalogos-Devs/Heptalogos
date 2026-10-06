@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Normalizes substrate admission, disposal, and task failures into Foundation
  * Problems without exposing Cordis lifecycle errors.

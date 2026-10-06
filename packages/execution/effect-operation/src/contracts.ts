@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Defines the versioned EffectOperation contract and the narrow adapter port
  * that observes external effect knowledge without owning retry policy.

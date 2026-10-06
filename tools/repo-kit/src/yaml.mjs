@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Provides the shared YAML parsing seam for workspace and workflow inspection,
  * preserving parser diagnostics instead of using line-oriented approximations.

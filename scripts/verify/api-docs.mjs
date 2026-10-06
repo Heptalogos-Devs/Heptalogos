@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Generates and verifies the derived API documentation projection from the
  * TypeDoc declaration graph. Temporary output keeps generated Markdown out of

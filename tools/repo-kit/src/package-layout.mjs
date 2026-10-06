@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Validates the current two-level product-package topology and its durable
  * navigation/boundary invariants without maintaining a package inventory.

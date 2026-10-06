@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Verifies Heptalogos-specific package boundary and Authority leakage rules
  * that generic dependency analyzers cannot express as semantic invariants.

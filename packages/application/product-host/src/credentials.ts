@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Composes the production BootstrapKeyProvider over the OS credential store.
  * Bootstrap policy decides whether credentials may be provisioned; this module

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Registers and resolves generation-pinned WorkHandlers, rejecting stale or
  * mismatched declarations before an attempt can reach product execution.

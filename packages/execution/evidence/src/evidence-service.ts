@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Persists and reads retained Evidence through the caller's persistence and
  * time authorities, preserving sensitivity and lineage semantics at the seam.

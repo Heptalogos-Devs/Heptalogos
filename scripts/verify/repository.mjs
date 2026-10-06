@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Runs repository-wide semantic checks over the current topology, metadata, and
  * package navigation without replacing generic tooling owners.

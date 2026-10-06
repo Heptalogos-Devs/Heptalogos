@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Owns Host lease acquisition, heartbeat, fencing, and release orchestration
  * over the single canonical PostgreSQL ownership Authority.

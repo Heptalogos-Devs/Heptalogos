@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { parser } from "typescript-eslint";
 import nxPlugin from "@nx/eslint-plugin";
 import jsdocPlugin from "eslint-plugin-jsdoc";

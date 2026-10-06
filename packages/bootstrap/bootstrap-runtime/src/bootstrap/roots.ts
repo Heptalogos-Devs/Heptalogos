@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Resolves the canonical Bootstrap path profile and lifecycle roots so every
  * store and journal uses the same installation-scoped filesystem topology.

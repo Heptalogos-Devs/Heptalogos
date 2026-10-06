@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Owns the private Subject OpenClaw process, public Gateway protocol, and one
  * bounded proposal-only agent run.

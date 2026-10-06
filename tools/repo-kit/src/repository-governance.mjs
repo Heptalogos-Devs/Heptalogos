@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Reads current repository governance projections and discovers maintained
  * responsibility roots without freezing a snapshot inventory.

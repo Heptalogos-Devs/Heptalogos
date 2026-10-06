@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Classifies the installation-owned PostgreSQL directory layout with fail-closed
  * traversal so unknown material cannot be mistaken for managed cluster state.

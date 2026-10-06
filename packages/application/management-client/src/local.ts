@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Owns the Node-only local discovery and session-token adapter. It reads only
  * the Bootstrap locator and Host-published RUN descriptors; Management state

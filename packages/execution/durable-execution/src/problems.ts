@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Maps package-resolution and DBOS-process failures to Foundation Problems so
  * provider-specific exceptions never cross the durable-execution boundary.

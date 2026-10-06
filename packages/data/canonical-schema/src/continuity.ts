@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Projects canonical-schema continuity values into validated migration inputs
  * so schema initialization preserves the current lineage boundary.

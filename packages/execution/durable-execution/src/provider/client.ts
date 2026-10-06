@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Adapts the public DBOSClient queue surface for pre-launch profile checks.
  * The caller-owned pool remains outside the client wrapper and is never closed

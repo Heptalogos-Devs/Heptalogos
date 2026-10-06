@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Implements the crash-safe BootstrapState store, combining keyed serialization,
  * atomic files, and explicit revision loading under one durable owner.

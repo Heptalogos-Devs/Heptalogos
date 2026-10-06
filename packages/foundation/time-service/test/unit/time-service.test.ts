@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { describe, expect, it } from "vitest";
 import { parseInstant } from "@heptalogos/foundation-contracts";
 import { createFakeTimeService, parseTimeZoneId } from "../../src/index.js";

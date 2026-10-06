@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Projects immutable WorkQueue profiles to DBOS database-backed queues and
  * verifies the persisted configuration without granting DBOS policy Authority.

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Restricts Bootstrap-authorized SQL operations to the explicit authority seam
  * required for Host database provisioning and ownership setup.

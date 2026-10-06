@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Runs the installed DBOS CLI with shell-free Node execution, bounded output,
  * sanitized PostgreSQL environment inheritance, and safe diagnostics.

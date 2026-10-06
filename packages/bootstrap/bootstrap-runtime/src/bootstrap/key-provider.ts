@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Defines callback-scoped Bootstrap secret access so credential bytes are not
  * retained by callers or promoted into a broader configuration contract.

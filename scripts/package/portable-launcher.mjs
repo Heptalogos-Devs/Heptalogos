@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Stable entrypoint for an uninitialized portable Product root.
  * The launcher owns only path derivation and first materialization of the

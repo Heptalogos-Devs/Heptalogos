@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Creates and removes private PostgreSQL credential files with restrictive
  * ownership and cleanup behavior so plaintext secrets have a bounded lifetime.

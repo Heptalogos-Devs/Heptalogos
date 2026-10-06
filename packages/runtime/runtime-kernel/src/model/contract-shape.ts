@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Validates the structural shape of Runtime contract declarations before graph
  * planning, so malformed provider metadata cannot enter reconciliation.

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Defines Activity, ExecutionContext, and lineage service contracts that carry
  * causal identity across Foundation operations and persistence boundaries.

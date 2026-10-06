@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 import { describe, expect, it } from "vitest";
 import { parseInstanceId } from "@heptalogos/foundation-contracts";
 import { deriveHostAdvisoryKey } from "../../src/advisory-key.js";

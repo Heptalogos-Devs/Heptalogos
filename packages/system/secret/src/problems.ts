@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Maps Secret owner failures into the shared Problem contract without exposing
  * backend details or material.

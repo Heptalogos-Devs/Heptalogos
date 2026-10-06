@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Defines Host lease, fence, token, and database-context contracts that callers
  * must carry through every canonical mutation path.

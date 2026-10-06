@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Seals and parses BootstrapState envelopes using canonical JSON and strict
  * schema validation; malformed or mismatched revisions fail explicitly.

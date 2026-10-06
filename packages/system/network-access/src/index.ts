@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Public current NetworkAccess policy and controlled gateway transport.
  * @packageDocumentation

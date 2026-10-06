@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Projects Bootstrap handoff evidence into execution lineage without making
  * lineage the owner of Bootstrap authority or durable work scheduling.

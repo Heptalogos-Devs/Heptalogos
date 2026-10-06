@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Owns the single process-local first-administrator claim timer. Canonical
  * claim mutation remains in Management; Product Host owns local publication.

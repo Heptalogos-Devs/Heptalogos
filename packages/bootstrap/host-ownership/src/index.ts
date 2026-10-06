@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Public Host ownership contracts and PostgreSQL fence operations; raw clients,
  * statechart objects, and provisioning mechanics remain adapter-internal.

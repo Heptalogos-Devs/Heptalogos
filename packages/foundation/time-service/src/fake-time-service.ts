@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Implements deterministic fake time for tests while preserving the same
  * monotonic-versus-wall-clock distinctions as the system service.

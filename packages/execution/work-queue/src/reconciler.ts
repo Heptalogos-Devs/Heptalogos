@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Reconciles canonical WorkItem truth after commits, lost notifications, or
  * dispatch failures so Signal remains a hint and never a durable authority.

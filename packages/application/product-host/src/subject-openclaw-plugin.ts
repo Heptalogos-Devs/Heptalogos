@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Defines the two proposal-transport tools exposed to the isolated Subject
  * OpenClaw runtime. The handlers acknowledge a proposal and perform no

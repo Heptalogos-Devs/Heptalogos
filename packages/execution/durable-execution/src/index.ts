@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Public durable-execution package contracts; DBOS SDK, process, and vendor
  * implementation details remain behind the adapter boundary.

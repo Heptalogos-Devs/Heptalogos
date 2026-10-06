@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Owns exact EffectOperation SQL/CAS transitions while keeping PostgreSQL and
  * transaction handles behind the persistence Foundation seam.

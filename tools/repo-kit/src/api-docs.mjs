@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Resolves public package declaration entrypoints and validates the structured
  * TypeDoc module set before generated API Markdown is accepted.

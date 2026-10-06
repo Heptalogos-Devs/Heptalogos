@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Loads and validates the installation locator that supplies Bootstrap roots
  * and identity before any stateful startup action is attempted.

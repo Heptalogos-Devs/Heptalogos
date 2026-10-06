@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Shared HostOwnershipFence query shape and SQL for the two mutation paths.
  * Publication and revocation retain their own failure semantics around this

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Provides the narrow file read/write seam used by BootstrapState stores so
  * filesystem errors are normalized without leaking storage policy to callers.

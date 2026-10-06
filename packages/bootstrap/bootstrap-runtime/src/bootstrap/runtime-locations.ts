@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Projects the validated installation roots into the small location contract
  * consumed by replaceable Product runtime components.

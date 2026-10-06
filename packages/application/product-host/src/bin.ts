@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Built daemon entrypoint for the real headless Product Host.
  * @module bin

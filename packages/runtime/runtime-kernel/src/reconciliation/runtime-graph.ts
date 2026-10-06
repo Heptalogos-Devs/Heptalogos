@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Builds the deterministic Runtime dependency graph through Graphlib, leaving
  * graph mechanics behind a semantic plan consumed by reconciliation.

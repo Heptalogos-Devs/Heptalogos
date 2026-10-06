@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Public shared Foundation vocabulary for canonical values, identities,
  * lifecycle roots, Problems, and data governance without runtime side effects.

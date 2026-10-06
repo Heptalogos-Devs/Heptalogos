@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Reads and validates private PostgreSQL cluster identity/readiness evidence so
  * Bootstrap can reject an unexpected data directory before starting it.

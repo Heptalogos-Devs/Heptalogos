@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Materializes the Host ownership schema and role prerequisites through the
  * Bootstrap-authorized path, keeping schema policy out of persistence.

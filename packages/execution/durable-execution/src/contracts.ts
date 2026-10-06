@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Defines the normalized durable-execution adapter contracts without exposing
  * DBOS SDK, Execa, or PostgreSQL implementation objects.

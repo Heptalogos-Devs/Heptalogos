@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Owns durable maintenance journal storage and atomic record replacement so a
  * recovery process can observe one coherent operation state at a time.

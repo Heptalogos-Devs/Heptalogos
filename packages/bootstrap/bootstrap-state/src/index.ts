@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Public BootstrapState contracts for versioned envelopes, journals, witnesses,
  * codecs, and crash-safe stores; file and serialization mechanics stay owned

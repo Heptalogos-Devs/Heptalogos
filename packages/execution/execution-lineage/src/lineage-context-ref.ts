@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Encodes and decodes the compact lineage context reference used at durable
  * boundaries, rejecting malformed identity data before it becomes evidence.

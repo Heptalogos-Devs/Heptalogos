@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Constructs canonical-schema Problem envelopes for initialization failures so
  * callers receive shared failure semantics instead of driver exceptions.

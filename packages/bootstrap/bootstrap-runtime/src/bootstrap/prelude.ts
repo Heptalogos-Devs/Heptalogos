@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Orchestrates Bootstrap locator/state preparation, lease acquisition, private
  * PostgreSQL setup, and the ordered handoff into Host ownership.

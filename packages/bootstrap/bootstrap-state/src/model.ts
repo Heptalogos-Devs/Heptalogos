@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Declares the versioned BootstrapState envelope and load-result contracts that
  * separate durable evidence from the authority established by current startup.

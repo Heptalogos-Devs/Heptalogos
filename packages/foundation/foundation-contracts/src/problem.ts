@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Defines the canonical Problem envelope and construction seam used to report
  * typed failures without leaking provider-specific exception shapes.

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Public Bootstrap runtime contracts for installation/recovery orchestration,
  * Host handoff, and managed maintenance; private Authority adapters remain

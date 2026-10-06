@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Maps WorkQueue admission, dispatch, and repository failures into shared
  * Foundation Problems with explicit retry classification.

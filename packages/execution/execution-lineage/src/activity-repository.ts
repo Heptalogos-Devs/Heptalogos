@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Adapts Activity persistence through the canonical Foundation transaction so
  * causal records carry the same execution and ownership context as mutations.

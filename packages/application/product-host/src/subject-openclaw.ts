@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Composes the Product-supervised Subject OpenClaw projection and Gateway
  * adapters behind the narrow Subject cognition runtime port.

@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Models private PostgreSQL lifecycle legality with XState while leaving
  * authorization and installation ownership to Bootstrap and Host callers.

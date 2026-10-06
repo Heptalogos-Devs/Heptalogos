@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Projects the canonical Management service to the bounded Fastify
  * surface. Route schemas come only from @heptalogos/management.

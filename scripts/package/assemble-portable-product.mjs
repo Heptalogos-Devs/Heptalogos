@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Assembles the current built Product Host and reference CLI into one
  * portable Product root from two already-built application artifacts. Nx owns
@@ -594,6 +597,14 @@ async function main() {
       join(options.target, "licenses/postgresql-commandline-third-party.txt"),
     );
   }
+  await cp(
+    join(repositoryRoot, "LICENSE"),
+    join(options.target, "licenses/Heptalogos-AGPL-3.0-only.txt"),
+  );
+  await cp(
+    join(repositoryRoot, "NOTICE"),
+    join(options.target, "licenses/Heptalogos-NOTICE.txt"),
+  );
   const openclawRoot = await realpath(join(productRoot, "node_modules/openclaw"));
   await cp(
     join(openclawRoot, "LICENSE"),

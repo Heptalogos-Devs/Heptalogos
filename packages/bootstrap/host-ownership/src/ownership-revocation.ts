@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Revokes the current Host token and closes its mutation fence so ownership
  * loss is represented durably before the connection is released.

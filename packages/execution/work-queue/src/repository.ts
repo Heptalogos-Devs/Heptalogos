@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Implements the Host-fenced WorkItem repository and its canonical state
  * mutations, keeping SQL/Kysely details behind the Foundation integration seam.

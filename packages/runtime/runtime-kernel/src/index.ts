@@ -1,3 +1,6 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+
 /**
  * Public Runtime Kernel contracts for graph planning, registries, readiness,
  * generation fencing, and lifecycle supervision above RuntimeSubstrate.
