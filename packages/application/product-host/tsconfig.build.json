@@ -7,29 +7,12 @@
     "rootDir": "src",
     "outDir": "./dist",
     "types": ["node"],
-    "tsBuildInfoFile": "./dist/tsconfig.build.tsbuildinfo"
+    "tsBuildInfoFile": "./dist/tsconfig.build.tsbuildinfo",
+    "lib": ["ES2025", "DOM"]
   },
   "include": ["src/**/*.ts"],
   "exclude": ["test/**/*.ts"],
   "references": [
-    {
-      "path": "../../product/subject/tsconfig.build.json"
-    },
-    {
-      "path": "../../product/messaging/tsconfig.build.json"
-    },
-    {
-      "path": "../../execution/durable-execution/tsconfig.build.json"
-    },
-    {
-      "path": "../../execution/work-queue/tsconfig.build.json"
-    },
-    {
-      "path": "../../execution/signal/tsconfig.build.json"
-    },
-    {
-      "path": "../../system/ai-runtime/tsconfig.build.json"
-    },
     {
       "path": "../../system/configuration/tsconfig.build.json"
     },
@@ -38,12 +21,6 @@
     },
     {
       "path": "../../foundation/time-service/tsconfig.build.json"
-    },
-    {
-      "path": "../../runtime/runtime-substrate/tsconfig.build.json"
-    },
-    {
-      "path": "../../runtime/runtime-kernel/tsconfig.build.json"
     },
     {
       "path": "../../foundation/schema-runtime/tsconfig.build.json"
@@ -56,12 +33,6 @@
     },
     {
       "path": "../../system/management/tsconfig.build.json"
-    },
-    {
-      "path": "../../system/network-access/tsconfig.build.json"
-    },
-    {
-      "path": "../../system/secret/tsconfig.build.json"
     },
     {
       "path": "../../foundation/foundation-contracts/tsconfig.build.json"

@@ -5,7 +5,6 @@
   "tags": ["kind:tooling", "area:repository"],
   "implicitDependencies": [
     "foundation-contracts",
-    "subject-chat-client",
     "management-client",
     "bootstrap-runtime",
     "durable-execution",
@@ -97,8 +96,14 @@
     },
     "check:product-artifacts": {
       "dependsOn": [
-        { "projects": "product-host", "target": "check:build-identities" },
-        { "projects": "management-client", "target": "generate:check" }
+        {
+          "projects": "product-host",
+          "target": "check:build-identities"
+        },
+        {
+          "projects": "management-client",
+          "target": "generate:check"
+        }
       ],
       "executor": "nx:noop"
     },
@@ -166,7 +171,10 @@
     "test": {
       "dependsOn": [
         "^test",
-        { "projects": "integration-foundation", "target": "test" }
+        {
+          "projects": "integration-foundation",
+          "target": "test"
+        }
       ],
       "executor": "nx:noop"
     },
@@ -216,7 +224,10 @@
         "check:static",
         "^test",
         "^build",
-        { "projects": "model-gateway-integration", "target": "test" }
+        {
+          "projects": "model-gateway-integration",
+          "target": "test"
+        }
       ],
       "executor": "nx:noop"
     }

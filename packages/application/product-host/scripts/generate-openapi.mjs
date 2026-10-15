@@ -9,30 +9,28 @@ import { fileURLToPath } from "node:url";
 
 const packageRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 const outputPath = resolve(packageRoot, "generated/management.openapi.json");
-const { createManagementHttpApp } = await import(
-  new URL("../dist/http.js", import.meta.url).href
+const { createProductHttpApp } = await import(
+  new URL("../dist/product-http.js", import.meta.url).href
 );
-
 const unavailable = async () => {
-  throw new Error("The schema-only Management service was invoked");
+  throw new Error("Schema-only operation invoked");
 };
-const schemaOnlyService = {
-  getDiscovery: unavailable,
-  getSystemStatus: unavailable,
-  getHost: unavailable,
-  getRuntimeGraph: unavailable,
-  getCapabilityGraph: unavailable,
-  getReadiness: unavailable,
-  ensureFirstAdministratorClaim: unavailable,
-  claimFirstAdministrator: unavailable,
-  login: unavailable,
-  authenticate: unavailable,
-  logout: unavailable,
-  getCompatibilityDescriptor: unavailable,
-  contractVersion: "management.v1",
-};
-
-const app = await createManagementHttpApp(schemaOnlyService);
+const app = await createProductHttpApp({
+  authentication: {
+    authenticate: unavailable,
+    claimFirstAdministrator: unavailable,
+    login: unavailable,
+    logout: unavailable,
+  },
+  product: {
+    configuration: unavailable,
+    status: unavailable,
+    check: unavailable,
+    configure: unavailable,
+  },
+  identity: { installationId: "schema-only", bootId: "schema-only" },
+  onAdministratorClaimed: unavailable,
+});
 await app.ready();
 const expected = JSON.stringify(app.swagger(), null, 2) + "\n";
 await app.close();

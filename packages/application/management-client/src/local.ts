@@ -81,18 +81,23 @@ async function readJson(path: string): Promise<unknown> {
   }
 }
 
-async function runRootFromAnchor(anchorRoot: string): Promise<string> {
+async function installationFromAnchor(anchorRoot: string): Promise<{
+  installationId: InstallationId;
+  runRoot: string;
+}> {
   const locator = objectValue(await readJson(join(anchorRoot, LOCATOR_FILENAME)));
+  const installationId = parseInstallationId(locator?.installationId);
   const roots = objectValue(locator?.roots);
   const runRoot = roots?.RUN;
   if (
     locator?.schemaVersion !== 1 ||
+    installationId === undefined ||
     typeof runRoot !== "string" ||
     !isAbsolute(runRoot)
   ) {
     throw new Error("The local Management locator is invalid");
   }
-  return runRoot;
+  return { installationId, runRoot };
 }
 
 async function readEndpoint(runRoot: string): Promise<ManagementEndpointDescriptor> {
@@ -173,11 +178,16 @@ export async function openLocalManagementClient(options: {
   readonly sessionToken?: string;
   readonly fetch?: ManagementClientOptions["fetch"];
   readonly credentialStore?: OsCredentialStore;
+  readonly signal?: AbortSignal;
 }): Promise<LocalManagementClient> {
-  const runRoot = await runRootFromAnchor(options.anchorRoot);
+  const { installationId, runRoot } = await installationFromAnchor(options.anchorRoot);
   const endpoint = await readEndpoint(runRoot);
+  if (endpoint.installationId !== installationId) {
+    throw new Error("The Management endpoint does not match the installation locator");
+  }
   const client = createManagementClient({
     origin: endpoint.origin,
+    signal: options.signal,
     ...(options.sessionToken === undefined
       ? {}
       : { sessionToken: options.sessionToken }),
@@ -186,8 +196,9 @@ export async function openLocalManagementClient(options: {
   const discovery = await client.getDiscovery();
   if (
     discovery.installationId !== endpoint.installationId ||
-    discovery.apiBasePath !== "/management/v1" ||
-    discovery.compatibility.coreContractVersion !== "management.v1"
+    discovery.apiBasePath !== "/v1" ||
+    discovery.contractVersion !== "management.v1" ||
+    discovery.bootId !== endpoint.bootId
   ) {
     throw new Error(
       "The live Management contract does not match the endpoint descriptor",

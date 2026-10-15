@@ -10,6 +10,7 @@
 import { ProblemError } from "@heptalogos/foundation-contracts";
 import { startProductHostFromArgv } from "./host.js";
 import { BOOTSTRAP_RUNTIME_GENERATION_ID } from "./generated/build-identities.js";
+import { initializeProductInstallation } from "./installation.js";
 
 function problemCode(error: unknown): string {
   if (error instanceof ProblemError) return error.problem.problemCode;
@@ -33,7 +34,15 @@ function reportFailure(error: unknown): void {
 }
 
 const main = async (): Promise<void> => {
-  const host = await startProductHostFromArgv(process.argv.slice(2));
+  const args = process.argv.slice(2);
+  if (args[0] === "init") {
+    if (args.length !== 3 || args[1] !== "--anchor-root")
+      throw new Error("Usage: heptalogos-host init --anchor-root <absolute path>");
+    const locator = await initializeProductInstallation(args[2]!);
+    process.stdout.write(JSON.stringify({ type: "INITIALIZED", ...locator }) + "\n");
+    return;
+  }
+  const host = await startProductHostFromArgv(args);
   process.stdout.write(
     JSON.stringify({
       type: "READY",

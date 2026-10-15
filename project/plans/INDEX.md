@@ -3,13 +3,7 @@
 Use this index to find the active authorization or the historical decision that
 established a current boundary. Historical plans do not authorize new work.
 
-There is no active implementation Plan. The completed Pre-JDD Architecture
-Debt Refactoring record is at
-`./completed/repository/pre-jdd-architecture-debt-refactoring-2026-09-05.md`.
-The Product Reality Convergence pack at
-`tmp/heptalogos-next-spec-pack-2026-09-04/README.md` is completed historical
-authorization; its P0–P4 records remain historical/completed and do not
-authorize follow-up work.
+当前活动授权：[QQ 持续主体上线](./qq-continuous-subject.md)。它授权完整系列实施及真实 Linux 部署；旧已完成计划仅保留历史解释，不限制本轮原地替换。
 
 | Plan                                                                                                                                                                           | State        | Area / Horizon                                       | Established or changed                                                                                                                                                                                                                            | Read when / current Authority                                                                                                                                                                                                       |
 | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

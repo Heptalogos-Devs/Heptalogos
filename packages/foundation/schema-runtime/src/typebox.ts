@@ -8,3 +8,5 @@
  */
 
 export { Type } from "typebox";
+
+export type { Static } from "typebox";

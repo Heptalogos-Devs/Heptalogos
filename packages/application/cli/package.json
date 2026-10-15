@@ -20,7 +20,8 @@
   "dependencies": {
     "@heptalogos/management-client": "workspace:*",
     "@inquirer/password": "catalog:",
-    "@oclif/core": "catalog:"
+    "@oclif/core": "catalog:",
+    "execa": "catalog:"
   },
   "oclif": {
     "bin": "heptalogos",

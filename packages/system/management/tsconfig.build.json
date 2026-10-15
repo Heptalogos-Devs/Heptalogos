@@ -16,31 +16,16 @@
       "path": "../../foundation/time-service/tsconfig.build.json"
     },
     {
-      "path": "../secret/tsconfig.build.json"
-    },
-    {
       "path": "../../foundation/schema-runtime/tsconfig.build.json"
     },
     {
       "path": "../../data/persistence/tsconfig.build.json"
     },
     {
-      "path": "../network-access/tsconfig.build.json"
-    },
-    {
       "path": "../../foundation/foundation-contracts/tsconfig.build.json"
     },
     {
-      "path": "../../execution/execution-lineage/tsconfig.build.json"
-    },
-    {
-      "path": "../../execution/evidence/tsconfig.build.json"
-    },
-    {
       "path": "../configuration/tsconfig.build.json"
-    },
-    {
-      "path": "../ai-runtime/tsconfig.build.json"
     }
   ]
 }

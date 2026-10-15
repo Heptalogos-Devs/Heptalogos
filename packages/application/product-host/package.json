@@ -18,39 +18,26 @@
     }
   },
   "dependencies": {
+    "@bybrave/proper-lockfile2": "catalog:",
     "@fastify/rate-limit": "catalog:",
     "@fastify/swagger": "catalog:",
     "@heptalogos/bootstrap-runtime": "workspace:*",
     "@heptalogos/bootstrap-state": "workspace:*",
     "@heptalogos/canonical-schema": "workspace:*",
-    "@heptalogos/durable-execution": "workspace:*",
-    "@heptalogos/ai-runtime": "workspace:*",
     "@heptalogos/configuration": "workspace:*",
     "@heptalogos/evidence": "workspace:*",
     "@heptalogos/execution-lineage": "workspace:*",
     "@heptalogos/foundation-contracts": "workspace:*",
     "@heptalogos/management": "workspace:*",
-    "@heptalogos/messaging": "workspace:*",
-    "@heptalogos/network-access": "workspace:*",
     "@heptalogos/os-credential": "workspace:*",
     "@heptalogos/persistence": "workspace:*",
-    "@heptalogos/secret": "workspace:*",
-    "@heptalogos/signal": "workspace:*",
-    "@heptalogos/subject": "workspace:*",
-    "@heptalogos/runtime-kernel": "workspace:*",
-    "@heptalogos/runtime-substrate": "workspace:*",
     "@heptalogos/schema-runtime": "workspace:*",
     "@heptalogos/time-service": "workspace:*",
-    "@heptalogos/work-queue": "workspace:*",
-    "@openclaw/gateway-client": "catalog:",
-    "@openclaw/gateway-protocol": "catalog:",
-    "execa": "catalog:",
+    "@nous-wave/client": "catalog:",
     "fastify": "catalog:",
-    "openclaw": "catalog:",
     "write-file-atomic": "catalog:"
   },
   "devDependencies": {
-    "@types/ws": "catalog:",
     "vitest": "catalog:"
   }
 }

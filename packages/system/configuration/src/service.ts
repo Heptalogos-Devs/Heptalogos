@@ -671,12 +671,13 @@ export function createConfigurationService(
             }),
           ]);
           if (current === undefined) {
-            await executeRepositorySql(
+            const inserted = await executeRepositorySql(
               transaction,
               'INSERT INTO "heptalogos"."configuration_activation" (' +
                 "activation_id, definition_id, scope_ref, scope_key, active_revision_id, " +
                 "previous_revision_id, impact, effective_at, lineage_context_ref, evidence_refs) " +
-                "VALUES ($1, $2, $3, $4, $5, NULL, $6, $7, $8, $9)",
+                "VALUES ($1, $2, $3, $4, $5, NULL, $6, $7, $8, $9) " +
+                "ON CONFLICT (definition_id, scope_key) DO NOTHING RETURNING activation_id",
               [
                 activationId,
                 definition.definitionId,
@@ -689,6 +690,14 @@ export function createConfigurationService(
                 JSON.stringify(evidenceRefs),
               ],
             );
+            if (inserted.length === 0)
+              throw configurationProblem(
+                "configuration.activation_conflict",
+                "Configuration activation is stale",
+                "Another request activated the initial configuration",
+                "conflict",
+                "after-change",
+              );
           } else {
             await executeRepositorySql(
               transaction,

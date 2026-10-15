@@ -40,9 +40,9 @@ requirement IDs.
 
 ## Management and System Authority
 
-| Spec                                                                | Read when                                                                                                     | Current contract covered                                                                                                        | Primary owner                        | Prefix |
-| ------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | ------ |
-| [System Authority and Management](./management/system-authority.md) | Changing normal Product Management, Administrator auth/session, SystemAction planning, or client projections. | Management Contract, Read Models, current one-Administrator plan/execute, OpenAPI/Client/CLI projections, and machine boundary. | System Authority and owning Services | `MGMT` |
+| Spec                                                                | Read when                                                                                                              | Current contract covered                                                                                                   | Primary owner                        | Prefix |
+| ------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- | ------------------------------------ | ------ |
+| [System Authority and Management](./management/system-authority.md) | Changing normal Product Management, Administrator auth/session, configuration, Subject binding, or client projections. | Management authentication, configuration CAS, Subject SDK operations, OpenAPI/Client/CLI and service lifecycle boundaries. | System Authority and owning Services | `MGMT` |
 
 ## Subject, Messaging, and current behavior
 

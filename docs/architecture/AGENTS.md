@@ -1,6 +1,6 @@
 # Architecture Documentation Instructions
 
-This scope documents current Heptalogos implementation architecture. The Nous Wave integration page is a planned boundary and labels its status explicitly.
+This scope documents current Heptalogos implementation architecture. Distinguish the installed official Nous Client and management binding from the ongoing native Subject/QQ integration.
 
 - Verify current behavior against current Specs and code. Mark target, planned, and unimplemented concepts explicitly.
 - Keep target-design semantics and rationale in Architecture-Vault. Link to that source instead of duplicating its full domain model.

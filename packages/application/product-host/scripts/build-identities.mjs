@@ -44,8 +44,6 @@ function normalizePath(root, path) {
 function isPackageBuildInput(path) {
   if (!path.startsWith("packages/")) return false;
   if (path === generatedIdentityPath) return false;
-  if (path === "packages/application/product-host/src/openclaw.plugin.json")
-    return true;
   if (path.includes("/test/") || path.includes("/tests/")) return false;
   if (path.endsWith("/README.md")) return false;
   return (
@@ -115,9 +113,6 @@ export async function computeBuildIdentities(repositoryRoot) {
   const bootstrapEntries = productEntries.filter((entry) =>
     isBootstrapBuildInput(entry.path),
   );
-  const subjectEntries = productEntries.filter((entry) =>
-    entry.path.startsWith("packages/product/subject/"),
-  );
   const sourceContentDigest = contentDigest(
     "heptalogos.product-source/v1",
     productEntries,
@@ -135,13 +130,6 @@ export async function computeBuildIdentities(repositoryRoot) {
       managementContractVersion: "management.v1",
     }),
   );
-  const durableCodeVersion = sha256(
-    JSON.stringify({
-      domain: "heptalogos.durable-code/v1",
-      schemaVersion: 1,
-      sourceContentDigest,
-    }),
-  );
   const bootstrapContentDigest = contentDigest(
     "heptalogos.bootstrap-runtime-source/v1",
     bootstrapEntries,
@@ -154,22 +142,9 @@ export async function computeBuildIdentities(repositoryRoot) {
       sourceContentDigest: bootstrapContentDigest,
     }),
   );
-  const subjectPackageGeneration = sha256(
-    JSON.stringify({
-      domain: "heptalogos.subject-package-generation/v1",
-      schemaVersion: 1,
-      package: "@heptalogos/subject",
-      sourceContentDigest: contentDigest(
-        "heptalogos.subject-package-source/v1",
-        subjectEntries,
-      ),
-    }),
-  );
   return Object.freeze({
     productGeneration,
     bootstrapRuntimeGeneration,
-    subjectPackageGeneration,
-    durableCodeVersion,
   });
 }
 
@@ -180,20 +155,14 @@ export function renderBuildIdentities(identities) {
  * @module build-identities
  */
 import type {
-  PackageGenerationId,
   ProductGenerationId,
 } from "@heptalogos/foundation-contracts";
-import type { DurableCodeVersion } from "@heptalogos/foundation-contracts";
 import type { BootstrapRuntimeGenerationId } from "@heptalogos/bootstrap-state";
 
 /** Product content identity materialized by the build. */
 export const PRODUCT_GENERATION_ID = "${identities.productGeneration}" as ProductGenerationId;
 /** Bootstrap runtime content identity materialized by the build. */
 export const BOOTSTRAP_RUNTIME_GENERATION_ID = "${identities.bootstrapRuntimeGeneration}" as BootstrapRuntimeGenerationId;
-/** Subject package content identity used by the generation-pinned Reaction handler. */
-export const SUBJECT_PACKAGE_GENERATION_ID = "${identities.subjectPackageGeneration}" as PackageGenerationId;
-/** Durable execution code identity projected into DBOS applicationVersion. */
-export const DURABLE_CODE_VERSION = "${identities.durableCodeVersion}" as DurableCodeVersion;
 `;
 }
 

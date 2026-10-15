@@ -7,7 +7,7 @@ Start with:
 - [Architecture index](INDEX.md)
 - [System architecture](system-architecture.md)
 - [Subject and agency](subject.md)
-- [Planned cognition integration](cognition-integration.md)
+- [Cognition integration](cognition-integration.md)
 - [Authority and core concepts](authority-and-core-concepts.md)
 
 Exact implementation obligations live in `specs/`. Design rationale belongs in Architecture-Vault. Qualification evidence and chronology stay under `project/`.

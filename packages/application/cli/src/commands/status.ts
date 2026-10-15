@@ -18,7 +18,7 @@ export default class Status extends BaseCommand {
     const common = flags as typeof flags & CommonFlags;
     return this.execute(
       common["anchor-root"],
-      (local) => local.client.getSystemStatus(),
+      (local) => local.client.getStatus(),
       true,
     );
   }

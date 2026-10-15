@@ -55,7 +55,30 @@ export function contractUnsupportedProblem(): ProblemError {
 
 /** Maps a Management problem to its stable HTTP status. */
 export function managementHttpStatus(problemCode: string): number {
+  if (problemCode === "management.internal") return 500;
+  if (problemCode === "management.cognition_unavailable") return 503;
+  if (problemCode === "management.cognition_forbidden") return 403;
+  if (problemCode === "management.subject_not_found") return 404;
+  if (
+    problemCode === "management.cognition_instance_mismatch" ||
+    problemCode === "management.subject_active"
+  )
+    return 409;
+  if (
+    problemCode === "persistence.service.fenced" ||
+    problemCode === "persistence.service.closed" ||
+    problemCode === "persistence.service.close_failed" ||
+    problemCode === "persistence.execution_context.stale_origin" ||
+    problemCode === "persistence.transaction.failed"
+  )
+    return 503;
+  if (problemCode.startsWith("persistence.")) return 500;
   if (problemCode === "management.rate_limited") return 429;
+  if (
+    problemCode === "management.configuration_conflict" ||
+    problemCode === "configuration.activation_conflict"
+  )
+    return 409;
   if (problemCode === "management.invalid_credentials") return 401;
   if (
     problemCode === "management.session_invalid" ||

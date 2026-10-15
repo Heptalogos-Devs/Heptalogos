@@ -15,15 +15,10 @@
     }
   },
   "dependencies": {
-    "@heptalogos/ai-runtime": "workspace:*",
     "@heptalogos/configuration": "workspace:*",
-    "@heptalogos/evidence": "workspace:*",
-    "@heptalogos/execution-lineage": "workspace:*",
     "@heptalogos/foundation-contracts": "workspace:*",
-    "@heptalogos/network-access": "workspace:*",
     "@heptalogos/persistence": "workspace:*",
     "@heptalogos/schema-runtime": "workspace:*",
-    "@heptalogos/secret": "workspace:*",
     "@heptalogos/time-service": "workspace:*"
   },
   "devDependencies": {

@@ -6,7 +6,6 @@ test-results/
 .vite/
 .cache/
 packages/application/management-client/src/generated/
-packages/application/subject-chat-client/src/generated/
 packages/application/product-host/generated/
 packages/application/product-host/src/generated/build-identities.ts
 .pnpm-store/

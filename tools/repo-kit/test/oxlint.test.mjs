@@ -1,9 +1,10 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
-import { join, relative, resolve } from "node:path";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import { runProcess } from "../src/process.mjs";
 
@@ -12,16 +13,30 @@ const root = resolve(fileURLToPath(new URL("../../../", import.meta.url)));
 async function runOxlint(files, config = ".oxlintrc.json") {
   return runProcess(
     "pnpm",
-    [
-      "exec",
-      "oxlint",
-      "--type-aware",
-      "--config",
-      config,
-      ...files.map((file) => relative(root, file)),
-    ],
+    ["exec", "oxlint", "--type-aware", "--config", config, ...files],
     { cwd: root },
   );
+}
+
+async function fixture(relativeDirectory) {
+  const temporaryRoot = await mkdtemp(join(tmpdir(), "heptalogos-lint-fixture-"));
+  const directory = join(temporaryRoot, relativeDirectory);
+  await mkdir(directory, { recursive: true });
+  for (const config of [".oxlintrc.json", ".oxlintrc-schema-owner.json"])
+    await cp(join(root, config), join(temporaryRoot, config));
+  await writeFile(
+    join(temporaryRoot, "tsconfig.json"),
+    JSON.stringify({
+      compilerOptions: {
+        target: "ES2025",
+        module: "NodeNext",
+        moduleResolution: "NodeNext",
+        strict: true,
+      },
+      include: ["**/*.ts"],
+    }),
+  );
+  return { temporaryRoot, directory };
 }
 
 function outputOf(result) {
@@ -30,8 +45,8 @@ function outputOf(result) {
 
 describe("Oxlint ownership and type-aware rules", () => {
   it("rejects forbidden schema imports and promise hazards in consumers", async () => {
-    const directory = await mkdtemp(
-      join(root, "packages", "bootstrap", "bootstrap-state", "src", "oxlint-probe-"),
+    const { temporaryRoot, directory } = await fixture(
+      "packages/bootstrap/bootstrap-state/src",
     );
     try {
       const ajv = join(directory, "forbidden-ajv.ts");
@@ -53,7 +68,7 @@ describe("Oxlint ownership and type-aware rules", () => {
 
       const results = await Promise.all(
         [ajv, typebox, floating, misused].map((file) =>
-          runOxlint([file], ".oxlintrc-schema-owner.json"),
+          runOxlint([file], join(temporaryRoot, ".oxlintrc-schema-owner.json")),
         ),
       );
       expect(results.every((result) => result.exitCode !== 0)).toBe(true);
@@ -62,54 +77,44 @@ describe("Oxlint ownership and type-aware rules", () => {
       expect(outputOf(results[2])).toMatch(/no-floating-promises/u);
       expect(outputOf(results[3])).toMatch(/no-misused-promises/u);
     } finally {
-      await rm(directory, { recursive: true, force: true });
+      await rm(temporaryRoot, { recursive: true, force: true });
     }
   });
 
   it("keeps the Nx boundary lane rejecting an invalid package dependency", async () => {
-    const directory = await mkdtemp(
-      join(
-        root,
-        "packages",
-        "foundation",
-        "foundation-contracts",
-        "src",
-        "eslint-probe-",
-      ),
+    const result = await runProcess(
+      "pnpm",
+      [
+        "exec",
+        "eslint",
+        "--no-cache",
+        "--stdin",
+        "--stdin-filename",
+        "packages/foundation/foundation-contracts/src/boundary-probe.ts",
+      ],
+      {
+        cwd: root,
+        input:
+          'import { MicroSystemSupervisor } from "@heptalogos/runtime-kernel";\nexport const value = MicroSystemSupervisor;\n',
+      },
     );
-    const file = join(directory, "invalid-boundary.ts");
-    try {
-      await writeFile(
-        file,
-        'import { MicroSystemSupervisor } from "@heptalogos/runtime-kernel";\nexport const value = MicroSystemSupervisor;\n',
-      );
-      const result = await runProcess(
-        "pnpm",
-        ["exec", "eslint", "--no-cache", relative(root, file)],
-        { cwd: root },
-      );
-      expect(result.exitCode).not.toBe(0);
-      expect(outputOf(result)).toMatch(/enforce-module-boundaries/u);
-    } finally {
-      await rm(directory, { recursive: true, force: true });
-    }
+    expect(result.exitCode).not.toBe(0);
+    expect(outputOf(result)).toMatch(/enforce-module-boundaries/u);
   }, 30_000);
 
   it("rejects raw child-process imports outside the repo-kit process owner", async () => {
-    const directory = await mkdtemp(
-      join(root, "tools", "repo-kit", "src", "oxlint-process-probe-"),
-    );
+    const { temporaryRoot, directory } = await fixture("tools/repo-kit/src");
     const file = join(directory, "invalid-process.ts");
     try {
       await writeFile(
         file,
         'import { execFileSync } from "node:child_process"; export const value = execFileSync;\n',
       );
-      const result = await runOxlint([file]);
+      const result = await runOxlint([file], join(temporaryRoot, ".oxlintrc.json"));
       expect(result.exitCode).not.toBe(0);
       expect(outputOf(result)).toMatch(/no-restricted-imports/u);
     } finally {
-      await rm(directory, { recursive: true, force: true });
+      await rm(temporaryRoot, { recursive: true, force: true });
     }
   });
 });

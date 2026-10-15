@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { ClaimFirstAdministratorData, ClaimFirstAdministratorErrors, ClaimFirstAdministratorResponses, CreateManagementSessionData, CreateManagementSessionErrors, CreateManagementSessionResponses, ExecuteSystemActionData, ExecuteSystemActionErrors, ExecuteSystemActionResponses, GetCapabilityGraphData, GetCapabilityGraphErrors, GetCapabilityGraphResponses, GetHostData, GetHostErrors, GetHostResponses, GetManagementDiscoveryData, GetManagementDiscoveryResponses, GetProductStateData, GetProductStateErrors, GetProductStateResponses, GetReadinessData, GetReadinessErrors, GetReadinessResponses, GetRuntimeGraphData, GetRuntimeGraphErrors, GetRuntimeGraphResponses, GetSystemActionCatalogData, GetSystemActionCatalogErrors, GetSystemActionCatalogResponses, GetSystemStatusData, GetSystemStatusErrors, GetSystemStatusResponses, PlanSystemActionData, PlanSystemActionErrors, PlanSystemActionResponses, RevokeCurrentManagementSessionData, RevokeCurrentManagementSessionErrors, RevokeCurrentManagementSessionResponses } from './types.gen.js';
+import type { BindProductSubjectData, BindProductSubjectErrors, BindProductSubjectResponses, CheckProductConfigurationData, CheckProductConfigurationErrors, CheckProductConfigurationResponses, ClaimFirstAdministratorData, ClaimFirstAdministratorErrors, ClaimFirstAdministratorResponses, ConfigureProductData, ConfigureProductErrors, ConfigureProductResponses, CreateManagementSessionData, CreateManagementSessionErrors, CreateManagementSessionResponses, CreateProductSubjectData, CreateProductSubjectErrors, CreateProductSubjectResponses, DescribeProductConfigurationData, DescribeProductConfigurationErrors, DescribeProductConfigurationResponses, GetBoundSubjectData, GetBoundSubjectErrors, GetBoundSubjectResponses, GetManagementDiscoveryData, GetManagementDiscoveryResponses, GetProductConfigurationData, GetProductConfigurationErrors, GetProductConfigurationResponses, GetProductStatusData, GetProductStatusErrors, GetProductStatusResponses, RevokeCurrentManagementSessionData, RevokeCurrentManagementSessionErrors, RevokeCurrentManagementSessionResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -18,16 +18,16 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
     meta?: keyof ClientMeta extends never ? Record<string, unknown> : ClientMeta;
 };
 
-/**
- * Discover the current Management contract
- */
 export const getManagementDiscovery = <ThrowOnError extends boolean = false>(options?: Options<GetManagementDiscoveryData, ThrowOnError>): RequestResult<GetManagementDiscoveryResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetManagementDiscoveryResponses, unknown, ThrowOnError>({ url: '/.well-known/heptalogos-management', ...options });
 
-/**
- * Claim the first Administrator
- */
+export const getProductStatus = <ThrowOnError extends boolean = false>(options?: Options<GetProductStatusData, ThrowOnError>): RequestResult<GetProductStatusResponses, GetProductStatusErrors, ThrowOnError> => (options?.client ?? client).get<GetProductStatusResponses, GetProductStatusErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/status',
+    ...options
+});
+
 export const claimFirstAdministrator = <ThrowOnError extends boolean = false>(options: Options<ClaimFirstAdministratorData, ThrowOnError>): RequestResult<ClaimFirstAdministratorResponses, ClaimFirstAdministratorErrors, ThrowOnError> => (options.client ?? client).post<ClaimFirstAdministratorResponses, ClaimFirstAdministratorErrors, ThrowOnError>({
-    url: '/management/v1/bootstrap/claim',
+    url: '/v1/bootstrap/claim',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -35,11 +35,8 @@ export const claimFirstAdministrator = <ThrowOnError extends boolean = false>(op
     }
 });
 
-/**
- * Create a Management session
- */
 export const createManagementSession = <ThrowOnError extends boolean = false>(options: Options<CreateManagementSessionData, ThrowOnError>): RequestResult<CreateManagementSessionResponses, CreateManagementSessionErrors, ThrowOnError> => (options.client ?? client).post<CreateManagementSessionResponses, CreateManagementSessionErrors, ThrowOnError>({
-    url: '/management/v1/session',
+    url: '/v1/session',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -47,60 +44,27 @@ export const createManagementSession = <ThrowOnError extends boolean = false>(op
     }
 });
 
-/**
- * Revoke the current Management session
- */
 export const revokeCurrentManagementSession = <ThrowOnError extends boolean = false>(options?: Options<RevokeCurrentManagementSessionData, ThrowOnError>): RequestResult<RevokeCurrentManagementSessionResponses, RevokeCurrentManagementSessionErrors, ThrowOnError> => (options?.client ?? client).delete<RevokeCurrentManagementSessionResponses, RevokeCurrentManagementSessionErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/management/v1/session/current',
+    url: '/v1/session/current',
     ...options
 });
 
-export const getSystemStatus = <ThrowOnError extends boolean = false>(options?: Options<GetSystemStatusData, ThrowOnError>): RequestResult<GetSystemStatusResponses, GetSystemStatusErrors, ThrowOnError> => (options?.client ?? client).get<GetSystemStatusResponses, GetSystemStatusErrors, ThrowOnError>({
+export const describeProductConfiguration = <ThrowOnError extends boolean = false>(options?: Options<DescribeProductConfigurationData, ThrowOnError>): RequestResult<DescribeProductConfigurationResponses, DescribeProductConfigurationErrors, ThrowOnError> => (options?.client ?? client).get<DescribeProductConfigurationResponses, DescribeProductConfigurationErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/management/v1/system/status',
+    url: '/v1/config/describe',
     ...options
 });
 
-export const getHost = <ThrowOnError extends boolean = false>(options?: Options<GetHostData, ThrowOnError>): RequestResult<GetHostResponses, GetHostErrors, ThrowOnError> => (options?.client ?? client).get<GetHostResponses, GetHostErrors, ThrowOnError>({
+export const getProductConfiguration = <ThrowOnError extends boolean = false>(options?: Options<GetProductConfigurationData, ThrowOnError>): RequestResult<GetProductConfigurationResponses, GetProductConfigurationErrors, ThrowOnError> => (options?.client ?? client).get<GetProductConfigurationResponses, GetProductConfigurationErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/management/v1/host',
+    url: '/v1/config',
     ...options
 });
 
-export const getRuntimeGraph = <ThrowOnError extends boolean = false>(options?: Options<GetRuntimeGraphData, ThrowOnError>): RequestResult<GetRuntimeGraphResponses, GetRuntimeGraphErrors, ThrowOnError> => (options?.client ?? client).get<GetRuntimeGraphResponses, GetRuntimeGraphErrors, ThrowOnError>({
+export const configureProduct = <ThrowOnError extends boolean = false>(options: Options<ConfigureProductData, ThrowOnError>): RequestResult<ConfigureProductResponses, ConfigureProductErrors, ThrowOnError> => (options.client ?? client).put<ConfigureProductResponses, ConfigureProductErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/management/v1/runtime/graph',
-    ...options
-});
-
-export const getCapabilityGraph = <ThrowOnError extends boolean = false>(options?: Options<GetCapabilityGraphData, ThrowOnError>): RequestResult<GetCapabilityGraphResponses, GetCapabilityGraphErrors, ThrowOnError> => (options?.client ?? client).get<GetCapabilityGraphResponses, GetCapabilityGraphErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/management/v1/capabilities',
-    ...options
-});
-
-export const getReadiness = <ThrowOnError extends boolean = false>(options?: Options<GetReadinessData, ThrowOnError>): RequestResult<GetReadinessResponses, GetReadinessErrors, ThrowOnError> => (options?.client ?? client).get<GetReadinessResponses, GetReadinessErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/management/v1/readiness',
-    ...options
-});
-
-/**
- * Read the current SystemAction catalog
- */
-export const getSystemActionCatalog = <ThrowOnError extends boolean = false>(options?: Options<GetSystemActionCatalogData, ThrowOnError>): RequestResult<GetSystemActionCatalogResponses, GetSystemActionCatalogErrors, ThrowOnError> => (options?.client ?? client).get<GetSystemActionCatalogResponses, GetSystemActionCatalogErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/management/v1/actions',
-    ...options
-});
-
-/**
- * Create a side-effect-free current SystemAction plan
- */
-export const planSystemAction = <ThrowOnError extends boolean = false>(options: Options<PlanSystemActionData, ThrowOnError>): RequestResult<PlanSystemActionResponses, PlanSystemActionErrors, ThrowOnError> => (options.client ?? client).post<PlanSystemActionResponses, PlanSystemActionErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/management/v1/actions/plan',
+    url: '/v1/config',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -108,12 +72,9 @@ export const planSystemAction = <ThrowOnError extends boolean = false>(options: 
     }
 });
 
-/**
- * Reauthenticate and execute one exact SystemAction plan
- */
-export const executeSystemAction = <ThrowOnError extends boolean = false>(options: Options<ExecuteSystemActionData, ThrowOnError>): RequestResult<ExecuteSystemActionResponses, ExecuteSystemActionErrors, ThrowOnError> => (options.client ?? client).post<ExecuteSystemActionResponses, ExecuteSystemActionErrors, ThrowOnError>({
+export const checkProductConfiguration = <ThrowOnError extends boolean = false>(options: Options<CheckProductConfigurationData, ThrowOnError>): RequestResult<CheckProductConfigurationResponses, CheckProductConfigurationErrors, ThrowOnError> => (options.client ?? client).post<CheckProductConfigurationResponses, CheckProductConfigurationErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/management/v1/actions/execute',
+    url: '/v1/config/check',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -121,11 +82,28 @@ export const executeSystemAction = <ThrowOnError extends boolean = false>(option
     }
 });
 
-/**
- * Read current Product prerequisite state
- */
-export const getProductState = <ThrowOnError extends boolean = false>(options?: Options<GetProductStateData, ThrowOnError>): RequestResult<GetProductStateResponses, GetProductStateErrors, ThrowOnError> => (options?.client ?? client).get<GetProductStateResponses, GetProductStateErrors, ThrowOnError>({
+export const getBoundSubject = <ThrowOnError extends boolean = false>(options?: Options<GetBoundSubjectData, ThrowOnError>): RequestResult<GetBoundSubjectResponses, GetBoundSubjectErrors, ThrowOnError> => (options?.client ?? client).get<GetBoundSubjectResponses, GetBoundSubjectErrors, ThrowOnError>({
     security: [{ scheme: 'bearer', type: 'http' }],
-    url: '/management/v1/product/state',
+    url: '/v1/subject',
     ...options
+});
+
+export const bindProductSubject = <ThrowOnError extends boolean = false>(options: Options<BindProductSubjectData, ThrowOnError>): RequestResult<BindProductSubjectResponses, BindProductSubjectErrors, ThrowOnError> => (options.client ?? client).put<BindProductSubjectResponses, BindProductSubjectErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/subject',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const createProductSubject = <ThrowOnError extends boolean = false>(options: Options<CreateProductSubjectData, ThrowOnError>): RequestResult<CreateProductSubjectResponses, CreateProductSubjectErrors, ThrowOnError> => (options.client ?? client).post<CreateProductSubjectResponses, CreateProductSubjectErrors, ThrowOnError>({
+    security: [{ scheme: 'bearer', type: 'http' }],
+    url: '/v1/subjects',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
 });
