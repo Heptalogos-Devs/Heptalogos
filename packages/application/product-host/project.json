@@ -6,7 +6,7 @@
   "sourceRoot": "packages/application/product-host/src",
   "targets": {
     "build": {
-      "dependsOn": ["generate:build-identities", "build:subject-openclaw-manifest"]
+      "dependsOn": ["generate:build-identities"]
     },
     "prune-lockfile": {
       "dependsOn": ["build"],
@@ -28,24 +28,22 @@
         "{projectRoot}/dist/patches",
         "{projectRoot}/dist/local_path_modules"
       ],
-      "options": { "buildTarget": "build" }
+      "options": {
+        "buildTarget": "build"
+      }
     },
     "copy-workspace-modules": {
       "dependsOn": ["build"],
       "cache": true,
       "executor": "@nx/js:copy-workspace-modules",
       "outputs": ["{projectRoot}/dist/workspace_modules"],
-      "options": { "buildTarget": "build" }
+      "options": {
+        "buildTarget": "build"
+      }
     },
     "prune": {
       "dependsOn": ["prune-lockfile", "copy-workspace-modules"],
       "executor": "nx:noop"
-    },
-    "build:subject-openclaw-manifest": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "node packages/application/product-host/scripts/copy-subject-openclaw-manifest.mjs"
-      }
     },
     "generate:build-identities": {
       "executor": "nx:run-commands",
@@ -66,13 +64,6 @@
         "command": "node packages/application/product-host/scripts/generate-openapi.mjs"
       }
     },
-    "generate:subject-chat-openapi": {
-      "dependsOn": ["build"],
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "node packages/application/product-host/scripts/generate-subject-chat-openapi.mjs"
-      }
-    },
     "check:openapi": {
       "dependsOn": ["build"],
       "executor": "nx:run-commands",
@@ -80,16 +71,11 @@
         "command": "node packages/application/product-host/scripts/generate-openapi.mjs --check"
       }
     },
-    "check:subject-chat-openapi": {
-      "dependsOn": ["build"],
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "node packages/application/product-host/scripts/generate-subject-chat-openapi.mjs --check"
-      }
-    },
     "lint": {
       "executor": "nx:run-commands",
-      "options": { "command": "oxlint --type-aware packages/application/product-host" }
+      "options": {
+        "command": "oxlint --type-aware packages/application/product-host"
+      }
     },
     "test": {
       "executor": "nx:run-commands",

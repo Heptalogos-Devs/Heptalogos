@@ -3,17 +3,11 @@
  * @module build-identities
  */
 import type {
-  PackageGenerationId,
   ProductGenerationId,
 } from "@heptalogos/foundation-contracts";
-import type { DurableCodeVersion } from "@heptalogos/foundation-contracts";
 import type { BootstrapRuntimeGenerationId } from "@heptalogos/bootstrap-state";
 
 /** Product content identity materialized by the build. */
-export const PRODUCT_GENERATION_ID = "20405415f699b410e47794e479da53cda65458fe1c14524dbadf5b0e00426469" as ProductGenerationId;
+export const PRODUCT_GENERATION_ID = "100a01d581c311fd6b26a078d5d8013a86d47f8d71d85505b852c864178846f7" as ProductGenerationId;
 /** Bootstrap runtime content identity materialized by the build. */
-export const BOOTSTRAP_RUNTIME_GENERATION_ID = "49b951fa4f43b1a4d5004e002f289b7c086dda39bd282d45427e1bc768f0e538" as BootstrapRuntimeGenerationId;
-/** Subject package content identity used by the generation-pinned Reaction handler. */
-export const SUBJECT_PACKAGE_GENERATION_ID = "c6fec5507fd6ee9444fb538da419096208750488435c2c7285a3ad03af1aa664" as PackageGenerationId;
-/** Durable execution code identity projected into DBOS applicationVersion. */
-export const DURABLE_CODE_VERSION = "ee057bdb8fa2302ece1cf5a778ca8a97185f7b84ec0629f6d2c93740e23b8d33" as DurableCodeVersion;
+export const BOOTSTRAP_RUNTIME_GENERATION_ID = "e095ab36eeab757c48cfcacc8b44fdf31810a838f7c5b4881c824b143bc8825e" as BootstrapRuntimeGenerationId;

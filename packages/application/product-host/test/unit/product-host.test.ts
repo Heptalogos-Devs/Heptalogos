@@ -3,7 +3,7 @@
 
 import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { join } from "node:path";
+import { join, resolve } from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import {
   createBootId,
@@ -31,6 +31,7 @@ afterEach(async () => {
 describe("Product Host focused contracts", () => {
   it("exposes only the safe Product Host root operations", () => {
     expect(Object.keys(productHostPublic).sort()).toEqual([
+      "initializeProductInstallation",
       "startProductHost",
       "startProductHostFromArgv",
     ]);
@@ -40,9 +41,9 @@ describe("Product Host focused contracts", () => {
     expect(
       parseProductHostInputs([
         "--anchor-root",
-        "C:\\install",
+        resolve("installation"),
         "--postgres-bin",
-        "C:\\postgres\\bin",
+        resolve("postgres/bin"),
         "--initial-postgres-port",
         "54321",
       ]),

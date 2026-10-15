@@ -9,18 +9,23 @@ engineStrict: true
 minimumReleaseAge: 0
 
 overrides:
-  "@types/node": 24.13.3
+  "@types/node": 24.19.1
+  js-yaml@>=4.0.0 <4.3.2: 4.3.2
+  smol-toml@<1.9.0: 1.9.0
+  brace-expansion@>=4.0.0 <5.0.12: 5.0.12
+  axios@>=1.0.0 <1.20.0: 1.20.0
+  source-map-js@>=1.0.0 <1.2.2: 1.2.2
 
 catalog:
   "@fastify/rate-limit": 11.2.0
   "@fastify/swagger": 9.8.1
-  "@nx/js": 23.2.0
+  "@nx/js": 23.2.1
   "@hey-api/openapi-ts": 0.99.0
   "@inquirer/password": 5.2.0
   "@napi-rs/keyring": 2.0.0
   "@oclif/core": 5.0.0
   "@types/pg": 8.23.1
-  "@types/node": 24.13.3
+  "@types/node": 24.19.1
   "@typescript/native": "npm:typescript@7.0.2"
   ajv: 8.20.0
   canonicalize: 4.0.0
@@ -28,11 +33,11 @@ catalog:
   eslint-plugin-jsdoc: 64.2.1
   execa: 10.0.1
   fast-check: 4.9.0
-  fastify: 5.12.1
+  fastify: 5.12.5
   jscpd: 5.0.16
   kysely: 0.29.5
   mdast-util-from-markdown: 2.0.3
-  nx: 23.2.0
+  nx: 23.2.1
   oxlint: 1.80.0
   oxlint-tsgolint: 7.0.2001
   pg: 8.23.0
@@ -52,25 +57,17 @@ catalog:
   pidusage: 4.0.1
   "@types/pidusage": 2.0.5
   "@opentelemetry/api": 1.9.1
-  "@openclaw/gateway-client": 2026.9.1
-  "@openclaw/gateway-protocol": 2026.9.1
-  "@types/ws": 8.18.1
   cordis: 4.0.0-rc.8
   "@dagrejs/graphlib": 4.0.5
-  "@nx/eslint-plugin": 23.2.0
+  "@nx/eslint-plugin": 23.2.1
   "@dbos-inc/dbos-sdk": 4.27.6
   knip: 6.32.3
   ai: 7.0.91
   "@ai-sdk/openai-compatible": 3.0.43
   "@ai-sdk/open-responses": 2.0.38
   "@ai-sdk/provider-utils": 5.0.36
-  openclaw: 2026.9.1
+  "@nous-wave/client": file:../../../../Nous-Wave/data/releases/client/nous-wave-client-0.1.0.tgz
 
 allowBuilds:
   esbuild: true
   nx: true
-  openclaw: true
-  "@google/genai": false
-  koffi: false
-  protobufjs: false
-  tree-sitter-bash: false

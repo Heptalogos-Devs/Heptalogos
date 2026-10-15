@@ -28,22 +28,8 @@
       "project": ["src/**/*.ts"]
     },
     "packages/application/product-host": {
-      "entry": [
-        "src/index.ts",
-        "src/bin.ts",
-        "src/subject-openclaw-plugin.ts",
-        "scripts/**/*.mjs"
-      ],
-      "project": ["src/**/*.ts", "scripts/**/*.mjs"],
-      "ignoreDependencies": ["@types/ws"],
-      "ignoreIssues": {
-        "src/subject-chat-http.ts": ["exports"]
-      }
-    },
-    "packages/application/subject-chat-client": {
-      "entry": ["src/index.ts", "scripts/generate.mjs"],
-      "project": ["src/**/*.ts", "scripts/**/*.mjs"],
-      "ignore": ["src/generated/**"]
+      "entry": ["src/index.ts", "src/bin.ts", "scripts/**/*.mjs"],
+      "project": ["src/**/*.ts", "scripts/**/*.mjs"]
     },
     "packages/product/messaging": {
       "entry": ["src/index.ts"],
@@ -55,6 +41,10 @@
     },
     "packages/system/management": {
       "entry": ["src/index.ts"],
+      "project": ["src/**/*.ts", "test/**/*.ts"]
+    },
+    "packages/foundation/schema-runtime": {
+      "entry": ["src/index.ts", "src/typebox.ts"],
       "project": ["src/**/*.ts", "test/**/*.ts"]
     },
     "tools/*": {

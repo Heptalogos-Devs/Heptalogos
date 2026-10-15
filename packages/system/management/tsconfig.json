@@ -15,31 +15,16 @@
       "path": "../../foundation/time-service"
     },
     {
-      "path": "../secret"
-    },
-    {
       "path": "../../foundation/schema-runtime"
     },
     {
       "path": "../../data/persistence"
     },
     {
-      "path": "../network-access"
-    },
-    {
       "path": "../../foundation/foundation-contracts"
     },
     {
-      "path": "../../execution/execution-lineage"
-    },
-    {
-      "path": "../../execution/evidence"
-    },
-    {
       "path": "../configuration"
-    },
-    {
-      "path": "../ai-runtime"
     }
   ]
 }

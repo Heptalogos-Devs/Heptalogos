@@ -36,7 +36,10 @@
     },
     "prune": {
       "dependsOn": ["prune-lockfile", "copy-workspace-modules"],
-      "executor": "nx:noop"
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node scripts/package/normalize-cli-artifact.mjs"
+      }
     },
     "lint": {
       "executor": "nx:run-commands",

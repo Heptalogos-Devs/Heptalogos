@@ -5,6 +5,7 @@ The scripts tree is the repository control plane:
 - `verify/` — permanent, independently runnable leaf gates.
 - Aggregate repository orchestration belongs to Nx project targets.
 - `maintenance/` — safe repository mutation and cleanup commands.
+- `package/` — production closure assembly, Linux installation, and Windows portable packaging; usage starts at the [Product Host](../packages/application/product-host/README.md).
 - `tools/repo-kit/` — reusable implementation, tests, and process mechanics.
 
 Phase-specific acceptance scripts are not archives. Their commands and results

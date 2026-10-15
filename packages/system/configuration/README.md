@@ -22,10 +22,10 @@ runtime owners.
 - Provider SDK objects, runtime reconciliation, or Management authorization.
 - A second persistence or transaction boundary.
 
-The current Product composition registers the NetworkAccess gateway transport,
-Subject cognition runtime and Expression budgets, and Product Host HTTP
-admission definitions. The service has no gateway-specific validation or
-activation lookup.
+The current Product Host registers its product settings definition. Independent
+packages may supply their own definitions; the service contains no model or
+gateway-specific validation. Concurrent initial activation uses the same CAS
+conflict semantics as replacement of an existing revision.
 
 ## Verification
 

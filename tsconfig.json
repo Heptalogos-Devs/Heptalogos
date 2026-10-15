@@ -68,9 +68,6 @@
       "path": "./packages/application/management-client"
     },
     {
-      "path": "./packages/application/subject-chat-client"
-    },
-    {
       "path": "./packages/application/product-host"
     },
     {

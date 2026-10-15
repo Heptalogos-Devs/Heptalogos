@@ -88,8 +88,17 @@ export abstract class BaseCommand extends Command {
     authenticated = false,
   ): Promise<T | undefined> {
     let local: LocalManagementClient | undefined;
+    const controller = new AbortController();
+    const interrupted = () => {
+      controller.abort();
+      process.stdin.destroy();
+    };
+    process.once("SIGINT", interrupted);
     try {
-      local = await openLocalManagementClient({ anchorRoot });
+      local = await openLocalManagementClient({
+        anchorRoot,
+        signal: controller.signal,
+      });
       if (authenticated) {
         const sessionToken = await local.readSessionToken();
         if (sessionToken === undefined) {
@@ -103,11 +112,18 @@ export abstract class BaseCommand extends Command {
         local = await openLocalManagementClient({
           anchorRoot,
           sessionToken,
+          signal: controller.signal,
         });
       }
       const value = await operation(local);
       return this.present(value);
     } catch (error) {
+      if (controller.signal.aborted)
+        throw new CliFailure(
+          "management.cancelled",
+          "The foreground request was cancelled; inspect its operation id before retrying mutations",
+          130,
+        );
       if (
         authenticated &&
         local !== undefined &&
@@ -117,6 +133,8 @@ export abstract class BaseCommand extends Command {
         await local.deleteSessionToken().catch(() => undefined);
       }
       throw toCliFailure(error);
+    } finally {
+      process.removeListener("SIGINT", interrupted);
     }
   }
 

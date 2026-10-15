@@ -1,45 +1,32 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import { readFile } from "node:fs/promises";
 import { Client } from "pg";
 import { afterEach, describe, expect, it } from "vitest";
-import { createUuidV7Id } from "@heptalogos/foundation-contracts";
 import { createOsCredentialStore } from "@heptalogos/os-credential";
 import {
   createManagementClient,
   ManagementClientError,
-  type SystemActionRequestInput,
 } from "../../../packages/application/management-client/dist/index.js";
 import { openLocalManagementClient } from "../../../packages/application/management-client/dist/node.js";
 import {
   makeFixture,
   readRunJson,
-  runCli,
   runHost,
   type ProductHostFixture,
   type RunningHost,
 } from "../support/fixture.js";
-import { createSubjectGatewayFixture } from "../support/subject-gateway-fixture.js";
-import {
-  cleanupIntegration,
-  holdSubjectAuthorityLock,
-  holdWorkItemLock,
-  readSubjectFactSnapshot,
-  readSubjectRuntimeDescriptor,
-} from "../support/test-helpers.js";
+import { cleanupIntegration } from "../support/test-helpers.js";
 
 const postgresBin = process.env.HEPTALOGOS_TEST_PG_BIN;
 const suite = postgresBin === undefined ? describe.skip : describe;
 let fixture: ProductHostFixture | undefined;
 let running: RunningHost | undefined;
-let subjectGateway: Awaited<ReturnType<typeof createSubjectGatewayFixture>> | undefined;
 
 afterEach(async () => {
-  await cleanupIntegration({ fixture, running, subjectGateway });
+  await cleanupIntegration({ fixture, running });
   fixture = undefined;
   running = undefined;
-  subjectGateway = undefined;
 });
 
 suite("built Product Host management runtime", () => {
@@ -99,7 +86,7 @@ suite("built Product Host management runtime", () => {
     });
     const discovery = await local.client.getDiscovery();
     expect(discovery.installationId).toBe(fixture.installationId);
-    expect(discovery.compatibility.coreContractVersion).toBe("management.v1");
+    expect(discovery.contractVersion).toBe("management.v1");
     expect(local.endpoint.origin).toBe(running.ready.origin);
   });
 
@@ -148,15 +135,84 @@ suite("built Product Host management runtime", () => {
     }
     assertProblem(rateLimited, "management.rate_limited");
 
-    const mismatch = await fetch(running.ready.origin + "/management/v1/readiness", {
-      headers: { "x-heptalogos-contract-version": "management.v0" },
+    const unauthorized = await fetch(running.ready.origin + "/v1/config");
+    expect(unauthorized.status).toBe(401);
+    await expect(unauthorized.json()).resolves.toMatchObject({
+      problemCode: "management.session_invalid",
     });
-    expect(mismatch.status).toBe(426);
-    await expect(mismatch.json()).resolves.toMatchObject({
-      schemaVersion: 1,
-      problemCode: "management.contract_unsupported",
-      category: "conflict",
-      retryClass: "manual",
+  });
+  it("returns one CAS conflict when two requests activate the first configuration", async () => {
+    fixture = await makeFixture(postgresBin!);
+    running = await runHost(fixture);
+    const unauthenticated = createManagementClient({ origin: running.ready.origin });
+    const material = (await readRunJson(fixture, "management-first-claim.json")) as {
+      claimId: string;
+      claimSecret: string;
+    };
+    const password = "configuration-concurrency-test-password";
+    await unauthenticated.claimFirstAdministrator({ ...material, password });
+    const login = await unauthenticated.login({ password });
+    const client = createManagementClient({
+      origin: running.ready.origin,
+      sessionToken: login.sessionToken,
     });
+    const database = new Client({
+      host: "127.0.0.1",
+      port: fixture.postgresPort,
+      database: "heptalogos",
+      user: "heptalogos_runtime",
+      password: await fixture.credentialStore.withCredential(
+        {
+          service: "Heptalogos/" + fixture.installationId,
+          account: "bootstrap/private-postgres-runtime-role",
+        },
+        async (bytes) => new TextDecoder().decode(bytes),
+      ),
+    });
+    await database.connect();
+    const settings = {
+      nous: { runRoot: fixture.runRoot, expectedInstanceId: null },
+      subject: { id: null, enabled: false },
+      subjectGateway: { origin: "http://127.0.0.1:19471" },
+      maintenanceGateway: { origin: "http://127.0.0.1:19472" },
+    };
+    let requests: Promise<PromiseSettledResult<unknown>[]> | undefined;
+    try {
+      // A table lock holds both INSERTs after their empty-row reads, reproducing the real race.
+      await database.query("BEGIN");
+      await database.query(
+        'LOCK TABLE "heptalogos"."configuration_activation" IN SHARE MODE',
+      );
+      requests = Promise.allSettled([
+        client.configure({ settings, expectedRevision: null }),
+        client.configure({ settings, expectedRevision: null }),
+      ]);
+      await expect
+        .poll(
+          async () => {
+            const result = await database.query<{ waiting: number }>(
+              "SELECT count(*)::integer AS waiting FROM pg_locks WHERE relation = 'heptalogos.configuration_activation'::regclass AND mode = 'RowExclusiveLock' AND NOT granted",
+            );
+            return result.rows[0]?.waiting;
+          },
+          { timeout: 5_000 },
+        )
+        .toBe(2);
+      await database.query("COMMIT");
+      const results = await requests;
+      expect(results.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+      const rejected = results.find((result) => result.status === "rejected");
+      expect(rejected).toMatchObject({
+        status: "rejected",
+        reason: {
+          problem: { problemCode: "configuration.activation_conflict", status: 409 },
+        },
+      });
+      expect((await client.getConfiguration()).settings).toEqual(settings);
+    } finally {
+      await database.query("ROLLBACK").catch(() => undefined);
+      await requests;
+      await database.end();
+    }
   });
 });

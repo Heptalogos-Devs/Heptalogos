@@ -63,7 +63,6 @@ export default [
       "**/generated/**",
       "**/vendor/**",
       "packages/application/management-client/src/generated/**",
-      "packages/application/subject-chat-client/src/generated/**",
       "tests/toolchain/ts6-api-lane.ts",
     ],
   },

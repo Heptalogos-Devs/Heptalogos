@@ -66,7 +66,7 @@ Subject 可以观察、等待、延迟、审议后沉默、受策略抑制或无
 
 ### E5. Reconciliation 驱动长期运行
 
-Runtime 根据 Desired State、Actual State、依赖、Capabilities、Health 和 Operating Mode 持续协调运行图。
+产品根据 Desired State、Actual State、依赖、可用能力、健康和运行模式持续决定业务准入及处理机会。进程监督使用 OS 服务管理器，模型/工具循环和通用渠道持久机制使用 OpenClaw，不重复建立通用运行图。
 
 ### E6. Failure Isolation
 
@@ -82,7 +82,7 @@ Runtime 根据 Desired State、Actual State、依赖、Capabilities、Health 和
 
 ### E9. Cognition 通过合同接入
 
-Foundation 提供认知查询、Context contribution、proposal/receipt、availability、configuration、Evidence 和 lifecycle 的接入能力。Memory、Self、Social Cognition、Motivation 等内部数据模型由 Nous Wave 维护。Heptalogos 自己维护 Pursuit、Commitment 和行为 Authority。
+产品通过 Nous 官方 SDK 和同一独立 OpenClaw 集成获得认知查询、Context contribution、proposal/receipt、availability、configuration、Evidence 和 lifecycle。Memory、Self、Social Cognition、Motivation 等内部数据模型由 Nous Wave 维护。Heptalogos 自己维护 Pursuit、Commitment 和行为 Authority。
 
 ### E10. Presentation 是投影
 
@@ -106,7 +106,7 @@ CLI、HTTP 和外部 GUI 消费 Management/Subject contracts。Presentation 技�
 
 ### E15. 存储治理与存储引擎分离
 
-Foundation 统一 owner identity、workspace、backup/restore、purge/retention、portability、resource accounting 和 Lineage。领域可以选择符合自身需要的数据库、文件和索引。
+产品组合各 owner 的 identity、workspace、backup/restore、purge/retention、portability、resource accounting 和 Lineage，不要求通用 Foundation 运行框架。领域可以选择符合自身需要的数据库、文件和索引。
 
 ### E16. 配置语义与配置存储分离
 

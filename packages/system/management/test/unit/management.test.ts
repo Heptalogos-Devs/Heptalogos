@@ -2,34 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { describe, expect, it } from "vitest";
-import { lineageContextRefSchema as canonicalLineageContextRefSchema } from "@heptalogos/execution-lineage";
-import {
-  createInstallationId,
-  createInstanceId,
-  createBootId,
-  createContinuityEpochId,
-  createUuidV7Id,
-  type Instant,
-} from "@heptalogos/foundation-contracts";
-import { compileSchema } from "@heptalogos/schema-runtime";
-import {
-  lineageContextRefSchema,
-  currentSystemActionCatalog,
-  systemActionDefinitionSchema,
-  systemActionExecuteResultSchema,
-  systemChangePlanSchema,
-  type SystemActionDefinition,
-  type SystemActionExecuteResult,
-  type SystemChangePlan,
-} from "../../src/index.js";
-import * as managementPublic from "../../src/index.js";
+import type { Instant } from "@heptalogos/foundation-contracts";
 import type { FirstAdministratorClaim, ServerSession } from "../../src/contracts.js";
-import { digestManagementSecret } from "../../src/password.js";
 import type { ManagementRepository } from "../../src/repository.js";
-import { createManagementServiceFromRepository } from "../../src/service.js";
-import type { ManagementProductOwners } from "../../src/service.js";
-import { systemActionCatalog } from "../../src/system-actions/catalog.js";
-
+import { digestManagementSecret } from "../../src/password.js";
+import { createAuthenticationWithRepository } from "../../src/authentication.js";
 const NOW = "2026-09-03T00:00:00.000Z" as Instant;
 
 function fakePersistence() {
@@ -104,99 +81,22 @@ function repositoryFixture(): ManagementRepository {
 
 function serviceFixture(
   repository: ManagementRepository,
-  state: {
-    readonly now?: () => Instant;
-    readonly runtimeKernelActive?: () => boolean;
-    readonly managementServiceRunning?: () => boolean;
-  } = {},
+  state: { now?: () => Instant } = {},
 ) {
-  const installationId = createInstallationId();
-  const instanceId = createInstanceId();
-  const bootId = createBootId();
-  const continuityEpochId = createContinuityEpochId();
-  const productOwners = {
-    configuration: {},
-    secret: {},
-    networkAccess: {},
-    aiRuntime: {},
-    subject: {
-      getStatus: async () => {
-        throw new Error("Subject owner is not used by this authentication fixture");
-      },
-      start: async () => {
-        throw new Error("Subject owner is not used by this authentication fixture");
-      },
-      stop: async () => {
-        throw new Error("Subject owner is not used by this authentication fixture");
-      },
-      reconcileRuntime: async () => undefined,
-    },
-  } as unknown as ManagementProductOwners;
-  return createManagementServiceFromRepository(
+  return createAuthenticationWithRepository(
     {
-      installationId,
-      instanceId,
-      bootId,
-      continuityEpochId,
-      productGeneration: "a".repeat(64) as never,
-      hostState: () => "ACTIVE",
-      managementHttpState: () => "LISTENING",
-      endpointDescriptorPublished: () => true,
-      runtimeKernelActive: state.runtimeKernelActive ?? (() => true),
-      managementServiceRunning: state.managementServiceRunning ?? (() => true),
-      runtimeSnapshot: () => ({
-        operatingMode: "NORMAL",
-        desiredRevision: 1,
-        systems: [],
-        selectedServiceBindings: [],
-        selectedCapabilityBindings: [],
-      }),
       persistence: fakePersistence(),
       time: {
         now: state.now ?? (() => NOW),
         monotonicNow: () => 0n as never,
         elapsedSince: () => 0n as never,
       },
-      productOwners,
-      execution: {} as never,
-      runReadActivity: async (_kind, operation) => operation(),
       runMutationActivity: async (_kind, operation) => operation(),
     },
     repository,
   );
 }
-
-describe("Management service", () => {
-  it("keeps repository and password mechanics outside the package root", () => {
-    expect(managementPublic).not.toHaveProperty("createManagementRepository");
-    expect(managementPublic).not.toHaveProperty("digestManagementSecret");
-    expect(managementPublic).not.toHaveProperty("hashAdministratorPassword");
-    expect(managementPublic).toHaveProperty("systemActionDefinitionSchema");
-  });
-
-  it("reuses the canonical LineageContextRef type schema and validation bounds", () => {
-    expect(lineageContextRefSchema).toBe(canonicalLineageContextRefSchema);
-    const validate = compileSchema(lineageContextRefSchema);
-    const base = {
-      schemaVersion: 1,
-      sourceActivityId: createUuidV7Id("ActivityId"),
-      sourceInstanceId: createInstanceId(),
-      sourceContinuityEpochId: createContinuityEpochId(),
-    };
-    expect(
-      validate.validate({
-        ...base,
-        telemetry: { traceId: "trace", spanId: "span", traceFlags: 255 },
-      }).ok,
-    ).toBe(true);
-    expect(
-      validate.validate({
-        ...base,
-        telemetry: { traceId: "trace", spanId: "span", traceFlags: 256 },
-      }).ok,
-    ).toBe(false);
-  });
-
+describe("Management authentication", () => {
   it("supports claim, replay rejection, Argon2 login, session auth, and logout", async () => {
     const service = serviceFixture(repositoryFixture());
     const claim = await service.ensureFirstAdministratorClaim();
@@ -249,125 +149,5 @@ describe("Management service", () => {
     ).rejects.toMatchObject({
       problem: { problemCode: "management.first_claim_invalid" },
     });
-  });
-
-  it("wraps reads and derives independent Runtime and Management readiness", async () => {
-    let runtimeKernelActive = false;
-    let managementServiceRunning = false;
-    const service = serviceFixture(repositoryFixture(), {
-      runtimeKernelActive: () => runtimeKernelActive,
-      managementServiceRunning: () => managementServiceRunning,
-    });
-    await service.ensureFirstAdministratorClaim();
-    expect((await service.getReadiness()).data).toMatchObject({
-      runtimeKernelActive: false,
-      managementServiceRunning: false,
-      state: "NOT_READY",
-    });
-    runtimeKernelActive = true;
-    expect((await service.getReadiness()).data).toMatchObject({
-      runtimeKernelActive: true,
-      managementServiceRunning: false,
-      state: "NOT_READY",
-    });
-    managementServiceRunning = true;
-    const readiness = await service.getReadiness();
-    expect(readiness).toMatchObject({
-      schemaVersion: 1,
-      contractVersion: "management.v1",
-      resource: { resourceKind: "management-readiness" },
-      observedAt: NOW,
-      productGeneration: "a".repeat(64),
-      data: {
-        runtimeKernelActive: true,
-        managementServiceRunning: true,
-        state: "READY",
-      },
-    });
-    expect(readiness).not.toHaveProperty("lineageContextRef");
-    expect((await service.getSystemStatus()).data.readiness.state).toBe("READY");
-    expect(service.getHost().resource.resourceKind).toBe("host");
-    expect(service.getRuntimeGraph().resource.resourceKind).toBe("runtime-graph");
-    expect(service.getCapabilityGraph().resource.resourceKind).toBe("capability-graph");
-  });
-
-  it("publishes the frozen SystemAction types and the exact finite runtime catalog", () => {
-    expect(
-      currentSystemActionCatalog.map(({ actionId, riskClass, applyMode }) => [
-        actionId,
-        riskClass,
-        applyMode,
-      ]),
-    ).toEqual([
-      ["configuration.revision.create", "LOW", "IMMEDIATE"],
-      ["configuration.activate", "MATERIAL", "RECONCILE"],
-      ["secret.set", "MATERIAL", "RECONCILE"],
-      ["secret.replace", "MATERIAL", "RECONCILE"],
-      ["secret.revoke", "MATERIAL", "RECONCILE"],
-      ["gateway-profile.set", "MATERIAL", "RECONCILE"],
-      ["model-profile.set", "MATERIAL", "RECONCILE"],
-      ["model-binding.set", "MATERIAL", "RECONCILE"],
-      ["subject.start", "MATERIAL", "RECONCILE"],
-      ["subject.stop", "MATERIAL", "RECONCILE"],
-    ]);
-    const action: SystemActionDefinition = {
-      schemaVersion: 1,
-      actionId: "configuration.activate" as SystemActionDefinition["actionId"],
-      actionVersion: 1,
-      inputSchema: { schemaVersion: 1, schemaId: "configuration.activate.input" },
-      outputSchema: { schemaVersion: 1, schemaId: "configuration.activate.output" },
-      targetKind: "configuration-revision",
-      riskClass: "MATERIAL",
-      applyMode: "RECONCILE",
-    };
-    const plan: SystemChangePlan = {
-      schemaVersion: 1,
-      planId: createUuidV7Id("SystemChangePlanId"),
-      actionId: action.actionId,
-      actionVersion: 1,
-      normalizedInputDigest: "a".repeat(64) as SystemChangePlan["planDigest"],
-      targetPreconditions: [],
-      affectedSemanticOwners: [
-        "system.configuration" as SystemChangePlan["affectedSemanticOwners"][number],
-      ],
-      configurationReadinessSubjectImpact: null,
-      restartReconcileImpact: { reconcile: true },
-      riskClass: "MATERIAL",
-      planDigest: "b".repeat(64) as SystemChangePlan["planDigest"],
-      createdAt: NOW,
-      lineageContextRef: {
-        schemaVersion: 1,
-        sourceActivityId: createUuidV7Id("ActivityId"),
-        sourceInstanceId: createInstanceId(),
-        sourceContinuityEpochId: createContinuityEpochId(),
-      },
-    };
-    const result: SystemActionExecuteResult<null> = {
-      schemaVersion: 1,
-      actionId: action.actionId,
-      planDigest: plan.planDigest,
-      result: null,
-      postconditionsVerified: true,
-      evidenceRefs: [],
-    };
-    expect(
-      compileSchema<SystemActionDefinition>(systemActionDefinitionSchema).validate(
-        action,
-      ).ok,
-    ).toBe(true);
-    expect(
-      compileSchema<SystemChangePlan>(systemChangePlanSchema).validate(plan).ok,
-    ).toBe(true);
-    expect(
-      compileSchema<SystemActionExecuteResult<null>>(
-        systemActionExecuteResultSchema,
-      ).validate(result).ok,
-    ).toBe(true);
-    const staticIds = currentSystemActionCatalog.map((entry) => entry.actionId).sort();
-    const runtimeIds = systemActionCatalog.handlers
-      .flatMap((handler) => handler.actionIds)
-      .sort();
-    expect(runtimeIds).toEqual(staticIds);
-    expect(new Set(runtimeIds).size).toBe(runtimeIds.length);
   });
 });

@@ -30,8 +30,15 @@ export async function readProtectedPassword(
 /** Reads one protected JSON action body from stdin without exposing argv input. */
 export async function readProtectedJsonFromStdin(): Promise<unknown> {
   const chunks: Buffer[] = [];
+  let bytes = 0;
   for await (const chunk of process.stdin) {
-    chunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
+    const buffer = typeof chunk === "string" ? Buffer.from(chunk) : (chunk as Buffer);
+    bytes += buffer.length;
+    if (bytes > 65_536) {
+      chunks.forEach((item) => item.fill(0));
+      throw new Error("Configuration JSON exceeds 65536 bytes");
+    }
+    chunks.push(buffer);
   }
   const text = Buffer.concat(chunks).toString("utf8").trim();
   if (text.length === 0) throw new Error("Protected JSON input is empty");

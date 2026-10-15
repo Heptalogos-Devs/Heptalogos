@@ -1,92 +1,32 @@
-# @heptalogos/product-host
+# Heptalogos 无图形管理宿主
 
-## Purpose
+Product Host 直接组合安装与 PostgreSQL 生命周期、持久化、配置、管理员鉴权及管理 HTTP。它不启动模型、Nous、QQ 或通用运行图；这些依赖不可用时，管理仍能使用。正式接口见 [管理合同](../../../specs/management/system-authority.md)，操作入口见 [CLI](../cli/README.md)。
 
-product-host is the first real headless Product Host executable. It composes
-the existing Bootstrap, private PostgreSQL, Host Ownership, Persistence,
-RuntimeKernel, Management, Messaging, and Subject services, then exposes the
-canonical Management and Subject Chat contracts over one loopback HTTP
-listener.
+## 职责与边界
 
-## Owns
+宿主保存本产品配置和 Subject 绑定，通过可独立安装的 Nous 官方 Client 读取实际认知服务、查询或创建 Subject。认知、Seed、Memory、Self 均由 Nous 保存。创建 Subject 不覆盖已有绑定，也不调用模型形成默认人格。
 
-- Build-time ProductGeneration and BootstrapRuntimeGeneration materialization;
-  runtime imports the checked identities without repository scanning.
-- Consumption of Bootstrap's `RuntimeLocations` contract for configuration,
-  durable state, cache, and ephemeral run roots; Product runtime code does not
-  infer installed resources from the repository or invocation cwd.
-- The single Bootstrap-to-Host composition and terminal shutdown order.
-- Management HTTP admission, discovery, claim/session routes, OpenAPI
-  artifact, endpoint descriptor, and live first-claim publication/rotation.
-- Installation-scoped `management.http.admission.v1` materialization and its
-  bounded body-size and claim/login rate-limit consumer in the Fastify app.
-- Product composition of the persistent Subject and Messaging owners with the
-  existing DBOS, WorkQueue, Signal, AIRuntime, and lifecycle boundaries.
-- Product-supervised Subject OpenClaw runtime process, isolated profile/state/
-  workspace/configuration roots, public Gateway protocol/client lifecycle, and
-  the bounded proposal-tool projection. Its projection, Gateway/Execa process
-  adapter, and lifecycle facade are separate internal owners. OpenClaw remains
-  replaceable mechanics; Subject and Review retain canonical authority.
-- Subject Chat HTTP admission/read routes and their generated client artifact.
-- A safe public handle limited to Product identity, loopback origin, abort
-  signal, and terminal close.
+Fastify 路由消费管理 owner 的 schema，生成 `generated/management.openapi.json`，再生成 ManagementClient。CLI 不读取产品数据库或复制业务规则。管理员密码使用既有 Argon2id，opaque session 仅保存摘要；本机 CLI 将会话秘密放进 OS keyring。
 
-## Does not own
+`initializeProductInstallation` 是安装器、`heptalogos-host init` 与 Windows portable launcher 共用的初始化入口。初始化有互斥及原子发布，既有 identity 和显式 lifecycle roots 不被重写。Host 使用当前所有权和短事务；关闭时停止接纳、等待有限在途工作并关闭自有 PostgreSQL。
 
-- Bootstrap, PostgreSQL, Host fence, Persistence, or Runtime semantics.
-- Bootstrap, PostgreSQL, Host fence, Persistence, Runtime, Subject, Messaging,
-  gateway/model, and DBOS/WorkQueue semantic meaning.
-- GUI/Presentation, the independent Machine Operations OpenClaw runtime, and
-  future Product behavior.
+## Linux 独立安装
 
-## Verification
+构建需要 Node 24.21.0、pnpm 11.24.0，以及 Nous 发布的 Client tarball。当前开发依赖指向同级 `Nous-Wave/data/releases/client/nous-wave-client-0.1.0.tgz`；它是正式构建输入，不能改成对 Nous 源文件的 import。安装产物会内置该 tarball 及生产依赖，不依赖源仓目录。
 
-Check build identities and the ProductHost-owned OpenAPI artifact, then qualify
-the built `heptalogos-host` process with the Product Host scenarios. The process
-must run from a repository-external working directory, but that evidence is not
-source-less release-form qualification.
-
-The dedicated portable-product qualification is run with
-`pnpm qualify:portable`. It is separate from the default test/verification
-surface and currently proves only the Windows x64 boundary.
-
-## Portable Product root (Windows x64)
-
-The current portable profile is assembled by the repository-owned
-`scripts/package/assemble-portable-product.mjs` command. The assembly carries
-the private Node and PostgreSQL runtimes, the dependency-closed Product Host
-and CLI application artifacts, the exact Subject OpenClaw packages, and the
-license/manifest inventory. Nx builds and prunes those artifacts, and the
-assembler reconciles each artifact lockfile and uses pnpm's hoisted production
-linker inside the artifact before replacing the application payload in the
-Product root. This keeps package resolution self-contained when the payload is
-copied outside the workspace; it is not a runtime install. The assembler does
-not copy or rebuild the source workspace. Development assembly is incremental: unchanged
-application and private-runtime subtrees remain in place, while clean
-qualification still starts from a fresh target outside the repository.
-
-After copying the assembled root to its final location, use the stable
-entrypoint from that location. The first `start` creates the bootstrap locator,
-allocates a loopback PostgreSQL port, and materializes the existing lifecycle
-roots. Later starts at the same location reuse the locator, InstallationId,
-InstanceId, canonical data, and persisted port.
-
-```text
-bin\heptalogos.cmd start                 # foreground Product Host
-bin\heptalogos.cmd status --json         # separate terminal
-bin\heptalogos.cmd readiness --json
-bin\heptalogos.cmd admin claim --password-stdin --json
-bin\heptalogos.cmd auth login --password-stdin --json
-bin\heptalogos.cmd action catalog --json
+```sh
+pnpm nx run product-host:prune
+pnpm nx run cli:prune
+node scripts/package/install-linux-product.mjs \
+  --target /absolute/path/heptalogos \
+  --node-root /absolute/path/node-v24.21.0 \
+  --postgres-root /absolute/path/postgresql-18.6
 ```
 
-Claim and login passwords are entered through stdin or the protected prompt;
-they are not command-line arguments. Stop the foreground Host with the real
-console Ctrl+C. The separate Machine Operations OpenClaw runtime is not part
-of this portable profile.
+安装器只接受新目录，复制私有 Node 与完整 PostgreSQL 工具链、Host/CLI 闭包，初始化分开的生命周期目录并注册该安装唯一的 systemd 用户服务。不会替换现有数据目录。安装后从任意 cwd 使用 `bin/heptalogos`。独立 Subject/maintenance Gateway 的槽尚未配置时明确显示 `unconfigured`；不能将管理可用当作 QQ 或模型已经上线。
 
-## Knowledge references
+Windows 保留 portable 初始化及前台 Host 入口。Linux 的 systemd 运行结果不证明 Windows 实机部署；参见 [装配脚本](../../../scripts/package/assemble-portable-product.mjs)。
 
-- [`Bootstrap closure Spec`](../../../specs/runtime/bootstrap-closure.md)
-- [`Management Contract Spec`](../../../specs/management/system-authority.md)
-- [`Management and Presentation Architecture`](../../../docs/architecture/management-presentation.md)
+## 验证
+
+运行 product-host 构建、聚焦测试、OpenAPI 生成检查，以及安装后的公开 CLI/API。实际安装检查包括认领、登录、配置冲突、管理在依赖离线时可用、正常 stop、重启保持身份与配置、端口释放。QQ、媒体、模型和主体活动必须各自经过真实使用，不能由这些管理检查推定。

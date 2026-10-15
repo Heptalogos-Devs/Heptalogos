@@ -1,300 +1,35 @@
 # 跨平台产品运行与分发
 
-## 1. 一个产品，多 Deployment Profile
-
-目标平台：
-
-```text
-Windows
-macOS
-Linux
-```
-
-部署形态至少考虑：
-
-```text
-interactive desktop/user process
-headless foreground
-OS service/daemon
-recovery invocation
-```
-
-Domain semantics 不随平台变化；path、service manager、signal、credential backend、native payload 等通过 Platform/Deployment Profile 显式表达。
-
----
-
-## 2. Lifecycle Roots 与 PathProfile
-
-生产布局由独立 lifecycle roots 定义：
-
-```text
-ProgramRoot          → BootstrapRuntime / ProductGeneration / bundled package code
-InstanceRoot         → logical instance / Extension instance binding metadata
-ConfigurationRoot    → bootstrap/declarative/owner-native configuration
-DataRoot             → Foundation/Extension/Domain durable data
-SecretRoot           → file-backed secret material only when backend uses filesystem
-BlobRoot             → CAS objects/staging/quarantine
-BackupRoot           → operational backup artifacts
-LogRoot              → operational logs
-CacheRoot            → rebuildable cache/index where applicable
-TempRoot / RunRoot   → ephemeral/process state
-PackageStagingRoot   → hostile package staging
-```
+## 安装身份与数据
 
-这些 root 可以物理共置，也可以完全分开；不得假设共同父目录。`PathProfile` 根据 Windows/macOS/Linux 与 portable/native/service deployment 映射逻辑 root。
+安装 locator 保存 InstallationId、InstanceId 和独立 lifecycle roots。PROGRAM、DATA、CONFIGURATION、SECRET、BLOB、BACKUP、LOG、CACHE、TEMP、RUN 分别承担代码、事实和运行材料；不能根据调用 cwd 或源仓布局猜测位置。显式 roots 和已有身份在重复初始化时保留。
 
-```text
-Program/Package generation replace/delete
-!= Instance delete
-!= Config delete
-!= Data delete
-!= Secret delete
-```
-
-### Example profiles
+程序代次的替换不等于实例、配置、数据或秘密的删除。初始化由安装器、Host init 与 portable launcher 共用同一入口，使用成熟文件锁和原子发布，禁止部分写入覆盖旧 locator。
 
-Linux system profile 可以映射：
+## 当前安装闭包
 
-```text
-ProgramRoot        /usr/lib/heptalogos
-ConfigurationRoot  /etc/heptalogos
-DataRoot           /var/lib/heptalogos
-LogRoot            /var/log/heptalogos
-RunRoot            /run/heptalogos
-```
+Nx prune/copy-workspace-modules 生成 Host/CLI 生产产物。装配在产物内完成生产依赖物化，将正式 Nous Client tarball 按内容哈希收进产物；运行不引用 Nous 源文件。发布闭包包含私有 Node、完整 PostgreSQL 工具链、应用、原生依赖和许可材料；运行时无需开发环境、Git 或在线 npm 安装。
 
-portable profile 可以把这些 root 放入同一外层目录，但那只是 profile convenience，不是 architecture ownership。
+Product Host 仅启动独立管理所需组合，已移除旧内置 OpenClaw、Subject Chat 和旧 AIRuntime 主体路径。保留的独立库不自动进入管理生产闭包。
 
-### InstallationAnchor / Bootstrap Locator
-
-OS service/shortcut/foreground/recovery 的固定 entrypoint 是 `InstallationAnchor`。它不依赖当前 ProductGeneration，只选择 verified current/previous BootstrapRuntime generation。
-
-InstallationAnchor 使用平台默认 `PathProfile`，并可以读取一个固定、极小、human-readable bootstrap locator 覆盖独立 root mapping。Locator 不包含 Secret plaintext，不承载普通业务 state，由 Bootstrap ownership 保护。
-
-Exact executable/script/wrapper 由平台资格验证，但必须保证 ProductGeneration 损坏时仍有可启动 Recovery path。
-
-BootstrapRuntime 默认可作为稳定 Host shell 在同一 OS process 中加载 ProductGeneration Host entrypoint；ProductGeneration 切换通过 maintenance restart 生效。若平台采用 parent/child launcher，也必须保持同一 ownership/Recovery contract。
-
-当前 P4 Windows portable profile 已落实这一入口边界：Nx 的
-`@nx/js:prune-lockfile` 与 `copy-workspace-modules` 先形成 Product Host/CLI
-application artifacts；仓库 assembler 只在 artifact 内用 pnpm 完成 lockfile
-reconciliation 和 hoisted production dependency materialization，再把 artifact、
-官方 Node、已验证的 PostgreSQL server closure、license inventory 和
-manifest 放入 portable root。它不复制或重建完整 source workspace。
-`bin\heptalogos.cmd` 只定位自身旁的私有 Node 与清晰可读的 launcher；未
-初始化 assembly 不携带绑定组装目录的 locator。开发组装会保留未变化的
-application/private-runtime subtree，只有变化的 payload 被替换；首次启动
-仍由 launcher 从当前位置建立 locator 和 lifecycle roots，并将首次分配的
-loopback PostgreSQL port 交给既有 Bootstrap；同一位置的后续启动复用既有
-身份、数据和持久端口。Release/clean qualification 仍从新的目标目录开始。
+构建与安装的当前版本、参数和命令见 [Product Host](../../packages/application/product-host/README.md)。Node/pnpm 的精确版本由根 package.json 声明，npm 包由 catalog/lockfile 声明；文档不另设版本来源。
 
-当前实现的 Product Host payload、CLI 和 OpenClaw root/client/protocol
-闭包在 portable root 内部解析；P4 的 source-less 证据仅适用于实际执行的
-Windows x64 candidate，不升级其他平台、service install 或 Machine
-Operations runtime 的资格状态。
+## Linux 服务
 
-Repository bootstrap fixtures and installed Product launchers both resolve
-their current filesystem roots into the Bootstrap-owned `RuntimeLocations`
-contract. Product runtime consumers receive configuration, durable state,
-cache, and run roots through that contract; invocation `cwd` and the source
-workspace layout are not installation-location inputs. Package-local static
-resources continue to use `import.meta.url`.
+Linux 安装器接受新目标目录，携带私有 Node/PostgreSQL，注册按安装身份派生的 systemd 用户服务。CLI 从任意 cwd 定位该安装，提供启动、停止、重启和服务状态。正常停止关闭接纳并有限等待，释放管理 HTTP 和自有 PostgreSQL；重启复用身份、数据和配置。
 
-## 3. Private Runtime
+Subject Gateway 和 maintenance Gateway 使用分开的 profile、端口、状态与秘密。当前安装槽未配置时返回 unconfigured，不将其推定为已运行。完整 QQ 产品的停止、历史补拉及跨日恢复随当前计划另行验证，管理服务的停止检查不能替代它们。
 
-Shipping product 自带并 pin 必要 runtime/toolchain，例如：
+## Windows 与其他平台
 
-```text
-Node
-PostgreSQL
-platform service helper when used
-other required native/WASM payloads
-```
+Windows portable 继续保留本机 launcher、私有 runtime、前台 Host、CLI 和相同初始化合同。装配及资格检查使用当前 Management 合同。Linux 实机结果不证明 Windows 实机安装，历史 Windows 候选结果也不覆盖本次改动；未经当前实际执行的部分标为 NOT_RUN。
 
-正常运行不依赖 global installation 或 developer PATH。
+macOS、Windows 服务安装与其他分发方式需要各自真实验证，不由目录存在或通用代码推定支持。Domain 语义不因桌面、服务器或 OS 名称创建另一套产品模型。
 
-FFmpeg/ffprobe is an external executable prerequisite for an implemented
-audio/video capability. It is installed and configured by the operator or
-deployment profile and is not part of the default Heptalogos payload.
+## 产物验证
 
-OpenClaw 的分发必须按角色区分：当前 Product Host 的 bounded Subject Chat
-primary cognition 使用一个由 Product Host 管理的 Subject OpenClaw Runtime，
-它与独立的 Machine Operations OpenClaw 不共享 Gateway、state/config/workspace、
-credentials、ports、权限或启动生命周期。Product distribution 可以同时携带
-两种 runtime，但当前 P3 只实现并验证 Subject 角色；Machine Operations 仍是
-外部独立运行域。详见 [Machine Operations Plane](machine-operations.md)。
+依赖审计同时检查开发树与实际安装的生产闭包。workspace override 必须进入装配后的 lock/manifest 并重新物化，不能仅用根审计宣称安装安全。
 
----
+实际 source-less 验证在仓库外使用安装的 CLI/Host，检查认领、登录、配置冲突、依赖离线时管理可用、停止释放端口、重启保持身份与配置。QQ、媒体、工具、模型和持续主体均需独立真实使用验证。原生共享库、WASM、子进程工具和 OS keyring 属于安装合同的一部分，不能以 npm install 成功替代。
 
-## 4. Native Transitive Closure
-
-任何 direct/transitive：
-
-```text
-.node addon
-shared library
-WASM binary
-external executable
-OS helper
-```
-
-都属于产品依赖，而不是“npm 内部细节”。
-
-必须进入：
-
-```text
-ReleaseManifest
-SBOM
-hash inventory
-platform qualification
-update compatibility
-```
-
-开发机 `pnpm install` 成功不能证明 shipping artifact 可加载。
-
----
-
-## 5. Stable Bootstrap Closure
-
-Bootstrap 是 dependency-closed、可恢复 normal Host 的最小闭包，只承担：
-
-```text
-resolve InstallationId/InstanceId and independent PathProfile lifecycle roots
-validate bootstrap metadata
-single-instance/bootstrap coordination
-select active/LKG ProductGeneration
-select approved runtime generation
-start/inspect private PostgreSQL
-maintain BootstrapJournal
-bounded RecoveryOperation
-launch Host
-```
-
-它不依赖 Subject、System Assistant、Machine Operations integration,
-third-party Extension、normal Configuration/SecretService 或 Web/GUI。
-
-Private PostgreSQL 默认使用 loopback-only TCP、installation-owned persisted port、SCRAM、private PostgreSQL DataRoot subspace。Cluster/bootstrap owner、migration role、runtime role、DBOS role按最小权限分离；normal Host 不使用 cluster superuser。
-
-Bootstrap 的 `PrivatePostgresController` 只使用 product-pinned PostgreSQL executables/tools。Cluster version/identity/profile 与 persisted port 进入 BootstrapStateStore；normal boot 遇到 mismatch/unknown data dir/port conflict 不 silently reinitialize or major-upgrade。
-
-Bootstrap cryptographic material 通过 `BootstrapKeyProvider` 获取，避免 normal SecretService/PostgreSQL 启动环。
-
-## 6. Host Packaging
-
-Host 是 dependency-closed source-less product payload，不要求单文件 executable。
-
-Node SEA 不是整个 Host 的 Foundation packaging model；可以在未来局部 helper 场景单独评估。
-
----
-
-## 7. Release Closure
-
-Release candidate 必须是不可变、可哈希、可复验的 closure：
-
-```text
-Host JS/assets
-bundled web/static protocol assets when present
-private Node/PostgreSQL
-native/WASM transitive dependencies
-platform helpers
-built-in Extension generations
-licenses
-SBOM
-ReleaseManifest
-```
-
-Acceptance 后不得 rebuild 再沿用旧证据。
-
----
-
-## 8. OS Service
-
-使用 OS-native 或成熟 wrapper：
-
-```text
-Windows SCM wrapper
-launchd / ServiceManagement
-systemd
-```
-
-Windows SCM wrapper 在当前 Foundation baseline 中 DEFERRED。Windows service packaging 进入 L3 时首先评估 WinSW；最终 shipping route 必须由真实 install/update/service-account/shutdown/recovery/source-less qualification 证明。该延期不阻断 Foundation Implementation Plan，也不授权自研 service wrapper。
-
----
-
-## 9. Source-less Acceptance
-
-在仓库外、无开发环境假设下运行 exact artifact。
-
-不得依赖：
-
-```text
-monorepo/src
-workspace symlink
-Git
-global Node/PostgreSQL
-online npm registry
-pnpm/npm install at runtime
-dev server
-```
-
----
-
-## 10. Native Matrix
-
-每个平台至少验证：
-
-```text
-bootstrap/start/stop/restart
-private PostgreSQL lifecycle
-filesystem paths/permissions
-single-instance behavior
-signals/service shutdown
-Secret/key backend
-native/WASM dependency loading
-subprocess/media tools
-source-less Extension load
-backup/restore/update
-CLI invocation/shell behavior
-network/proxy/TLS profile behavior
-```
-
-一个平台 PASS 不能推断其他平台 PASS。
-
----
-
-## 11. Release Evidence
-
-每个 release candidate 形成：
-
-```text
-artifact digests
-manifest
-SBOM
-license inventory
-OSV/vulnerability scan evidence
-native/WASM dependency inventory
-platform qualification results
-source-less acceptance
-live gateway/protocol results for claimed support
-```
-
-## 12. Desktop Presentation 与平台 preset
-
-Core capability 不依赖 Desktop Presentation package。Desktop Presentation 是可选的
-product component，只在需要 local window 时携带或获取。
-
-```text
-Windows / macOS / Linux / Linux Server
-  = distribution entry/preset targets
-  != domain product lines
-```
-
-Packaging 不得仅凭平台创建 `serverMode`、`desktopMode`、`serverEdition` 或等价
-domain semantics。Linux Host/Subject/Web/service/headless capability 是一等能力；
-Linux local desktop visuals 可以接受合理 degradation，Windows/macOS 是 high-fidelity
-visual targets。Linux Server 使用同一 capability model，默认不携带或获取 Desktop
-Presentation。
-
-以下仍是 provisional/qualification work，而不是当前 Foundation implementation：generation-
-coupled Core/Web/Desktop manifest，signing/notarization/update mechanics，remote Web
-TLS/auth，Electron cold-start/RSS/GPU，以及详细 installer behavior。
+FFmpeg/ffprobe 由实际媒体部署显式配置。当前管理产物不因预留媒体或 Gateway 位置而宣称相应能力已上线。

@@ -1,16 +1,11 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
 
-import {
-  execFile,
-  spawn,
-  type ChildProcessWithoutNullStreams,
-} from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { createServer } from "node:net";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
-import { createInterface } from "node:readline";
 import { promisify } from "node:util";
 import { fileURLToPath } from "node:url";
 import {
@@ -22,6 +17,8 @@ import {
   createOsCredentialStore,
   type OsCredentialStore,
 } from "@heptalogos/os-credential";
+
+import { observeRunningHost, type RunningHost } from "./running-host.js";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../../..");
 const hostBinary = resolve(
@@ -59,23 +56,7 @@ export interface ProductHostFixture {
   cleanup(): Promise<void>;
 }
 
-export interface HostReady {
-  readonly type: "READY";
-  readonly installationId: string;
-  readonly instanceId: string;
-  readonly bootId: string;
-  readonly origin: string;
-  readonly productGeneration: string;
-  readonly bootstrapRuntimeGeneration: string;
-}
-
-export interface RunningHost {
-  readonly child: ChildProcessWithoutNullStreams;
-  readonly ready: HostReady;
-  readonly stop: () => Promise<void>;
-  readonly crash: () => Promise<void>;
-  readonly stderr: () => string;
-}
+export type { HostReady, RunningHost } from "./running-host.js";
 
 // Intentional duplication: this fixture allocates its PostgreSQL test port
 // with Product Host-specific failure semantics; the production Subject
@@ -183,70 +164,7 @@ export async function runHost(
     windowsHide: true,
   });
   child.stdin.end();
-  let stderr = "";
-  child.stderr.on("data", (chunk) => {
-    stderr += String(chunk);
-  });
-  const stdoutReader = createInterface({ input: child.stdout });
-  const stderrReader = createInterface({ input: child.stderr });
-  const ready = await new Promise<HostReady>((resolvePromise, reject) => {
-    const timer = setTimeout(() => {
-      reject(new Error("Product Host did not publish READY: " + stderr));
-      child.kill();
-    }, 150_000);
-    const inspectLine = (line: string, stream: "stdout" | "stderr") => {
-      try {
-        const value = JSON.parse(line) as Partial<HostReady>;
-        if (value.type === "READY") {
-          clearTimeout(timer);
-          resolvePromise(value as HostReady);
-        } else if (value.type === "ERROR") {
-          clearTimeout(timer);
-          reject(
-            new Error(
-              `Product Host startup failed on ${stream}: ${line}${stderr.length === 0 ? "" : `; stderr=${stderr}`}`,
-            ),
-          );
-        }
-      } catch {
-        // Keep waiting for the machine-readable READY line.
-      }
-    };
-    stdoutReader.on("line", (line) => inspectLine(line, "stdout"));
-    stderrReader.on("line", (line) => inspectLine(line, "stderr"));
-    child.once("exit", (code) => {
-      clearTimeout(timer);
-      reject(new Error(`Product Host exited before READY (${code}): ${stderr}`));
-    });
-  });
-  stdoutReader.close();
-  stderrReader.close();
-  return {
-    child,
-    ready,
-    stderr: () => stderr,
-    async stop() {
-      if (child.exitCode !== null) return;
-      child.kill("SIGTERM");
-      await new Promise<void>((resolvePromise, reject) => {
-        const timer = setTimeout(
-          () => reject(new Error("Product Host did not stop")),
-          60_000,
-        );
-        child.once("exit", () => {
-          clearTimeout(timer);
-          resolvePromise();
-        });
-      });
-    },
-    async crash() {
-      if (child.exitCode !== null) return;
-      child.kill("SIGKILL");
-      await new Promise<void>((resolvePromise) => {
-        child.once("exit", () => resolvePromise());
-      });
-    },
-  };
+  return observeRunningHost(child);
 }
 
 export async function runCli(

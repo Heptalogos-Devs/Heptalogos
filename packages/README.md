@@ -14,12 +14,10 @@ co-change rather than file size.
 
 Current groups:
 
-| system | Cross-cutting system adapters and Management semantic services | os-credential, management |
-| application | Headless Product Host and client projections | product-host, management-client, subject-chat-client, cli |
-| product | Current Product semantic owners | subject, messaging |
-
 | Group                                | Role                                                              | Members                                                                                          |
 | ------------------------------------ | ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| system                               | Cross-cutting system adapters and Management semantic services    | `os-credential`, `management`                                                                    |
+| application                          | Headless Product Host and client projections                      | `product-host`, `management-client`, `cli`                                                       |
 | [foundation](./foundation/README.md) | Shared contracts, schema mechanics, and time                      | `foundation-contracts`, `schema-runtime`, `time-service`                                         |
 | [bootstrap](./bootstrap/README.md)   | Installation, private PostgreSQL, and Host authority              | `bootstrap-state`, `bootstrap-runtime`, `private-postgres`, `host-ownership`                     |
 | [data](./data/README.md)             | Canonical schema and Host-fenced persistence                      | `canonical-schema`, `persistence`                                                                |

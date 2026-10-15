@@ -2,11 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /**
- * Public Management contracts and semantic service; HTTP, OpenAPI, client,
- * and CLI projections remain outside this package.
+ * Model-independent product Management, configuration and authentication.
  * @packageDocumentation
  */
-
 export {
   FIRST_CLAIM_LIFETIME_MS,
   MANAGEMENT_API_BASE_PATH,
@@ -15,100 +13,22 @@ export {
   SESSION_LIFETIME_MS,
   claimRequestSchema,
   claimResponseSchema,
-  capabilityGraphSchema,
-  hostReadModelSchema,
   loginRequestSchema,
   loginResponseSchema,
-  managementDiscoverySchema,
   managementProblemSchema,
-  resourceRefSchema,
-  readinessSchema,
-  runtimeBindingSnapshotSchema,
-  runtimeCapabilityGraphEntrySchema,
-  runtimeCapabilityProvisionSnapshotSchema,
-  runtimeCapabilityRequirementSnapshotSchema,
-  runtimeGraphEdgeSchema,
-  runtimeGraphSchema,
-  runtimeProvisionSnapshotSchema,
-  runtimeRequirementSnapshotSchema,
-  runtimeSystemSnapshotSchema,
-  systemActionDefinitionSchema,
-  systemActionExecuteRequestSchema,
-  systemActionExecuteResultSchema,
-  systemActionRequestSchema,
-  systemChangePlanSchema,
-  productStateSchema,
-  currentSystemActionCatalog,
-  SYSTEM_ACTION_CATALOG_REVISION,
-  systemStatusSchema,
 } from "./contracts.js";
-export { lineageContextRefSchema } from "@heptalogos/execution-lineage";
-export type { LineageContextRef } from "@heptalogos/execution-lineage";
-export type { EvidenceRef } from "@heptalogos/evidence";
 export type {
-  AdministratorBootstrapState,
   AdministratorId,
-  CapabilityGraphReadModel,
-  ClaimRequest,
-  ClaimResponse,
-  CompatibilityDescriptor,
-  ContractRange,
   FirstAdministratorClaimId,
   FirstClaimMaterial,
-  HostReadModel,
-  HostReadModelData,
-  JsonSchemaRef,
+  ServerSession,
+  ManagementDigest,
+  ClaimRequest,
+  ClaimResponse,
   LoginRequest,
   LoginResponse,
-  ManagementDiscovery,
-  ManagementHttpState,
-  ManagementHostState,
   ManagementProblemDetails,
-  ManagementDigest,
-  ProductSemanticId,
-  Readiness,
-  ReadinessData,
-  ReadModelEnvelope,
-  ResourceRef,
-  RuntimeBindingSnapshot,
-  RuntimeCapabilityGraphEntry,
-  RuntimeCapabilityProvisionSnapshot,
-  RuntimeCapabilityRequirementSnapshot,
-  RuntimeGraphEdge,
-  RuntimeGraphReadModel,
-  RuntimeGraphReadModelData,
-  RuntimeIntrospectionSnapshot,
-  RuntimeOperatingMode,
-  RuntimeProvisionSnapshot,
-  RuntimeRequirementSnapshot,
-  RuntimeSystemSnapshot,
-  RuntimeSystemActualState,
-  RuntimeSystemRole,
-  SystemStatus,
-  SystemStatusData,
-  SystemActionDefinition,
-  SystemActionExecuteResult,
-  SystemActionExecuteRequest,
-  SystemActionRequest,
-  ProductSystemActionId,
-  ProductStateData,
-  ProductStateReadModel,
-  SubjectStateActionInput,
-  SubjectStatusProjection,
-  SystemActionId,
-  SystemChangePlan,
-  SystemChangePlanId,
-  TargetPrecondition,
-  CapabilityGraphReadModelData,
 } from "./contracts.js";
-export { createManagementService } from "./service.js";
-export type {
-  ManagementProjectionSource,
-  ManagementProductOwners,
-  SubjectManagementPort,
-  ManagementService,
-  ManagementServiceOptions,
-} from "./service.js";
 export {
   managementHttpStatus,
   managementProblem,
@@ -116,3 +36,35 @@ export {
   contractUnsupportedProblem,
   invalidInputProblem,
 } from "./problems.js";
+
+export { createManagementAuthentication } from "./authentication.js";
+export type {
+  ManagementAuthentication,
+  ManagementAuthenticationOptions,
+} from "./authentication.js";
+
+export {
+  ProductManagement,
+  PRODUCT_SETTINGS_ID,
+  productSettingsSchema,
+  productSettingsDefinition,
+  productStatusSchema,
+  productConfigurationSchema,
+  configureProductSchema,
+} from "./product.js";
+export type {
+  ProductSettings,
+  DependencyStatus,
+  ProductStatus,
+  ProductManagementOptions,
+} from "./product.js";
+
+export { productDiscoverySchema } from "./product.js";
+
+export {
+  managedSubjectSchema,
+  createProductSubjectSchema,
+  bindProductSubjectSchema,
+  boundSubjectSchema,
+} from "./product.js";
+export type { ManagedSubject, CreateProductSubject, BoundSubject } from "./product.js";

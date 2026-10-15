@@ -19,13 +19,12 @@ import {
   readFile,
   readdir,
   readlink,
-  realpath,
   rm,
   writeFile,
 } from "node:fs/promises";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { runProcessSync } from "@heptalogos/repo-kit";
+import { readYamlFile, runProcessSync } from "@heptalogos/repo-kit";
 
 const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const pnpmCommand = "pnpm";
@@ -39,8 +38,6 @@ const requiredPostgresTools =
         "pg_isready.exe",
       ]
     : ["postgres", "initdb", "pg_ctl", "pg_controldata", "pg_isready"];
-const exactOpenClawVersion = "2026.9.1";
-const exactOpenClawWireVersion = "4";
 const artifactNodeLinker = "hoisted";
 const subprocessEnvironment = {
   ...process.env,
@@ -218,13 +215,55 @@ async function pathExists(path) {
   }
 }
 
-async function ensureArtifactDependencies(artifactRoot, label) {
+/** Materializes the production dependency closure with the workspace's package-manager policy. */
+export async function ensureArtifactDependencies(artifactRoot, label) {
   await requireFile(join(artifactRoot, "package.json"), `${label} artifact manifest`);
+  const manifestPath = join(artifactRoot, "package.json");
+  const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
+  const workspace = JSON.parse(
+    await readFile(join(repositoryRoot, "package.json"), "utf8"),
+  );
+  let manifestChanged = manifest.packageManager !== workspace.packageManager;
+  manifest.packageManager = workspace.packageManager;
+  for (const [name, version] of Object.entries(manifest.dependencies ?? {})) {
+    if (
+      typeof version !== "string" ||
+      !version.startsWith("file:") ||
+      !version.endsWith(".tgz")
+    )
+      continue;
+    if (isInside(artifactRoot, resolve(artifactRoot, version.slice(5)))) continue;
+    const archive = resolve(
+      repositoryRoot,
+      "packages/application",
+      label,
+      version.slice(5),
+    );
+    await requireFile(archive, `official artifact dependency ${name}`);
+    const relativePath = `local_path_modules/${await digestFile(archive)}.tgz`;
+    await mkdir(join(artifactRoot, "local_path_modules"), { recursive: true });
+    await cp(archive, join(artifactRoot, relativePath));
+    manifest.dependencies[name] = `file:./${relativePath}`;
+    manifestChanged = true;
+  }
+  if (manifestChanged) {
+    await writeFile(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
+  }
   await requireFile(join(artifactRoot, "pnpm-lock.yaml"), `${label} artifact lockfile`);
   await requireFile(
     join(artifactRoot, "pnpm-workspace.yaml"),
     `${label} artifact workspace settings`,
   );
+  const settingsPath = join(artifactRoot, "pnpm-workspace.yaml");
+  const settings = readYamlFile(settingsPath);
+  const workspacePolicy = readYamlFile(join(repositoryRoot, "pnpm-workspace.yaml"));
+  const overrides = workspacePolicy.overrides ?? {};
+  if (JSON.stringify(settings.overrides ?? {}) !== JSON.stringify(overrides)) {
+    await writeFile(
+      settingsPath,
+      JSON.stringify({ ...settings, overrides }, null, 2) + "\n",
+    );
+  }
   await access(join(artifactRoot, "workspace_modules")).catch(() => {
     fail(`${label} artifact workspace modules are missing: ${artifactRoot}`);
   });
@@ -234,6 +273,7 @@ async function ensureArtifactDependencies(artifactRoot, label) {
   const inputDigest = await digestArtifactInputs(artifactRoot);
   const previous = await readJsonIfPresent(statePath);
   if (
+    previous?.schemaVersion === 3 &&
     previous?.inputDigest === inputDigest &&
     previous?.nodeLinker === artifactNodeLinker &&
     (await pathExists(join(artifactRoot, "node_modules/.modules.yaml")))
@@ -243,11 +283,16 @@ async function ensureArtifactDependencies(artifactRoot, label) {
 
   // Nx owns the pruned artifact and workspace-module copy. pnpm owns the
   // lockfile reconciliation and dependency materialization inside that artifact.
+  // File-directory dependencies may change without a new package version or
+  // lockfile identity. Force-install alone can retain an existing hoisted
+  // payload; rebuild only the generated dependency tree on changed inputs.
+  await rm(join(artifactRoot, "node_modules"), { recursive: true, force: true });
   run(pnpmCommand, ["install", "--lockfile-only"], artifactRoot);
   run(
     pnpmCommand,
     [
       "install",
+      "--force",
       "--prod",
       "--frozen-lockfile",
       `--config.node-linker=${artifactNodeLinker}`,
@@ -259,7 +304,7 @@ async function ensureArtifactDependencies(artifactRoot, label) {
   await writeFile(
     statePath,
     JSON.stringify({
-      schemaVersion: 2,
+      schemaVersion: 3,
       inputDigest: finalInputDigest,
       nodeLinker: artifactNodeLinker,
     }),
@@ -273,7 +318,8 @@ async function replaceDirectory(source, destination) {
   await copyDirectory(source, destination);
 }
 
-async function normalizeCliArtifactManifest(root) {
+/** Rewrites oclif and binary paths for Nx's flat CLI artifact. */
+export async function normalizeCliArtifactManifest(root) {
   const manifestPath = join(root, "package.json");
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
   if (
@@ -301,7 +347,8 @@ async function normalizeCliArtifactManifest(root) {
   });
 }
 
-async function verifyPortableLinks(root) {
+/** Rejects dependency links that escape the assembled artifact. */
+export async function verifyPortableLinks(root) {
   async function visit(directory) {
     const children = await readdir(directory, { withFileTypes: true });
     for (const child of children) {
@@ -317,6 +364,22 @@ async function verifyPortableLinks(root) {
     }
   }
   await visit(root);
+}
+
+/** Retires superseded application code while preserving private runtimes and lifecycle state. */
+export async function retirePreviousProductPayloads(target, currentGeneration) {
+  if (!/^[0-9a-f]{64}$/u.test(currentGeneration))
+    fail("Current product generation is invalid");
+  const directory = join(target, "program", "product");
+  for (const entry of await readdir(directory, { withFileTypes: true })) {
+    if (
+      (entry.isDirectory() || entry.isSymbolicLink()) &&
+      /^[0-9a-f]{64}$/u.test(entry.name) &&
+      entry.name !== currentGeneration
+    ) {
+      await rm(join(directory, entry.name), { recursive: true });
+    }
+  }
 }
 
 function runJson(command, args, cwd) {
@@ -426,8 +489,8 @@ async function main() {
     process.platform === "win32" ? "node.exe" : "bin/node",
   );
   const nodeVersion = probe(nodeExecutable, ["--version"]);
-  if (nodeVersion !== "v24.20.0")
-    fail(`Expected Node v24.20.0, observed ${nodeVersion}`);
+  if (nodeVersion !== "v24.21.0")
+    fail(`Expected Node v24.21.0, observed ${nodeVersion}`);
   for (const name of requiredPostgresTools) {
     await requireFile(join(options.postgresRoot, "bin", name), `PostgreSQL ${name}`);
   }
@@ -489,7 +552,14 @@ async function main() {
     !targetExists ||
     previousComponents.get("node")?.version !== nodeVersion.slice(1) ||
     previousComponents.get("node")?.digest === undefined ||
-    !(await pathExists(join(options.target, "runtime", "node", "node.exe")));
+    !(await pathExists(
+      join(
+        options.target,
+        "runtime",
+        "node",
+        process.platform === "win32" ? "node.exe" : "bin/node",
+      ),
+    ));
   const postgresNeedsReplacement =
     !targetExists ||
     previousComponents.get("postgresql")?.version !== "18.6" ||
@@ -501,6 +571,7 @@ async function main() {
     !nodeNeedsReplacement &&
     !postgresNeedsReplacement
   ) {
+    await retirePreviousProductPayloads(options.target, productGeneration);
     console.log("PASS portable Product unchanged at " + options.target);
     return;
   }
@@ -508,61 +579,6 @@ async function main() {
     await replaceDirectory(options.hostArtifact, productRoot);
     await replaceDirectory(options.cliArtifact, cliRoot);
     await normalizeCliArtifactManifest(cliRoot);
-  }
-
-  const hostOpenClawPackage = JSON.parse(
-    await readFile(join(productRoot, "node_modules/openclaw/package.json"), "utf8"),
-  );
-  if (hostOpenClawPackage.version !== exactOpenClawVersion) {
-    fail(
-      `Product deploy did not contain exact OpenClaw ${exactOpenClawVersion}: ${String(hostOpenClawPackage.version)}`,
-    );
-  }
-  await requireFile(
-    join(productRoot, "node_modules/openclaw/openclaw.mjs"),
-    "deployed OpenClaw executable",
-  );
-  const gatewayClientPackagePath = join(
-    productRoot,
-    "node_modules/@openclaw/gateway-client/package.json",
-  );
-  const gatewayProtocolPackagePath = join(
-    productRoot,
-    "node_modules/@openclaw/gateway-protocol/package.json",
-  );
-  await requireFile(gatewayClientPackagePath, "deployed OpenClaw Gateway client");
-  await requireFile(gatewayProtocolPackagePath, "deployed OpenClaw Gateway protocol");
-  const gatewayClientPackage = JSON.parse(
-    await readFile(gatewayClientPackagePath, "utf8"),
-  );
-  const gatewayProtocolPackage = JSON.parse(
-    await readFile(gatewayProtocolPackagePath, "utf8"),
-  );
-  for (const [label, packageJson] of [
-    ["Gateway client", gatewayClientPackage],
-    ["Gateway protocol", gatewayProtocolPackage],
-  ]) {
-    if (packageJson.version !== exactOpenClawVersion) {
-      fail(
-        `Product deploy did not contain exact OpenClaw ${label} ${exactOpenClawVersion}: ${String(packageJson.version)}`,
-      );
-    }
-  }
-  const wireProtocolVersion = applicationChanged
-    ? probe(
-        nodeExecutable,
-        [
-          "--input-type=module",
-          "--eval",
-          'import { PROTOCOL_VERSION } from "@openclaw/gateway-protocol"; console.log(PROTOCOL_VERSION);',
-        ],
-        productRoot,
-      )
-    : previousComponents.get("openclaw")?.wireProtocolVersion;
-  if (wireProtocolVersion !== exactOpenClawWireVersion) {
-    fail(
-      `Product deploy did not expose exact OpenClaw wire protocol ${exactOpenClawWireVersion}: ${wireProtocolVersion}`,
-    );
   }
 
   await requireFile(join(productRoot, "bin.js"), "deployed Product Host");
@@ -605,15 +621,6 @@ async function main() {
     join(repositoryRoot, "NOTICE"),
     join(options.target, "licenses/Heptalogos-NOTICE.txt"),
   );
-  const openclawRoot = await realpath(join(productRoot, "node_modules/openclaw"));
-  await cp(
-    join(openclawRoot, "LICENSE"),
-    join(options.target, "licenses/openclaw-LICENSE.txt"),
-  );
-  await cp(
-    join(openclawRoot, "THIRD_PARTY_NOTICES.md"),
-    join(options.target, "licenses/openclaw-THIRD_PARTY_NOTICES.md"),
-  );
   if (!targetExists || applicationChanged) {
     await writeFile(
       join(options.target, "licenses/npm-package-license-index.json"),
@@ -639,9 +646,6 @@ async function main() {
   const postgresComponentDigest = postgresNeedsReplacement
     ? await digestTree(join(options.target, "runtime/postgresql"))
     : previousComponents.get("postgresql")?.digest;
-  const openclawComponentDigest = applicationChanged
-    ? hostArtifactDigest
-    : previousComponents.get("openclaw")?.digest;
   const productComponentDigest = applicationChanged
     ? hostArtifactDigest
     : previousComponents.get("product-host")?.digest;
@@ -658,11 +662,12 @@ async function main() {
       locator: "created-by-bin/heptalogos.cmd-on-first-run",
       port: "allocated-by-the-launcher-on-first-start-and-persisted-in-BootstrapState",
     },
-    openclaw: {
-      rootPackageVersion: hostOpenClawPackage.version,
-      gatewayClientPackageVersion: gatewayClientPackage.version,
-      gatewayProtocolPackageVersion: gatewayProtocolPackage.version,
-      wireProtocolVersion,
+    gateways: {
+      subject: { state: "unconfigured", owner: "independent subject Gateway artifact" },
+      maintenance: {
+        state: "unconfigured",
+        owner: "independent maintenance Gateway artifact",
+      },
     },
     assembly: {
       mode: options.incremental ? "development-incremental" : "clean-artifact",
@@ -681,14 +686,6 @@ async function main() {
         name: "postgresql",
         version: "18.6",
         digest: postgresComponentDigest,
-      },
-      {
-        name: "openclaw",
-        version: hostOpenClawPackage.version,
-        gatewayClientVersion: gatewayClientPackage.version,
-        gatewayProtocolVersion: gatewayProtocolPackage.version,
-        wireProtocolVersion,
-        digest: openclawComponentDigest,
       },
       {
         name: "product-host",
@@ -710,7 +707,10 @@ async function main() {
       mode: 0o600,
     },
   );
+  await retirePreviousProductPayloads(options.target, productGeneration);
   console.log("PASS portable Product assembled at " + options.target);
 }
 
-await main();
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  await main();
+}

@@ -12,3 +12,4 @@ export {
   type ProductHostHandle,
   type ProductHostStartOptions,
 } from "./host.js";
+export { initializeProductInstallation } from "./installation.js";

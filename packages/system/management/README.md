@@ -1,48 +1,11 @@
-# @heptalogos/management
+# Heptalogos 管理所有者
 
-## Purpose
+管理 owner 提供管理员认领、Argon2id 登录、opaque session、稳定 Problem，以及产品配置、状态和 Subject 管理操作。模型、Nous、QQ 与 Subject Gateway 不构成管理启动前提。
 
-management owns the canonical Management semantics: the single
-Administrator, first-administrator claim, server-side sessions, complete
-Problem projections, the bounded current SystemAction plan/execute contract,
-and enveloped read-only Host, Runtime, Capability, Product, and Readiness
-projections. It is the semantic service behind HTTP, the generated client, and
-the reference CLI.
+`authentication.ts` 通过已有 canonical PostgreSQL repository 保存管理员、claim 和 session，保留所有权围栏、密码规范化、到期、撤销和 auth epoch。秘密明文只存在于调用边界；数据库保存摘要或 verifier。
 
-## Owns
+`product.ts` 拥有产品管理 schema 和配置操作，复用 Configuration 的 revision/activation CAS。它通过 Host 注入的官方 Nous Client 操作读取或创建 Subject，不访问 Nous 数据库，不复制认知。安装、Host boot、配置修订、Subject 和依赖状态分别表达；`subject.enabled` 是产品意图，不能证明模型或 QQ 已准备好。
 
-- Administrator, first-claim, and session durable models and fenced repository operations.
-- Password normalization/hash policy and authentication decisions.
-- Current Management wire schemas, CompatibilityDescriptor, Problems,
-  ReadModelEnvelope, and strongly typed Runtime/Capability projections.
-- The Management wire schemas reuse the canonical `LineageContextRef` type and
-  schema owned by `@heptalogos/execution-lineage`; Management does not define a
-  second lineage contract.
-- SystemActionDefinition, SystemChangePlan, and SystemActionExecuteResult
-  contracts plus the ten current Product prerequisite action routes.
-- A finite internal SystemAction catalog with one handler per current action
-  ID, grouped into Configuration, Secret, AIRuntime, and Subject handler
-  families. The catalog is not a public plugin or extension registry.
-- Product prerequisite reads for Configuration, Secret metadata, NetworkAccess,
-  GatewayProfile, ModelProfile, ModelBinding, and AIRuntime readiness.
-- The system.management MicroSystem definition and service contract.
+HTTP/OpenAPI 在 Product Host，生成客户端和 CLI 在 application 范围；OS 服务管理不在模型或该服务中运行。已被替换的 SystemAction 通用计划、运行图读模型和旧 AIRuntime 管理路径不再是本包接口。
 
-## Does not own
-
-- Fastify, OpenAPI transport, CLI parsing, native keyring, Bootstrap, or Runtime internals.
-- Generic SystemAction registries, durable approval/operation stores, Cedar
-  execution, or future domain mutations.
-- A second database, transaction pool, or read-model store.
-- Public repository, password/hash, token, or Argon2 mechanics.
-
-## Verification
-
-Run unit/schema tests and Product Host integration scenarios against the real
-canonical PostgreSQL baseline. Route schemas, OpenAPI, and generated
-ManagementClient are one checked projection chain.
-
-## Knowledge references
-
-- [`Management Contract Spec`](../../../specs/management/system-authority.md)
-- [`Service, capability, and readiness Spec`](../../../specs/core/service-capability-readiness.md)
-- [`Data, evidence, and persistence Architecture`](../../../docs/architecture/data-evidence-persistence.md)
+运行包测试、构建及 type-aware lint；涉及鉴权、配置事务或恢复的变更还需真实 PostgreSQL 和独立安装闭环。精确规则见 [管理合同](../../../specs/management/system-authority.md)。

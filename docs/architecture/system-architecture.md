@@ -1,31 +1,25 @@
 # 总体系统架构
 
-## 产品宿主
+## 当前产品宿主
 
-Heptalogos 以无图形界面的 Product Host 承载 Subject 的行为和产品运行。主要运行角色包括 Bootstrap/Recovery、Kernel、System Services、行为领域、Drivers/Providers 和外部 Presentation。
+Product Host 直接组合安装所有权、私有 PostgreSQL、持久化、配置、管理员鉴权和管理 HTTP。它不启动 RuntimeKernel、DBOS、旧 Subject Executor 或模型。Nous、QQ 和两个 Gateway 均不构成管理启动前提；独立安装后的 CLI 通过同一管理合同操作产品。
 
-Kernel 维护运行组合、代次、Service/Capability 注册、Readiness、运行模式和资源所有权等产品运行语义。PostgreSQL、durable engine、HTTP、AI SDK 等通用机制通过受控适配器接入。
+管理状态分别展示安装、当前 boot、配置修订、Subject 绑定和外部依赖。配置中的运行意图与真实依赖可用性分别表达，避免用管理 HTTP 正常推定主体可以行动。启动、停止与恢复的当前入口见 [Product Host](../../packages/application/product-host/README.md)。
 
-## 行为领域
+## 认知与原生执行
 
-当前代码实现的 Subject 处理链由 ConversationMailbox、Reaction、BehaviorIntent、Review、DecisionCommit、CommunicationCommit 和表达/沉默语义组成；外部效果由 EffectOperation 独立约束。精确实现合同分别见 Subject Reaction/Behavior 与 EffectOperation Specs。
+长期认知由独立 Nous Wave 保存。Host 使用独立发布的官方 Client 查询实际服务、创建或绑定 Subject；两侧共享 SubjectId，产品不读取 Nous 私有表或复制认知。
 
-目标领域还包括跨多次 Reaction 延续的 Pursuit、ActionPlan/InteractionPlan、Commitment 和 Obligation。它们必须在各自的 Plan/Spec 授权后才进入当前实现。
+活动计划正在接入正式 OpenClaw 原生循环和 QQ Channel。OpenClaw 拥有模型、工具、子 Agent、durable ingress/send；Heptalogos 拥有消息、实际接触、活动、注意、行为采纳和结果。当前管理接入与后续主体运行的区别见 [认知接入](cognition-integration.md)。
 
-## 认知系统
+## 保留的领域和机制
 
-目标职责由 Nous Wave 维护长期 Memory、Self、Social Cognition、Motivation 和 Cognitive Runtime。当前 Heptalogos 代码尚未集成 Nous Wave Provider、认知查询或 Context contribution；接口形成前不把这些目标能力视为当前运行组件。规划边界见[认知接入](cognition-integration.md)。
+仓库保留独立有效的 Foundation、Subject、Messaging 等库。它们可供新产品组合复用，但包存在或其测试通过不表示已接入当前 Host。旧 AIRuntime/proposal-only 主体组合和 Subject Chat HTTP 路径已从宿主移除。
 
-SubjectId 在两个系统之间保持一致。行为状态和认知状态拥有独立的修订与提交路径。
+生活、社会语言、Motivation/Pursuit 及连续运行按 [活动计划](../../project/plans/qq-continuous-subject.md)推进。长期领域模型由 [Architecture-Vault](https://github.com/Heptalogos-Devs/Architecture-Vault/blob/main/docs/Heptalogos/TARGET_DESIGN.md)维护。
 
-## System Services
+## 管理与维护
 
-Foundation 提供持久化、时间、工作义务、信号、配置、密钥、网络访问、Artifact/Evidence、执行血缘、消息、AI Runtime、能力代理和管理等服务。
+CLI、HTTP 和外部界面消费同一 Management Contract，业务事实保留在其所有者。管理员身份不自动授予普通主体消息以管理权限。
 
-这些服务提供产品运行机制和治理，不取得业务领域自身的 Authority。
-
-## Presentation 与机器运维
-
-CLI、HTTP 和外部图形界面投影同一 Management Contract。Presentation 不拥有产品真值。
-
-Machine Operations Plane 位于 Product Host 之外，拥有独立机器/deployment 权限和故障域。Host 健康时通过正式 Management Contract 工作；严重故障时执行有限机器级修复。
+Subject Gateway 与 maintenance Gateway 使用独立 profile、端口、状态和秘密。当前安装器预留其位置，未配置时明确显示 unconfigured；维护控制不依赖主体健康，也不取得主体的发言权限。当前管理权限见 [管理合同](../../specs/management/system-authority.md)。

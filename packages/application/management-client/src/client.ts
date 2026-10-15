@@ -2,25 +2,22 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 /**
- * Exposes the generated Management HTTP operations through a small, portable
- * client facade. The generated files remain the wire and response authority.
+ * Typed facade over the sole generated Management transport.
  * @module client
  */
-
 import {
+  getManagementDiscovery,
+  getProductStatus,
   claimFirstAdministrator,
   createManagementSession,
-  executeSystemAction,
-  getCapabilityGraph,
-  getHost,
-  getManagementDiscovery,
-  getProductState,
-  getReadiness,
-  getRuntimeGraph,
-  getSystemActionCatalog,
-  getSystemStatus,
-  planSystemAction,
   revokeCurrentManagementSession,
+  describeProductConfiguration,
+  getProductConfiguration,
+  configureProduct,
+  checkProductConfiguration,
+  getBoundSubject,
+  bindProductSubject,
+  createProductSubject,
 } from "./generated/index.js";
 import { createClient } from "./generated/client/index.js";
 import type {
@@ -29,55 +26,39 @@ import type {
   ClaimFirstAdministratorResponses,
   CreateManagementSessionData,
   CreateManagementSessionResponses,
-  ExecuteSystemActionData,
-  ExecuteSystemActionResponses,
-  GetCapabilityGraphResponses,
-  GetHostResponses,
   GetManagementDiscoveryResponses,
-  GetProductStateResponses,
-  GetReadinessResponses,
-  GetRuntimeGraphResponses,
-  GetSystemActionCatalogResponses,
-  GetSystemStatusResponses,
-  PlanSystemActionData,
-  PlanSystemActionResponses,
-  RevokeCurrentManagementSessionResponses,
+  GetProductStatusResponses,
+  GetProductConfigurationResponses,
+  ConfigureProductData,
+  CheckProductConfigurationData,
+  BindProductSubjectData,
+  CreateProductSubjectData,
 } from "./generated/types.gen.js";
 
-/** The redacted Problem envelope generated from the canonical error schema. */
+/** Canonical generated Problem response. */
 export type ManagementProblemDetails = ClaimFirstAdministratorErrors[400];
-/** Stable discovery result exposed by the facade. */
+/** Public installed Host identity. */
 export type ManagementDiscoveryResult = GetManagementDiscoveryResponses[200];
-/** Stable first-claim request input exposed by the facade. */
+/** Input for consuming the local first claim. */
 export type ClaimFirstAdministratorInput = ClaimFirstAdministratorData["body"];
-/** Stable first-claim result exposed by the facade. */
+/** Claim result without the administrator password. */
 export type ClaimFirstAdministratorResult = ClaimFirstAdministratorResponses[201];
-/** Stable login request input exposed by the facade. */
+/** Administrator login input. */
 export type ManagementLoginInput = CreateManagementSessionData["body"];
-/** Stable login result exposed by the facade. */
+/** One-time session token and expiry. */
 export type ManagementLoginResult = CreateManagementSessionResponses[200];
-/** Stable system status result exposed by the facade. */
-export type SystemStatusResult = GetSystemStatusResponses[200];
-/** Stable Host result exposed by the facade. */
-export type HostReadModelResult = GetHostResponses[200];
-/** Stable Runtime graph result exposed by the facade. */
-export type RuntimeGraphResult = GetRuntimeGraphResponses[200];
-/** Stable Capability graph result exposed by the facade. */
-export type CapabilityGraphResult = GetCapabilityGraphResponses[200];
-/** Stable readiness result exposed by the facade. */
-export type ReadinessResult = GetReadinessResponses[200];
-/** Stable current SystemAction catalog result exposed by the facade. */
-export type SystemActionCatalogResult = GetSystemActionCatalogResponses[200];
-/** Stable action-plan input exposed by the facade. */
-export type SystemActionRequestInput = PlanSystemActionData["body"];
-/** Stable action-plan result exposed by the facade. */
-export type SystemActionPlanResult = PlanSystemActionResponses[200];
-/** Stable action-execution input exposed by the facade. */
-export type SystemActionExecuteInput = ExecuteSystemActionData["body"];
-/** Stable action-execution result exposed by the facade. */
-export type SystemActionExecuteResult = ExecuteSystemActionResponses[200];
-/** Stable redacted Product prerequisite state exposed by the facade. */
-export type ProductStateResult = GetProductStateResponses[200];
+/** Management and dependency status. */
+export type ProductStatusResult = GetProductStatusResponses[200];
+/** Current settings and CAS revision. */
+export type ProductConfigurationResult = GetProductConfigurationResponses[200];
+/** Exact settings replacement with expected revision. */
+export type ProductConfigurationInput = ConfigureProductData["body"];
+/** Schema-generated product settings. */
+export type ProductSettings = CheckProductConfigurationData["body"];
+/** Explicit Subject binding with expected revision. */
+export type BindSubjectInput = BindProductSubjectData["body"];
+/** Idempotent Subject creation with optional Seed. */
+export type CreateSubjectInput = CreateProductSubjectData["body"];
 
 /** A transport or canonical Management failure surfaced by the client. */
 export class ManagementClientError extends Error {
@@ -115,47 +96,15 @@ function problemDetails(value: unknown): ManagementProblemDetails | undefined {
   return value as ManagementProblemDetails;
 }
 
-/** Options for one portable generated Management client instance. */
+/** One authenticated, cancellable client for an installed Management origin. */
 export interface ManagementClientOptions {
   readonly origin: string;
   readonly sessionToken?: string;
   readonly fetch?: typeof fetch;
+  readonly signal?: AbortSignal;
 }
-
-/** Canonical generated-client operations used by CLI and later clients. */
-export interface ManagementClient {
-  /** Reads the live Management discovery descriptor. */
-  getDiscovery(): Promise<ManagementDiscoveryResult>;
-  /** Claims the first Administrator using the published claim material. */
-  claimFirstAdministrator(
-    body: ClaimFirstAdministratorInput,
-  ): Promise<ClaimFirstAdministratorResult>;
-  /** Creates an opaque Administrator session. */
-  login(body: ManagementLoginInput): Promise<ManagementLoginResult>;
-  /** Revokes the current opaque Administrator session. */
-  logout(): Promise<RevokeCurrentManagementSessionResponses[204]>;
-  /** Reads aggregate system status. */
-  getSystemStatus(): Promise<SystemStatusResult>;
-  /** Reads the current Host projection. */
-  getHost(): Promise<HostReadModelResult>;
-  /** Reads the current Runtime graph projection. */
-  getRuntimeGraph(): Promise<RuntimeGraphResult>;
-  /** Reads the current Capability graph projection. */
-  getCapabilityGraph(): Promise<CapabilityGraphResult>;
-  /** Reads current Product Host readiness. */
-  getReadiness(): Promise<ReadinessResult>;
-  /** Reads the current finite SystemAction catalog. */
-  getSystemActionCatalog(): Promise<SystemActionCatalogResult>;
-  /** Creates one side-effect-free current SystemAction plan. */
-  planSystemAction(body: SystemActionRequestInput): Promise<SystemActionPlanResult>;
-  /** Executes one exact action plan and its identical typed input. */
-  executeSystemAction(
-    body: SystemActionExecuteInput,
-  ): Promise<SystemActionExecuteResult>;
-  /** Reads current redacted Product prerequisite state. */
-  getProductState(): Promise<ProductStateResult>;
-}
-
+/** Public client shape is inferred from the generated operations it exposes. */
+export type ManagementClient = ReturnType<typeof createManagementClient>;
 type ClientFieldsResponse<T> = { readonly data: T };
 
 async function request<T>(
@@ -169,137 +118,37 @@ async function request<T>(
   }
 }
 
-/** Creates a generated fetch client bound to one discovered loopback origin. */
-export function createManagementClient(
-  options: ManagementClientOptions,
-): ManagementClient {
+/** Creates the same portable client consumed by CLI and external callers. */
+export function createManagementClient(options: ManagementClientOptions) {
   const transport = createClient({
     baseUrl: options.origin,
-    ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
-    ...(options.sessionToken === undefined ? {} : { auth: options.sessionToken }),
-    headers: { "x-heptalogos-contract-version": "management.v1" },
+    ...(options.fetch ? { fetch: options.fetch } : {}),
+    ...(options.sessionToken ? { auth: options.sessionToken } : {}),
   });
+  const base = {
+    client: transport,
+    throwOnError: true as const,
+    responseStyle: "fields" as const,
+    signal: options.signal,
+  };
   return Object.freeze({
-    getDiscovery() {
-      return request(() =>
-        getManagementDiscovery({
-          client: transport,
-          throwOnError: true,
-          responseStyle: "fields",
-        }),
-      );
-    },
-    claimFirstAdministrator(body: ClaimFirstAdministratorData["body"]) {
-      return request(() =>
-        claimFirstAdministrator({
-          client: transport,
-          body,
-          throwOnError: true,
-          responseStyle: "fields",
-        }),
-      );
-    },
-    login(body: CreateManagementSessionData["body"]) {
-      return request(() =>
-        createManagementSession({
-          client: transport,
-          body,
-          throwOnError: true,
-          responseStyle: "fields",
-        }),
-      );
-    },
-    logout() {
-      return request(() =>
-        revokeCurrentManagementSession({
-          client: transport,
-          throwOnError: true,
-          responseStyle: "fields",
-        }),
-      );
-    },
-    getSystemStatus() {
-      return request(() =>
-        getSystemStatus({
-          client: transport,
-          throwOnError: true,
-          responseStyle: "fields",
-        }),
-      );
-    },
-    getHost() {
-      return request(() =>
-        getHost({
-          client: transport,
-          throwOnError: true,
-          responseStyle: "fields",
-        }),
-      );
-    },
-    getRuntimeGraph() {
-      return request(() =>
-        getRuntimeGraph({
-          client: transport,
-          throwOnError: true,
-          responseStyle: "fields",
-        }),
-      );
-    },
-    getCapabilityGraph() {
-      return request(() =>
-        getCapabilityGraph({
-          client: transport,
-          throwOnError: true,
-          responseStyle: "fields",
-        }),
-      );
-    },
-    getReadiness() {
-      return request(() =>
-        getReadiness({
-          client: transport,
-          throwOnError: true,
-          responseStyle: "fields",
-        }),
-      );
-    },
-    getSystemActionCatalog() {
-      return request(() =>
-        getSystemActionCatalog({
-          client: transport,
-          throwOnError: true,
-          responseStyle: "fields",
-        }),
-      );
-    },
-    planSystemAction(body: SystemActionRequestInput) {
-      return request(() =>
-        planSystemAction({
-          client: transport,
-          body,
-          throwOnError: true,
-          responseStyle: "fields",
-        }),
-      );
-    },
-    executeSystemAction(body: SystemActionExecuteInput) {
-      return request(() =>
-        executeSystemAction({
-          client: transport,
-          body,
-          throwOnError: true,
-          responseStyle: "fields",
-        }),
-      );
-    },
-    getProductState() {
-      return request(() =>
-        getProductState({
-          client: transport,
-          throwOnError: true,
-          responseStyle: "fields",
-        }),
-      );
-    },
+    getSubject: () => request(() => getBoundSubject(base)),
+    bindSubject: (body: BindSubjectInput) =>
+      request(() => bindProductSubject({ ...base, body })),
+    createSubject: (body: CreateSubjectInput) =>
+      request(() => createProductSubject({ ...base, body })),
+    getDiscovery: () => request(() => getManagementDiscovery(base)),
+    getStatus: () => request(() => getProductStatus(base)),
+    claimFirstAdministrator: (body: ClaimFirstAdministratorInput) =>
+      request(() => claimFirstAdministrator({ ...base, body })),
+    login: (body: ManagementLoginInput) =>
+      request(() => createManagementSession({ ...base, body })),
+    logout: () => request(() => revokeCurrentManagementSession(base)),
+    describeConfiguration: () => request(() => describeProductConfiguration(base)),
+    getConfiguration: () => request(() => getProductConfiguration(base)),
+    configure: (body: ProductConfigurationInput) =>
+      request(() => configureProduct({ ...base, body })),
+    checkConfiguration: (body: ProductSettings) =>
+      request(() => checkProductConfiguration({ ...base, body })),
   });
 }

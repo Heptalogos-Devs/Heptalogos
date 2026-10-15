@@ -1,39 +1,19 @@
-# 规划中的 Nous Wave 认知接入
+# Nous Wave 认知接入
 
-本页描述目标认知接入边界，不代表当前代码已具备相应 Provider、查询或提案能力。
+Heptalogos 通过可独立安装的 Nous 官方 Client 消费同一认知服务。Nous 保存 Subject、Seed、Memory、Self 及后续认知领域；Heptalogos 保存产品配置、消息、活动和行为。两侧通过 SubjectId 关联，产品不读取 Nous 私有数据库，也不复制认知对象作为自己的事实。
 
-## 当前实现状态
+## 当前管理接入
 
-当前 Subject 实现由现有 Reaction/Behavior 合同限定。仓库没有 Nous Wave 客户端、认知查询或 Context contribution 合同、期望条件类型、认知提案/回执合同，也没有 Pursuit Spec 或实现。当前 OpenAI AIRuntime 路由是模型调用能力，不是 Nous Wave 集成。
+Product Host 从配置的 Nous runRoot 读取正式 discovery，使用其中的本机服务凭证连接，并核对指定 InstanceId。认证状态查询用于展示真实 Core/Kernel 等组件状态；Subject 查询、绑定与可选 Seed 创建直接使用官方 Client。创建不自动替换产品绑定。管理配置通过已有 revision/activation CAS 生效，活跃绑定不能绕过配置入口的替换限制。
 
-## 职责
+管理自身不依赖认知服务在线。Nous 不可用时，管理员仍可登录、查看配置和依赖状态、修复连接；需要实际认知的 Subject 操作明确失败。配置中的 subject.enabled 只是运行意图，不能证明模型、QQ 或认知循环已经就绪。
 
-Nous Wave 维护长期认知：Memory、Self、Social Cognition、Motivation 和 Cognitive Runtime。Heptalogos 维护产品运行和主动行为。
+接口和权限的精确合同见 [Management Spec](../../specs/management/system-authority.md)，安装与官方 Client 构建输入见 [Product Host](../../packages/application/product-host/README.md)。
 
-两侧共享 SubjectId，并分别维护自己的领域对象、修订和提交序列。
+## 正在接入的主体循环
 
-## 读取
+当前管理接入尚不构成 QQ 主体运行。活动计划要求正式 OpenClaw 原生模型循环复用 Nous 的 Memory、WorkContext、Projection 和 ContextCompiler，覆盖工具后续、RESET/压缩、子 Agent 和真实结果回流。Heptalogos 消费同一插件，管理实例与主体实例各自运行并隔离凭证和工具范围。
 
-Heptalogos 通过稳定认知查询和 Context contribution 获取与当前情境相关的认知。返回结果携带对象身份、修订和必要来源信息，使行为判断能够引用明确的认知状态。
+消息接收、实际注意、行为采纳、唯一发送及认知回流分别由自己的所有者记录。普通聊天中的“记住/忘记”不授予认知管理权限。Social、语言惯例、Motivation 和 Pursuit 随后按完整功能接入；不能将旧 AIRuntime 或已有 Foundation 库视为这些能力已实现的证明。
 
-Heptalogos 不复制 Nous Wave 内部对象为自己的 canonical state。
-
-## 提案
-
-Reaction、行为结果或外部观察可以向 Nous Wave 产生类型化认知提案。Nous Wave 对自己的 Memory、Self、Social 和 Motivation 分别核验并提交。
-
-认知系统向 Heptalogos 提供的 Desired Condition 描述主体希望满足的状态。Heptalogos 通过 Pursuit 表示是否已经采纳该期望并持续投入主动行为。
-
-## 结果回传
-
-Decision、Commitment、Action 和 Effect 的结果通过带来源的回执进入认知系统。Nous Wave 根据证据评价期望条件、形成记忆或更新其他认知。
-
-一次行为完成与一个期望条件满足分别判断。
-
-## 可用性
-
-认知系统是独立产品能力。目标设计要求 Heptalogos 根据 Feature Readiness 决定认知系统缺失或降级时哪些行为仍然可用；具体可降级与必须阻塞的行为尚未确定。管理、恢复和机器运维不依赖 Nous Wave 正常运行。
-
-## 设计来源
-
-长期语义见 Architecture-Vault 的 [Heptalogos / Nous Wave 目标设计](https://github.com/Heptalogos-Devs/Architecture-Vault)和[认知与主动性合同](https://github.com/Heptalogos-Devs/Architecture-Vault/blob/main/docs/integration/cognition-agency.md)。实现前需要完成合同、规格和授权 Plan。当前降级问题由 Vault 的 Heptalogos [未决问题](https://github.com/Heptalogos-Devs/Architecture-Vault/blob/main/docs/Heptalogos/OPEN_QUESTIONS.md)记录。
+实施范围与实际验证要求见 [活动计划](../../project/plans/qq-continuous-subject.md)。长期职责、生活与认知语义由 Architecture-Vault 的[共享合同](https://github.com/Heptalogos-Devs/Architecture-Vault/blob/main/docs/integration/cognition-agency.md)与[目标设计](https://github.com/Heptalogos-Devs/Architecture-Vault/blob/main/docs/Heptalogos/TARGET_DESIGN.md)维护。
