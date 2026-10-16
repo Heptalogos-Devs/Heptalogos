@@ -42,6 +42,7 @@ import {
   hostTokenBudgetSchema,
   hostRoleScopeSchema,
   hostResultReleaseRequestSchema,
+  hostResultReleaseResponseSchema,
   type HostResultReleaseResponse,
   hostContactIdentitySchema,
   decodeCognitionUsage,
@@ -515,6 +516,11 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
     ): Promise<ActivityDispatchResult>;
     /** Trusted Host reads execution output; this operation creates no Subject contact. */
     readRoleResults(subjectId: string, runId: string): Promise<NativeRoleResults>;
+    /** Reads the immutable release receipt before a retry selects any newly arrived output. */
+    readResultRelease(
+      subjectId: string,
+      requestId: string,
+    ): Promise<HostResultReleaseResponse | undefined>;
     /** Trusted Host reads what Nous actually applied, including its official EpistemicView. */
     readAppliedContext(runId: string): Promise<NativeAppliedContext>;
     readRun: typeof readRun;
@@ -1194,6 +1200,16 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           observedAt: selected.observedAt,
         });
       return { version: 1, accepted: true };
+    },
+    async readResultRelease(subjectId, requestId) {
+      const rows = await readRepositorySql<{ response: unknown }>(
+        options.persistence,
+        "SELECT document->'response' AS response FROM heptalogos.role_result_release WHERE subject_id=$1 AND request_id=$2",
+        [subjectId, requestId],
+      );
+      return rows[0]
+        ? validated(() => hostResultReleaseResponseSchema.parse(rows[0]!.response))
+        : undefined;
     },
     async releaseResult(value) {
       const input = validated(() => hostResultReleaseRequestSchema.parse(value));

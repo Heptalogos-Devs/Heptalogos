@@ -1343,6 +1343,47 @@ real("native child completion causality", () => {
           childRunId: direct.input.native.runId,
         },
       });
+      expect(
+        await f.bridge.readResultRelease(f.input.subjectId, direct.release.requestId),
+      ).toEqual(released);
+      expect(
+        await f.bridge.readResultRelease(randomUUID(), direct.release.requestId),
+      ).toBeUndefined();
+      const lateResultId = randomUUID();
+      await f.c.run(() =>
+        f.bridge.feedback({
+          ...sdk.hostContactIdentitySchema.strip().parse(direct.input),
+          stage: "pending",
+          observation: sdk.encodeObservationInput({
+            subjectId: f.input.subjectId,
+            sessionId: direct.input.nousSessionId,
+            requestId: lateResultId,
+            sourceClass: "generated",
+            observedAt: sdk.timestampFromDate(new Date()),
+            material: {
+              case: "inlineText",
+              value: { text: "LATE ACTUAL FEEDBACK", mediaType: "text/plain" },
+            },
+          }),
+        }),
+      );
+      expect(
+        (await f.bridge.readRoleResults(f.input.subjectId, direct.input.native.runId))
+          .results,
+      ).toHaveLength(2);
+      expect(
+        await f.bridge.readResultRelease(f.input.subjectId, direct.release.requestId),
+      ).toEqual(released);
+      await expect(
+        f.c.run(() =>
+          f.bridge.releaseResult({
+            ...direct.release,
+            resultIds: [direct.resultId, lateResultId],
+          }),
+        ),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_result_release_changed" },
+      });
       expect(JSON.stringify(released.contacts)).toContain(
         "IMMUTABLE DIRECT ROLE RESULT",
       );
