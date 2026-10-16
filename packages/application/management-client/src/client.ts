@@ -107,7 +107,8 @@ export interface ManagementClientOptions {
 export type ManagementClient = ReturnType<typeof createManagementClient>;
 type ClientFieldsResponse<T> = { readonly data: T };
 
-async function request<T>(
+/** Shares generated Host response and Problem handling across authentication domains. */
+export async function requestHostData<T>(
   operation: () => Promise<ClientFieldsResponse<T>>,
 ): Promise<T> {
   try {
@@ -132,23 +133,24 @@ export function createManagementClient(options: ManagementClientOptions) {
     signal: options.signal,
   };
   return Object.freeze({
-    getSubject: () => request(() => getBoundSubject(base)),
+    getSubject: () => requestHostData(() => getBoundSubject(base)),
     bindSubject: (body: BindSubjectInput) =>
-      request(() => bindProductSubject({ ...base, body })),
+      requestHostData(() => bindProductSubject({ ...base, body })),
     createSubject: (body: CreateSubjectInput) =>
-      request(() => createProductSubject({ ...base, body })),
-    getDiscovery: () => request(() => getManagementDiscovery(base)),
-    getStatus: () => request(() => getProductStatus(base)),
+      requestHostData(() => createProductSubject({ ...base, body })),
+    getDiscovery: () => requestHostData(() => getManagementDiscovery(base)),
+    getStatus: () => requestHostData(() => getProductStatus(base)),
     claimFirstAdministrator: (body: ClaimFirstAdministratorInput) =>
-      request(() => claimFirstAdministrator({ ...base, body })),
+      requestHostData(() => claimFirstAdministrator({ ...base, body })),
     login: (body: ManagementLoginInput) =>
-      request(() => createManagementSession({ ...base, body })),
-    logout: () => request(() => revokeCurrentManagementSession(base)),
-    describeConfiguration: () => request(() => describeProductConfiguration(base)),
-    getConfiguration: () => request(() => getProductConfiguration(base)),
+      requestHostData(() => createManagementSession({ ...base, body })),
+    logout: () => requestHostData(() => revokeCurrentManagementSession(base)),
+    describeConfiguration: () =>
+      requestHostData(() => describeProductConfiguration(base)),
+    getConfiguration: () => requestHostData(() => getProductConfiguration(base)),
     configure: (body: ProductConfigurationInput) =>
-      request(() => configureProduct({ ...base, body })),
+      requestHostData(() => configureProduct({ ...base, body })),
     checkConfiguration: (body: ProductSettings) =>
-      request(() => checkProductConfiguration({ ...base, body })),
+      requestHostData(() => checkProductConfiguration({ ...base, body })),
   });
 }

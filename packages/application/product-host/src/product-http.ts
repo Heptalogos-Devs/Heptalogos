@@ -39,6 +39,7 @@ import {
 } from "@heptalogos/management";
 import { Type } from "@heptalogos/schema-runtime/typebox";
 import { tokenFromRequest } from "./http-auth.js";
+import { registerGatewayHttp, type GatewayHttpOptions } from "./gateway-http.js";
 
 async function withRequestSignal<T>(
   request: FastifyRequest,
@@ -67,6 +68,7 @@ export interface ProductHttpOptions {
   readonly product: ProductManagement;
   readonly identity: { readonly installationId: string; readonly bootId: string };
   readonly onAdministratorClaimed: () => Promise<void>;
+  readonly gateway?: GatewayHttpOptions;
 }
 /** Builds a loopback-only, non-model-dependent Management API. */
 export async function createProductHttpApp(options: ProductHttpOptions) {
@@ -90,7 +92,10 @@ export async function createProductHttpApp(options: ProductHttpOptions) {
       openapi: "3.1.0",
       info: { title: "Heptalogos Management", version: "1.0.0" },
       components: {
-        securitySchemes: { bearerAuth: { type: "http", scheme: "bearer" } },
+        securitySchemes: {
+          bearerAuth: { type: "http", scheme: "bearer" },
+          gatewayService: { type: "http", scheme: "bearer" },
+        },
       },
     },
   });
@@ -319,6 +324,7 @@ export async function createProductHttpApp(options: ProductHttpOptions) {
           ),
         ),
   );
+  registerGatewayHttp(app, options.gateway);
   return app;
 }
 

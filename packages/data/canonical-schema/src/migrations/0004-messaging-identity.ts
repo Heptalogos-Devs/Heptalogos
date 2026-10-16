@@ -93,6 +93,11 @@ CREATE TABLE heptalogos.message_contact(
  contact_id text NOT NULL, observed_at timestamptz NOT NULL, lineage_context_ref jsonb NOT NULL,
  PRIMARY KEY(subject_id,message_id,contact_id)
 );
+CREATE TABLE heptalogos.messaging_history_coverage(
+ conversation_id uuid PRIMARY KEY REFERENCES heptalogos.messaging_conversation(conversation_id),
+ revision integer NOT NULL CHECK(revision>=1), document jsonb NOT NULL,
+ lineage_context_ref jsonb NOT NULL
+);
 CREATE TABLE heptalogos.identity_entity(
  entity_ref uuid PRIMARY KEY, kind text NOT NULL CHECK(kind IN ('person','group','subject')), created_at timestamptz NOT NULL DEFAULT now(), lineage_context_ref jsonb NOT NULL
 );
@@ -104,9 +109,9 @@ CREATE TABLE heptalogos.identity_external_key(
 CREATE TABLE heptalogos.identity_subject(
  subject_id text PRIMARY KEY, entity_ref uuid NOT NULL UNIQUE REFERENCES heptalogos.identity_entity(entity_ref)
 );
-REVOKE ALL ON heptalogos.messaging_platform_event,heptalogos.messaging_pending,heptalogos.message_attachment,heptalogos.message_reference,heptalogos.message_contact,heptalogos.identity_entity,heptalogos.identity_external_key,heptalogos.identity_subject FROM PUBLIC;
+REVOKE ALL ON heptalogos.messaging_history_coverage,heptalogos.messaging_platform_event,heptalogos.messaging_pending,heptalogos.message_attachment,heptalogos.message_reference,heptalogos.message_contact,heptalogos.identity_entity,heptalogos.identity_external_key,heptalogos.identity_subject FROM PUBLIC;
 GRANT UPDATE(lifecycle) ON heptalogos.message_fact TO heptalogos_runtime;
-GRANT SELECT,INSERT,UPDATE ON heptalogos.messaging_platform_event,heptalogos.messaging_pending,heptalogos.message_attachment,heptalogos.message_reference TO heptalogos_runtime;
+GRANT SELECT,INSERT,UPDATE ON heptalogos.messaging_history_coverage,heptalogos.messaging_platform_event,heptalogos.messaging_pending,heptalogos.message_attachment,heptalogos.message_reference TO heptalogos_runtime;
 GRANT SELECT,INSERT ON heptalogos.message_contact,heptalogos.identity_entity,heptalogos.identity_external_key,heptalogos.identity_subject TO heptalogos_runtime;
 `,
       )

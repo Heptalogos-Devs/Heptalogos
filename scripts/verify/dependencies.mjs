@@ -9,7 +9,7 @@
 
 import { builtinModules } from "node:module";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { join, resolve } from "node:path";
+import { dirname, isAbsolute, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   authority,
@@ -153,6 +153,7 @@ for (const manifestPath of packageManifests) {
 }
 
 const externalDependencyNames = new Set();
+const localArchiveDependencyNames = new Set();
 for (const { manifest, path: manifestPath } of manifests) {
   for (const section of dependencySections) {
     for (const [name, specifier] of Object.entries(manifest[section] ?? {})) {
@@ -178,6 +179,47 @@ for (const { manifest, path: manifestPath } of manifests) {
         fail(
           `${manifestPath}: ${section}.${name} uses workspace: but no workspace package owns that name`,
         );
+        continue;
+      }
+      // Development may consume a separately installed SDK; production uses its catalog peer.
+      if (section === "devDependencies" && specifier.startsWith("link:")) {
+        const directory = specifier.slice(5);
+        const linkedManifest = resolve(
+          dirname(manifestPath),
+          directory,
+          "package.json",
+        );
+        if (
+          isAbsolute(directory) ||
+          manifest.peerDependencies?.[name] !== "catalog:" ||
+          !existsSync(linkedManifest)
+        ) {
+          fail(
+            `${manifestPath}: linked development SDK requires a relative installed directory and catalog peer`,
+          );
+        } else {
+          const installed = JSON.parse(readFileSync(linkedManifest, "utf8"));
+          if (installed.name !== name || installed.version !== workspaceCatalog[name])
+            fail(
+              `${manifestPath}: linked development SDK must match its exact catalog peer`,
+            );
+        }
+        externalDependencyNames.add(name);
+        continue;
+      }
+      if (specifier.startsWith("file:")) {
+        const archive = specifier.slice(5);
+        if (
+          isAbsolute(archive) ||
+          !archive.endsWith(".tgz") ||
+          !existsSync(resolve(dirname(manifestPath), archive))
+        ) {
+          fail(
+            `${manifestPath}: ${section}.${name} must reference an existing relative release archive`,
+          );
+        }
+        localArchiveDependencyNames.add(name);
+        externalDependencyNames.add(name);
         continue;
       }
       if (specifier !== "catalog:") {
@@ -218,7 +260,10 @@ for (const error of validateVersionAuthority({
 }
 
 for (const name of externalDependencyNames) {
-  if (!Object.hasOwn(workspaceCatalog, name)) {
+  if (
+    !localArchiveDependencyNames.has(name) &&
+    !Object.hasOwn(workspaceCatalog, name)
+  ) {
     fail(`catalog entry missing for direct external dependency: ${name}`);
   }
 }

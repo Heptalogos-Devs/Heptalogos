@@ -9,4 +9,4 @@
 
 export { Type } from "typebox";
 
-export type { Static } from "typebox";
+export type { Static, TSchema } from "typebox";

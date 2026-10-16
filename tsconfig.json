@@ -87,6 +87,9 @@
     },
     {
       "path": "./packages/product/identity"
+    },
+    {
+      "path": "./packages/application/openclaw-host"
     }
   ]
 }

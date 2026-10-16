@@ -1,53 +1,13 @@
 # @heptalogos/subject
 
-## Purpose
+Product Life 和 Agency 的语义所有者。Nous 拥有主体身份与长期认知，OpenClaw 执行模型、工具、子 Agent 和唯一 durable send；本包保存活动采纳、实际进展与行为结果。
 
-`subject` owns the persistent logical Subject authority and the bounded L4
-conversation communication path: ConversationMailbox, Reaction acquisition,
-the cognition proposal, deterministic Review, CommunicationCommit, Expression,
-and expression-driven local reply materialization.
+`createLifeService` 提供 propose/adopt、生命周期 CAS、日程分页和低成本注意选择。未采纳提案不能启动，采用的来源、工具、受众和运行预算必须在当前可信权限内。活动带明确世界域；未知映射不能启动。休息期间不选择原始来信，积压按实际等待时间保持公平。重启标记需要重新判断的继续工作，保留实际成果。
 
-The current primary cognition proposal is supplied through the narrow
-Product-composed `SubjectCognitionRuntime` port. Product Host implements that
-port with one isolated OpenClaw `2026.9.1` public Gateway/client runtime and
-two proposal-only typed tools. The adapter's process/profile/provider state is
-not Subject canonical state; this package still owns the Subject semantics,
-Review, and CommunicationCommit Authority. Expression remains on AIRuntime.
+`createAgencyService` 接纳完整的原生 prepared batch，以稳定 intent 和原始 sourceIndex 识别行为与发送段。发送点与活动取消通过同一个活动行锁决定；Host 持久化许可后，Channel 才执行网络发送。已接受的结果可在取消或恢复后幂等返回；uncertain 阻止自动重发，可靠回执可以解消同一次尝试。实际引用、线程、受众和正文都受检查。
 
-The durable record stores desired Subject state only. Current status is a
-Subject-owned projection over that intent and current runtime/dependency facts;
-there is no second durable `actualState` authority.
+本包沿用 Host-fenced Persistence 和既有执行 Lineage，不创建模型循环、网络重试 worker 或第二份认知。当前独立安装的 Host 是否已接入这些操作，取决于实际部署代际与 Gateway 配置；包构建通过不代表 QQ 上线。
 
-The independent Expression step consumes the active Subject-scoped
-`subject.expression.v1` configuration revision. Its first materialized Product
-default is `maxOutputTokens: 256`; the value is managed through the canonical
-Configuration and Management path rather than a duplicate Expression literal.
+语义见 [主体与活动合同](../../../specs/subject/subject-base.md) 和 [行为及真实结果](../../../specs/subject/reaction-behavior.md)。schema 与公开类型以 `src/contracts.ts`、`src/agency-contracts.ts` 为准；HTTP 和 Client 由这些 schema 生成。
 
-The internal module ownership is deliberately direct: `repository.ts` owns
-persistence and codecs; `authority.ts` owns Subject lifecycle, admission, and
-the authority fence; `reaction-executor.ts` owns cognition, deterministic
-Review, and CommunicationCommit; `communication-executor.ts` owns Expression,
-outbound materialization, and re-entry; and `service.ts` composes those owners
-with the current handler boundary. An unexpected OpenClaw child exit marks the
-runtime unavailable/failed. Replacement occurs only through an explicit
-`subject.start` or reconcile operation; there is no autonomous retry or
-backoff loop.
-
-## Current scope
-
-The package registers one generation-pinned `work.subject-reaction` handler.
-The current path accepts an optional `NO_COMMUNICATION` or `COMMUNICATE`
-proposal; the latter is reviewed into one CommunicationCommit before
-Expression and the outbound MessageFact. `CommunicationCommit` owns the
-accepted communication semantics, while Expression only realizes its bounded
-human-facing text. This package does not define the total Subject behavior
-space or a generic ActionPlan/Decision framework.
-
-Persona, Memory, external IM, tools, proactive behavior, and advanced
-observation/recovery machinery are outside this package's current plan.
-
-## Knowledge references
-
-- [Subject Base Spec](../../../specs/subject/subject-base.md)
-- [Reaction and Communication Spec](../../../specs/subject/reaction-behavior.md)
-- [Subject Communication Spine Plan](../../../project/plans/completed/product/p1-subject-communication-spine-correction-2026-09-04.md)
+开发时运行 `pnpm nx run subject:build`、`pnpm nx run subject:test`。真实事务与并发测试位于 `integration/foundation`；通过 `HEPTALOGOS_TEST_PG_BIN` 指向安装的 PostgreSQL bin 后运行 Life/Agency/Messaging 对应测试，避免把跳过的数据库测试记为通过。

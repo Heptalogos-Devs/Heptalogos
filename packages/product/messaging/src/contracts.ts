@@ -79,6 +79,7 @@ export const nativeMessageReferenceSchema = Type.Object(
   {
     kind: Type.Union([Type.Literal("reply"), Type.Literal("forward")]),
     nativeId: key,
+    sourceRef: optionalKey,
     conversation: Type.Optional(nativeConversationSchema),
   },
   object,
@@ -229,6 +230,7 @@ export type UpdateAttachmentInput = Static<typeof updateAttachmentInputSchema>;
 export const forwardNodeSchema = Type.Object(
   {
     path: key,
+    sourceRef: optionalKey,
     parentPath: Type.Union([key, Type.Null()]),
     claimedAuthor: Type.Optional(messageAuthorSchema),
     platformSentAt: Type.Union([timestamp, Type.Null()]),
@@ -342,19 +344,29 @@ export const readMessageMaterialSchema = Type.Object(
         {
           referenceId: id,
           ordinal: Type.Integer({ minimum: 0 }),
-          target: nativeMessageReferenceSchema,
+          target: Type.Object(
+            {
+              ...nativeMessageReferenceSchema.properties,
+              sourceRef: Type.Optional(Type.Never()),
+            },
+            object,
+          ),
           state: messageReferenceSchema.properties.state,
           resolvedMessageRef: Type.Optional(id),
           nodes: Type.Optional(
             Type.Array(
               Type.Object(
-                { ...forwardNodeSchema.properties, parts: Type.Array(safePartSchema) },
+                {
+                  ...forwardNodeSchema.properties,
+                  sourceRef: Type.Optional(Type.Never()),
+                  parts: Type.Array(safePartSchema),
+                },
                 object,
               ),
             ),
           ),
           reason: optionalKey,
-          continuation: optionalKey,
+          continuation: Type.Optional(Type.Never()),
         },
         object,
       ),
@@ -419,6 +431,7 @@ export const pendingFactSchema = Type.Object(
 /** Bounds pending-work enumeration, optionally to one authorized conversation. */
 export const listPendingInputSchema = Type.Object(
   {
+    conversationIds: Type.Optional(Type.Array(id, { maxItems: 128 })),
     conversationId: Type.Optional(id),
     limit: Type.Integer({ minimum: 1, maximum: 512 }),
   },
@@ -437,6 +450,7 @@ export const completePendingInputSchema = Type.Object(
 /** Bounds acquisition-work enumeration by the requested attachment states. */
 export const pendingAttachmentsInputSchema = Type.Object(
   {
+    conversationIds: Type.Optional(Type.Array(id, { maxItems: 128 })),
     limit: Type.Integer({ minimum: 1, maximum: 512 }),
     states: Type.Optional(Type.Array(attachmentSchema.properties.state)),
   },
@@ -459,7 +473,10 @@ export const platformEventSchema = Type.Object(
 );
 /** Selects concrete platform events for the trusted Host event consumer. */
 export const readEventsInputSchema = Type.Object(
-  { eventRefs: Type.Array(id, { maxItems: 512 }) },
+  {
+    conversationIds: Type.Optional(Type.Array(id, { maxItems: 128 })),
+    eventRefs: Type.Array(id, { maxItems: 512 }),
+  },
   object,
 );
 /** Returns persisted platform events with protected source-envelope references. */
@@ -473,6 +490,22 @@ export interface MessagingServiceOptions {
 }
 /** Canonical fact, material and bounded pending-state owner. */
 export interface MessagingService {
+  /** Resolves allowed source metadata without retrieving original message documents. */
+  messageSources(
+    input: Static<typeof messageSourcesInputSchema>,
+  ): Promise<Static<typeof messageSourcesResultSchema>>;
+  /** Resolves only already-established conversation identities without creating or reading message facts. */
+  resolveConversations(
+    input: Static<typeof resolveConversationsInputSchema>,
+  ): Promise<Static<typeof resolveConversationsResultSchema>>;
+  /** Reads durable native history coverage without treating missing messages as completeness. */
+  readHistoryCoverage(
+    input: Static<typeof readHistoryCoverageInputSchema>,
+  ): Promise<Static<typeof readHistoryCoverageResultSchema>>;
+  /** Commits actual native history progress with compare-and-swap revision protection. */
+  updateHistoryCoverage(
+    input: Static<typeof updateHistoryCoverageInputSchema>,
+  ): Promise<Static<typeof historyCoverageSchema>>;
   /** Atomically accepts or deduplicates native facts and their durable pending references. */
   accept(input: AcceptFactsInput): Promise<AcceptFactsResult>;
   /** Returns authorized and budgeted materials without recording an Observation. */
@@ -502,3 +535,78 @@ export interface MessagingService {
     input: Static<typeof readEventsInputSchema>,
   ): Promise<Static<typeof readEventsResultSchema>>;
 }
+
+/** Persisted native-history progress never infers completeness from an empty page or sequence gap. */
+export const historyCoverageSchema = Type.Object(
+  {
+    conversation: nativeConversationSchema,
+    revision: Type.Integer({ minimum: 1 }),
+    nativeCursor: Type.Union([key, Type.Null()]),
+    coverage: Type.Union([
+      Type.Literal("limited"),
+      Type.Literal("gap"),
+      Type.Literal("unavailable"),
+      Type.Literal("complete"),
+    ]),
+    reason: key,
+    updatedAt: timestamp,
+    firstNativeMessageId: optionalKey,
+    lastNativeMessageId: optionalKey,
+  },
+  object,
+);
+/** Reads durable progress for one exact account and native conversation. */
+export const readHistoryCoverageInputSchema = Type.Object(
+  { conversation: nativeConversationSchema },
+  object,
+);
+/** Returns existing progress or explicitly absent state before the first history attempt. */
+export const readHistoryCoverageResultSchema = Type.Object(
+  { history: Type.Union([historyCoverageSchema, Type.Null()]) },
+  object,
+);
+/** Commits only the cursor/window actually accepted through the normal Messaging fact entrypoint. */
+export const updateHistoryCoverageInputSchema = Type.Object(
+  {
+    ...historyCoverageSchema.properties,
+    revision: Type.Optional(Type.Never()),
+    expectedRevision: Type.Union([Type.Integer({ minimum: 1 }), Type.Null()]),
+  },
+  object,
+);
+
+/** Exact native conversation keys supplied by the Host's current source-authorization boundary. */
+export const resolveConversationsInputSchema = Type.Object(
+  { conversations: Type.Array(nativeConversationSchema, { maxItems: 128 }) },
+  object,
+);
+/** Existing canonical identities only; absence never creates a new conversation. */
+export const resolveConversationsResultSchema = Type.Object(
+  { conversationIds: Type.Array(id) },
+  object,
+);
+
+/** Metadata-only current-source authorization accepts only the Host's already permitted conversations. */
+export const messageSourcesInputSchema = Type.Object(
+  {
+    messageRefs: Type.Array(id, { maxItems: 512 }),
+    conversationIds: Type.Array(id, { maxItems: 512 }),
+  },
+  object,
+);
+/** Source lifecycle and conversation identity are returned without reading message text or raw documents. */
+export const messageSourcesResultSchema = Type.Object(
+  {
+    sources: Type.Array(
+      Type.Object(
+        {
+          messageRef: id,
+          conversationId: id,
+          lifecycle: Type.Union([Type.Literal("present"), Type.Literal("retracted")]),
+        },
+        object,
+      ),
+    ),
+  },
+  object,
+);

@@ -15,7 +15,8 @@ import {
   type DependencyStatus,
 } from "@heptalogos/management";
 
-async function client(settings: ProductSettings) {
+/** Connects only through official discovery and verifies the configured instance identity. */
+export async function connectProductNous(settings: ProductSettings) {
   const connected = await connectNousInstance({ runRoot: settings.nous.runRoot });
   if (
     settings.nous.expectedInstanceId &&
@@ -31,10 +32,10 @@ async function client(settings: ProductSettings) {
 }
 async function operation<T>(
   settings: ProductSettings,
-  invoke: (connected: Awaited<ReturnType<typeof client>>) => Promise<T>,
+  invoke: (connected: Awaited<ReturnType<typeof connectProductNous>>) => Promise<T>,
 ): Promise<T> {
   try {
-    return await invoke(await client(settings));
+    return await invoke(await connectProductNous(settings));
   } catch (error) {
     if (error instanceof Error && "problem" in error) throw error;
     if (error instanceof NousError) {

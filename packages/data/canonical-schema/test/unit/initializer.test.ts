@@ -83,6 +83,7 @@ describe("canonical schema adapter", () => {
       "0002_product_gateway_prerequisites",
       "0003_product_subject_l4",
       "0004_messaging_identity",
+      "0005_life_agency",
     ]);
     await expect(canonicalMigrationProvider.getMigrations()).resolves.toEqual(
       expect.objectContaining({

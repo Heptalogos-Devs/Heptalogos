@@ -14,11 +14,14 @@ import { productSubjectL4Migration } from "./migrations/0003-product-subject-l4.
 
 import { messagingIdentityMigration } from "./migrations/0004-messaging-identity.js";
 
+import { lifeAgencyMigration } from "./migrations/0005-life-agency.js";
+
 const migrations: Readonly<Record<string, Migration>> = Object.freeze({
   "0001_foundation_baseline": foundationBaselineMigration,
   "0002_product_gateway_prerequisites": productGatewayPrerequisitesMigration,
   "0003_product_subject_l4": productSubjectL4Migration,
   "0004_messaging_identity": messagingIdentityMigration,
+  "0005_life_agency": lifeAgencyMigration,
 });
 
 /** Provides the current canonical migration set to Kysely's Migrator. */
@@ -34,4 +37,5 @@ export const canonicalMigrationNames = Object.freeze([
   "0002_product_gateway_prerequisites",
   "0003_product_subject_l4",
   "0004_messaging_identity",
+  "0005_life_agency",
 ] as const);

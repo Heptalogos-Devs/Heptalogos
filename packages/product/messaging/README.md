@@ -56,6 +56,9 @@ instead of reproducing DTOs.
   materials were used. Reading itself creates no Observation or cognition.
   Unencountered retracted messages expose a withdrawn marker and no content;
   encountered material retains its retracted lifecycle and attachment state.
+- `readHistoryCoverage` and `updateHistoryCoverage` retain actual native cursor,
+  read window and explicit limited/gap/unavailable/complete coverage under revision
+  CAS. Empty pages do not imply completeness.
 - `readEvents` is for the trusted Host event consumer, including protected
   envelope references. It is not an ordinary conversation read endpoint.
 

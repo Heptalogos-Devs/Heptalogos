@@ -1,0 +1,57 @@
+{
+  "name": "@heptalogos/openclaw-host",
+  "version": "0.1.0",
+  "private": true,
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "files": [
+    "dist/index.js",
+    "dist/index.d.ts",
+    "dist/routing.d.ts",
+    "dist/policy.d.ts",
+    "openclaw.plugin.json",
+    "README.md",
+    "LICENSE",
+    "NOTICE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "openclaw": {
+    "extensions": [
+      "./dist/index.js"
+    ]
+  },
+  "peerDependencies": {
+    "openclaw": "catalog:"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    }
+  },
+  "dependencies": {
+    "ws": "catalog:",
+    "ajv": "catalog:",
+    "typebox": "catalog:"
+  },
+  "devDependencies": {
+    "@types/ws": "catalog:",
+    "vitest": "catalog:",
+    "openclaw": "link:../../../../Nous-Wave/packages/openclaw/node_modules/openclaw",
+    "@heptalogos/management-client": "workspace:*",
+    "@heptalogos/messaging": "workspace:*",
+    "@heptalogos/schema-runtime": "workspace:*",
+    "esbuild": "catalog:"
+  },
+  "scripts": {
+    "pack:product": "node scripts/pack.mjs"
+  },
+  "nousNativeState": [
+    "openChannelIngressQueue",
+    "openKeyedStore"
+  ]
+}

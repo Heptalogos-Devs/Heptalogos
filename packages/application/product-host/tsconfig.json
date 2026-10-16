@@ -13,10 +13,13 @@
   "include": ["src/**/*.ts", "test/**/*.ts"],
   "references": [
     {
-      "path": "../../system/configuration"
+      "path": "../../product/identity"
     },
     {
-      "path": "../../bootstrap/bootstrap-state"
+      "path": "../../product/messaging"
+    },
+    {
+      "path": "../../product/subject"
     },
     {
       "path": "../../foundation/time-service"
@@ -43,7 +46,13 @@
       "path": "../../execution/evidence"
     },
     {
+      "path": "../../system/configuration"
+    },
+    {
       "path": "../../data/canonical-schema"
+    },
+    {
+      "path": "../../bootstrap/bootstrap-state"
     },
     {
       "path": "../../bootstrap/bootstrap-runtime"

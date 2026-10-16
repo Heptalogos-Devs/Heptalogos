@@ -68,11 +68,16 @@
       ],
       "kysely": ["../../packages/data/persistence/node_modules/kysely/dist/index.d.ts"],
       "@heptalogos/messaging": ["../../packages/product/messaging/dist/index.d.ts"],
-      "@heptalogos/identity": ["../../packages/product/identity/dist/index.d.ts"]
-    }
+      "@heptalogos/identity": ["../../packages/product/identity/dist/index.d.ts"],
+      "@heptalogos/subject": ["../../packages/product/subject/dist/index.d.ts"]
+    },
+    "lib": ["ES2025", "DOM"]
   },
   "include": ["test/**/*.ts", "support/**/*.ts"],
   "references": [
+    {
+      "path": "../../packages/application/product-host"
+    },
     {
       "path": "../../packages/product/identity"
     },
@@ -81,6 +86,9 @@
     },
     {
       "path": "../../packages/foundation/schema-runtime"
+    },
+    {
+      "path": "../../packages/product/subject"
     },
     {
       "path": "../../packages/execution/signal"

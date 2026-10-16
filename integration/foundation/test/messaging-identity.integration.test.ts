@@ -9,80 +9,28 @@ import {
   type RawMessageFact,
 } from "@heptalogos/messaging";
 import { createIdentityService } from "@heptalogos/identity";
-import { createPersistenceService } from "@heptalogos/persistence";
-import {
-  createExecutionContextRuntime,
-  createExecutionLineageService,
-  createPersistenceExecutionContextProvider,
-} from "@heptalogos/execution-lineage";
-import { createSystemTimeService } from "@heptalogos/time-service";
 import { createCanonicalMessageId } from "@heptalogos/foundation-contracts";
 import { canonicalMigrationProvider } from "../../../packages/data/canonical-schema/dist/migration-provider.js";
 import {
   makeFixture,
-  boot,
   cleanupCanonicalPostgresFixtures,
-  stopManagedHostWithoutRuntime,
   qualifiedPgBin,
   mutateAsBootstrap,
 } from "../support/canonical-postgres.js";
 
+import { composeProductPersistence } from "../support/product-persistence.js";
+
 const real = qualifiedPgBin ? describe : describe.skip;
 afterEach(cleanupCanonicalPostgresFixtures);
 async function compose(fixture?: Awaited<ReturnType<typeof makeFixture>>) {
-  fixture ??= await makeFixture();
-  const started = await boot(fixture);
-  const time = createSystemTimeService();
-  const runtime = createExecutionContextRuntime(
-    {
-      installationId: started.host.installationId,
-      instanceId: started.host.instanceId,
-      bootId: started.host.bootId,
-      continuityEpochId: started.host.continuityEpochId,
-      hostOwnershipToken: started.host.token,
-    },
-    time,
-  );
-  const persistence = createPersistenceService(
-    started.host.persistence,
-    {
-      maxConnections: 8,
-      idleTimeoutMs: 5000,
-      connectionTimeoutMs: 10000,
-      statementTimeoutMs: 10000,
-      lockTimeoutMs: 10000,
-      idleInTransactionSessionTimeoutMs: 30000,
-      onBackgroundError() {},
-    },
-    createPersistenceExecutionContextProvider(runtime),
-  );
-  const lineage = createExecutionLineageService();
-  const run = <T>(operation: () => Promise<T>) =>
-    runtime.runActivity(
-      {
-        kind: "qualification.messaging",
-        importance: "routine",
-        retentionClass: "operational",
-        sensitivity: "operational",
-      },
-      async (context) => {
-        await persistence.mutate((tx) => lineage.retainCurrent(tx, context));
-        return operation();
-      },
-    );
+  const current = await composeProductPersistence(fixture);
   return {
-    fixture,
-    started,
-    persistence,
-    run,
-    messaging: createMessagingService({ persistence }),
-    identity: createIdentityService({ persistence }),
-    async close() {
-      await persistence.close();
-      await stopManagedHostWithoutRuntime(started.host);
-    },
+    ...current,
+    messaging: createMessagingService({ persistence: current.persistence }),
+    identity: createIdentityService({ persistence: current.persistence }),
   };
 }
+
 const conversation = {
   platform: "qq",
   accountId: "900719925474099312345",
@@ -115,8 +63,16 @@ function message(nativeMessageId: string): RawMessageFact {
       },
     ],
     references: [
-      { kind: "forward", nativeId: "forward-native-id" },
-      { kind: "reply", nativeId: "unavailable-parent" },
+      {
+        kind: "forward",
+        nativeId: "forward-native-id",
+        sourceRef: "archive:reference:protected",
+      },
+      {
+        kind: "reply",
+        nativeId: "unavailable-parent",
+        sourceRef: "archive:reference:protected",
+      },
     ],
     sourceEnvelopeRef: "archive:envelope:protected",
   };
@@ -146,6 +102,127 @@ real.sequential("native Messaging and Host Identity on real fenced PostgreSQL", 
         Array.from({ length: 12 }, (_, i) => i + 2),
       );
       expect((await c.messaging.listPending({ limit: 100 })).pending).toHaveLength(13);
+      const absentConversation = {
+        ...duplicate.conversation,
+        conversationId: "not-recorded",
+      };
+      expect(
+        await c.messaging.resolveConversations({
+          conversations: [duplicate.conversation, absentConversation],
+        }),
+      ).toEqual({ conversationIds: [first.conversationId] });
+      expect(
+        await c.messaging.resolveConversations({ conversations: [absentConversation] }),
+      ).toEqual({ conversationIds: [] });
+      const outside = await c.run(() =>
+        c.messaging.accept({
+          facts: [
+            {
+              ...message("outside-message"),
+              conversation: { ...conversation, conversationId: "outside-scope" },
+            },
+          ],
+        }),
+      );
+      expect(
+        (
+          await c.messaging.listPending({
+            conversationIds: [first.conversationId],
+            limit: 100,
+          })
+        ).pending,
+      ).toHaveLength(13);
+      expect(
+        (await c.messaging.listPending({ conversationIds: [], limit: 100 })).pending,
+      ).toEqual([]);
+      expect(
+        (await c.messaging.listAttachments({ conversationIds: [], limit: 100 }))
+          .attachments,
+      ).toEqual([]);
+      expect(
+        (await c.messaging.listReferences({ conversationIds: [], limit: 100 }))
+          .references,
+      ).toEqual([]);
+      const outsideId = outside.results[0]!.factId;
+      expect(
+        await c.messaging.messageSources({
+          messageRefs: [first.factId, outsideId],
+          conversationIds: [first.conversationId],
+        }),
+      ).toEqual({
+        sources: [
+          {
+            messageRef: first.factId,
+            conversationId: first.conversationId,
+            lifecycle: "present",
+          },
+        ],
+      });
+      expect(
+        await c.messaging.messageSources({
+          messageRefs: [first.factId],
+          conversationIds: [],
+        }),
+      ).toEqual({ sources: [] });
+      expect(
+        (
+          await c.messaging.listAttachments({
+            conversationIds: [first.conversationId],
+            limit: 100,
+          })
+        ).attachments.some((item) => item.messageId === outsideId),
+      ).toBe(false);
+      expect(
+        (
+          await c.messaging.listReferences({
+            conversationIds: [first.conversationId],
+            limit: 100,
+          })
+        ).references.some((item) => item.messageId === outsideId),
+      ).toBe(false);
+
+      expect(
+        await c.messaging.readHistoryCoverage({ conversation: duplicate.conversation }),
+      ).toEqual({ history: null });
+      const history = await c.run(() =>
+        c.messaging.updateHistoryCoverage({
+          conversation: duplicate.conversation,
+          expectedRevision: null,
+          nativeCursor: "oldest-native-id",
+          coverage: "limited",
+          reason: "protocol_bounded_window",
+          updatedAt: duplicate.receivedAt,
+          firstNativeMessageId: duplicate.nativeMessageId,
+          lastNativeMessageId: "native-11",
+        }),
+      );
+      expect(history.revision).toBe(1);
+      const raced = await Promise.allSettled(
+        [1, 2].map(() =>
+          c.run(() =>
+            c.messaging.updateHistoryCoverage({
+              ...history,
+              revision: undefined,
+              expectedRevision: 1,
+              coverage: "gap",
+              reason: "native_cursor_no_progress",
+            }),
+          ),
+        ),
+      );
+      expect(raced.filter((result) => result.status === "fulfilled")).toHaveLength(1);
+      expect(
+        (
+          await c.messaging.readHistoryCoverage({
+            conversation: duplicate.conversation,
+          })
+        ).history,
+      ).toMatchObject({
+        revision: 2,
+        coverage: "gap",
+        nativeCursor: "oldest-native-id",
+        reason: "native_cursor_no_progress",
+      });
       const audience = {
         subjectId: "subject-original",
         conversationIds: [first.conversationId],
@@ -234,9 +311,20 @@ real.sequential("native Messaging and Host Identity on real fenced PostgreSQL", 
             },
           ],
           reason: "node_budget",
-          continuation: "native-next-page",
+          continuation: "archive:continuation:protected",
         }),
       );
+      const safePartial = await c.messaging.prepareRead({
+        messageRefs: [first.factId],
+        audience,
+        budget: { maxMessages: 1, maxBytes: 100000 },
+      });
+      expect(JSON.stringify(safePartial)).not.toContain("continuation:protected");
+      expect(
+        safePartial.materials[0]?.references.find(
+          (r) => r.referenceId === reference.referenceId,
+        ),
+      ).not.toHaveProperty("continuation");
       await c.run(() =>
         c.messaging.updateReference({
           referenceId: reference.referenceId,
@@ -310,6 +398,20 @@ real.sequential("native Messaging and Host Identity on real fenced PostgreSQL", 
       const late = await c.run(() =>
         c.messaging.accept({ facts: [message("late-history")] }),
       );
+      expect(
+        await c.messaging.messageSources({
+          messageRefs: [first.factId],
+          conversationIds: [first.conversationId],
+        }),
+      ).toEqual({
+        sources: [
+          {
+            messageRef: first.factId,
+            conversationId: first.conversationId,
+            lifecycle: "retracted",
+          },
+        ],
+      });
       const withdrawn = await c.messaging.prepareRead({
         messageRefs: [first.factId, second.factId, late.results[0]!.factId],
         audience,
@@ -345,6 +447,14 @@ real.sequential("native Messaging and Host Identity on real fenced PostgreSQL", 
         (await c.messaging.readEvents({ eventRefs: [unknown.results[0]!.factId] }))
           .events[0]?.eventType,
       ).toBe("notice.future_qq_member_state");
+      expect(
+        (
+          await c.messaging.readEvents({
+            eventRefs: [unknown.results[0]!.factId],
+            conversationIds: [],
+          })
+        ).events,
+      ).toEqual([]);
       await c.run(() =>
         c.messaging.completePending({ pendingRefs: [first.pendingRef] }),
       );
@@ -449,12 +559,12 @@ real.sequential("native Messaging and Host Identity on real fenced PostgreSQL", 
     }
   }, 120000);
   it("upgrades a real legacy Subject Chat record in place without deleting its body or lineage", async () => {
-    const original = canonicalMigrationProvider.getMigrations;
+    const original = canonicalMigrationProvider.getMigrations.bind(
+      canonicalMigrationProvider,
+    );
     canonicalMigrationProvider.getMigrations = async () =>
       Object.fromEntries(
-        Object.entries(await original()).filter(
-          ([name]) => name !== "0004_messaging_identity",
-        ),
+        Object.entries(await original()).filter(([name]) => name < "0004_"),
       );
     let old: Awaited<ReturnType<typeof compose>>;
     try {

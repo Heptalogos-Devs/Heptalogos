@@ -22,7 +22,9 @@
     "durable-execution",
     "effect-operation",
     "messaging",
-    "identity"
+    "identity",
+    "subject",
+    "product-host"
   ],
   "targets": {
     "lint": {

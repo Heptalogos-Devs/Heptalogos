@@ -8,6 +8,8 @@
 import { createCanonicalSchemaInitializer } from "@heptalogos/canonical-schema";
 import {
   prepareBootstrapPrelude,
+  loadBootstrapLocator,
+  resolveBootstrapPathProfile,
   resolveRuntimeLocations,
   type BootstrapManagedHostContext,
 } from "@heptalogos/bootstrap-runtime";
@@ -48,6 +50,7 @@ import {
 import { createProductHttpApp, closeProductHttpApp } from "./product-http.js";
 import { getNousSubject, createNousSubject } from "./nous.js";
 import { inspectProductDependencies } from "./dependencies.js";
+import { createGatewayRuntime } from "./gateway-runtime.js";
 import { parseProductHostInputs, type ProductHostInputs } from "./inputs.js";
 
 /** Handle to the independently usable management process. */
@@ -276,10 +279,34 @@ export async function startProductHost(
       runMutation: runMutationActivity,
       subjects: { get: getNousSubject, create: createNousSubject },
     });
+    const secretPaths = await resolveBootstrapPathProfile(
+      await loadBootstrapLocator(options.anchorRoot),
+      ["SECRET"],
+    );
+    if (
+      secretPaths.installationId !== owned.installationId ||
+      secretPaths.instanceId !== owned.instanceId
+    )
+      throw new Error("Installation identity changed while resolving channel secrets");
+    const gateway = await createGatewayRuntime({
+      persistence: currentPersistence,
+      product,
+      secretRoot: secretPaths.resolve("SECRET").canonicalPath,
+      dataRoot: locations.stateRoot,
+      now: () => new Date().toISOString(),
+      runMutation: runMutationActivity,
+    });
+    const recoveryConfiguration = await product.configuration();
+    const recoverySubjectId = recoveryConfiguration.settings?.subject?.id;
+    if (recoverySubjectId)
+      await runMutationActivity("subject.life.recover", () =>
+        gateway.life.recover(recoverySubjectId),
+      );
     const currentRunRoot = runRoot;
     app = await createProductHttpApp({
       authentication,
       product,
+      gateway: gateway.http,
       identity: {
         installationId: currentHost.installationId,
         bootId: currentHost.bootId,

@@ -9,6 +9,7 @@ describe("ManagementClient public facade", () => {
   it("keeps generated transport and modules closure-private", () => {
     expect(Object.keys(managementClientPublic).sort()).toEqual([
       "ManagementClientError",
+      "createGatewayHostClient",
       "createManagementClient",
     ]);
     const client = createManagementClient({ origin: "http://127.0.0.1:1" });

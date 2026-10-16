@@ -15,17 +15,9 @@
     }
   },
   "dependencies": {
-    "@heptalogos/ai-runtime": "workspace:*",
-    "@heptalogos/configuration": "workspace:*",
-    "@heptalogos/evidence": "workspace:*",
-    "@heptalogos/execution-lineage": "workspace:*",
     "@heptalogos/foundation-contracts": "workspace:*",
-    "@heptalogos/messaging": "workspace:*",
     "@heptalogos/persistence": "workspace:*",
-    "@heptalogos/runtime-kernel": "workspace:*",
-    "@heptalogos/schema-runtime": "workspace:*",
-    "@heptalogos/time-service": "workspace:*",
-    "@heptalogos/work-queue": "workspace:*"
+    "@heptalogos/schema-runtime": "workspace:*"
   },
   "devDependencies": {
     "vitest": "catalog:"

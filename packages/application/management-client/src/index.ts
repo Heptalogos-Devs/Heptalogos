@@ -22,3 +22,9 @@ export type {
 } from "./client.js";
 
 export type { BindSubjectInput, CreateSubjectInput } from "./client.js";
+
+export {
+  createGatewayHostClient,
+  type GatewayHostClient,
+  type GatewayHostClientOptions,
+} from "./gateway-client.js";

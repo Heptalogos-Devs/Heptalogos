@@ -799,6 +799,20 @@ export type GetProductConfigurationResponses = {
     200: {
         revision: string | null;
         settings: {
+            qq?: {
+                accountId: string;
+                nativeAgentId: string;
+                conversations: Array<{
+                    kind: 'group' | 'direct';
+                    conversationId: string;
+                    receive: boolean;
+                    observe: boolean;
+                    effects: Array<'send' | 'edit' | 'withdraw' | 'react' | 'moderate' | 'accept_request'>;
+                }>;
+                tools: Array<string>;
+                sourceRefs: Array<string>;
+                maxRunMs: number;
+            };
             nous: {
                 runRoot: string;
                 expectedInstanceId: string | null;
@@ -823,6 +837,20 @@ export type ConfigureProductData = {
     body: {
         expectedRevision: string | null;
         settings: {
+            qq?: {
+                accountId: string;
+                nativeAgentId: string;
+                conversations: Array<{
+                    kind: 'group' | 'direct';
+                    conversationId: string;
+                    receive: boolean;
+                    observe: boolean;
+                    effects: Array<'send' | 'edit' | 'withdraw' | 'react' | 'moderate' | 'accept_request'>;
+                }>;
+                tools: Array<string>;
+                sourceRefs: Array<string>;
+                maxRunMs: number;
+            };
             nous: {
                 runRoot: string;
                 expectedInstanceId: string | null;
@@ -954,6 +982,20 @@ export type ConfigureProductResponses = {
     200: {
         revision: string | null;
         settings: {
+            qq?: {
+                accountId: string;
+                nativeAgentId: string;
+                conversations: Array<{
+                    kind: 'group' | 'direct';
+                    conversationId: string;
+                    receive: boolean;
+                    observe: boolean;
+                    effects: Array<'send' | 'edit' | 'withdraw' | 'react' | 'moderate' | 'accept_request'>;
+                }>;
+                tools: Array<string>;
+                sourceRefs: Array<string>;
+                maxRunMs: number;
+            };
             nous: {
                 runRoot: string;
                 expectedInstanceId: string | null;
@@ -976,6 +1018,20 @@ export type ConfigureProductResponse = ConfigureProductResponses[keyof Configure
 
 export type CheckProductConfigurationData = {
     body: {
+        qq?: {
+            accountId: string;
+            nativeAgentId: string;
+            conversations: Array<{
+                kind: 'group' | 'direct';
+                conversationId: string;
+                receive: boolean;
+                observe: boolean;
+                effects: Array<'send' | 'edit' | 'withdraw' | 'react' | 'moderate' | 'accept_request'>;
+            }>;
+            tools: Array<string>;
+            sourceRefs: Array<string>;
+            maxRunMs: number;
+        };
         nous: {
             runRoot: string;
             expectedInstanceId: string | null;
@@ -1104,6 +1160,20 @@ export type CheckProductConfigurationResponses = {
      * Default Response
      */
     200: {
+        qq?: {
+            accountId: string;
+            nativeAgentId: string;
+            conversations: Array<{
+                kind: 'group' | 'direct';
+                conversationId: string;
+                receive: boolean;
+                observe: boolean;
+                effects: Array<'send' | 'edit' | 'withdraw' | 'react' | 'moderate' | 'accept_request'>;
+            }>;
+            tools: Array<string>;
+            sourceRefs: Array<string>;
+            maxRunMs: number;
+        };
         nous: {
             runRoot: string;
             expectedInstanceId: string | null;
@@ -1374,6 +1444,20 @@ export type BindProductSubjectResponses = {
     200: {
         revision: string | null;
         settings: {
+            qq?: {
+                accountId: string;
+                nativeAgentId: string;
+                conversations: Array<{
+                    kind: 'group' | 'direct';
+                    conversationId: string;
+                    receive: boolean;
+                    observe: boolean;
+                    effects: Array<'send' | 'edit' | 'withdraw' | 'react' | 'moderate' | 'accept_request'>;
+                }>;
+                tools: Array<string>;
+                sourceRefs: Array<string>;
+                maxRunMs: number;
+            };
             nous: {
                 runRoot: string;
                 expectedInstanceId: string | null;
@@ -1527,3 +1611,4533 @@ export type CreateProductSubjectResponses = {
 };
 
 export type CreateProductSubjectResponse = CreateProductSubjectResponses[keyof CreateProductSubjectResponses];
+
+export type RegisterChannelRouteData = {
+    body: {
+        accountId: string;
+        conversation: {
+            kind: 'direct' | 'group';
+            id: string;
+        };
+        nativeAgentId: string;
+        sessionKey: string;
+        mainSessionKey: string;
+        matchedBy: 'binding.account';
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/route';
+};
+
+export type RegisterChannelRouteErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type RegisterChannelRouteError = RegisterChannelRouteErrors[keyof RegisterChannelRouteErrors];
+
+export type RegisterChannelRouteResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        registered: true;
+    };
+};
+
+export type RegisterChannelRouteResponse = RegisterChannelRouteResponses[keyof RegisterChannelRouteResponses];
+
+export type UploadAttachmentData = {
+    body: Blob | File;
+    headers: {
+        'x-media-type': string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/media';
+};
+
+export type UploadAttachmentErrors = {
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type UploadAttachmentError = UploadAttachmentErrors[keyof UploadAttachmentErrors];
+
+export type UploadAttachmentResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        reference: string;
+        sha256: string;
+        bytes: number;
+        mediaType: string;
+    };
+};
+
+export type UploadAttachmentResponse = UploadAttachmentResponses[keyof UploadAttachmentResponses];
+
+export type GatewayScopeData = {
+    body: {
+        [key: string]: never;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/scope';
+};
+
+export type GatewayScopeErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type GatewayScopeError = GatewayScopeErrors[keyof GatewayScopeErrors];
+
+export type GatewayScopeResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        subjectId: string;
+        revision: string;
+        accountId: string;
+        nativeAgentId: string;
+        conversations: Array<{
+            kind: 'group' | 'direct';
+            conversationId: string;
+            receive: boolean;
+            observe: boolean;
+            effects: Array<'send' | 'edit' | 'withdraw' | 'react' | 'moderate' | 'accept_request'>;
+        }>;
+        tools: Array<string>;
+        sourceRefs: Array<string>;
+        maxRunMs: number;
+    };
+};
+
+export type GatewayScopeResponse = GatewayScopeResponses[keyof GatewayScopeResponses];
+
+export type ArchiveEnvelopeData = {
+    body: {
+        kind: 'envelope' | 'segment';
+        value: unknown;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/archive';
+};
+
+export type ArchiveEnvelopeErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ArchiveEnvelopeError = ArchiveEnvelopeErrors[keyof ArchiveEnvelopeErrors];
+
+export type ArchiveEnvelopeResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        reference: string;
+    };
+};
+
+export type ArchiveEnvelopeResponse = ArchiveEnvelopeResponses[keyof ArchiveEnvelopeResponses];
+
+export type ReadArchiveData = {
+    body: {
+        reference: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/archive/read';
+};
+
+export type ReadArchiveErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ReadArchiveError = ReadArchiveErrors[keyof ReadArchiveErrors];
+
+export type ReadArchiveResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        value: unknown;
+    };
+};
+
+export type ReadArchiveResponse = ReadArchiveResponses[keyof ReadArchiveResponses];
+
+export type AcceptFactsData = {
+    body: {
+        facts: Array<{
+            kind: 'message';
+            conversation: {
+                platform: string;
+                accountId: string;
+                conversationId: string;
+                kind: 'direct' | 'group';
+            };
+            nativeMessageId: string;
+            direction: 'INBOUND' | 'OUTBOUND';
+            author: {
+                accountId: string;
+                uid?: string;
+                entityRef?: string;
+                displayName?: string;
+                groupCard?: string;
+            };
+            platformSentAt: string | null;
+            receivedAt: string;
+            parts: Array<{
+                kind: 'text' | 'at' | 'reply' | 'image' | 'sticker' | 'face' | 'audio' | 'video' | 'file' | 'forward' | 'share' | 'card' | 'location' | 'unknown';
+                text?: string;
+                targetId?: string;
+                atAll?: boolean;
+                nativeDataRef?: string;
+                attachment?: {
+                    kind: string;
+                    reference: string;
+                };
+                data?: {
+                    [key: string]: unknown;
+                };
+            }>;
+            references: Array<{
+                kind: 'reply' | 'forward';
+                nativeId: string;
+                sourceRef?: string;
+                conversation?: {
+                    platform: string;
+                    accountId: string;
+                    conversationId: string;
+                    kind: 'direct' | 'group';
+                };
+            }>;
+            sourceEnvelopeRef: string;
+            sourceEventRef?: string;
+        } | {
+            kind: 'event';
+            conversation: {
+                platform: string;
+                accountId: string;
+                conversationId: string;
+                kind: 'direct' | 'group';
+            };
+            eventKey: string;
+            eventType: string;
+            receivedAt: string;
+            platformSentAt: string | null;
+            sourceEnvelopeRef: string;
+            actor?: {
+                accountId: string;
+                uid?: string;
+                entityRef?: string;
+                displayName?: string;
+                groupCard?: string;
+            };
+            targetNativeMessageId?: string;
+            effect?: 'retract' | 'none';
+        }>;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/messaging/accept';
+};
+
+export type AcceptFactsErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type AcceptFactsError = AcceptFactsErrors[keyof AcceptFactsErrors];
+
+export type AcceptFactsResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        results: Array<{
+            kind: 'message' | 'event';
+            status: 'created' | 'existing';
+            factId: string;
+            conversationId: string;
+            sequence?: number;
+            pendingRef: string;
+        }>;
+    };
+};
+
+export type AcceptFactsResponse = AcceptFactsResponses[keyof AcceptFactsResponses];
+
+export type PrepareReadData = {
+    body: {
+        messageRefs?: Array<string>;
+        window?: {
+            conversationId: string;
+            afterSequence: number;
+            throughSequence?: number;
+        };
+        audience: {
+            subjectId: string;
+            conversationIds: Array<string>;
+        };
+        budget: {
+            maxMessages: number;
+            maxBytes: number;
+        };
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/messaging/read';
+};
+
+export type PrepareReadErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type PrepareReadError = PrepareReadErrors[keyof PrepareReadErrors];
+
+export type PrepareReadResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        materials: Array<{
+            messageId: string;
+            conversationId: string;
+            sequence: number;
+            nativeMessageId: string;
+            conversation: {
+                platform: string;
+                accountId: string;
+                conversationId: string;
+                kind: 'direct' | 'group';
+            };
+            direction: 'INBOUND' | 'OUTBOUND';
+            author: {
+                accountId: string;
+                uid?: string;
+                entityRef?: string;
+                displayName?: string;
+                groupCard?: string;
+            };
+            platformSentAt: string | null;
+            receivedAt: string;
+            lineageContextRef: {
+                schemaVersion: 1;
+                sourceActivityId: string;
+                sourceInstanceId: string;
+                sourceContinuityEpochId: string;
+            };
+            lifecycle: 'present' | 'retracted';
+            withheld: boolean;
+            parts: Array<{
+                kind: 'text' | 'at' | 'reply' | 'image' | 'sticker' | 'face' | 'audio' | 'video' | 'file' | 'forward' | 'share' | 'card' | 'location' | 'unknown';
+                text?: string;
+                targetId?: string;
+                atAll?: boolean;
+                data?: {
+                    [key: string]: unknown;
+                };
+            }>;
+            attachments: Array<{
+                attachmentId: string;
+                messageId: string;
+                nodePath?: string;
+                referenceId?: string;
+                partIndex: number;
+                source?: unknown;
+                revision: number;
+                state: 'pending' | 'acquiring' | 'available' | 'failed' | 'expired' | 'retracted';
+                cas?: {
+                    reference: string;
+                    sha256: string;
+                    bytes: number;
+                    mediaType: string;
+                };
+                failure?: {
+                    code: string;
+                    retryable: boolean;
+                };
+            }>;
+            references: Array<{
+                referenceId: string;
+                ordinal: number;
+                target: {
+                    kind: 'reply' | 'forward';
+                    nativeId: string;
+                    sourceRef?: unknown;
+                    conversation?: {
+                        platform: string;
+                        accountId: string;
+                        conversationId: string;
+                        kind: 'direct' | 'group';
+                    };
+                };
+                state: 'pending' | 'available' | 'partial' | 'unavailable';
+                resolvedMessageRef?: string;
+                nodes?: Array<{
+                    path: string;
+                    sourceRef?: unknown;
+                    parentPath: string | null;
+                    claimedAuthor?: {
+                        accountId: string;
+                        uid?: string;
+                        entityRef?: string;
+                        displayName?: string;
+                        groupCard?: string;
+                    };
+                    platformSentAt: string | null;
+                    parts: Array<{
+                        kind: 'text' | 'at' | 'reply' | 'image' | 'sticker' | 'face' | 'audio' | 'video' | 'file' | 'forward' | 'share' | 'card' | 'location' | 'unknown';
+                        text?: string;
+                        targetId?: string;
+                        atAll?: boolean;
+                        data?: {
+                            [key: string]: unknown;
+                        };
+                    }>;
+                }>;
+                reason?: string;
+                continuation?: unknown;
+            }>;
+        }>;
+        coverage: {
+            complete: boolean;
+            returnedMessages: number;
+            bytes: number;
+        };
+        omitted: Array<{
+            messageRef: string;
+            reason: 'not_found' | 'not_authorized' | 'message_budget' | 'byte_budget';
+        }>;
+        nextSequence?: number;
+    };
+};
+
+export type PrepareReadResponse = PrepareReadResponses[keyof PrepareReadResponses];
+
+export type PendingFactsData = {
+    body: {
+        conversationIds?: Array<string>;
+        conversationId?: string;
+        limit: number;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/messaging/pending';
+};
+
+export type PendingFactsErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type PendingFactsError = PendingFactsErrors[keyof PendingFactsErrors];
+
+export type PendingFactsResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        pending: Array<{
+            pendingRef: string;
+            kind: 'message' | 'event';
+            factId: string;
+            conversationId: string;
+        }>;
+    };
+};
+
+export type PendingFactsResponse = PendingFactsResponses[keyof PendingFactsResponses];
+
+export type CompletePendingData = {
+    body: {
+        pendingRefs: Array<string>;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/messaging/complete';
+};
+
+export type CompletePendingErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type CompletePendingError = CompletePendingErrors[keyof CompletePendingErrors];
+
+export type CompletePendingResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        accepted: true;
+    };
+};
+
+export type CompletePendingResponse = CompletePendingResponses[keyof CompletePendingResponses];
+
+export type PendingAttachmentsData = {
+    body: {
+        conversationIds?: Array<string>;
+        limit: number;
+        states?: Array<'pending' | 'acquiring' | 'available' | 'failed' | 'expired' | 'retracted'>;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/messaging/attachments';
+};
+
+export type PendingAttachmentsErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type PendingAttachmentsError = PendingAttachmentsErrors[keyof PendingAttachmentsErrors];
+
+export type PendingAttachmentsResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        attachments: Array<{
+            attachmentId: string;
+            messageId: string;
+            nodePath?: string;
+            referenceId?: string;
+            partIndex: number;
+            source: {
+                kind: string;
+                reference: string;
+            };
+            revision: number;
+            state: 'pending' | 'acquiring' | 'available' | 'failed' | 'expired' | 'retracted';
+            cas?: {
+                reference: string;
+                sha256: string;
+                bytes: number;
+                mediaType: string;
+            };
+            failure?: {
+                code: string;
+                retryable: boolean;
+            };
+        }>;
+    };
+};
+
+export type PendingAttachmentsResponse = PendingAttachmentsResponses[keyof PendingAttachmentsResponses];
+
+export type UpdateAttachmentData = {
+    body: {
+        attachmentId: string;
+        expectedRevision: number;
+        state: 'pending' | 'acquiring' | 'available' | 'failed' | 'expired' | 'retracted';
+        cas?: {
+            reference: string;
+            sha256: string;
+            bytes: number;
+            mediaType: string;
+        };
+        failure?: {
+            code: string;
+            retryable: boolean;
+        };
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/messaging/attachment';
+};
+
+export type UpdateAttachmentErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type UpdateAttachmentError = UpdateAttachmentErrors[keyof UpdateAttachmentErrors];
+
+export type UpdateAttachmentResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        attachmentId: string;
+        messageId: string;
+        nodePath?: string;
+        referenceId?: string;
+        partIndex: number;
+        source: {
+            kind: string;
+            reference: string;
+        };
+        revision: number;
+        state: 'pending' | 'acquiring' | 'available' | 'failed' | 'expired' | 'retracted';
+        cas?: {
+            reference: string;
+            sha256: string;
+            bytes: number;
+            mediaType: string;
+        };
+        failure?: {
+            code: string;
+            retryable: boolean;
+        };
+    };
+};
+
+export type UpdateAttachmentResponse = UpdateAttachmentResponses[keyof UpdateAttachmentResponses];
+
+export type PendingReferencesData = {
+    body: {
+        conversationIds?: Array<string>;
+        conversationId?: string;
+        limit: number;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/messaging/references';
+};
+
+export type PendingReferencesErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type PendingReferencesError = PendingReferencesErrors[keyof PendingReferencesErrors];
+
+export type PendingReferencesResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        references: Array<{
+            referenceId: string;
+            messageId: string;
+            ordinal: number;
+            target: {
+                kind: 'reply' | 'forward';
+                nativeId: string;
+                sourceRef?: string;
+                conversation?: {
+                    platform: string;
+                    accountId: string;
+                    conversationId: string;
+                    kind: 'direct' | 'group';
+                };
+            };
+            revision: number;
+            state: 'pending' | 'available' | 'partial' | 'unavailable';
+            resolvedMessageRef?: string;
+            nodes?: Array<{
+                path: string;
+                sourceRef?: string;
+                parentPath: string | null;
+                claimedAuthor?: {
+                    accountId: string;
+                    uid?: string;
+                    entityRef?: string;
+                    displayName?: string;
+                    groupCard?: string;
+                };
+                platformSentAt: string | null;
+                parts: Array<{
+                    kind: 'text' | 'at' | 'reply' | 'image' | 'sticker' | 'face' | 'audio' | 'video' | 'file' | 'forward' | 'share' | 'card' | 'location' | 'unknown';
+                    text?: string;
+                    targetId?: string;
+                    atAll?: boolean;
+                    nativeDataRef?: string;
+                    attachment?: {
+                        kind: string;
+                        reference: string;
+                    };
+                    data?: {
+                        [key: string]: unknown;
+                    };
+                }>;
+            }>;
+            reason?: string;
+            continuation?: string;
+        }>;
+    };
+};
+
+export type PendingReferencesResponse = PendingReferencesResponses[keyof PendingReferencesResponses];
+
+export type UpdateReferenceData = {
+    body: {
+        referenceId: string;
+        expectedRevision: number;
+        state: 'pending' | 'available' | 'partial' | 'unavailable';
+        resolvedMessageRef?: string;
+        nodes?: Array<{
+            path: string;
+            sourceRef?: string;
+            parentPath: string | null;
+            claimedAuthor?: {
+                accountId: string;
+                uid?: string;
+                entityRef?: string;
+                displayName?: string;
+                groupCard?: string;
+            };
+            platformSentAt: string | null;
+            parts: Array<{
+                kind: 'text' | 'at' | 'reply' | 'image' | 'sticker' | 'face' | 'audio' | 'video' | 'file' | 'forward' | 'share' | 'card' | 'location' | 'unknown';
+                text?: string;
+                targetId?: string;
+                atAll?: boolean;
+                nativeDataRef?: string;
+                attachment?: {
+                    kind: string;
+                    reference: string;
+                };
+                data?: {
+                    [key: string]: unknown;
+                };
+            }>;
+        }>;
+        reason?: string;
+        continuation?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/messaging/reference';
+};
+
+export type UpdateReferenceErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type UpdateReferenceError = UpdateReferenceErrors[keyof UpdateReferenceErrors];
+
+export type UpdateReferenceResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        referenceId: string;
+        messageId: string;
+        ordinal: number;
+        target: {
+            kind: 'reply' | 'forward';
+            nativeId: string;
+            sourceRef?: string;
+            conversation?: {
+                platform: string;
+                accountId: string;
+                conversationId: string;
+                kind: 'direct' | 'group';
+            };
+        };
+        revision: number;
+        state: 'pending' | 'available' | 'partial' | 'unavailable';
+        resolvedMessageRef?: string;
+        nodes?: Array<{
+            path: string;
+            sourceRef?: string;
+            parentPath: string | null;
+            claimedAuthor?: {
+                accountId: string;
+                uid?: string;
+                entityRef?: string;
+                displayName?: string;
+                groupCard?: string;
+            };
+            platformSentAt: string | null;
+            parts: Array<{
+                kind: 'text' | 'at' | 'reply' | 'image' | 'sticker' | 'face' | 'audio' | 'video' | 'file' | 'forward' | 'share' | 'card' | 'location' | 'unknown';
+                text?: string;
+                targetId?: string;
+                atAll?: boolean;
+                nativeDataRef?: string;
+                attachment?: {
+                    kind: string;
+                    reference: string;
+                };
+                data?: {
+                    [key: string]: unknown;
+                };
+            }>;
+        }>;
+        reason?: string;
+        continuation?: string;
+    };
+};
+
+export type UpdateReferenceResponse = UpdateReferenceResponses[keyof UpdateReferenceResponses];
+
+export type ReadEventsData = {
+    body: {
+        conversationIds?: Array<string>;
+        eventRefs: Array<string>;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/messaging/events';
+};
+
+export type ReadEventsErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ReadEventsError = ReadEventsErrors[keyof ReadEventsErrors];
+
+export type ReadEventsResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        events: Array<{
+            kind: 'event';
+            conversation: {
+                platform: string;
+                accountId: string;
+                conversationId: string;
+                kind: 'direct' | 'group';
+            };
+            eventKey: string;
+            eventType: string;
+            receivedAt: string;
+            platformSentAt: string | null;
+            sourceEnvelopeRef: string;
+            actor?: {
+                accountId: string;
+                uid?: string;
+                entityRef?: string;
+                displayName?: string;
+                groupCard?: string;
+            };
+            targetNativeMessageId?: string;
+            effect?: 'retract' | 'none';
+            eventId: string;
+            conversationId: string;
+        }>;
+    };
+};
+
+export type ReadEventsResponse = ReadEventsResponses[keyof ReadEventsResponses];
+
+export type ReadHistoryCoverageData = {
+    body: {
+        conversation: {
+            platform: string;
+            accountId: string;
+            conversationId: string;
+            kind: 'direct' | 'group';
+        };
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/messaging/history/read';
+};
+
+export type ReadHistoryCoverageErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ReadHistoryCoverageError = ReadHistoryCoverageErrors[keyof ReadHistoryCoverageErrors];
+
+export type ReadHistoryCoverageResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        history: {
+            conversation: {
+                platform: string;
+                accountId: string;
+                conversationId: string;
+                kind: 'direct' | 'group';
+            };
+            revision: number;
+            nativeCursor: string | null;
+            coverage: 'limited' | 'gap' | 'unavailable' | 'complete';
+            reason: string;
+            updatedAt: string;
+            firstNativeMessageId?: string;
+            lastNativeMessageId?: string;
+        } | null;
+    };
+};
+
+export type ReadHistoryCoverageResponse = ReadHistoryCoverageResponses[keyof ReadHistoryCoverageResponses];
+
+export type UpdateHistoryCoverageData = {
+    body: {
+        conversation: {
+            platform: string;
+            accountId: string;
+            conversationId: string;
+            kind: 'direct' | 'group';
+        };
+        revision?: unknown;
+        nativeCursor: string | null;
+        coverage: 'limited' | 'gap' | 'unavailable' | 'complete';
+        reason: string;
+        updatedAt: string;
+        firstNativeMessageId?: string;
+        lastNativeMessageId?: string;
+        expectedRevision: number | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/messaging/history/update';
+};
+
+export type UpdateHistoryCoverageErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type UpdateHistoryCoverageError = UpdateHistoryCoverageErrors[keyof UpdateHistoryCoverageErrors];
+
+export type UpdateHistoryCoverageResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        conversation: {
+            platform: string;
+            accountId: string;
+            conversationId: string;
+            kind: 'direct' | 'group';
+        };
+        revision: number;
+        nativeCursor: string | null;
+        coverage: 'limited' | 'gap' | 'unavailable' | 'complete';
+        reason: string;
+        updatedAt: string;
+        firstNativeMessageId?: string;
+        lastNativeMessageId?: string;
+    };
+};
+
+export type UpdateHistoryCoverageResponse = UpdateHistoryCoverageResponses[keyof UpdateHistoryCoverageResponses];
+
+export type ResolveAccountData = {
+    body: {
+        platform: string;
+        accountId: string;
+        uid?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/identity/account';
+};
+
+export type ResolveAccountErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ResolveAccountError = ResolveAccountErrors[keyof ResolveAccountErrors];
+
+export type ResolveAccountResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        entityRef: string;
+        kind: 'person' | 'group' | 'subject';
+    };
+};
+
+export type ResolveAccountResponse = ResolveAccountResponses[keyof ResolveAccountResponses];
+
+export type ResolveGroupData = {
+    body: {
+        platform: string;
+        groupId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/identity/group';
+};
+
+export type ResolveGroupErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ResolveGroupError = ResolveGroupErrors[keyof ResolveGroupErrors];
+
+export type ResolveGroupResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        entityRef: string;
+        kind: 'person' | 'group' | 'subject';
+    };
+};
+
+export type ResolveGroupResponse = ResolveGroupResponses[keyof ResolveGroupResponses];
+
+export type BindSubjectAccountData = {
+    body: {
+        platform: string;
+        accountId: string;
+        uid?: string;
+        subjectId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/identity/subject-account';
+};
+
+export type BindSubjectAccountErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type BindSubjectAccountError = BindSubjectAccountErrors[keyof BindSubjectAccountErrors];
+
+export type BindSubjectAccountResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        entityRef: string;
+        kind: 'person' | 'group' | 'subject';
+    };
+};
+
+export type BindSubjectAccountResponse = BindSubjectAccountResponses[keyof BindSubjectAccountResponses];
+
+export type AdoptDeliveryData = {
+    body: {
+        channel: string;
+        accountId: string;
+        to: string;
+        replyToId?: string | null;
+        replyToMode?: 'first' | 'all';
+        threadId?: string | number | null;
+        nativeIntentId: string;
+        runId: string;
+        preparedBatch: {
+            [key: string]: unknown;
+        };
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/agency/adopt';
+};
+
+export type AdoptDeliveryErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type AdoptDeliveryError = AdoptDeliveryErrors[keyof AdoptDeliveryErrors];
+
+export type AdoptDeliveryResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        reference: string;
+    };
+};
+
+export type AdoptDeliveryResponse = AdoptDeliveryResponses[keyof AdoptDeliveryResponses];
+
+export type AuthorizeDeliveryData = {
+    body: {
+        reference: string;
+        channel: string;
+        accountId: string;
+        to: string;
+        replyToId?: string | null;
+        threadId?: string | number | null;
+        deliveryQueueId: string;
+        payload: {
+            sourceIndex: number;
+            kind: 'text' | 'media' | 'payload';
+            text?: string;
+            mediaUrl?: string;
+            payload?: {
+                [key: string]: unknown;
+            };
+            deliveryPartIndex?: number;
+            deliveryPartCount?: number;
+        };
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/agency/authorize';
+};
+
+export type AuthorizeDeliveryErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type AuthorizeDeliveryError = AuthorizeDeliveryErrors[keyof AuthorizeDeliveryErrors];
+
+export type AuthorizeDeliveryResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        authorized: true;
+    };
+};
+
+export type AuthorizeDeliveryResponse = AuthorizeDeliveryResponses[keyof AuthorizeDeliveryResponses];
+
+export type BeginDeliveryData = {
+    body: {
+        reference: string;
+        channel: string;
+        accountId: string;
+        to: string;
+        replyToId?: string | null;
+        threadId?: string | number | null;
+        deliveryQueueId: string;
+        payload: {
+            sourceIndex: number;
+            kind: 'text' | 'media' | 'payload';
+            text?: string;
+            mediaUrl?: string;
+            payload?: {
+                [key: string]: unknown;
+            };
+            deliveryPartIndex?: number;
+            deliveryPartCount?: number;
+        };
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/agency/begin';
+};
+
+export type BeginDeliveryErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type BeginDeliveryError = BeginDeliveryErrors[keyof BeginDeliveryErrors];
+
+export type BeginDeliveryResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        action: 'send';
+        attemptId: string;
+    } | {
+        action: 'return';
+        outcome: {
+            state: 'accepted';
+            platformMessageId: string;
+            acceptedAt: string;
+        } | {
+            state: 'not_sent';
+            code: string;
+        } | {
+            state: 'failed';
+            code: string;
+        } | {
+            state: 'uncertain';
+            code: string;
+        };
+    };
+};
+
+export type BeginDeliveryResponse = BeginDeliveryResponses[keyof BeginDeliveryResponses];
+
+export type RecordDeliveryData = {
+    body: {
+        reference: string;
+        sourceIndex: number;
+        partIndex: number;
+        attemptId: string;
+        outcome: {
+            state: 'accepted';
+            platformMessageId: string;
+            acceptedAt: string;
+        } | {
+            state: 'not_sent';
+            code: string;
+        } | {
+            state: 'failed';
+            code: string;
+        } | {
+            state: 'uncertain';
+            code: string;
+        };
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/agency/record';
+};
+
+export type RecordDeliveryErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type RecordDeliveryError = RecordDeliveryErrors[keyof RecordDeliveryErrors];
+
+export type RecordDeliveryResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        recorded: true;
+    };
+};
+
+export type RecordDeliveryResponse = RecordDeliveryResponses[keyof RecordDeliveryResponses];
+
+export type ProposeActivityData = {
+    body: {
+        operationId: string;
+        subjectId: string;
+        purpose: string;
+        mode: 'work' | 'rest' | 'wait';
+        window: {
+            notBefore: {
+                timeDomainRef: string;
+                at: string;
+            } | null;
+            notAfter: {
+                timeDomainRef: string;
+                at: string;
+            } | null;
+        };
+        proposedBy: string;
+        sourceRefs: Array<string>;
+        workContextId: string | null;
+        world: {
+            timeDomainRef: string;
+            at: string;
+        };
+        nextOpportunity: {
+            timeDomainRef: string;
+            at: string;
+        } | null;
+        interruptOn: Array<'direct' | 'mention' | 'reply' | 'deadline' | 'correction' | 'manual'>;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/life/propose';
+};
+
+export type ProposeActivityErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ProposeActivityError = ProposeActivityErrors[keyof ProposeActivityErrors];
+
+export type ProposeActivityResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        activityId: string;
+        subjectId: string;
+        revision: number;
+        purpose: string;
+        mode: 'work' | 'rest' | 'wait';
+        window: {
+            notBefore: {
+                timeDomainRef: string;
+                at: string;
+            } | null;
+            notAfter: {
+                timeDomainRef: string;
+                at: string;
+            } | null;
+        };
+        sourceRefs: Array<string>;
+        workContextId: string | null;
+        state: 'planned' | 'active' | 'paused' | 'completed' | 'cancelled' | 'failed';
+        proposedBy: string;
+        adoptedBy: string | null;
+        adoptedAt: string | null;
+        lastTransitionReason: string;
+        scope: {
+            conversations: Array<{
+                conversationRef: string;
+                operations: Array<'observe' | 'send' | 'edit' | 'withdraw' | 'moderate'>;
+            }>;
+            tools: Array<string>;
+            sourceRefs: Array<string>;
+            maxRunMs: number;
+        } | null;
+        world: {
+            timeDomainRef: string;
+            at: string;
+        };
+        nextOpportunity: {
+            timeDomainRef: string;
+            at: string;
+        } | null;
+        progress: {
+            note: string;
+            sourceRefs: Array<string>;
+            artifactRefs: Array<string>;
+            resultRefs: Array<string>;
+        };
+        interruptOn: Array<'direct' | 'mention' | 'reply' | 'deadline' | 'correction' | 'manual'>;
+        continuationRequired: boolean;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type ProposeActivityResponse = ProposeActivityResponses[keyof ProposeActivityResponses];
+
+export type AdoptActivityData = {
+    body: {
+        subjectId: string;
+        activityId: string;
+        expectedRevision: number;
+        adoptedBy: string;
+        scope: {
+            conversations: Array<{
+                conversationRef: string;
+                operations: Array<'observe' | 'send' | 'edit' | 'withdraw' | 'moderate'>;
+            }>;
+            tools: Array<string>;
+            sourceRefs: Array<string>;
+            maxRunMs: number;
+        };
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/life/adopt';
+};
+
+export type AdoptActivityErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type AdoptActivityError = AdoptActivityErrors[keyof AdoptActivityErrors];
+
+export type AdoptActivityResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        activityId: string;
+        subjectId: string;
+        revision: number;
+        purpose: string;
+        mode: 'work' | 'rest' | 'wait';
+        window: {
+            notBefore: {
+                timeDomainRef: string;
+                at: string;
+            } | null;
+            notAfter: {
+                timeDomainRef: string;
+                at: string;
+            } | null;
+        };
+        sourceRefs: Array<string>;
+        workContextId: string | null;
+        state: 'planned' | 'active' | 'paused' | 'completed' | 'cancelled' | 'failed';
+        proposedBy: string;
+        adoptedBy: string | null;
+        adoptedAt: string | null;
+        lastTransitionReason: string;
+        scope: {
+            conversations: Array<{
+                conversationRef: string;
+                operations: Array<'observe' | 'send' | 'edit' | 'withdraw' | 'moderate'>;
+            }>;
+            tools: Array<string>;
+            sourceRefs: Array<string>;
+            maxRunMs: number;
+        } | null;
+        world: {
+            timeDomainRef: string;
+            at: string;
+        };
+        nextOpportunity: {
+            timeDomainRef: string;
+            at: string;
+        } | null;
+        progress: {
+            note: string;
+            sourceRefs: Array<string>;
+            artifactRefs: Array<string>;
+            resultRefs: Array<string>;
+        };
+        interruptOn: Array<'direct' | 'mention' | 'reply' | 'deadline' | 'correction' | 'manual'>;
+        continuationRequired: boolean;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type AdoptActivityResponse = AdoptActivityResponses[keyof AdoptActivityResponses];
+
+export type TransitionActivityData = {
+    body: {
+        subjectId: string;
+        activityId: string;
+        expectedRevision: number;
+        action: 'start' | 'pause' | 'resume' | 'finish' | 'cancel' | 'fail';
+        reason: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/life/transition';
+};
+
+export type TransitionActivityErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type TransitionActivityError = TransitionActivityErrors[keyof TransitionActivityErrors];
+
+export type TransitionActivityResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        activityId: string;
+        subjectId: string;
+        revision: number;
+        purpose: string;
+        mode: 'work' | 'rest' | 'wait';
+        window: {
+            notBefore: {
+                timeDomainRef: string;
+                at: string;
+            } | null;
+            notAfter: {
+                timeDomainRef: string;
+                at: string;
+            } | null;
+        };
+        sourceRefs: Array<string>;
+        workContextId: string | null;
+        state: 'planned' | 'active' | 'paused' | 'completed' | 'cancelled' | 'failed';
+        proposedBy: string;
+        adoptedBy: string | null;
+        adoptedAt: string | null;
+        lastTransitionReason: string;
+        scope: {
+            conversations: Array<{
+                conversationRef: string;
+                operations: Array<'observe' | 'send' | 'edit' | 'withdraw' | 'moderate'>;
+            }>;
+            tools: Array<string>;
+            sourceRefs: Array<string>;
+            maxRunMs: number;
+        } | null;
+        world: {
+            timeDomainRef: string;
+            at: string;
+        };
+        nextOpportunity: {
+            timeDomainRef: string;
+            at: string;
+        } | null;
+        progress: {
+            note: string;
+            sourceRefs: Array<string>;
+            artifactRefs: Array<string>;
+            resultRefs: Array<string>;
+        };
+        interruptOn: Array<'direct' | 'mention' | 'reply' | 'deadline' | 'correction' | 'manual'>;
+        continuationRequired: boolean;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type TransitionActivityResponse = TransitionActivityResponses[keyof TransitionActivityResponses];
+
+export type ProgressActivityData = {
+    body: {
+        subjectId: string;
+        activityId: string;
+        expectedRevision: number;
+        progress: {
+            note: string;
+            sourceRefs: Array<string>;
+            artifactRefs: Array<string>;
+            resultRefs: Array<string>;
+        };
+        nextOpportunity: {
+            timeDomainRef: string;
+            at: string;
+        } | null;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/life/progress';
+};
+
+export type ProgressActivityErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ProgressActivityError = ProgressActivityErrors[keyof ProgressActivityErrors];
+
+export type ProgressActivityResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        activityId: string;
+        subjectId: string;
+        revision: number;
+        purpose: string;
+        mode: 'work' | 'rest' | 'wait';
+        window: {
+            notBefore: {
+                timeDomainRef: string;
+                at: string;
+            } | null;
+            notAfter: {
+                timeDomainRef: string;
+                at: string;
+            } | null;
+        };
+        sourceRefs: Array<string>;
+        workContextId: string | null;
+        state: 'planned' | 'active' | 'paused' | 'completed' | 'cancelled' | 'failed';
+        proposedBy: string;
+        adoptedBy: string | null;
+        adoptedAt: string | null;
+        lastTransitionReason: string;
+        scope: {
+            conversations: Array<{
+                conversationRef: string;
+                operations: Array<'observe' | 'send' | 'edit' | 'withdraw' | 'moderate'>;
+            }>;
+            tools: Array<string>;
+            sourceRefs: Array<string>;
+            maxRunMs: number;
+        } | null;
+        world: {
+            timeDomainRef: string;
+            at: string;
+        };
+        nextOpportunity: {
+            timeDomainRef: string;
+            at: string;
+        } | null;
+        progress: {
+            note: string;
+            sourceRefs: Array<string>;
+            artifactRefs: Array<string>;
+            resultRefs: Array<string>;
+        };
+        interruptOn: Array<'direct' | 'mention' | 'reply' | 'deadline' | 'correction' | 'manual'>;
+        continuationRequired: boolean;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type ProgressActivityResponse = ProgressActivityResponses[keyof ProgressActivityResponses];
+
+export type ScheduleActivitiesData = {
+    body: {
+        subjectId: string;
+        afterId?: string;
+        limit: number;
+        states: Array<'planned' | 'active' | 'paused' | 'completed' | 'cancelled' | 'failed'>;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/life/schedule';
+};
+
+export type ScheduleActivitiesErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ScheduleActivitiesError = ScheduleActivitiesErrors[keyof ScheduleActivitiesErrors];
+
+export type ScheduleActivitiesResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        activities: Array<{
+            activityId: string;
+            subjectId: string;
+            revision: number;
+            purpose: string;
+            mode: 'work' | 'rest' | 'wait';
+            window: {
+                notBefore: {
+                    timeDomainRef: string;
+                    at: string;
+                } | null;
+                notAfter: {
+                    timeDomainRef: string;
+                    at: string;
+                } | null;
+            };
+            sourceRefs: Array<string>;
+            workContextId: string | null;
+            state: 'planned' | 'active' | 'paused' | 'completed' | 'cancelled' | 'failed';
+            proposedBy: string;
+            adoptedBy: string | null;
+            adoptedAt: string | null;
+            lastTransitionReason: string;
+            scope: {
+                conversations: Array<{
+                    conversationRef: string;
+                    operations: Array<'observe' | 'send' | 'edit' | 'withdraw' | 'moderate'>;
+                }>;
+                tools: Array<string>;
+                sourceRefs: Array<string>;
+                maxRunMs: number;
+            } | null;
+            world: {
+                timeDomainRef: string;
+                at: string;
+            };
+            nextOpportunity: {
+                timeDomainRef: string;
+                at: string;
+            } | null;
+            progress: {
+                note: string;
+                sourceRefs: Array<string>;
+                artifactRefs: Array<string>;
+                resultRefs: Array<string>;
+            };
+            interruptOn: Array<'direct' | 'mention' | 'reply' | 'deadline' | 'correction' | 'manual'>;
+            continuationRequired: boolean;
+            createdAt: string;
+            updatedAt: string;
+        }>;
+        nextId: string | null;
+    };
+};
+
+export type ScheduleActivitiesResponse = ScheduleActivitiesResponses[keyof ScheduleActivitiesResponses];
+
+export type TakeAttentionData = {
+    body: {
+        subjectId: string;
+        activityId: string | null;
+        resting: boolean;
+        naturalOpportunity: boolean;
+        candidates: Array<{
+            messageRef: string;
+            conversationRef: string;
+            receivedAt: string;
+            direct: boolean;
+            mention: boolean;
+            reply: boolean;
+        }>;
+        maxItems: number;
+        maxWaitMs: number;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/life/attention';
+};
+
+export type TakeAttentionErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type TakeAttentionError = TakeAttentionErrors[keyof TakeAttentionErrors];
+
+export type TakeAttentionResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        decision: 'read' | 'defer' | 'continue' | 'rest';
+        messageRefs: Array<string>;
+        reason: string;
+    };
+};
+
+export type TakeAttentionResponse = TakeAttentionResponses[keyof TakeAttentionResponses];
+
+export type PrepareCognitionData = {
+    body: {
+        version: 1;
+        contactRequestId: string;
+        native: {
+            sessionKey: string;
+            sessionId: string;
+            runId: string;
+            agentId: string;
+            historyGeneration: string;
+            parentSessionKey?: string;
+        };
+        subjectId: string;
+        nousSessionId: string;
+        invocationId: string;
+        promptDigest: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/nous/v1/prepare';
+};
+
+export type PrepareCognitionErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type PrepareCognitionError = PrepareCognitionErrors[keyof PrepareCognitionErrors];
+
+export type PrepareCognitionResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        version: 1;
+        contactRequestId: string;
+        workContextId: string;
+        usage: {
+            [key: string]: unknown;
+        };
+        contacts: Array<{
+            contactRef: string;
+            observation: {
+                [key: string]: unknown;
+            };
+        }>;
+        scope: {
+            activityRef: string;
+            actorEntityRef?: string;
+            context: {
+                [key: string]: unknown;
+            };
+        };
+    };
+};
+
+export type PrepareCognitionResponse = PrepareCognitionResponses[keyof PrepareCognitionResponses];
+
+export type AdmitCognitionData = {
+    body: {
+        version: 1;
+        contactRequestId: string;
+        native: {
+            sessionKey: string;
+            sessionId: string;
+            runId: string;
+            agentId: string;
+            historyGeneration: string;
+            parentSessionKey?: string;
+        };
+        subjectId: string;
+        nousSessionId: string;
+        invocationId: string;
+        projection: {
+            [key: string]: unknown;
+        };
+        occurrences: Array<{
+            contactRef: string;
+            receipt: {
+                [key: string]: unknown;
+            };
+        }>;
+    };
+    path?: never;
+    query?: never;
+    url: '/nous/v1/admitted';
+};
+
+export type AdmitCognitionErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type AdmitCognitionError = AdmitCognitionErrors[keyof AdmitCognitionErrors];
+
+export type AdmitCognitionResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        version: 1;
+        accepted: true;
+    };
+};
+
+export type AdmitCognitionResponse = AdmitCognitionResponses[keyof AdmitCognitionResponses];
+
+export type HandoffCognitionData = {
+    body: {
+        version: 1;
+        requestId: string;
+        subjectId: string;
+        parentSessionKey: string;
+        parentSessionId: string;
+        parentNousSessionId: string;
+        childSessionKey: string;
+        childSessionId: string;
+        childNousSessionId: string;
+        contextMode: 'isolated';
+    };
+    path?: never;
+    query?: never;
+    url: '/nous/v1/handoff';
+};
+
+export type HandoffCognitionErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type HandoffCognitionError = HandoffCognitionErrors[keyof HandoffCognitionErrors];
+
+export type HandoffCognitionResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        version: 1;
+        accepted: true;
+    };
+};
+
+export type HandoffCognitionResponse = HandoffCognitionResponses[keyof HandoffCognitionResponses];
+
+export type FeedbackCognitionData = {
+    body: {
+        version: 1;
+        contactRequestId: string;
+        native: {
+            sessionKey: string;
+            sessionId: string;
+            runId: string;
+            agentId: string;
+            historyGeneration: string;
+            parentSessionKey?: string;
+        };
+        subjectId: string;
+        nousSessionId: string;
+        invocationId: string;
+        stage: 'pending';
+        observation: {
+            [key: string]: unknown;
+        };
+    } | {
+        version: 1;
+        contactRequestId: string;
+        native: {
+            sessionKey: string;
+            sessionId: string;
+            runId: string;
+            agentId: string;
+            historyGeneration: string;
+            parentSessionKey?: string;
+        };
+        subjectId: string;
+        nousSessionId: string;
+        invocationId: string;
+        stage: 'committed';
+        observationRequestId: string;
+        receipt: {
+            [key: string]: unknown;
+        };
+    };
+    path?: never;
+    query?: never;
+    url: '/nous/v1/feedback';
+};
+
+export type FeedbackCognitionErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type FeedbackCognitionError = FeedbackCognitionErrors[keyof FeedbackCognitionErrors];
+
+export type FeedbackCognitionResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        version: 1;
+        stage: 'pending';
+        accepted: true;
+        observation: {
+            [key: string]: unknown;
+        };
+    } | {
+        version: 1;
+        stage: 'committed';
+        accepted: true;
+    };
+};
+
+export type FeedbackCognitionResponse = FeedbackCognitionResponses[keyof FeedbackCognitionResponses];

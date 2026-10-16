@@ -18,6 +18,10 @@ import {
 } from "@heptalogos/persistence/repository";
 import type { PersistenceMutationTransactionContext } from "@heptalogos/persistence";
 import {
+  messageSourcesInputSchema,
+  resolveConversationsInputSchema,
+  readHistoryCoverageInputSchema,
+  updateHistoryCoverageInputSchema,
   acceptFactsInputSchema,
   prepareReadInputSchema,
   recordContactInputSchema,
@@ -55,6 +59,18 @@ function conflict(detail: string): never {
   );
 }
 const validators = {
+  sources: compileSchema<Parameters<MessagingService["messageSources"]>[0]>(
+    messageSourcesInputSchema,
+  ),
+  conversations: compileSchema<Parameters<MessagingService["resolveConversations"]>[0]>(
+    resolveConversationsInputSchema,
+  ),
+  historyRead: compileSchema<Parameters<MessagingService["readHistoryCoverage"]>[0]>(
+    readHistoryCoverageInputSchema,
+  ),
+  historyUpdate: compileSchema<
+    Parameters<MessagingService["updateHistoryCoverage"]>[0]
+  >(updateHistoryCoverageInputSchema),
   accept: compileSchema<AcceptFactsInput>(acceptFactsInputSchema),
   read: compileSchema<Parameters<MessagingService["prepareRead"]>[0]>(
     prepareReadInputSchema,
@@ -94,15 +110,22 @@ function safePart(part: MessageFact["parts"][number]) {
   return safe;
 }
 function safeReference(ref: MessageReference) {
-  const { revision: _revision, messageId: _message, ...safe } = ref;
+  const {
+    revision: _revision,
+    messageId: _message,
+    continuation: _protectedContinuation,
+    ...safe
+  } = ref;
+  const { sourceRef: _protectedSource, ...safeTarget } = ref.target;
   return {
     ...safe,
+    target: safeTarget,
     ...(ref.nodes
       ? {
-          nodes: ref.nodes.map((node) => ({
-            ...node,
-            parts: node.parts.map(safePart),
-          })),
+          nodes: ref.nodes.map((node) => {
+            const { sourceRef: _protectedNode, ...safeNode } = node;
+            return { ...safeNode, parts: node.parts.map(safePart) };
+          }),
         }
       : {}),
   };
@@ -444,6 +467,88 @@ export function createMessagingService(
   };
 
   return {
+    async messageSources(input) {
+      check(validators.sources, input);
+      return read(async (tx) => ({
+        sources: (
+          await sql<{
+            message_id: string;
+            conversation_id: string;
+            lifecycle: "present" | "retracted";
+          }>(
+            tx,
+            `SELECT message_id,conversation_id,lifecycle FROM heptalogos.message_fact WHERE message_id=ANY($1::uuid[]) AND conversation_id=ANY($2::uuid[]) ORDER BY conversation_id,sequence`,
+            [input.messageRefs, input.conversationIds],
+          )
+        ).map((row) => ({
+          messageRef: row.message_id,
+          conversationId: row.conversation_id,
+          lifecycle: row.lifecycle,
+        })),
+      }));
+    },
+    async resolveConversations(input) {
+      check(validators.conversations, input);
+      return read(async (tx) => ({
+        conversationIds: (
+          await sql<{ conversation_id: string }>(
+            tx,
+            `SELECT DISTINCT c.conversation_id FROM heptalogos.messaging_conversation c JOIN jsonb_to_recordset($1::jsonb) AS requested(platform text,"accountId" text,"conversationId" text,kind text) ON c.platform_id=requested.platform AND c.native_account_id=requested."accountId" AND c.native_conversation_id=requested."conversationId" AND c.conversation_kind=requested.kind ORDER BY c.conversation_id`,
+            [JSON.stringify(input.conversations)],
+          )
+        ).map((row) => row.conversation_id),
+      }));
+    },
+    async readHistoryCoverage(input) {
+      check(validators.historyRead, input);
+      return read(async (tx) => {
+        const rows = await sql<{ document: unknown }>(
+          tx,
+          `SELECT h.document FROM heptalogos.messaging_history_coverage h JOIN heptalogos.messaging_conversation c USING(conversation_id) WHERE c.platform_id=$1 AND c.native_account_id=$2 AND c.native_conversation_id=$3 AND c.conversation_kind=$4`,
+          [
+            input.conversation.platform,
+            input.conversation.accountId,
+            input.conversation.conversationId,
+            input.conversation.kind,
+          ],
+        );
+        return {
+          history: rows[0]
+            ? document<Awaited<ReturnType<MessagingService["updateHistoryCoverage"]>>>(
+                rows[0].document,
+              )
+            : null,
+        };
+      });
+    },
+    async updateHistoryCoverage(input) {
+      check(validators.historyUpdate, input);
+      if (!parseInstant(input.updatedAt))
+        invalid("History update time must be canonical");
+      return mutate(async (tx, context) => {
+        const conversation = await lockConversation(tx, context, input.conversation);
+        const [previous] = await sql<{ revision: number }>(
+          tx,
+          "SELECT revision FROM heptalogos.messaging_history_coverage WHERE conversation_id=$1 FOR UPDATE",
+          [conversation.conversationId],
+        );
+        if ((previous?.revision ?? null) !== input.expectedRevision)
+          conflict("History coverage revision changed");
+        const { expectedRevision: _expected, ...fields } = input;
+        const history = { ...fields, revision: (previous?.revision ?? 0) + 1 };
+        await sql(
+          tx,
+          `INSERT INTO heptalogos.messaging_history_coverage(conversation_id,revision,document,lineage_context_ref) VALUES($1,$2,$3::jsonb,$4::jsonb) ON CONFLICT(conversation_id) DO UPDATE SET revision=EXCLUDED.revision,document=EXCLUDED.document,lineage_context_ref=EXCLUDED.lineage_context_ref`,
+          [
+            conversation.conversationId,
+            history.revision,
+            JSON.stringify(history),
+            JSON.stringify(transactionLineage(context)),
+          ],
+        );
+        return history;
+      });
+    },
     accept,
     prepareRead,
     async recordContact(input) {
@@ -476,8 +581,8 @@ export function createMessagingService(
             conversation_id: string;
           }>(
             tx,
-            `SELECT * FROM heptalogos.messaging_pending WHERE NOT completed AND ($1::uuid IS NULL OR conversation_id=$1) ORDER BY created_at,pending_id LIMIT $2`,
-            [input.conversationId ?? null, input.limit],
+            `SELECT * FROM heptalogos.messaging_pending WHERE NOT completed AND ($1::uuid IS NULL OR conversation_id=$1) AND ($3::uuid[] IS NULL OR conversation_id=ANY($3::uuid[])) ORDER BY created_at,pending_id LIMIT $2`,
+            [input.conversationId ?? null, input.limit, input.conversationIds ?? null],
           )
         ).map((r) => ({
           pendingRef: r.pending_id,
@@ -503,8 +608,12 @@ export function createMessagingService(
         attachments: (
           await sql<{ document: unknown }>(
             tx,
-            `SELECT document FROM heptalogos.message_attachment WHERE state=ANY($1::text[]) ORDER BY attachment_id LIMIT $2`,
-            [input.states ?? ["pending", "failed"], input.limit],
+            `SELECT a.document FROM heptalogos.message_attachment a JOIN heptalogos.message_fact m USING(message_id) WHERE a.state=ANY($1::text[]) AND ($3::uuid[] IS NULL OR m.conversation_id=ANY($3::uuid[])) ORDER BY a.attachment_id LIMIT $2`,
+            [
+              input.states ?? ["pending", "failed"],
+              input.limit,
+              input.conversationIds ?? null,
+            ],
           )
         ).map((r) => document<MessageAttachment>(r.document)),
       }));
@@ -579,8 +688,8 @@ export function createMessagingService(
         references: (
           await sql<{ document: unknown }>(
             tx,
-            `SELECT r.document FROM heptalogos.message_reference r JOIN heptalogos.message_fact m USING(message_id) WHERE r.state IN ('pending','partial') AND m.lifecycle='present' AND ($1::uuid IS NULL OR m.conversation_id=$1) ORDER BY r.reference_id LIMIT $2`,
-            [input.conversationId ?? null, input.limit],
+            `SELECT r.document FROM heptalogos.message_reference r JOIN heptalogos.message_fact m USING(message_id) WHERE r.state IN ('pending','partial') AND m.lifecycle='present' AND ($1::uuid IS NULL OR m.conversation_id=$1) AND ($3::uuid[] IS NULL OR m.conversation_id=ANY($3::uuid[])) ORDER BY r.reference_id LIMIT $2`,
+            [input.conversationId ?? null, input.limit, input.conversationIds ?? null],
           )
         ).map((r) => document<MessageReference>(r.document)),
       }));
@@ -616,6 +725,20 @@ export function createMessagingService(
         if (previous.revision !== input.expectedRevision)
           conflict("Reference revision changed");
         if (previous.state === "available") conflict("Resolved reference is immutable");
+        if (input.resolvedMessageRef) {
+          const [target] = await sql<{ message_id: string }>(
+            tx,
+            `SELECT child.message_id FROM heptalogos.message_fact child
+             JOIN heptalogos.message_fact parent ON parent.message_id=$2
+             WHERE child.message_id=$1 AND child.conversation_id=parent.conversation_id
+               AND child.native_message_id=$3`,
+            [input.resolvedMessageRef, previous.messageId, previous.target.nativeId],
+          );
+          if (previous.target.kind !== "reply" || !target)
+            conflict(
+              "Reply resolution must identify its native target in the same conversation",
+            );
+        }
         const nodes = [...(previous.nodes ?? [])];
         for (const node of input.nodes ?? []) {
           const existing = nodes.find((n) => n.path === node.path);
@@ -705,8 +828,8 @@ export function createMessagingService(
         events: (
           await sql<{ document: unknown }>(
             tx,
-            `SELECT document FROM heptalogos.messaging_platform_event WHERE event_id=ANY($1::uuid[]) ORDER BY received_at,event_id`,
-            [input.eventRefs],
+            `SELECT document FROM heptalogos.messaging_platform_event WHERE event_id=ANY($1::uuid[]) AND ($2::uuid[] IS NULL OR conversation_id=ANY($2::uuid[])) ORDER BY received_at,event_id`,
+            [input.eventRefs, input.conversationIds ?? null],
           )
         ).map((r) =>
           document<

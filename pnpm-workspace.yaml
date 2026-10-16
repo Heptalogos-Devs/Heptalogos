@@ -24,11 +24,13 @@ catalog:
   "@inquirer/password": 5.2.0
   "@napi-rs/keyring": 2.0.0
   "@oclif/core": 5.0.0
+  "@types/ws": 8.18.2
   "@types/pg": 8.23.1
   "@types/node": 24.19.1
   "@typescript/native": "npm:typescript@7.0.2"
   ajv: 8.20.0
   canonicalize: 4.0.0
+  esbuild: 0.28.2
   eslint: 10.9.1
   eslint-plugin-jsdoc: 64.2.1
   execa: 10.0.1
@@ -38,6 +40,7 @@ catalog:
   kysely: 0.29.5
   mdast-util-from-markdown: 2.0.3
   nx: 23.2.1
+  openclaw: 2026.9.1
   oxlint: 1.80.0
   oxlint-tsgolint: 7.0.2001
   pg: 8.23.0
@@ -49,6 +52,7 @@ catalog:
   tinyglobby: 0.2.17
   typedoc: 0.28.20
   typedoc-plugin-markdown: 4.13.0
+  ws: 8.21.3
   yaml: 2.9.0
   vitest: 4.1.11
   write-file-atomic: 8.0.0
@@ -66,7 +70,6 @@ catalog:
   "@ai-sdk/openai-compatible": 3.0.43
   "@ai-sdk/open-responses": 2.0.38
   "@ai-sdk/provider-utils": 5.0.36
-  "@nous-wave/client": file:../../../../Nous-Wave/data/releases/client/nous-wave-client-0.1.0.tgz
 
 allowBuilds:
   esbuild: true
