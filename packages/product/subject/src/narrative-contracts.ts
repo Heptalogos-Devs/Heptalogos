@@ -4,10 +4,10 @@
 import { Type, type Static } from "@heptalogos/schema-runtime/typebox";
 import { worldIntervalSchema, realizeWorldSchema } from "./world-contracts.js";
 import { preparedDeliverySchema } from "./agency-contracts.js";
-import { worldPointSchema } from "./contracts.js";
+import { activitySchema, worldPointSchema } from "./contracts.js";
 const object = { additionalProperties: false } as const;
 const ref = Type.String({ minLength: 1, maxLength: 2048 });
-const id = Type.String({ format: "uuid" });
+const id = activitySchema.properties.activityId;
 const refs = Type.Array(ref, { maxItems: 128, uniqueItems: true });
 const text = Type.String({ minLength: 1, maxLength: 16384 });
 /** Audience comes from the adopted decision, never from the renderer. */

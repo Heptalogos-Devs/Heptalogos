@@ -190,7 +190,7 @@ export function createNarrativeService(options: NarrativeOptions) {
       denied("The native intent already identifies another exact expression");
     return { reference: rows[0].document.reference };
   };
-  const claimQuery = `SELECT c.document,
+  const claimQuery = `SELECT c.claim_id, c.document,
     CASE WHEN EXISTS(SELECT 1 FROM heptalogos.agency_delivery_part p WHERE p.behavior_id=c.behavior_id AND p.source_index=c.source_index AND p.state='accepted') THEN 'expressed'
     WHEN EXISTS(SELECT 1 FROM heptalogos.agency_delivery_part p WHERE p.behavior_id=c.behavior_id AND p.source_index=c.source_index AND p.state IN ('dispatching','uncertain')) THEN 'uncertain'
     WHEN EXISTS(SELECT 1 FROM heptalogos.agency_delivery_part p WHERE p.behavior_id=c.behavior_id AND p.source_index=c.source_index AND p.state IN ('not_sent','failed')) THEN 'not_sent'
@@ -372,8 +372,9 @@ export function createNarrativeService(options: NarrativeOptions) {
         message_ids: string[];
       }>(
         options.persistence,
-        claimQuery +
-          " WHERE c.subject_id=$1 AND c.conversation_ref=$2 AND ($3::uuid IS NULL OR c.claim_id>$3) AND ($4::text IS NULL OR (c.about_domain=$4 AND c.about_start<$6::timestamptz AND c.about_end>$5::timestamptz)) ORDER BY c.claim_id LIMIT $7",
+        "SELECT * FROM (" +
+          claimQuery +
+          " WHERE c.subject_id=$1 AND c.conversation_ref=$2 AND ($3::uuid IS NULL OR c.claim_id>$3) AND ($4::text IS NULL OR (c.about_domain=$4 AND c.about_start<$6::timestamptz AND c.about_end>$5::timestamptz))) q WHERE ($7::text IS NULL OR q.status=$7) ORDER BY q.claim_id LIMIT $8",
         [
           input.subjectId,
           input.conversationRef,
@@ -381,16 +382,15 @@ export function createNarrativeService(options: NarrativeOptions) {
           input.about?.timeDomainRef ?? null,
           input.about?.start ?? null,
           input.about?.end ?? null,
+          input.status ?? null,
           input.limit + 1,
         ],
       );
-      const selected = rows
-        .map((row) => ({
-          ...row.document,
-          status: row.status,
-          platformMessageIds: row.message_ids,
-        }))
-        .filter((row) => !input.status || row.status === input.status);
+      const selected = rows.map((row) => ({
+        ...row.document,
+        status: row.status,
+        platformMessageIds: row.message_ids,
+      }));
       return {
         claims: selected.slice(0, input.limit),
         more: rows.length > input.limit,
