@@ -180,6 +180,7 @@ export const progressActivitySchema = Type.Object(
     expectedRevision: Type.Integer({ minimum: 1 }),
     progress: activitySchema.properties.progress,
     nextOpportunity: Type.Union([worldPointSchema, Type.Null()]),
+    mode: Type.Optional(activitySchema.properties.mode),
   },
   object,
 );

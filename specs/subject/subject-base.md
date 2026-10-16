@@ -57,3 +57,11 @@ Life/Agency 已有正式 owner 和 PostgreSQL 迁移；活动 CAS、重启进展
 评价只将已有实际 evidence refs 与 Activity 的显式 source scope/open WorkContext 提交给官方 `Motivation.evaluate`。接口不接收调用者 truth、complete 或自定义 evaluator。NoUS 根据实际 Material/owner timeline 决定 Achieve 正见证、Maintain 完整窗口、UNKNOWN、limited/gap 和 finalConclusion；H 只保存 evaluationId、exact revision、实际来源与结果投影，不实现第二个 evaluator 或 Observation recorder。Activity 完成或一次效果失败都不自动结束 Pursuit。
 
 服务 API `/gateway/v1/pursuit/{adopt,read,recheck,transition,reconsider,evaluate}` 从 subject owner schema 生成 OpenAPI/Client，要求独立 gateway service credential 与当前绑定 Subject；普通聊天或 administrator session 不能获得该服务身份。HTTP 注册 hook 与 Motivation adapter 独立于 gateway composition，部署组合需要注入 owner 并在既有 Activity/Agency 授权点调用 guard。迁移 0007 只新增 Pursuit/修订历史/评价引用表，不覆盖既有 Activity、消息、认知或效果历史。
+
+## 原生 Activity 进展
+
+Host 为实际派发注册的 agent RPC 携带独立 `toolBindings.heptalogos`，包含该次 nativeRunId 与 Activity ref。原生 `heptalogos_life` 工具只从 SDK factory context 获取该绑定及 agent/Session，并将 SDK execute 的实际 toolCallId 交回 Host。缺绑定时不提供工具；不能以模型参数、提示文本或最近 Session/run 查找补足身份。
+
+service-only `/gateway/v1/native/life` 在事务外完成当前 Pursuit/来源检查与 world 读取，在 Host fence 内锁定并重新验证实际 running run、已 admitted contact、Activity scope、operator grant 与 Pursuit 本地 revision。inspect 读取该 Activity；progress 的 note 是主体陈述，来源引用由 Host 从实际选源、已提交反馈 receipt 生成，不接受模型的成果或来源宣称。两者都要求当前 `heptalogos_life` 工具许可。
+
+Life.progress 可显式改变 work/wait/rest，保持当前 active 状态，并要求下一处理点属于 Activity 当前实际 world。rest 阻止新来信正文读取；同 world 到期后由 Life owner CAS 转回 work，既有原生 opportunity 续行，无额外 timer 或模型循环。wait 仍可处理已授权来信。并发进展或授权撤回不能被旧 revision 覆盖。

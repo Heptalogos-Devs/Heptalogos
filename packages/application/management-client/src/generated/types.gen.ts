@@ -5401,6 +5401,7 @@ export type ProgressActivityData = {
             timeDomainRef: string;
             at: string;
         } | null;
+        mode?: 'work' | 'rest' | 'wait';
     };
     path?: never;
     query?: never;
@@ -6113,6 +6114,150 @@ export type AdmitCognitionResponses = {
 };
 
 export type AdmitCognitionResponse = AdmitCognitionResponses[keyof AdmitCognitionResponses];
+
+export type NativeLifeData = {
+    body: {
+        nativeRunId: string;
+        activityRef: string;
+        nativeAgentId: string;
+        sessionKey: string;
+        sessionId: string;
+        toolCallId: string;
+        request: {
+            action: 'inspect';
+        } | {
+            action: 'progress';
+            note: string;
+            expectedRevision: number;
+            nextOpportunity: {
+                timeDomainRef: string;
+                at: string;
+            } | null;
+            mode: 'work' | 'rest' | 'wait';
+        };
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/native/life';
+};
+
+export type NativeLifeErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type NativeLifeError = NativeLifeErrors[keyof NativeLifeErrors];
+
+export type NativeLifeResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        revision: number;
+        purpose: string;
+        state: 'planned' | 'active' | 'paused' | 'completed' | 'cancelled' | 'failed';
+        mode: 'work' | 'rest' | 'wait';
+        world: {
+            timeDomainRef: string;
+            at: string;
+        };
+        nextOpportunity: {
+            timeDomainRef: string;
+            at: string;
+        } | null;
+        progress: {
+            note: string;
+            sourceRefs: Array<string>;
+            artifactRefs: Array<string>;
+            resultRefs: Array<string>;
+        };
+        feedbackOmitted: boolean;
+    };
+};
+
+export type NativeLifeResponse = NativeLifeResponses[keyof NativeLifeResponses];
 
 export type AuthorizeToolExecutionData = {
     body: {

@@ -176,43 +176,105 @@ export async function consumeActivityOpportunity(
 
 /** Creates Life operations; the caller supplies its current real execution Activity to Persistence. */
 export function createLifeService(options: LifeOptions) {
-  const mutate = async (
+  const mutateIn = async (
+    transaction: PersistenceInternalTransaction,
     input: { subjectId: string; activityId: string; expectedRevision: number },
+    change: (value: LifeActivity) => LifeActivity,
+  ) => {
+    const rows = await executeRepositorySql<{
+      document: unknown;
+      revision: string;
+    }>(
+      transaction,
+      'SELECT document, revision FROM "heptalogos"."life_activity" WHERE subject_id=$1 AND activity_id=$2 FOR UPDATE',
+      [input.subjectId, input.activityId],
+    );
+    if (!rows[0])
+      throw subjectProblem(
+        "life.not_found",
+        "Activity not found",
+        "The Activity does not belong to this Subject",
+      );
+    const current = readDocument(rows[0]);
+    if (Number(rows[0].revision) !== input.expectedRevision)
+      conflict("Read the current Activity revision before changing it");
+    const next = checked<LifeActivity>(activitySchema, {
+      ...change(current),
+      revision: current.revision + 1,
+      updatedAt: options.now(),
+    });
+    await executeRepositorySql(
+      transaction,
+      'UPDATE "heptalogos"."life_activity" SET document=$1::jsonb,revision=$2,updated_at=$3 WHERE activity_id=$4',
+      [JSON.stringify(next), next.revision, next.updatedAt, input.activityId],
+    );
+    return next;
+  };
+  const mutate = <
+    T extends { subjectId: string; activityId: string; expectedRevision: number },
+  >(
+    input: T,
     change: (value: LifeActivity) => LifeActivity,
   ) =>
     options.persistence.mutate((context) =>
-      useRepositoryMutationTransaction(context, async (transaction) => {
-        const rows = await executeRepositorySql<{
-          document: unknown;
-          revision: string;
-        }>(
-          transaction,
-          'SELECT document, revision FROM "heptalogos"."life_activity" WHERE subject_id=$1 AND activity_id=$2 FOR UPDATE',
-          [input.subjectId, input.activityId],
-        );
-        if (!rows[0])
-          throw subjectProblem(
-            "life.not_found",
-            "Activity not found",
-            "The Activity does not belong to this Subject",
-          );
-        const current = readDocument(rows[0]);
-        if (Number(rows[0].revision) !== input.expectedRevision)
-          conflict("Read the current Activity revision before changing it");
-        const next = checked<LifeActivity>(activitySchema, {
-          ...change(current),
-          revision: current.revision + 1,
-          updatedAt: options.now(),
-        });
-        await executeRepositorySql(
-          transaction,
-          'UPDATE "heptalogos"."life_activity" SET document=$1::jsonb,revision=$2,updated_at=$3 WHERE activity_id=$4',
-          [JSON.stringify(next), next.revision, next.updatedAt, input.activityId],
-        );
-        return next;
-      }),
+      useRepositoryMutationTransaction(context, (tx) => mutateIn(tx, input, change)),
     );
+  const progressIn = async (
+    transaction: PersistenceInternalTransaction,
+    value: Static<typeof progressActivitySchema>,
+    world: LifeActivity["world"],
+  ) => {
+    const input = checked<Static<typeof progressActivitySchema>>(
+      progressActivitySchema,
+      value,
+    );
+    return mutateIn(transaction, input, (current) => {
+      if (!["active", "paused"].includes(current.state))
+        conflict("Only current work can record progress");
+      if (
+        world.timeDomainRef !== current.world.timeDomainRef ||
+        !Number.isFinite(Date.parse(world.at)) ||
+        (input.nextOpportunity &&
+          (input.nextOpportunity.timeDomainRef !== current.world.timeDomainRef ||
+            !Number.isFinite(Date.parse(input.nextOpportunity.at))))
+      )
+        throw subjectProblem(
+          "life.time_domain_unavailable",
+          "Progress must use the actual Activity world",
+          "Use the current comparable world point",
+        );
+      return {
+        ...current,
+        progress: input.progress,
+        nextOpportunity: input.nextOpportunity,
+        ...(input.mode ? { mode: input.mode } : {}),
+      };
+    });
+  };
   return {
+    /** Host-native progress shares this owner and the caller's existing fenced transaction. */
+    progressIn,
+    /** Quiet mode ends only at its actual comparable due point, under Activity CAS. */
+    async resumeDue(
+      input: { subjectId: string; activityId: string; expectedRevision: number },
+      world: LifeActivity["world"],
+    ) {
+      return mutate(input, (current) => {
+        assertWindow(current, world);
+        if (
+          current.state !== "active" ||
+          current.continuationRequired ||
+          !current.adoptedBy ||
+          !current.scope ||
+          current.mode === "work" ||
+          !current.nextOpportunity ||
+          current.nextOpportunity.timeDomainRef !== world.timeDomainRef ||
+          Date.parse(current.nextOpportunity.at) > Date.parse(world.at)
+        )
+          conflict("The quiet Activity has no current due opportunity in this world");
+        return { ...current, mode: "work" };
+      });
+    },
     /** Actual world time is read before entering any Host mutation. */
     worldNow: options.worldNow,
     async propose(value: Static<typeof proposeActivitySchema>): Promise<LifeActivity> {
@@ -350,15 +412,10 @@ export function createLifeService(options: LifeOptions) {
         progressActivitySchema,
         value,
       );
-      return mutate(input, (current) => {
-        if (!["active", "paused"].includes(current.state))
-          conflict("Only current work can record progress");
-        return {
-          ...current,
-          progress: input.progress,
-          nextOpportunity: input.nextOpportunity,
-        };
-      });
+      const world = await options.worldNow(input.subjectId);
+      return options.persistence.mutate((context) =>
+        useRepositoryMutationTransaction(context, (tx) => progressIn(tx, input, world)),
+      );
     },
     async get(subjectId: string, activityId: string) {
       const rows = await readRepositorySql<{ document: unknown }>(

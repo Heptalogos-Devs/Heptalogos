@@ -519,6 +519,7 @@ real("trusted Activity native input dispatch", () => {
           subjectId,
           activityId: current.activityId,
           expectedRevision: current.revision,
+          mode: "rest",
           progress: {
             note: "PUBLIC ACTUAL TASK: continue the saved work without new messages",
             sourceRefs: [],
@@ -531,13 +532,14 @@ real("trusted Activity native input dispatch", () => {
           },
         }),
       );
+      expect(dispatch.mock.calls[0]![0].toolBindings.heptalogos.nativeRunId).toBe(
+        dispatch.mock.calls[0]![0].idempotencyKey,
+      );
       const publicOpportunity = {
         accountId: "100",
         conversation: { kind: "group" as const, id: "300" },
       };
-      expect((await c.run(() => opportunity(publicOpportunity))).decision).toBe(
-        "defer",
-      );
+      expect((await c.run(() => opportunity(publicOpportunity))).decision).toBe("rest");
       await expect(c.run(() => entry.dispatch(emptyInput))).rejects.toBeDefined();
       current = await c.run(() =>
         life.progress({
@@ -552,11 +554,15 @@ real("trusted Activity native input dispatch", () => {
         }),
       );
       const beforeContinuation = dispatch.mock.calls.length;
-      const continued = await Promise.all([
+      const continued = await Promise.allSettled([
         c.run(() => opportunity(publicOpportunity)),
         c.run(() => opportunity(publicOpportunity)),
       ]);
-      expect(continued.some((r) => r.decision === "dispatched")).toBe(true);
+      expect(
+        continued.some(
+          (r) => r.status === "fulfilled" && r.value.decision === "dispatched",
+        ),
+      ).toBe(true);
       expect(dispatch).toHaveBeenCalledTimes(beforeContinuation + 1);
       expect(dispatch.mock.calls.at(-1)![0].deliver).toBe(false);
       expect(

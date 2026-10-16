@@ -6,7 +6,7 @@
  * artifact. The generated output is checked in and is never hand-edited.
  */
 
-import { mkdir, mkdtemp, readdir, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { dirname, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -35,6 +35,20 @@ try {
     },
     plugins: ["@hey-api/client-fetch", "@hey-api/typescript", "@hey-api/sdk"],
   });
+
+  // The native tool consumes the same bounded action contract as the Host endpoint.
+  // Do not bundle Host implementation modules or maintain a second argument schema.
+  const document = JSON.parse(await readFile(inputPath, "utf8"));
+  const action =
+    document.paths["/gateway/v1/native/life"].post.requestBody.content[
+      "application/json"
+    ].schema.properties.request;
+  await writeFile(
+    join(outputRoot, "native-life-schema.gen.ts"),
+    "// Generated from the Host OpenAPI owner. Do not edit.\nexport const nativeLifeActionSchema = " +
+      JSON.stringify(action, null, 2) +
+      " as const;\n",
+  );
 
   if (checkMode) {
     const files = async (root) => {

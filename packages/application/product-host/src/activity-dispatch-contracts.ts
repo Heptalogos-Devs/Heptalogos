@@ -52,6 +52,9 @@ export type NativeActivityParams = {
   readonly message: string;
   readonly idempotencyKey: string;
   readonly timeout: number;
+  readonly toolBindings: {
+    readonly heptalogos: { readonly nativeRunId: string; readonly activityRef: string };
+  };
 } & (
   | {
       readonly deliver: true;

@@ -55,6 +55,10 @@ import type {
   ActivityDispatchResult,
 } from "./activity-dispatch-contracts.js";
 import { hasAuthorizedNativeSources } from "./native-source-selection.js";
+import {
+  nativeLifeRequestSchema,
+  type NativeLifeRequest,
+} from "./native-life-contracts.js";
 import type { GatewayCognitionBridge } from "./gateway-http.js";
 
 /** Persisted exact native-run selection; only the trusted Host may construct it. */
@@ -139,7 +143,10 @@ type Handoff = { request: HostHandoffRequest; registration: Registration };
 /** Product composition supplies real existing owners and explicit recovery opportunities. */
 export interface NativeCognitionOptions {
   readonly persistence: PersistenceService;
-  readonly life: Pick<ReturnType<typeof createLifeService>, "get">;
+  readonly life: Pick<
+    ReturnType<typeof createLifeService>,
+    "get" | "worldNow" | "progressIn"
+  >;
   readonly now: () => string;
   /** External cognition/Pursuit checks run before any fenced write transaction. */
   readonly checkInput?: (
@@ -883,6 +890,126 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           observedAt: selected.observedAt,
         });
       return { version: 1, accepted: true };
+    },
+    async life(value: NativeLifeRequest) {
+      const parsed = compileSchema<NativeLifeRequest>(nativeLifeRequestSchema).validate(
+        value,
+      );
+      if (!parsed.ok) invalid();
+      const input = parsed.value;
+      const preflight = await readRun(input.nativeRunId);
+      if (
+        !preflight ||
+        preflight.state !== "running" ||
+        preflight.registration.activityId !== input.activityRef ||
+        preflight.native.agentId !== input.nativeAgentId ||
+        preflight.native.sessionKey !== input.sessionKey ||
+        preflight.native.sessionId !== input.sessionId
+      )
+        deny(
+          "native_life_unavailable",
+          "The actual running invocation and Activity binding must match",
+        );
+      await checkInput(preflight.registration);
+      const world = await options.life.worldNow(preflight.registration.subjectId);
+      return mutate(async (tx) => {
+        await sessionLock(tx, input.sessionKey);
+        const rows = await sql<{ state: string; document: NativeRunSnapshot }>(
+          tx,
+          "SELECT state,document FROM heptalogos.life_native_run WHERE run_id=$1 FOR UPDATE",
+          [input.nativeRunId],
+        );
+        const run = rows[0];
+        if (
+          !run ||
+          run.state !== "running" ||
+          digest(run.document.registration) !== digest(preflight.registration) ||
+          digest(run.document.native) !== digest(preflight.native)
+        )
+          deny(
+            "native_life_unavailable",
+            "The current native invocation changed during external checks",
+          );
+        const activity = await lockedActivity(
+          tx,
+          preflight.registration.subjectId,
+          input.activityRef,
+        );
+        current(activity, run.document.registration);
+        await options.authorizeInput(run.document.registration, activity, tx);
+        if (!activity.scope!.tools.includes("heptalogos_life"))
+          deny("native_tool_denied", "Life is outside this Activity's adopted tools");
+        const contacts = await sql<{ document: Contact }>(
+          tx,
+          "SELECT document FROM heptalogos.life_native_contact WHERE run_id=$1 AND document ? 'admitted' ORDER BY recorded_at DESC,contact_request_id DESC LIMIT 1",
+          [input.nativeRunId],
+        );
+        const contact = contacts[0]?.document;
+        if (
+          !contact?.admitted ||
+          !contact.appliedUsage ||
+          !contact.response.allowedToolNames.includes("heptalogos_life")
+        )
+          deny(
+            "native_life_unavailable",
+            "Life requires the actual admitted controlled invocation",
+          );
+        // Only real committed feedback can support progress; the note remains a Subject statement.
+        const feedback = await sql<{
+          receipt: ReturnType<typeof encodeAcceptedObservation>;
+        }>(
+          tx,
+          "SELECT receipt FROM heptalogos.cognition_pending_feedback WHERE run_id=$1 AND receipt IS NOT NULL AND delivered_at IS NOT NULL ORDER BY recorded_at DESC,request_id DESC LIMIT 65",
+          [input.nativeRunId],
+        );
+        const receipts = feedback
+          .slice(0, 64)
+          .map((r) => decodeAcceptedObservation(r.receipt));
+        const next =
+          input.request.action === "inspect"
+            ? activity
+            : await options.life.progressIn(
+                tx,
+                {
+                  subjectId: activity.subjectId,
+                  activityId: activity.activityId,
+                  expectedRevision: input.request.expectedRevision,
+                  mode: input.request.mode,
+                  nextOpportunity: input.request.nextOpportunity,
+                  progress: {
+                    note: "Subject progress statement: " + input.request.note,
+                    sourceRefs: [...new Set(run.document.registration.sourceRefs)],
+                    artifactRefs: [
+                      ...new Set(
+                        receipts
+                          .map((r) => (r.artifactId ? "artifact:" + r.artifactId : ""))
+                          .filter(Boolean),
+                      ),
+                    ],
+                    resultRefs: [
+                      ...new Set(
+                        receipts
+                          .map((r) =>
+                            r.occurrenceId ? "occurrence:" + r.occurrenceId : "",
+                          )
+                          .filter(Boolean),
+                      ),
+                    ],
+                  },
+                },
+                world,
+              );
+        return {
+          revision: next.revision,
+          purpose: next.purpose,
+          state: next.state,
+          mode: next.mode,
+          world,
+          nextOpportunity: next.nextOpportunity,
+          progress: next.progress,
+          feedbackOmitted: feedback.length > 64,
+        };
+      });
     },
     async toolExecution(value) {
       const input = validated(() => hostToolExecutionRequestSchema.parse(value));

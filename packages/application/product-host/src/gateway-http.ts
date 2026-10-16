@@ -34,6 +34,12 @@ import {
   activityOpportunityResultSchema,
   type createActivityOpportunity,
 } from "./activity-opportunity.js";
+import {
+  nativeLifeRequestSchema,
+  nativeLifeResponseSchema,
+  type NativeLifeRequest,
+  type NativeLifeResponse,
+} from "./native-life-contracts.js";
 import type { createActivityDispatcher } from "./activity-dispatch.js";
 import * as contracts from "./gateway-contracts.js";
 import type { createArchiveStore } from "./archive-store.js";
@@ -45,6 +51,8 @@ const ack = Type.Object(
 const empty = Type.Object({}, { additionalProperties: false });
 /** Managed cognition uses the official Client's public wire, with no parallel observation DTO. */
 export interface GatewayCognitionBridge {
+  /** Native-context-bound Life inspect/progress; never a management getter. */
+  life(input: NativeLifeRequest): Promise<NativeLifeResponse>;
   /** Admits actual Host-selected material to one native invocation. */
   prepare(input: HostPrepareRequest): Promise<HostPrepareResponse>;
   /** Records the actual projection and accepted material receipts. */
@@ -546,6 +554,14 @@ export function registerGatewayHttp(
     wire.admittedRequest as TSchema,
     wire.acknowledgement as TSchema,
     (v) => owners().cognition.admitted(v as HostAdmittedRequest),
+    true,
+  );
+  endpoint(
+    "nativeLife",
+    p + "native/life",
+    nativeLifeRequestSchema,
+    nativeLifeResponseSchema,
+    (v) => owners().cognition.life(v),
     true,
   );
   endpoint(
