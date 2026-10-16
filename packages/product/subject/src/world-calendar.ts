@@ -5,7 +5,7 @@
  * @module world-calendar
  */
 import { Temporal } from "@js-temporal/polyfill";
-import recurrence from "rrule";
+import recurrence = require("rrule");
 import { v5 as uuidv5 } from "uuid";
 import type { Static } from "@heptalogos/schema-runtime/typebox";
 import type {
