@@ -113,6 +113,7 @@ export interface SubjectAttentionOptions {
     messageBatchLimit: number;
     limit: number;
     positions: readonly AttentionPosition[];
+    naturalOpportunity: boolean;
   }) => Promise<{ candidates: readonly SubjectAttentionCandidate[]; more: boolean }>;
 }
 /** Stored explanation contains references and policy reasons, never unread text. */

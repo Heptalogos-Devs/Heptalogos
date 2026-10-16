@@ -5,8 +5,12 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createMessagingService, type RawMessageFact } from "@heptalogos/messaging";
 import {
   createSubjectAttentionService,
+  createLifeService,
   type SubjectAttentionCandidate,
 } from "@heptalogos/subject";
+import { createIdentityService } from "@heptalogos/identity";
+import { createSubjectActivityResolver } from "../../../packages/application/product-host/src/subject-activity-resolver.js";
+import { createSubjectAttentionRuntime } from "../../../packages/application/product-host/src/subject-attention-runtime.js";
 import { useRepositoryMutationTransaction } from "@heptalogos/persistence/repository";
 import {
   cleanupCanonicalPostgresFixtures,
@@ -221,4 +225,255 @@ real("Metadata-only global Attention on real PostgreSQL", () => {
       await c.close();
     }
   }, 60000);
+  it("ranks before source caps, revisits pending metadata only at natural nodes and keeps reads unconsumed", async () => {
+    const c = await composeProductPersistence(undefined, 1);
+    try {
+      const subjectId = randomUUID(),
+        now = () => "2026-10-16T10:00:00.000Z";
+      const messaging = createMessagingService({ persistence: c.persistence });
+      const group = {
+        platform: "qq",
+        accountId: "100",
+        kind: "group" as const,
+        conversationId: "200",
+      };
+      const facts: RawMessageFact[] = [false, true].map((mention, i) => ({
+        kind: "message",
+        conversation: group,
+        nativeMessageId: String(i + 1),
+        direction: "INBOUND",
+        author: { accountId: "500" },
+        platformSentAt: now(),
+        receivedAt: now(),
+        parts: mention
+          ? [{ kind: "at", targetId: "100", atAll: false }]
+          : [{ kind: "text", text: "PRIVATE_UNREAD" }],
+        references: [],
+        sourceEnvelopeRef: "PRIVATE_ENVELOPE",
+      }));
+      await c.run(() => messaging.accept({ facts }));
+      const settings = async () => ({
+        nous: { runRoot: "fixture", expectedInstanceId: null },
+        subject: { id: subjectId, enabled: true },
+        subjectGateway: { origin: "http://127.0.0.1:1" },
+        maintenanceGateway: { origin: "http://127.0.0.1:2" },
+        qq: {
+          accountId: "100",
+          nativeAgentId: "fixture",
+          tools: [],
+          sourceRefs: [],
+          maxRunMs: 180000,
+          conversations: [
+            {
+              kind: "group" as const,
+              conversationId: "200",
+              receive: true,
+              observe: true,
+              effects: [],
+            },
+          ],
+        },
+        reactor: {
+          candidateLimit: 2,
+          perSourceLimit: 2,
+          messageBatchLimit: 1,
+          coalesceMs: 0,
+          reconsiderMs: 120000,
+        },
+      });
+      const make = () =>
+        createSubjectAttentionRuntime({
+          persistence: c.persistence,
+          settings,
+          messaging,
+          now,
+          life: {
+            schedule: async () => ({ activities: [], nextId: null }),
+            worldNow: async () => ({ timeDomainRef: "time:real", at: now() }),
+          },
+          worlds: { pendingContacts: async () => [] },
+          profiles: { entryNotice: async () => undefined },
+          narrative: {
+            pendingCommitments: async () => ({ commitments: [], more: false }),
+          },
+          native: {
+            readyResults: async () => ({ runs: [], more: false }),
+            hasAcceptedSource: async () => false,
+          },
+        });
+      // A source may supply older background before a known direct opportunity.
+      // Two metadata batches must be collected even when the final selection has one slot.
+      const owner = createSubjectAttentionService({
+        persistence: c.persistence,
+        now,
+        policy: async () => ({
+          candidateLimit: 1,
+          perSourceLimit: 1,
+          messageBatchLimit: 1,
+          coalesceMs: 0,
+          reconsiderMs: 120000,
+        }),
+        candidates: async () => ({
+          more: false,
+          candidates: ["background", "direct"].map((p, i) => ({
+            subjectId,
+            candidateRef: "known:" + i,
+            sourceOwner: "messaging" as const,
+            sourceKey: "same",
+            sourceRef: "ref:" + i,
+            sourceRevision: String(i),
+            kind: "message" as const,
+            priorityClass: p as "background" | "direct",
+            availableAt: now(),
+            related: false,
+            metadata: { label: "metadata" },
+          })),
+        }),
+      });
+      expect(
+        (await c.run(() => owner.select({ subjectId }))).selected?.priorityClass,
+      ).toBe("direct");
+      const runtime = make();
+      const first = await c.run(() => runtime.select({ subjectId, limit: 1 }));
+      await c.run(() =>
+        runtime.recordConsidered({
+          subjectId,
+          reactionId: randomUUID(),
+          candidateRef: first.selected!.candidateRef,
+          explanationRef: first.explanationRef,
+        }),
+      );
+      expect(first.selected?.priorityClass).toBe("direct");
+      // End-of-page is not permission to create another paid reaction to old unread work.
+      expect(
+        (await c.run(() => make().select({ subjectId }))).selected?.sourceOwner,
+      ).not.toBe("messaging");
+      expect(
+        (
+          await c.run(() => make().select({ subjectId, naturalOpportunity: true }))
+        ).candidates.some((candidate) => candidate.sourceOwner === "messaging"),
+      ).toBe(true);
+      expect(
+        (
+          await messaging.listPending({
+            conversationIds: (
+              await messaging.resolveConversations({ conversations: [group] })
+            ).conversationIds,
+            limit: 10,
+          })
+        ).pending,
+      ).toHaveLength(2);
+    } finally {
+      await c.close();
+    }
+  });
+  it("concurrently creates/adopts/resumes one own-life per audience and never shares audience context", async () => {
+    const c = await composeProductPersistence(undefined, 1);
+    try {
+      const subjectId = randomUUID(),
+        now = () => "2026-10-16T10:00:00.000Z";
+      const identity = createIdentityService({ persistence: c.persistence });
+      const conversations = ["a", "b"].map((k) => ({
+        conversationRef: "conversation:" + k,
+        operations: ["observe", "send"] as ("observe" | "send")[],
+      }));
+      const scope = { conversations, tools: [], sourceRefs: [], maxRunMs: 180000 };
+      const life = createLifeService({
+        persistence: c.persistence,
+        now,
+        worldNow: async () => ({ timeDomainRef: "time:real", at: now() }),
+        scopeAuthority: async () => scope,
+      });
+      const constraints = new Map<string, unknown>();
+      let resumeArrivals = 0;
+      let releaseResume!: () => void;
+      const resumeGate = new Promise<void>((resolve) => {
+        releaseResume = resolve;
+      });
+      const resolve = createSubjectActivityResolver({
+        life,
+        identity,
+        settings: async () => ({
+          nous: { runRoot: "fixture", expectedInstanceId: null },
+          subject: { id: subjectId, enabled: true },
+          subjectGateway: { origin: "http://127.0.0.1:1" },
+          maintenanceGateway: { origin: "http://127.0.0.1:2" },
+        }),
+        scopeFor: async () => scope,
+        authorize: async (activity) => {
+          if (activity.continuationRequired) {
+            if (++resumeArrivals === 2) releaseResume();
+            await resumeGate;
+          }
+        },
+        nous: async () => ({
+          runtime: {
+            createWorkContext: async (input) => {
+              constraints.set(input.operationId!, input.constraints);
+              return {
+                $typeName: "nous.wave.v1alpha1.WorkContextResponse",
+                degradation: [],
+                workContext: {
+                  $typeName: "nous.wave.v1alpha1.WorkContext",
+                  workContextId: input.operationId!,
+                  subjectId,
+                  state: "open",
+                  purpose: input.purpose!,
+                  unresolvedQuestions: [],
+                  constraints: input.constraints,
+                  resumeConditions: [],
+                  revision: 1n,
+                  cognitionAnchors: [],
+                  contextText: input.contextText!,
+                  entityAnchors: [],
+                  tagAnchors: [],
+                },
+              };
+            },
+          },
+        }),
+      });
+      const candidate = (audience: string): SubjectAttentionCandidate => ({
+        subjectId,
+        candidateRef: audience,
+        sourceOwner: "messaging",
+        sourceKey: audience,
+        sourceRef: audience,
+        sourceRevision: "1",
+        kind: "message",
+        priorityClass: "direct",
+        availableAt: now(),
+        related: false,
+        metadata: { label: "metadata", conversationRef: audience },
+      });
+      const a = candidate("conversation:a"),
+        b = candidate("conversation:b");
+      const pair = await c.run(() => Promise.all([resolve(a), resolve(a)]));
+      expect(pair[0]?.activityId).toBe(pair[1]?.activityId);
+      expect(pair[0]?.scope?.conversations.map((x) => x.conversationRef)).toEqual([
+        "conversation:a",
+      ]);
+      const other = await c.run(() => resolve(b));
+      expect(other?.activityId).not.toBe(pair[0]?.activityId);
+      expect(other?.workContextId).not.toBe(pair[0]?.workContextId);
+      expect(other?.scope?.conversations.map((x) => x.conversationRef)).toEqual([
+        "conversation:b",
+      ]);
+      expect(
+        new Set([...constraints.values()].map((x) => JSON.stringify(x))).size,
+      ).toBe(2);
+      await c.run(() => life.recover(subjectId));
+      const resumed = await c.run(() => Promise.all([resolve(a), resolve(a)]));
+      expect(
+        resumed.every(
+          (x) =>
+            x !== undefined &&
+            x.activityId === pair[0]?.activityId &&
+            !x.continuationRequired,
+        ),
+      ).toBe(true);
+    } finally {
+      await c.close();
+    }
+  });
 });

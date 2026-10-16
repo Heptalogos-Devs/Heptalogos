@@ -115,10 +115,10 @@ export function createSubjectAttentionService(options: SubjectAttentionOptions) 
         messageBatchLimit: policy.messageBatchLimit,
         limit,
         positions: history,
+        naturalOpportunity: input.naturalOpportunity === true,
       });
       const actualNow = options.now(),
-        now = Date.parse(actualNow),
-        counts = new Map<string, number>();
+        now = Date.parse(actualNow);
       let nextAt: number | undefined;
       const visible: SubjectAttentionCandidate[] = [];
       for (const value of supplied.candidates) {
@@ -133,9 +133,6 @@ export function createSubjectAttentionService(options: SubjectAttentionOptions) 
             "The source owner returned another Subject",
             "authorization",
           );
-        const n = counts.get(candidate.sourceKey) ?? 0;
-        if (n >= policy.perSourceLimit) continue;
-        counts.set(candidate.sourceKey, n + 1);
         const prior = bySource.get(candidate.sourceKey);
         if (prior?.sourceRevision === candidate.sourceRevision) {
           const next = Date.parse(prior.consideredAt) + policy.reconsiderMs;
