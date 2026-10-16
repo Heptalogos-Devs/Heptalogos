@@ -67,3 +67,13 @@ Host 为实际派发注册的 agent RPC 携带独立 `toolBindings.heptalogos`�
 service-only `/gateway/v1/native/life` 在事务外完成当前 Pursuit/来源检查与 world 读取，在 Host fence 内锁定并重新验证实际 running run、已 admitted contact、Activity scope、operator grant 与 Pursuit 本地 revision。inspect 读取该 Activity；progress 的 note 是主体陈述，来源引用由 Host 从实际选源、已提交反馈 receipt 生成，不接受模型的成果或来源宣称。两者都要求当前 `heptalogos_life` 工具许可。
 
 Life.progress 可显式改变 work/wait/rest，保持当前 active 状态，并要求下一处理点属于 Activity 当前实际 world。rest 阻止新来信正文读取；同 world 到期后由 Life owner CAS 转回 work，既有原生 opportunity 续行，无额外 timer 或模型循环。wait 仍可处理已授权来信。并发进展或授权撤回不能被旧 revision 覆盖。
+
+## 当前纠偏施工合同
+
+独立世界与陈述由[WorldLife](world-life.md)及[NarrativeCommit](narrative-claims.md)拥有，原生多角色由[执行合同](../system/ai-runtime.md)拥有。它们为唯一活动计划的当前施工范围，前文已实现消息派发路径不构成这些能力已完成的声明。
+
+机会扩展为message、world_event、schedule、activity_result、cognition_change、explicit_subject_intent。仅message必须提供实际会话；内部生活不依赖QQ账号或虚假消息。主观决定可继续、观察、推迟、拒绝、询问、交流、学习、委派、发起活动或休息。Direct/@/maxWait只触发重新考虑，不保证回复。Subject在已授予工具/来源/渠道/预算内可自行采用活动，不要求操作者逐项管理adopt。
+
+Nous EpistemicView是唯一主体知识投影，包含相关熟悉范围、接受事实/报告、亲历/听说/学习区分、未知与freshness/coverage限制、刚获得的执行辅助和学习机会。Host只传purpose/视角/真实来源和世界时间，不读取三个域拼第二份知识库。陌生主题仍可在本人愿意且权限允许时学习；后台懂得不等于主体已有专业经验。
+
+世界/worker/review使用execution_only，成果经显式有界handoff才形成subject_experience。观察、学习、reflection与后续表达保留各自来源；未读正文不能进入主体认知。短期情境心境由实际生活/评价延续，不每次随机重置或改写长期Self。

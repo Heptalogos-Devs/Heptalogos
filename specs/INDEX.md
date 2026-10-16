@@ -55,3 +55,11 @@ requirement IDs.
 Spec paths define semantic owners, not package or workspace topology. Provider
 decisions, qualification evidence, current sequencing, and work authorization
 remain in their canonical Project Control documents.
+
+## 当前持续主体纠偏施工
+
+[唯一活动计划](../project/plans/qq-continuous-subject.md)授权完整世界与角色链；新增操作的实际范围见各Spec，不能以文档存在视为已交付。
+
+- [WorldLife](./subject/world-life.md)：世界定义、日程、实现、视角、无会话机会和历史。
+- [人格表达与NarrativeCommit](./subject/narrative-claims.md)：brief、最终读回、Claim、事务采用及派发关联。
+- [原生多角色执行](./system/ai-runtime.md)：替代旧AIRuntime产品路由的角色/用途/视角、独立renderer及失败合同。
