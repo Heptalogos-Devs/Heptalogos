@@ -50,7 +50,7 @@ QQ 插件使用独立的 `SECRET/channel-service-token` 访问同一 Host 的服
 
 Host 默认适配器读取本安装 `installation-services.json` 的 Subject 身份、根目录和显式 env 文件路径，调用同一独立原生包的 `heptalogos-qq-dispatch` SDK 入口。消息和调用参数走 stdin，Gateway 密码只进入子进程环境；Host 不另建模型循环。SDK 终态保留原始结果，`completed` 表示 RPC 已结束，实际发送以 Agency 和平台回执为准。
 
-当前要求 Activity 的工具为空，与原生生产 denyall 配合。原生服务未配置时返回明确状态；SDK 失败或无法确认时保留 uncertain，重复 requestId 不再次调用。Host 停止或进程超时时终止本地调用进程。实际安装仍须核对模型输入、最终 QQ 回执和结果回流。
+逐 Activity 工具使用正式 native boundary v4 的模型集合过滤和强制执行前授权；实际能力仍受原生工具策略及 OS 沙箱限制。原生服务未配置时返回明确状态；SDK 失败或无法确认时保留 uncertain，重复 requestId 不再次调用。Host 停止或进程超时时终止本地调用进程。实际安装仍须核对模型输入、最终 QQ 回执和结果回流。
 
 ## 验证
 

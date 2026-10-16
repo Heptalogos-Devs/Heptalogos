@@ -165,16 +165,20 @@ async function fixture() {
       intent: "Read selected actual facts",
       audience: { visibility: "group", conversationRef: "conversation:qq:registered" },
     }),
-    sourceRefs: ["occurrence:registered"],
+    sourceRefs: [
+      "occurrence:registered",
+      ...messageRefs.map((ref) => "message:" + ref),
+    ],
     messageRefs,
     contacts: [0, 1].map((index) => ({
-      contactRef: `fact:${index}`,
+      contactRef: `message:${messageRefs[index]}`,
       observation: sdk.encodeObservationInput({
         subjectId,
         requestId: randomUUID(),
         sourceClass: "message",
         actorEntityRef: `entity:author:${index}`,
-        externalObjectRef: `object:qq:message:${index}`,
+        externalObjectRef: `message:${messageRefs[index]}`,
+        conversationRef: "conversation:qq:registered",
         occurredTime: {
           value: {
             case: "instant",
@@ -611,3 +615,55 @@ real(
     }, 120000);
   },
 );
+
+real("mandatory native tool execution admission", () => {
+  it("requires an admitted exact invocation and rechecks current authority at both execution phases", async () => {
+    const f = await fixture();
+    try {
+      const prepared = await f.c.run(() => f.bridge.prepare(f.input));
+      expect(prepared.allowedToolNames).toEqual(["read"]);
+      const identity = sdk.hostContactIdentitySchema.strip().parse(f.input);
+      const request = {
+        ...identity,
+        toolName: "read",
+        toolCallId: "actual:1",
+        phase: "prepare" as const,
+      };
+      await expect(
+        f.c.run(() => f.bridge.toolExecution(request)),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_tool_unavailable" },
+      });
+      const usage = await admitSelected(f, prepared);
+      expect(await f.c.run(() => f.bridge.toolExecution(request))).toMatchObject({
+        allowed: true,
+        usage: sdk.encodeCognitionUsage(usage),
+      });
+      await expect(
+        f.c.run(() => f.bridge.toolExecution({ ...request, toolName: "exec" })),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_tool_denied" },
+      });
+      await expect(
+        f.c.run(() => f.bridge.toolExecution({ ...request, invocationId: "forged" })),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_contact_changed" },
+      });
+      expect(
+        await f.c.run(() => f.bridge.toolExecution({ ...request, phase: "execute" })),
+      ).toMatchObject({ allowed: true, usage: sdk.encodeCognitionUsage(usage) });
+      f.revoke();
+      await expect(
+        f.c.run(() => f.bridge.toolExecution({ ...request, phase: "execute" })),
+      ).rejects.toThrow();
+      await f.c.run(() => f.bridge.finishRun(f.input.native.runId, "cancelled"));
+      await expect(
+        f.c.run(() => f.bridge.toolExecution(request)),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_tool_unavailable" },
+      });
+    } finally {
+      await f.c.close();
+    }
+  }, 120000);
+});

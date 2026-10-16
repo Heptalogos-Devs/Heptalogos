@@ -30,6 +30,7 @@ import {
   hostAdmittedRequestSchema,
   hostHandoffRequestSchema,
   hostFeedbackRequestSchema,
+  hostToolExecutionRequestSchema,
   hostContactIdentitySchema,
   decodeCognitionUsage,
   encodeCognitionUsage,
@@ -50,6 +51,7 @@ import type {
   NativeActivityParams,
   ActivityDispatchResult,
 } from "./activity-dispatch-contracts.js";
+import { hasAuthorizedNativeSources } from "./native-source-selection.js";
 import type { GatewayCognitionBridge } from "./gateway-http.js";
 
 /** Persisted exact native-run selection; only the trusted Host may construct it. */
@@ -66,6 +68,7 @@ export interface Registration {
   readonly usage: HostPrepareResponse["usage"];
   readonly sourceRefs: readonly string[];
   readonly messageRefs: readonly string[];
+  readonly inheritedMessageSources?: readonly string[];
   readonly contacts: HostPrepareResponse["contacts"];
 }
 type NativeDispatchRecord = {
@@ -184,7 +187,7 @@ function current(activity: LifeActivity, registration: Registration) {
       "native_activity_unavailable",
       "The original adopted Activity must be active and explicitly continued",
     );
-  if (registration.sourceRefs.some((ref) => !activity.scope!.sourceRefs.includes(ref)))
+  if (!hasAuthorizedNativeSources(activity, registration))
     deny(
       "native_source_denied",
       "An actual source is outside the current adopted Activity",
@@ -596,6 +599,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           version: 1,
           contactRequestId: input.contactRequestId,
           workContextId: activity.workContextId,
+          allowedToolNames: [...activity.scope!.tools],
           usage: encodeCognitionUsage(usage),
           scope: {
             activityRef: registration.activityId,
@@ -788,6 +792,52 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         });
       return { version: 1, accepted: true };
     },
+    async toolExecution(value) {
+      const input = validated(() => hostToolExecutionRequestSchema.parse(value));
+      return mutate(async (tx) => {
+        await sessionLock(tx, input.native.sessionKey);
+        const contact = await contactIn(tx, input);
+        const runs = await sql<{ state: string; document: NativeRunSnapshot }>(
+          tx,
+          "SELECT state,document FROM heptalogos.life_native_run WHERE run_id=$1 FOR UPDATE",
+          [input.native.runId],
+        );
+        const run = runs[0];
+        if (
+          !run ||
+          run.state !== "running" ||
+          !contact.admitted ||
+          !contact.appliedUsage
+        )
+          deny(
+            "native_tool_unavailable",
+            "Tools require the actual admitted running invocation",
+          );
+        const activity = await lockedActivity(
+          tx,
+          input.subjectId,
+          run.document.registration.activityId,
+        );
+        current(activity, run.document.registration);
+        await options.authorizeInput(run.document.registration, activity);
+        if (
+          !contact.response.allowedToolNames.includes(input.toolName) ||
+          !activity.scope!.tools.includes(input.toolName)
+        )
+          deny(
+            "native_tool_denied",
+            "The actual tool is outside this invocation's current adopted scope",
+          );
+        return {
+          version: 1,
+          contactRequestId: input.contactRequestId,
+          toolName: input.toolName,
+          toolCallId: input.toolCallId,
+          allowed: true,
+          usage: contact.appliedUsage,
+        };
+      });
+    },
     async handoff(value) {
       const input = validated(() => hostHandoffRequestSchema.parse(value));
       await mutate(async (tx) => {
@@ -837,6 +887,9 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           registration: {
             ...parent.registration,
             usage: runs[0]!.document.appliedUsage ?? parent.registration.usage,
+            inheritedMessageSources: parent.registration.sourceRefs.filter((ref) =>
+              ref.startsWith("message:"),
+            ),
             role: "worker",
             contacts: [],
             messageRefs: [],

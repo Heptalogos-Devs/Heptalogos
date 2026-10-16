@@ -1612,6 +1612,129 @@ export type CreateProductSubjectResponses = {
 
 export type CreateProductSubjectResponse = CreateProductSubjectResponses[keyof CreateProductSubjectResponses];
 
+export type TakeActivityOpportunityData = {
+    body: {
+        accountId: string;
+        conversation: {
+            kind: 'group' | 'direct';
+            id: string;
+        };
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/activity/opportunity';
+};
+
+export type TakeActivityOpportunityErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type TakeActivityOpportunityError = TakeActivityOpportunityErrors[keyof TakeActivityOpportunityErrors];
+
+export type TakeActivityOpportunityResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        decision: 'defer' | 'rest' | 'dispatched';
+        dispatch?: {
+            requestId: string;
+            nativeRunId: string;
+            sessionKey: string;
+            promptDigest: string;
+            state: 'dispatching' | 'completed' | 'failed' | 'uncertain';
+            replayed: boolean;
+            result?: unknown;
+            code?: string;
+        };
+    };
+};
+
+export type TakeActivityOpportunityResponse = TakeActivityOpportunityResponses[keyof TakeActivityOpportunityResponses];
+
 export type DispatchActivityData = {
     body: {
         requestId: string;
@@ -5838,6 +5961,7 @@ export type PrepareCognitionResponses = {
         version: 1;
         contactRequestId: string;
         workContextId: string;
+        allowedToolNames: Array<string>;
         usage: {
             [key: string]: unknown;
         };
@@ -5990,11 +6114,143 @@ export type AdmitCognitionResponses = {
 
 export type AdmitCognitionResponse = AdmitCognitionResponses[keyof AdmitCognitionResponses];
 
+export type AuthorizeToolExecutionData = {
+    body: {
+        version: 1;
+        contactRequestId: string;
+        native: {
+            sessionKey: string;
+            sessionId: string;
+            runId: string;
+            agentId: string;
+            historyGeneration: string;
+            parentSessionKey?: string;
+        };
+        subjectId: string;
+        nousSessionId: string;
+        invocationId: string;
+        toolName: string;
+        toolCallId: string;
+        phase: 'prepare' | 'execute';
+    };
+    path?: never;
+    query?: never;
+    url: '/nous/v1/tool-execution';
+};
+
+export type AuthorizeToolExecutionErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type AuthorizeToolExecutionError = AuthorizeToolExecutionErrors[keyof AuthorizeToolExecutionErrors];
+
+export type AuthorizeToolExecutionResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        version: 1;
+        contactRequestId: string;
+        toolName: string;
+        toolCallId: string;
+        allowed: true;
+        usage: {
+            [key: string]: unknown;
+        };
+    };
+};
+
+export type AuthorizeToolExecutionResponse = AuthorizeToolExecutionResponses[keyof AuthorizeToolExecutionResponses];
+
 export type HandoffCognitionData = {
     body: {
         version: 1;
         requestId: string;
         subjectId: string;
+        parentRunId: string;
         parentSessionKey: string;
         parentSessionId: string;
         parentNousSessionId: string;

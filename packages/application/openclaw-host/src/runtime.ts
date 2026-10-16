@@ -106,6 +106,24 @@ export function registerQqChannel(api: OpenClawPluginApi): void {
         accountId: connection.accountId,
       });
       let pump: ReturnType<typeof createQqResourcePump> | undefined;
+      const opportunities = new Set<string>();
+      const wake = (conversation: {
+        kind: "group" | "direct";
+        conversationId: string;
+      }) => {
+        const key = `${conversation.kind}:${conversation.conversationId}`;
+        if (signal.aborted || opportunities.has(key)) return;
+        opportunities.add(key);
+        void host
+          .takeActivityOpportunity({
+            accountId: connection.accountId,
+            conversation: { kind: conversation.kind, id: conversation.conversationId },
+          })
+          .catch(() => {
+            if (!signal.aborted) report("activity_opportunity_unavailable");
+          })
+          .finally(() => opportunities.delete(key));
+      };
       const commit = async (envelope: HistoryEnvelope) => {
         const latest = await host.gatewayScope();
         if (latest.accountId !== connection.accountId)
@@ -149,6 +167,8 @@ export function registerQqChannel(api: OpenClawPluginApi): void {
         }
         const accepted = await host.acceptFacts({ facts: parsed.facts });
         pump?.request();
+        for (const fact of parsed.facts)
+          if (fact.kind === "message") wake(fact.conversation);
         return accepted;
       };
       const monitor = createQqIngress({
@@ -195,6 +215,10 @@ export function registerQqChannel(api: OpenClawPluginApi): void {
             );
           }
           pump?.request();
+          for (const conversation of latest.conversations.filter(
+            (c) => c.receive && c.observe,
+          ))
+            wake(conversation);
         })()
           .catch(() => report("history_or_login_unavailable"))
           .finally(() => {

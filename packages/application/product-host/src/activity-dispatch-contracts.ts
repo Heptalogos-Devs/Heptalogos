@@ -46,17 +46,21 @@ export const activityDispatchResultSchema = Type.Object(
 /** Saved dispatch result. Retrying this identity never issues another native call. */
 export type ActivityDispatchResult = Static<typeof activityDispatchResultSchema>;
 /** Host-selected inputs passed to the existing public native agent CLI adapter. */
-export interface NativeActivityParams {
+export type NativeActivityParams = {
   readonly agentId: string;
   readonly sessionKey: string;
   readonly message: string;
   readonly idempotencyKey: string;
   readonly timeout: number;
-  readonly deliver: true;
-  readonly channel: "heptalogos-qq";
-  readonly accountId: string;
-  readonly to: string;
-}
+} & (
+  | {
+      readonly deliver: true;
+      readonly channel: "heptalogos-qq";
+      readonly accountId: string;
+      readonly to: string;
+    }
+  | { readonly deliver: false }
+);
 /** The official SDK owns actual execution and delivery, including its final result. */
 export type NativeActivityDispatch = (
   params: NativeActivityParams,

@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { AcceptFactsData, AcceptFactsErrors, AcceptFactsResponses, AdmitCognitionData, AdmitCognitionErrors, AdmitCognitionResponses, AdoptActivityData, AdoptActivityErrors, AdoptActivityResponses, AdoptDeliveryData, AdoptDeliveryErrors, AdoptDeliveryResponses, ArchiveEnvelopeData, ArchiveEnvelopeErrors, ArchiveEnvelopeResponses, AuthorizeDeliveryData, AuthorizeDeliveryErrors, AuthorizeDeliveryResponses, BeginDeliveryData, BeginDeliveryErrors, BeginDeliveryResponses, BindProductSubjectData, BindProductSubjectErrors, BindProductSubjectResponses, BindSubjectAccountData, BindSubjectAccountErrors, BindSubjectAccountResponses, CheckProductConfigurationData, CheckProductConfigurationErrors, CheckProductConfigurationResponses, ClaimFirstAdministratorData, ClaimFirstAdministratorErrors, ClaimFirstAdministratorResponses, CompletePendingData, CompletePendingErrors, CompletePendingResponses, ConfigureProductData, ConfigureProductErrors, ConfigureProductResponses, CreateManagementSessionData, CreateManagementSessionErrors, CreateManagementSessionResponses, CreateProductSubjectData, CreateProductSubjectErrors, CreateProductSubjectResponses, DescribeProductConfigurationData, DescribeProductConfigurationErrors, DescribeProductConfigurationResponses, DispatchActivityData, DispatchActivityErrors, DispatchActivityResponses, FeedbackCognitionData, FeedbackCognitionErrors, FeedbackCognitionResponses, GatewayScopeData, GatewayScopeErrors, GatewayScopeResponses, GetBoundSubjectData, GetBoundSubjectErrors, GetBoundSubjectResponses, GetManagementDiscoveryData, GetManagementDiscoveryResponses, GetProductConfigurationData, GetProductConfigurationErrors, GetProductConfigurationResponses, GetProductStatusData, GetProductStatusErrors, GetProductStatusResponses, HandoffCognitionData, HandoffCognitionErrors, HandoffCognitionResponses, PendingAttachmentsData, PendingAttachmentsErrors, PendingAttachmentsResponses, PendingFactsData, PendingFactsErrors, PendingFactsResponses, PendingReferencesData, PendingReferencesErrors, PendingReferencesResponses, PrepareCognitionData, PrepareCognitionErrors, PrepareCognitionResponses, PrepareReadData, PrepareReadErrors, PrepareReadResponses, ProgressActivityData, ProgressActivityErrors, ProgressActivityResponses, ProposeActivityData, ProposeActivityErrors, ProposeActivityResponses, ReadArchiveData, ReadArchiveErrors, ReadArchiveResponses, ReadEventsData, ReadEventsErrors, ReadEventsResponses, ReadHistoryCoverageData, ReadHistoryCoverageErrors, ReadHistoryCoverageResponses, RecordDeliveryData, RecordDeliveryErrors, RecordDeliveryResponses, RegisterChannelRouteData, RegisterChannelRouteErrors, RegisterChannelRouteResponses, ResolveAccountData, ResolveAccountErrors, ResolveAccountResponses, ResolveGroupData, ResolveGroupErrors, ResolveGroupResponses, RevokeCurrentManagementSessionData, RevokeCurrentManagementSessionErrors, RevokeCurrentManagementSessionResponses, ScheduleActivitiesData, ScheduleActivitiesErrors, ScheduleActivitiesResponses, TakeAttentionData, TakeAttentionErrors, TakeAttentionResponses, TransitionActivityData, TransitionActivityErrors, TransitionActivityResponses, UpdateAttachmentData, UpdateAttachmentErrors, UpdateAttachmentResponses, UpdateHistoryCoverageData, UpdateHistoryCoverageErrors, UpdateHistoryCoverageResponses, UpdateReferenceData, UpdateReferenceErrors, UpdateReferenceResponses, UploadAttachmentData, UploadAttachmentErrors, UploadAttachmentResponses } from './types.gen.js';
+import type { AcceptFactsData, AcceptFactsErrors, AcceptFactsResponses, AdmitCognitionData, AdmitCognitionErrors, AdmitCognitionResponses, AdoptActivityData, AdoptActivityErrors, AdoptActivityResponses, AdoptDeliveryData, AdoptDeliveryErrors, AdoptDeliveryResponses, ArchiveEnvelopeData, ArchiveEnvelopeErrors, ArchiveEnvelopeResponses, AuthorizeDeliveryData, AuthorizeDeliveryErrors, AuthorizeDeliveryResponses, AuthorizeToolExecutionData, AuthorizeToolExecutionErrors, AuthorizeToolExecutionResponses, BeginDeliveryData, BeginDeliveryErrors, BeginDeliveryResponses, BindProductSubjectData, BindProductSubjectErrors, BindProductSubjectResponses, BindSubjectAccountData, BindSubjectAccountErrors, BindSubjectAccountResponses, CheckProductConfigurationData, CheckProductConfigurationErrors, CheckProductConfigurationResponses, ClaimFirstAdministratorData, ClaimFirstAdministratorErrors, ClaimFirstAdministratorResponses, CompletePendingData, CompletePendingErrors, CompletePendingResponses, ConfigureProductData, ConfigureProductErrors, ConfigureProductResponses, CreateManagementSessionData, CreateManagementSessionErrors, CreateManagementSessionResponses, CreateProductSubjectData, CreateProductSubjectErrors, CreateProductSubjectResponses, DescribeProductConfigurationData, DescribeProductConfigurationErrors, DescribeProductConfigurationResponses, DispatchActivityData, DispatchActivityErrors, DispatchActivityResponses, FeedbackCognitionData, FeedbackCognitionErrors, FeedbackCognitionResponses, GatewayScopeData, GatewayScopeErrors, GatewayScopeResponses, GetBoundSubjectData, GetBoundSubjectErrors, GetBoundSubjectResponses, GetManagementDiscoveryData, GetManagementDiscoveryResponses, GetProductConfigurationData, GetProductConfigurationErrors, GetProductConfigurationResponses, GetProductStatusData, GetProductStatusErrors, GetProductStatusResponses, HandoffCognitionData, HandoffCognitionErrors, HandoffCognitionResponses, PendingAttachmentsData, PendingAttachmentsErrors, PendingAttachmentsResponses, PendingFactsData, PendingFactsErrors, PendingFactsResponses, PendingReferencesData, PendingReferencesErrors, PendingReferencesResponses, PrepareCognitionData, PrepareCognitionErrors, PrepareCognitionResponses, PrepareReadData, PrepareReadErrors, PrepareReadResponses, ProgressActivityData, ProgressActivityErrors, ProgressActivityResponses, ProposeActivityData, ProposeActivityErrors, ProposeActivityResponses, ReadArchiveData, ReadArchiveErrors, ReadArchiveResponses, ReadEventsData, ReadEventsErrors, ReadEventsResponses, ReadHistoryCoverageData, ReadHistoryCoverageErrors, ReadHistoryCoverageResponses, RecordDeliveryData, RecordDeliveryErrors, RecordDeliveryResponses, RegisterChannelRouteData, RegisterChannelRouteErrors, RegisterChannelRouteResponses, ResolveAccountData, ResolveAccountErrors, ResolveAccountResponses, ResolveGroupData, ResolveGroupErrors, ResolveGroupResponses, RevokeCurrentManagementSessionData, RevokeCurrentManagementSessionErrors, RevokeCurrentManagementSessionResponses, ScheduleActivitiesData, ScheduleActivitiesErrors, ScheduleActivitiesResponses, TakeActivityOpportunityData, TakeActivityOpportunityErrors, TakeActivityOpportunityResponses, TakeAttentionData, TakeAttentionErrors, TakeAttentionResponses, TransitionActivityData, TransitionActivityErrors, TransitionActivityResponses, UpdateAttachmentData, UpdateAttachmentErrors, UpdateAttachmentResponses, UpdateHistoryCoverageData, UpdateHistoryCoverageErrors, UpdateHistoryCoverageResponses, UpdateReferenceData, UpdateReferenceErrors, UpdateReferenceResponses, UploadAttachmentData, UploadAttachmentErrors, UploadAttachmentResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -137,6 +137,20 @@ export const createProductSubject = <ThrowOnError extends boolean = false>(optio
             type: 'http'
         }],
     url: '/v1/subjects',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const takeActivityOpportunity = <ThrowOnError extends boolean = false>(options: Options<TakeActivityOpportunityData, ThrowOnError>): RequestResult<TakeActivityOpportunityResponses, TakeActivityOpportunityErrors, ThrowOnError> => (options.client ?? client).post<TakeActivityOpportunityResponses, TakeActivityOpportunityErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/activity/opportunity',
     ...options,
     headers: {
         'Content-Type': 'application/json',
@@ -586,6 +600,20 @@ export const admitCognition = <ThrowOnError extends boolean = false>(options: Op
             type: 'http'
         }],
     url: '/nous/v1/admitted',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const authorizeToolExecution = <ThrowOnError extends boolean = false>(options: Options<AuthorizeToolExecutionData, ThrowOnError>): RequestResult<AuthorizeToolExecutionResponses, AuthorizeToolExecutionErrors, ThrowOnError> => (options.client ?? client).post<AuthorizeToolExecutionResponses, AuthorizeToolExecutionErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/nous/v1/tool-execution',
     ...options,
     headers: {
         'Content-Type': 'application/json',

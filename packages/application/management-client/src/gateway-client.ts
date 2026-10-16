@@ -107,6 +107,10 @@ export function createGatewayHostClient(options: GatewayHostClientOptions) {
       requestGateway((base) => api.scheduleActivities({ ...base, body })),
     dispatchActivity: (body: wire.DispatchActivityData["body"]) =>
       requestGateway((base) => api.dispatchActivity({ ...base, body })),
+    takeActivityOpportunity: (body: wire.TakeActivityOpportunityData["body"]) =>
+      requestGateway((base) => api.takeActivityOpportunity({ ...base, body })),
+    authorizeToolExecution: (body: wire.AuthorizeToolExecutionData["body"]) =>
+      requestGateway((base) => api.authorizeToolExecution({ ...base, body })),
     takeAttention: (body: wire.TakeAttentionData["body"]) =>
       requestGateway((base) => api.takeAttention({ ...base, body })),
     prepareCognition: (body: wire.PrepareCognitionData["body"]) =>

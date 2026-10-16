@@ -21,6 +21,9 @@ import { createArchiveStore } from "./archive-store.js";
 import { createChannelRouteStore } from "./channel-routes.js";
 import { createNativeCognitionBridge } from "./native-cognition.js";
 import { connectProductNous } from "./nous.js";
+import { createActivityOpportunity } from "./activity-opportunity.js";
+import { createSelectedMediaUploader } from "./selected-media.js";
+import { hasCanonicalNativeMessages } from "./native-source-selection.js";
 import { createActivityDispatcher } from "./activity-dispatch.js";
 import type { NativeActivityDispatch } from "./activity-dispatch-contracts.js";
 import type { GatewayScope } from "./gateway-contracts.js";
@@ -231,6 +234,10 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
           "The current Subject must be enabled on its actual native account Agent",
         );
       if (!activity.scope) denied("The Activity has not adopted its permission scope");
+      if (!(await hasCanonicalNativeMessages(registration, messaging)))
+        denied(
+          "Selected message contacts do not match the actual authorized conversation",
+        );
       assertScopeWithin(
         activity.scope,
         await authority(
@@ -326,7 +333,11 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
     scope,
     now: options.now,
   });
+  const archive = createArchiveStore(
+    join(options.dataRoot, "messaging", "protected-cas"),
+  );
   const activities = createActivityDispatcher({
+    prepareMedia: createSelectedMediaUploader({ archive, nous }),
     life,
     messaging,
     identity,
@@ -344,7 +355,16 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
       );
     },
   });
+  const opportunity = createActivityOpportunity({
+    scope,
+    life,
+    messaging,
+    activities,
+    enabled: async () =>
+      !!(await options.product.configuration()).settings?.subject.enabled,
+  });
   const http: GatewayHttpOptions = {
+    opportunity,
     authenticate: await serviceCredential(options.secretRoot),
     runMutation: options.runMutation,
     scope,
@@ -353,7 +373,7 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
     life,
     agency,
     routes,
-    archive: createArchiveStore(join(options.dataRoot, "messaging", "protected-cas")),
+    archive,
     cognition: native,
     activities,
   };

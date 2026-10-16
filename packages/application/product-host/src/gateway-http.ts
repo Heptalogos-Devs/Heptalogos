@@ -20,6 +20,8 @@ import {
   type HostHandoffRequest,
   type HostFeedbackRequest,
   type HostFeedbackResponse,
+  type HostToolExecutionRequest,
+  type HostToolExecutionResponse,
 } from "@nous-wave/client/host-bridge";
 import { managementProblem, managementProblemSchema } from "@heptalogos/management";
 import { tokenFromRequest } from "./http-auth.js";
@@ -27,6 +29,11 @@ import {
   activityDispatchInputSchema,
   activityDispatchResultSchema,
 } from "./activity-dispatch-contracts.js";
+import {
+  activityOpportunityInputSchema,
+  activityOpportunityResultSchema,
+  type createActivityOpportunity,
+} from "./activity-opportunity.js";
 import type { createActivityDispatcher } from "./activity-dispatch.js";
 import * as contracts from "./gateway-contracts.js";
 import type { createArchiveStore } from "./archive-store.js";
@@ -42,6 +49,8 @@ export interface GatewayCognitionBridge {
   prepare(input: HostPrepareRequest): Promise<HostPrepareResponse>;
   /** Records the actual projection and accepted material receipts. */
   admitted(input: HostAdmittedRequest): Promise<{ version: 1; accepted: true }>;
+  /** Rechecks the actual invocation and current adopted tools immediately before execution. */
+  toolExecution(input: HostToolExecutionRequest): Promise<HostToolExecutionResponse>;
   /** Authorizes a restricted child before its first model input. */
   handoff(input: HostHandoffRequest): Promise<{ version: 1; accepted: true }>;
   /** Preserves original actual outcomes before submitting them to cognition. */
@@ -59,6 +68,7 @@ export interface GatewayHttpOptions {
   readonly archive: ReturnType<typeof createArchiveStore>;
   readonly routes: ReturnType<typeof createChannelRouteStore>;
   readonly cognition: GatewayCognitionBridge;
+  readonly opportunity: ReturnType<typeof createActivityOpportunity>;
   readonly activities: ReturnType<typeof createActivityDispatcher>;
 }
 /** Registers schema-owned service endpoints on the existing local Host listener. */
@@ -148,6 +158,14 @@ export function registerGatewayHttp(
     return { scope, conversationIds };
   };
   const p = "/gateway/v1/";
+  endpoint(
+    "takeActivityOpportunity",
+    p + "activity/opportunity",
+    activityOpportunityInputSchema,
+    activityOpportunityResultSchema,
+    (v) => owners().opportunity(v),
+    true,
+  );
   endpoint(
     "dispatchActivity",
     p + "activity/dispatch",
@@ -523,6 +541,14 @@ export function registerGatewayHttp(
     wire.admittedRequest as TSchema,
     wire.acknowledgement as TSchema,
     (v) => owners().cognition.admitted(v as HostAdmittedRequest),
+    true,
+  );
+  endpoint(
+    "authorizeToolExecution",
+    HOST_BRIDGE_PATHS.toolExecution,
+    wire.toolExecutionRequest as TSchema,
+    wire.toolExecutionResponse as TSchema,
+    (v) => owners().cognition.toolExecution(v as HostToolExecutionRequest),
     true,
   );
   endpoint(

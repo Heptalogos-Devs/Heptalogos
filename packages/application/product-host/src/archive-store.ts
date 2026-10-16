@@ -41,6 +41,19 @@ export function createArchiveStore(root: string, maxBytes = 64 * 1024 * 1024) {
     return hash;
   };
   return {
+    async readAttachment(input: { reference: string; sha256: string; bytes: number }) {
+      const matched = /^cas:sha256:([a-f0-9]{64})$/.exec(input.reference);
+      if (!matched || matched[1] !== input.sha256)
+        throw new Error("Unknown protected media reference");
+      const path = join(root, input.sha256);
+      const stat = await lstat(path);
+      if (!stat.isFile() || stat.size > maxBytes || stat.size !== input.bytes)
+        throw new Error("Protected media is unavailable");
+      const bytes = await readFile(path);
+      if (digest(bytes) !== input.sha256)
+        throw new Error("Protected media integrity check failed");
+      return bytes;
+    },
     async uploadAttachmentStream(source: Readable, mediaType: string) {
       if (!/^[a-z0-9.+-]+\/[a-z0-9.+-]+$/i.test(mediaType))
         throw new Error("Invalid declared media type");
