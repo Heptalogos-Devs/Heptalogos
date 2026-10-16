@@ -15,6 +15,20 @@ export function createWorldOperations(
   request: <T>(operation: (base: Base) => Promise<{ readonly data: T }>) => Promise<T>,
 ) {
   return {
+    worldCalendarRead: (body: wire.WorldCalendarReadData["body"]) =>
+      request((base) => api.worldCalendarRead({ ...base, body })),
+    worldCalendarChange: (body: wire.WorldCalendarChangeData["body"]) =>
+      request((base) => api.worldCalendarChange({ ...base, body })),
+    worldProfileAdopt: (body: wire.WorldProfileAdoptData["body"]) =>
+      request((base) => api.worldProfileAdopt({ ...base, body })),
+    worldProfileRead: (body: wire.WorldProfileReadData["body"]) =>
+      request((base) => api.worldProfileRead({ ...base, body })),
+    worldLiving: (body: wire.WorldLivingData["body"]) =>
+      request((base) => api.worldLiving({ ...base, body })),
+    worldClockRead: (body: wire.WorldClockReadData["body"]) =>
+      request((base) => api.worldClockRead({ ...base, body })),
+    worldClockConfigure: (body: wire.WorldClockConfigureData["body"]) =>
+      request((base) => api.worldClockConfigure({ ...base, body })),
     worldConfigure: (body: wire.WorldConfigureData["body"]) =>
       request((base) => api.worldConfigure({ ...base, body })),
     worldRead: (body: wire.WorldReadData["body"]) =>

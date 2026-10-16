@@ -6,18 +6,33 @@ import { readFile, stat } from "node:fs/promises";
 import { BaseCommand, CliFailure, toCliFailure } from "../base-command.js";
 import { openOperatorGateway } from "../gateway-access.js";
 import { readProtectedJsonFromStdin } from "../password.js";
-import { worldOperations, worldRequest } from "../world-request.js";
+import {
+  worldOperations,
+  worldRequest,
+  worldDocumentOperations,
+} from "../world-request.js";
 /** Read commands use ordinary parameters; import/realize require an exact bounded JSON request. */
 export default class World extends BaseCommand {
-  static summary = "配置世界、查询生活与覆盖、推进正式日程";
+  static summary = "配置世界、课表与入场，查询日历和实际生活状态";
   static description =
-    "read/prepare/query/history/coverage 不调用模型。advance-rules 采用已配置的固定规律；advance 是实际生活机会，可能调用已配置的世界/主体角色。configure/realize 仅接受完整 JSON 文件或标准输入，不自动生成 operationId、修订或权限。";
+    "read/calendar/profile-read/living/clock/query/history/coverage 不调用模型。clock-configure 是明确的官方 Clock 管理操作，不会随 profile-adopt 自动迁移旧主体。profile-adopt 独立于可选 Seed；首次入场先显式配置时钟。advance-rules 采用已配置规律；advance 投影实际原生机会。配置、入场和日历修改使用完整 JSON 文件或标准输入。";
   static args = {
     operation: Args.string({ required: true, options: Object.keys(worldOperations) }),
   };
   static flags = {
     "subject-id": Flags.string({ description: "当前绑定 Subject UUID" }),
     "world-id": Flags.string({ description: "世界 UUID" }),
+    "calendar-view": Flags.string({
+      options: ["planned", "lived", "combined"],
+      default: "combined",
+    }),
+    perspective: Flags.string({
+      options: ["subject", "world_author", "public"],
+      default: "subject",
+    }),
+    timezone: Flags.string({ description: "日历显示 IANA 时区，如 Asia/Shanghai" }),
+    "actor-ref": Flags.string({ description: "日历筛选实际人物 EntityRef" }),
+    continuation: Flags.string({ description: "上一页返回的日历 continuation" }),
     domain: Flags.string({ description: "正式 timeDomainRef" }),
     from: Flags.string({ description: "所查世界区间起点（UTC ISO）" }),
     to: Flags.string({ description: "所查世界区间终点（UTC ISO，不含）" }),
@@ -70,13 +85,10 @@ export default class World extends BaseCommand {
             );
           }
         }
-        if (
-          (flags.file || flags.stdin) &&
-          !["configure", "realize"].includes(operation)
-        )
+        if ((flags.file || flags.stdin) && !worldDocumentOperations.includes(operation))
           throw new CliFailure(
             "cli.invalid_flag",
-            "只有 configure/realize 使用 --file 或 --stdin；普通操作使用明确参数。",
+            "只有配置、入场及日历修改使用 --file 或 --stdin；查询使用明确参数。",
             2,
           );
         const input = worldRequest(operation, flags, document),

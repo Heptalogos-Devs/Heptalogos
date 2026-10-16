@@ -24,14 +24,35 @@ import {
   worldStateSchema,
   worldRealizationResultSchema,
   worldQueryResultSchema,
+  readCalendarSchema,
+  calendarResultSchema,
+  changeCalendarSchema,
+  adoptWorldProfileSchema,
+  adoptedWorldProfileSchema,
+  worldLivingStateSchema,
   type createWorldLifeService,
+  type createWorldProfileService,
 } from "@heptalogos/subject";
+import {
+  worldClockConfigurationSchema,
+  worldClockStatusSchema,
+  type WorldClockManagement,
+} from "./world-clock.js";
 /** Management authorization is supplied by the existing authenticated Host boundary. */
 export interface WorldHttpOptions {
   readonly authenticate: (token: string | undefined) => Promise<void>;
   readonly runMutation: <T>(kind: string, operation: () => Promise<T>) => Promise<T>;
   readonly identity?: Pick<IdentityService, "resolveWorldActor" | "readWorldActors">;
   readonly worlds: ReturnType<typeof createWorldLifeService>;
+  readonly profiles: Pick<
+    ReturnType<typeof createWorldProfileService>,
+    "adopt" | "read"
+  >;
+  readonly living: ReturnType<typeof createWorldLifeService>["readLivingState"];
+  readonly clock?: WorldClockManagement;
+  readonly onProfileAdopted?: (
+    input: Static<typeof adoptedWorldProfileSchema>,
+  ) => Promise<void>;
   readonly currentSubject: () => Promise<string>;
 }
 /** No model-facing world management capability is created here. */
@@ -121,6 +142,65 @@ export function registerWorldHttp(app: FastifyInstance, options?: WorldHttpOptio
   );
   route("realize", realizeWorldSchema, worldRealizationResultSchema, (input) =>
     owners().worlds.realize(input),
+  );
+  route("calendarRead", readCalendarSchema, calendarResultSchema, (input) =>
+    owners().worlds.readCalendar(input),
+  );
+  route("calendarChange", changeCalendarSchema, worldStateSchema, (input) =>
+    owners().worlds.changeCalendar(input),
+  );
+  route(
+    "profileAdopt",
+    adoptWorldProfileSchema,
+    adoptedWorldProfileSchema,
+    async (input) => {
+      const adopted = await owners().profiles.adopt(input);
+      await owners().onProfileAdopted?.(adopted);
+      return adopted;
+    },
+  );
+  route(
+    "profileRead",
+    readWorldSchema,
+    Type.Object(
+      { profile: Type.Union([adoptedWorldProfileSchema, Type.Null()]) },
+      { additionalProperties: false },
+    ),
+    async (input) => ({
+      profile: (await owners().profiles.read(input.subjectId, input.worldId)) ?? null,
+    }),
+  );
+  route(
+    "living",
+    readWorldSchema,
+    Type.Object(
+      { living: Type.Union([worldLivingStateSchema, Type.Null()]) },
+      { additionalProperties: false },
+    ),
+    async (input) => ({ living: (await owners().living(input)) ?? null }),
+  );
+  const clockOwner = () => {
+    const clock = owners().clock;
+    if (!clock)
+      throw managementProblem(
+        "world.clock_unavailable",
+        "Official Clock management is unavailable",
+        "Use the installed Product Host Clock composition",
+        "unavailable",
+      );
+    return clock;
+  };
+  route(
+    "clockRead",
+    Type.Pick(readWorldSchema, ["subjectId"]),
+    worldClockStatusSchema,
+    (input) => clockOwner().read(input.subjectId),
+  );
+  route(
+    "clockConfigure",
+    worldClockConfigurationSchema,
+    worldClockStatusSchema,
+    (input) => clockOwner().configure(input),
   );
   // The owner returns a discriminated view. Retain its schema source at the owner rather than duplicating DTOs here.
   route("query", queryWorldSchema, worldQueryResultSchema, (input) =>

@@ -425,6 +425,29 @@ export class ProductManagement {
     if (!checked.ok)
       throw invalidInputProblem("Product configuration does not match its schema");
     effectiveReactorPolicy(checked.value);
+    const roles = checked.value.roles ?? [];
+    if (new Set(roles.map((binding) => binding.role)).size !== roles.length)
+      throw invalidInputProblem(
+        "Configure each role once with its explicit primary and fallback native profiles",
+      );
+    for (const binding of roles) {
+      const structured = [
+        "world.planner",
+        "subject.deliberation",
+        "narrative.review",
+      ].includes(binding.role);
+      if (binding.outputContract !== (structured ? "structured_json" : "natural_text"))
+        throw invalidInputProblem(
+          "Use the role's actual structured or natural-text output contract",
+        );
+      if (
+        ["subject.render", "narrative.review"].includes(binding.role) &&
+        binding.allowedTools.length
+      )
+        throw invalidInputProblem(
+          "Renderer and review roles do not acquire tool-calling capabilities",
+        );
+    }
     for (const endpoint of [
       checked.value.subjectGateway.origin,
       checked.value.maintenanceGateway.origin,

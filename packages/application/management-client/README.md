@@ -11,3 +11,5 @@
 `createGatewayHostClient` 是同一生成链下的 Channel 服务入口，使用独立 serviceToken。它覆盖当前权限读取、身份、消息与历史覆盖、受保护 raw archive、流式媒体、Life/Agency 和正式 Nous Host bridge。请求与响应仍取自 owning schema；不会从模型参数获取管理员权限。媒体入口消费生成的 Blob/File 类型，Node 可将受控文件作为 Blob 流式上传。
 
 Gateway 仅允许显式 loopback HTTP origin，禁止重定向；实际来源、会话及行为权限在 Host/adapter 的当前状态上核对。此 Client 可用不表示具体安装已配置 Gateway 或 QQ；部署状态由实际安装查询和端到端运行证明。
+
+同一 `./gateway` facade 还覆盖正式 World 日历读取/修改、WorldProfile 采用/读取、LivingState、官方 Clock 的明确管理操作，以及 `reactorStatus/reactorHistory/reactorAttentionExplain/reactorWake`。所有请求和响应来自 Host OpenAPI；CLI 通过同一客户端调用，不能写入伪造的审议、接触、review 或发送回执。配置激活的响应单独返回原生机会投影状态，离线 Native 不阻止配置保存；`projected` 只表示原生调度已接受请求。

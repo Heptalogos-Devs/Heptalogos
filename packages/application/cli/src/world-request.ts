@@ -4,6 +4,13 @@
 import { CliFailure } from "./base-command.js";
 /** CLI names route to generated owner operations; none of them reads private storage. */
 export const worldOperations = {
+  calendar: "worldCalendarRead",
+  "calendar-change": "worldCalendarChange",
+  "profile-adopt": "worldProfileAdopt",
+  "profile-read": "worldProfileRead",
+  living: "worldLiving",
+  clock: "worldClockRead",
+  "clock-configure": "worldClockConfigure",
   configure: "worldConfigure",
   read: "worldRead",
   prepare: "worldPrepare",
@@ -16,6 +23,14 @@ export const worldOperations = {
   "actor-resolve": "worldActorResolve",
   actors: "worldActors",
 } as const;
+/** Mutations accept the owner's complete request; read commands use ordinary flags. */
+export const worldDocumentOperations: readonly (keyof typeof worldOperations)[] = [
+  "configure",
+  "realize",
+  "calendar-change",
+  "profile-adopt",
+  "clock-configure",
+];
 /** Named flags remain a presentation shape; the owner validates the actual wire contract. */
 export type WorldFlags = Record<string, unknown>;
 function required(flags: WorldFlags, key: string): string {
@@ -30,17 +45,18 @@ export function worldRequest(
   flags: WorldFlags,
   document?: unknown,
 ): unknown {
-  if (operation === "configure" || operation === "realize") {
+  if (worldDocumentOperations.includes(operation)) {
     if (!document || typeof document !== "object" || Array.isArray(document))
       throw new CliFailure(
         "cli.invalid_json",
-        "configure/realize 需要 --file 或 --stdin 提供完整 owner 请求。",
+        `${operation} 需要 --file 或 --stdin 提供完整 owner 请求。`,
         2,
       );
     return document;
   }
-  const subjectId = required(flags, "subject-id"),
-    worldId = required(flags, "world-id");
+  const subjectId = required(flags, "subject-id");
+  if (operation === "clock") return { subjectId };
+  const worldId = required(flags, "world-id");
   const base = { subjectId, worldId };
   const range = () => ({
     timeDomainRef: required(flags, "domain"),
@@ -50,7 +66,22 @@ export function worldRequest(
   switch (operation) {
     case "read":
     case "prepare":
+    case "profile-read":
+    case "living":
       return base;
+    case "calendar":
+      return {
+        ...base,
+        interval: range(),
+        view: flags["calendar-view"] ?? "combined",
+        perspective: flags.perspective ?? "subject",
+        displayTimezone: required(flags, "timezone"),
+        limit: flags.limit ?? 50,
+        ...(flags["actor-ref"] ? { actorRef: flags["actor-ref"] } : {}),
+        ...(flags["activity-id"] ? { activityId: flags["activity-id"] } : {}),
+        ...(flags.continuation ? { continuation: flags.continuation } : {}),
+        ...(flags["as-recorded-at"] ? { asRecordedAt: flags["as-recorded-at"] } : {}),
+      };
     case "actor-resolve":
       return { ...base, actorKey: required(flags, "actor-key") };
     case "actors":

@@ -45,6 +45,12 @@ import { registerNarrativeHttp, type NarrativeHttpOptions } from "./narrative-ht
 import { registerWorldOpportunityHttp } from "./world-opportunity-http.js";
 import { registerLifeReadHttp } from "./life-read-http.js";
 import { registerGatewayHttp, type GatewayHttpOptions } from "./gateway-http.js";
+import {
+  registerReactorHttp,
+  reactorProjectionSchema,
+  type ReactorHttpOptions,
+  type ReactorProjection,
+} from "./reactor-http.js";
 
 async function withRequestSignal<T>(
   request: FastifyRequest,
@@ -77,6 +83,10 @@ export interface ProductHttpOptions {
   readonly pursuit?: PursuitHttpOptions;
   readonly world?: WorldHttpOptions;
   readonly narrative?: NarrativeHttpOptions;
+  readonly reactor?: ReactorHttpOptions;
+  readonly onConfigurationActivated?: (
+    configuration: Awaited<ReturnType<ProductManagement["configuration"]>>,
+  ) => Promise<ReactorProjection>;
   readonly worldOpportunity?: Parameters<typeof registerWorldOpportunityHttp>[1];
 }
 /** Builds a loopback-only, non-model-dependent Management API. */
@@ -269,7 +279,16 @@ export async function createProductHttpApp(options: ProductHttpOptions) {
         operationId: "configureProduct",
         security,
         body: configureProductSchema,
-        response: { 200: productConfigurationSchema, ...errors },
+        response: {
+          200: Type.Object(
+            {
+              ...productConfigurationSchema.properties,
+              reactorOpportunity: Type.Optional(reactorProjectionSchema),
+            },
+            { additionalProperties: false },
+          ),
+          ...errors,
+        },
       },
     },
     async (request, reply) => {
@@ -277,9 +296,19 @@ export async function createProductHttpApp(options: ProductHttpOptions) {
         settings: ProductSettings;
         expectedRevision: string | null;
       };
-      return withRequestSignal(request, reply, (signal) =>
-        options.product.configure(body.settings, body.expectedRevision, signal),
-      );
+      return withRequestSignal(request, reply, async (signal) => {
+        const configuration = await options.product.configure(
+          body.settings,
+          body.expectedRevision,
+          signal,
+        );
+        const reactorOpportunity =
+          await options.onConfigurationActivated?.(configuration);
+        return {
+          ...configuration,
+          ...(reactorOpportunity ? { reactorOpportunity } : {}),
+        };
+      });
     },
   );
   app.get(
@@ -338,6 +367,7 @@ export async function createProductHttpApp(options: ProductHttpOptions) {
   registerPursuitHttp(app, options.pursuit);
   registerWorldHttp(app, options.world);
   registerNarrativeHttp(app, options.narrative);
+  registerReactorHttp(app, options.reactor);
   const unavailable = async (): Promise<never> => {
     throw managementProblem(
       "world.unconfigured",
