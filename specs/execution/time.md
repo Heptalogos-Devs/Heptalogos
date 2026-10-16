@@ -7,3 +7,5 @@ Subject世界时间由Nous CognitiveClockService提供，使用正式timeDomainR
 无显式映射不能比较跨域裸Timestamp。时间/时区/倍率改变不改写既有事实、承诺和发送结果，相关未来安排由owner重新考虑。knowledgeAtWorldTime与asRecordedAt分别表达故事内知情和现实数据库提交截点。
 
 当前Activity已拒绝不同域比较；完整世界带域历史与offline realization由[WorldLife](../subject/world-life.md)施工合同约束，在消费者接通前不宣称完成。simulate_elapsed默认离线1倍、按持久锚点有界实现；pause_with_host显式采用暂停，异常关机从已知高水位恢复。虚拟昨夜事件允许现在实现并保存现在recordedAt，不能伪造真实夜间工具或QQ观察。
+
+Reactor现实秒/总deadline、role预算和世界活动小时分别计量，精力只对已实现同域区间积分。课表保留RRULE/例外的本地与原实例身份，正常范围读取不推进时钟或实现生活；详细合同见WorldLife与Reactor。

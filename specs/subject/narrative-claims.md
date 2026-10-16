@@ -37,3 +37,5 @@ ExpressionBrief的decisionRef必须解析到同Subject/Activity的不可变Decis
 worldDetailScope只从已正式释放、明确引用的当前世界场景派生，保留相应区间、人物、地点和环境允许的creationScope。新细节必须引用已知父事件；Narrative owner将source.kind固定为narrative、producer固定为实际renderer，并保留实际reviewer谱系，不接受模型自报环境传感器或world planner身份。
 
 承诺的due必须在实际当前世界域的未来；NarrativeCommit在同一事务用Life.progressIn将最早due与尚有的nextOpportunity合并，不新建timer。pendingCommitments按实际Activity查询尚未解决的采用记录，交给主体后续审议；该记录本身不证明履约。claimsTo支持oldest/newest，以afterClaimId沿所选方向分页，status先按真实发送结果计算再过滤/限量。当前受众的最近说法直接提供给主体，不等待下轮反思。
+
+主观意图、render/review与采用属于同一[Reactor](reactor.md)前台。高优先切换先保存依赖/草稿并撤销旧采用资格，恢复重核相关世界时段、听众、意愿与Claim；固定已提交网络请求不占前台。renderer自然文本无FC，其表现候选只有正式owner允许的槽位，不可成为任意代码。

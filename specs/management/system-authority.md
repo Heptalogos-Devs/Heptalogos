@@ -47,3 +47,9 @@ Host 通过已安装官方 Client 和受保护 discovery 连接 Nous，按配置
 ## 验证
 
 必须验证真实 PostgreSQL 的认领、登录/撤销、CAS 和生命周期，以及仓库外安装后的 CLI/API。并发初始化、原子发布前崩溃、身份错配、取消和关闭端口属于受影响边界。Linux 验证只证明 Linux；Windows portable 与其检查继续保持独立平台边界。操作命令唯一维护在 [CLI](../../packages/application/cli/README.md) 和 [Host 安装](../../packages/application/product-host/README.md)。
+
+## Reactor生活操作的完整消费者
+
+活动计划要求无模型读取范围日历（planned/lived/combined与例外）、当前生活（地点/焦点/E及原因/下一节点）、attention explain（候选/选延略/未读）、role runs（实际profile/预算/结果）、生活/陈述及owner存储/清理。新增接口尚须实际生成并接入CLI后才报告可用，不能由当前通用对象分页代替。
+
+普通CLI使用当前绑定Subject、today或from/to、显示时区；单实例/以后系列编辑与复杂WorldProfile文件采用复用正式owner，CLI不重算课表、不要求手写内部operation UUID。GUI消费相同生成Client和变化通知，断线按正式游标/范围重读。config describe/check解释每值来源、单位、生效/消费者，发现必需输入不足、无时区/互斥课表与角色输出能力不匹配，不新增模型资格数据库。

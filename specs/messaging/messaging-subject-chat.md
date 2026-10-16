@@ -271,3 +271,5 @@ generic messaging broker
 - [Execution Lineage](../execution/execution-lineage.md)
 - [Evidence](../execution/evidence.md)
 - [Contract Versioning](../core/contract-versioning.md)
+
+当前channel/account机会消费者按活动计划迁移到唯一Subject Reactor；接收只通知稳定pending，跨来源全局选择不提前读取正文。preview/full/media各按实际provider admission/receipt完成所见范围，skipped与observed分开。世界或内部任务不伪造QQ会话，听众私密边界与既有actual-contact完成pending、转发文件父会话语义保留。

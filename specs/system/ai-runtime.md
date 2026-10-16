@@ -4,13 +4,13 @@
 
 本文件拥有 Heptalogos 对独立 Nous/OpenClaw 的原生执行合同。旧 AIRuntime 的 GatewayProfile/ModelProfile、subject.primary/subject.expression 和独立 SDK 循环不是当前执行路由。Host 保存产品职责绑定、用途、预算和权限；OpenClaw 保存 provider/model/协议/凭据及 generation 参数；Nous 保存认知形成/embedding/rerank 配置。不得维护第二份 provider registry。
 
-当前代码已接通多角色职责绑定、可信输入、来源/工具边界、主观决定、新活动与学习、独立 renderer/review 和唯一发送；独立安装、真实模型、QQ与跨日结果仍按活动计划验收。
+当前代码已接通独立角色、可信输入、DecisionCommit、世界/叙事和唯一发送组件；单前台Reactor与语义动作、后台让出和压缩新增合同尚须迁移实际消费者，独立安装、真实模型、QQ与跨日仍按活动计划验收。
 
 ## 角色与可信运行
 
 产品职责为 world.planner、subject.deliberation、subject.execution、subject.render、narrative.review；Nous reflection 不复制为 Host 角色，maintenance 使用独立运行实例。产品 role 与原生 agent ID、main/worker 标签分别表达，不能依靠模型自称赋权。
 
-RoleBinding 至少拥有职责、nativeAgentRef、启用状态、输出合同、预算、期限、允许工具类别与显式同职责备用 profile。RoleRun 保存实际 Subject/Activity、role/purpose、视角、Agent/Session/run、父运行及 exact source/WorkContext、实际模型/模板/配置版本、费用和结果引用。当前主观审议默认同 Subject 并发1；专业 worker 默认最多2，短事务提交而不持有跨模型长锁。
+RoleBinding 至少拥有职责、nativeAgentRef、启用状态、输出合同、预算、期限、允许工具类别与显式同职责备用 profile。RoleRun 保存实际 Subject/Activity、role/purpose、视角、Agent/Session/run、父运行及 exact source/WorkContext、实际模型/模板/配置版本、费用和结果引用。同Subject的前台与后台交接由[Reactor](../subject/reactor.md)拥有，不能让每个会话各自并发审议；短事务不跨模型长锁。
 
 用途与接触性质由认证 Host binding 提供。world author、review和worker原始成果按 execution_only 保存，不能自动形成 Subject Episode/反思。主观经验须由正式 contact 释放；没有 Host 配置的独立集成不伪造产品事件。每个角色独立 history/cursor，世界幕后与专家完整历史不得流入主体 transcript、reranker或摘要。
 
@@ -40,6 +40,8 @@ Prompt由职责模板、当前主体投影、世界/任务、带归属材料及�
 
 Host先读取公开agents.list，在已配置的primary/fallback中选择实际存在的profile；有已保存dispatch时先恢复原实际profile/结果，不在付费运行失败后切换再执行。角色模板通过原生extraSystemPrompt+minimal mode进入实际system输入，外部JSON只作带归属材料。结构角色附所属owner的正式JSON schema；renderer只输出自然文本。模型/协议/凭据仍完全归原生profile。
 
-专业任务工具是已采用delegation.tools与RoleBinding/Activity工具范围的交集约束，实际tokenBudget/allowedToolNames通过正式native ABI 5前置控制。整个连续决定链沿首个采用运行保存的绝对deadline，后续执行/审议/渲染/评审不能重置。RoleResult保留冻结的Activity revision、实际原生结果及期限；phase身份与semantic digest由采用决定确定，当前世界投影刷新不导致重跑旧付费阶段。
+专业任务工具是已采用delegation.tools与RoleBinding/Activity工具范围的交集约束，实际tokenBudget/allowedToolNames通过正式native ABI 5前置控制。短前台链沿Reaction整体deadline，后续短动作/审议/渲染/评审不能重置；长专业worker用独立已采用活动预算并让出前台，具体见Reactor。RoleResult保留冻结的Activity revision、实际原生结果及期限；phase身份与semantic digest由采用决定确定，当前世界投影刷新不导致重跑旧付费阶段。
 
 执行结果优先释放有界最终生成结果，正文与原始归属共同进入新的正式Subject contact；后续主观决定由同一DecisionCommit消费者实际采用。新的initiate_activity/learn采用创建独立WorkContext和Life Activity，沿原scope重新授权，通过原生world scheduler或一次内部角色调用获得首个运行机会；不依赖QQ会话，也不把决定本身记为学习成果。
+
+关键继续信息、原生固定前缀后台压缩和硬超窗见[连续性](../subject/context-continuity.md)。全部角色无需每个事件都轮流调用；renderer只需自然文本，语义动作由强审议的同一schema采用，原生工具执行同一owner，不另建FC命令语法。

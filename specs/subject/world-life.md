@@ -43,3 +43,19 @@ knowledgeAtWorldTime读取已实现故事中角色截至该世界点的见闻；
 当前`createWorldOpportunity`串联固定规则实现、必要world.planner和Subject审议；世界作者frame与Subject可见材料分开。候选contact构造不代表主体感知；只有真实deliberation provider admission及accepted contact receipt成立才ack世界待接触事件，失败/uncertain保留pending。planner事件producer绑定实际RoleRun，不能由模型自报。后续选择交给Life/Agency的adoptDeliberation消费者。原生cron.command helper投影同Subject唯一声明job，wake按当前安装discovery调用service机会；正式安装组合与真实模型/跨日结果仍需按活动计划验收。
 
 虚拟人物由Identity `resolveWorldActor(worldId,actorKey)`取得稳定canonical EntityRef，跨世界同key不合并，`linkAccount`拒绝为虚拟人物绑定真实协议账号。Subject本人使用ensureSubjectEntity；世界采用adapter需分别核对本人self与其余actor的exact world scope。
+
+## 独立WorldProfile、课表例外与范围日历
+
+当前规律展开基础继续使用；完整profile/例外/范围日历与LivingState是活动计划新增消费者，完成实际接口与运行前不将旧Life分页冒充完整日历。
+
+结构化WorldProfile与可选Seed分别采用。无Seed创建不调用模型、不补人格或旧传记；学校/角色仅是明确入场事实，可按实际启用领域形成认识。新profile不倒退既有世界或覆盖原Subject身份。跨owner步骤复用稳定operation及真实回执，失败续未完成，不建通用创建引擎。
+
+规则使用成熟RFC5545语义：RRULE重复、RDATE增加、EXDATE排除、RECURRENCE-ID原实例身份。单次移动保留原实例，修订显式限定本次/未来范围/尚未实现系列；旧已实现事件不重写。时区参与本地展开，DST规则显式，不用UTC每周加固定小时。主体缺席/违反规则的行为与修改学校规则分别处理。
+
+readCalendar按Subject/world/from-to/domain/展示时区、planned/lived/combined、人物/活动及cursor有界展开和合并规则、例外、计划、已实现事件；显示原/现安排、修订来源、真实状态/时段/recorded和coverage。只读不模型、不推进世界、不登记接触。作者、Subject已知安排和公开忙闲各自视角。
+
+LivingState保留当前焦点/地点/活动、精力E、积分到的world stamp及profile revision。E在0..100；新增已实现区间分成不重叠段，每段一个主活动rate，附属活动仅加最大正负担比例，不按worker/message/token重复扣除。幂等事件不重复积分，跨域无映射未知，未实现段不能提供恢复；纠正已积分段按owner历史有限重算。
+
+工程初值：新profile E=80，学习-8/世界小时、普通社交-4、休息+12、睡眠+16，附属正负担比例0.25，事件delta默认0且配置最多±10；娱乐负担或恢复由profile明确。在线rate默认1，offline simulate_elapsed默认1、规划24世界小时/细化2世界小时。配置不重启复位，不覆盖已有明确policy，未经心理校准。精力为审议提供可解释负担，真实费用/网络期限独立，不能固定阈值拒绝全部交流。
+
+世界向唯一[Reactor](reactor.md)提供机会，语义手机/浏览/世界动作来自其同一操作合同；导演幕后和未释放资料不能进入Subject情境。正常CLI支持今日/范围、只改本次/以后系列及profile导入，GUI消费同一生成Client。
