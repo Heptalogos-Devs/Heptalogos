@@ -4,7 +4,11 @@ import { randomUUID } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLifeService } from "@heptalogos/subject";
-import { readRepositorySql } from "@heptalogos/persistence/repository";
+import {
+  readRepositorySql,
+  executeRepositorySql,
+  useRepositoryMutationTransaction,
+} from "@heptalogos/persistence/repository";
 import {
   createNativeCognitionBridge,
   type NativeCognitionOptions,
@@ -137,6 +141,10 @@ async function fixture(tools = ["read"]) {
     persistence: c.persistence,
     life,
     now,
+    resolveChildProviderPolicy: async () => ({
+      tokenBudget: { inputTokens: 8192, outputTokens: 2048 },
+      allowedToolNames: tools,
+    }),
     checkInput: async () => externalCheck(),
     authorizeInput: async () => {
       if (revoked) throw new Error("Current input permission revoked");
@@ -156,6 +164,8 @@ async function fixture(tools = ["read"]) {
     nativeRunId: randomUUID(),
     prompt: "exact raw native prompt with private engineering envelope",
     role: "main" as const,
+    tokenBudget: { inputTokens: 8192, outputTokens: 2048 },
+    allowedToolNames: tools,
     roleScope: {
       role: "subject.deliberation" as const,
       purpose: "subject_deliberation" as const,
@@ -1469,6 +1479,79 @@ real("admitted native caller history", () => {
         f.input.native.runId + ":user",
         currentRun + ":user",
       ]);
+    } finally {
+      await f.c.close();
+    }
+  }, 120000);
+});
+
+real("trusted provider budgets and role tools", () => {
+  it("enforces role tools inside Activity scope and preserves unconfigured historical results without permitting another attempt", async () => {
+    const f = await fixture(["read", "write"]);
+    try {
+      const runId = randomUUID();
+      const selection = await f.c.run(() =>
+        f.bridge.registerInput({
+          ...f.registration,
+          nativeRunId: runId,
+          tokenBudget: { inputTokens: 2048, outputTokens: 37 },
+          allowedToolNames: ["read"],
+        }),
+      );
+      const input = {
+        ...f.input,
+        contactRequestId: randomUUID(),
+        invocationId: "bounded-policy",
+        promptDigest: selection.promptDigest,
+        native: { ...f.input.native, runId },
+      };
+      const prepared = await f.c.run(() => f.bridge.prepare(input));
+      expect(prepared.tokenBudget).toEqual({ inputTokens: 2048, outputTokens: 37 });
+      expect(prepared.allowedToolNames).toEqual(["read"]);
+      await admitSelected({ ...f, input }, prepared);
+      await expect(
+        f.c.run(() =>
+          f.bridge.toolExecution({
+            ...sdk.hostContactIdentitySchema.strip().parse(input),
+            toolName: "write",
+            toolCallId: "denied-role-tool",
+            phase: "execute",
+          }),
+        ),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_tool_denied" },
+      });
+      const applied = await f.bridge.readAppliedContext(runId);
+      await f.c.run(() =>
+        f.c.persistence.mutate((context) =>
+          useRepositoryMutationTransaction(context, async (tx) => {
+            await executeRepositorySql(
+              tx,
+              `UPDATE heptalogos.life_native_input SET document=jsonb_set(document,'{registration,providerPolicyState}','"unconfigured"'::jsonb) WHERE native_run_id=$1`,
+              [runId],
+            );
+            await executeRepositorySql(
+              tx,
+              `UPDATE heptalogos.life_native_run SET document=jsonb_set(document,'{registration,providerPolicyState}','"unconfigured"'::jsonb) WHERE run_id=$1`,
+              [runId],
+            );
+          }),
+        ),
+      );
+      await expect(
+        f.c.run(() =>
+          f.bridge.prepare({
+            ...input,
+            contactRequestId: randomUUID(),
+            invocationId: "forbidden-new-attempt",
+          }),
+        ),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_provider_policy_unconfigured" },
+      });
+      expect(await f.bridge.readAppliedContext(runId)).toEqual(applied);
+      await f.c.run(() => f.bridge.finishRun(runId, "completed"));
+      expect((await f.bridge.readRun(runId))?.state).toBe("completed");
     } finally {
       await f.c.close();
     }

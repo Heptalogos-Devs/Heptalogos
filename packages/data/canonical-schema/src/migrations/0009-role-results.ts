@@ -38,6 +38,15 @@ export const roleResultsMigration: Migration = {
         `UPDATE heptalogos.life_native_contact c SET document=jsonb_set(c.document,'{response,roleScope}',${scope("r.role")}) FROM heptalogos.life_native_run r WHERE c.run_id=r.run_id AND c.document#>'{response,roleScope}' IS NULL`,
       )
       .execute(db);
+    // Old paid results remain readable, but missing role budgets never gain
+    // inferred defaults or permission for another provider attempt.
+    for (const table of ["life_native_input", "life_native_run", "life_handoff"]) {
+      await sql
+        .raw(
+          `UPDATE heptalogos.${table} SET document=jsonb_set(document,'{registration,providerPolicyState}','"unconfigured"'::jsonb) WHERE document#>'{registration,tokenBudget}' IS NULL OR document#>'{registration,allowedToolNames}' IS NULL`,
+        )
+        .execute(db);
+    }
     // Normalize current wire usages once; historical raw transcript and actual
     // source observations keep their original facts.
     for (const table of ["life_native_input", "life_native_run", "life_handoff"]) {

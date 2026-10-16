@@ -30,6 +30,7 @@ import type { MessagingService } from "@heptalogos/messaging";
 import type { NousClient } from "@nous-wave/client";
 import {
   hostPrepareRequestSchema,
+  hostPrepareResponseSchema,
   hostAdmittedRequestSchema,
   hostHandoffRequestSchema,
   hostFeedbackRequestSchema,
@@ -37,6 +38,8 @@ import {
   hostCompletionRequestSchema,
   type HostCompletionRequest,
   type HostRoleScope,
+  type HostTokenBudget,
+  hostTokenBudgetSchema,
   hostRoleScopeSchema,
   hostResultReleaseRequestSchema,
   type HostResultReleaseResponse,
@@ -77,6 +80,9 @@ export interface Registration {
   readonly promptDigest: string;
   readonly role: "main" | "worker";
   readonly roleScope: HostRoleScope;
+  readonly tokenBudget: HostTokenBudget;
+  readonly allowedToolNames: readonly string[];
+  readonly providerPolicyState?: "configured" | "unconfigured";
   readonly actorEntityRef: string;
   readonly workContextId: string;
   readonly usage: HostPrepareResponse["usage"];
@@ -178,6 +184,11 @@ export interface NativeCognitionOptions {
     "get" | "worldNow" | "progressIn"
   >;
   readonly now: () => string;
+  /** Existing product role configuration supplies the actual execution profile policy. */
+  readonly resolveChildProviderPolicy?: (
+    parent: NativeRunSnapshot,
+    childNativeAgentId: string,
+  ) => Promise<{ tokenBudget: HostTokenBudget; allowedToolNames: readonly string[] }>;
   /** External cognition/Pursuit checks run before any fenced write transaction. */
   readonly checkInput?: (
     registration: Readonly<Registration>,
@@ -226,6 +237,22 @@ const activityCodec = compileSchema<LifeActivity>(activitySchema);
 /** Product role is supplied only by the trusted caller, independently of native position. */
 function roleScope(registration: Registration): HostRoleScope {
   return validated(() => hostRoleScopeSchema.parse(registration.roleScope));
+}
+function providerPolicy(registration: Registration) {
+  if (registration.providerPolicyState !== "configured")
+    deny(
+      "native_provider_policy_unconfigured",
+      "This retained run has no configured provider budget/tool policy; preserve its result and start a newly configured invocation",
+    );
+  const tokenBudget = validated(() =>
+    hostTokenBudgetSchema.parse(registration.tokenBudget),
+  );
+  const allowedToolNames = validated(() =>
+    hostPrepareResponseSchema.shape.allowedToolNames.parse(
+      registration.allowedToolNames,
+    ),
+  );
+  return { tokenBudget, allowedToolNames };
 }
 function current(activity: LifeActivity, registration: Registration) {
   if (
@@ -388,6 +415,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
       );
     if (registration.promptDigest !== input.promptDigest)
       deny("native_input_unregistered", "The exact native prompt was not registered");
+    providerPolicy(registration);
     await checkInput(registration);
     return registration;
   };
@@ -417,7 +445,11 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
     registerInput(
       input: Omit<
         Registration,
-        "promptDigest" | "usage" | "inheritedMessageSources" | "inheritedSourceRefs"
+        | "promptDigest"
+        | "usage"
+        | "inheritedMessageSources"
+        | "inheritedSourceRefs"
+        | "providerPolicyState"
       > & {
         readonly prompt: string;
         readonly usage: Parameters<typeof encodeCognitionUsage>[0];
@@ -457,7 +489,11 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
   } = {
     async registerInput(input, dispatch) {
       const { prompt, usage, ...selection } = input;
-      if ("inheritedMessageSources" in input || "inheritedSourceRefs" in input)
+      if (
+        "inheritedMessageSources" in input ||
+        "inheritedSourceRefs" in input ||
+        "providerPolicyState" in input
+      )
         invalid();
       const sourceParent = input.parentRunId
         ? await readRun(input.parentRunId)
@@ -489,6 +525,10 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
       )
         invalid();
       validated(() => hostRoleScopeSchema.parse(input.roleScope));
+      validated(() => hostTokenBudgetSchema.parse(input.tokenBudget));
+      validated(() =>
+        hostPrepareResponseSchema.shape.allowedToolNames.parse(input.allowedToolNames),
+      );
       for (const contact of input.contacts) {
         if (!contact.contactRef.startsWith("role-result-release:")) continue;
         const releaseRef = contact.contactRef.slice("role-result-release:".length);
@@ -547,6 +587,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
       });
       const registration: Registration = {
         ...selection,
+        providerPolicyState: "configured",
         ...(sourceParent
           ? {
               inheritedSourceRefs: [...input.sourceRefs],
@@ -881,12 +922,15 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           contactRequestId: input.contactRequestId,
           workContextId: activity.workContextId,
           roleScope: roleScope(registration),
+          tokenBudget: providerPolicy(registration).tokenBudget,
           allowedToolNames: ["subject.render", "narrative.review"].includes(
             roleScope(registration).role,
           )
             ? []
             : activity.scope!.tools.filter(
-                (name) => !["message", "sessions_send", "cron"].includes(name),
+                (name) =>
+                  providerPolicy(registration).allowedToolNames.includes(name) &&
+                  !["message", "sessions_send", "cron"].includes(name),
               ),
           allowedHistoryUserKeys,
           currentSources: [],
@@ -1476,6 +1520,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           "native_tool_unavailable",
           "The actual admitted running invocation is unavailable",
         );
+      providerPolicy(preflight.registration);
       await checkInput(preflight.registration);
       return mutate(async (tx) => {
         await sessionLock(tx, input.native.sessionKey);
@@ -1535,6 +1580,21 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         preflight.nousSessionId !== input.parentNousSessionId
       )
         deny("native_parent_changed", "The exact running parent is unavailable");
+      if (!options.resolveChildProviderPolicy)
+        deny(
+          "native_provider_policy_unconfigured",
+          "New delegated execution needs its explicitly configured child profile policy",
+        );
+      const childPolicy = await options.resolveChildProviderPolicy(
+        preflight,
+        input.childNativeAgentId,
+      );
+      validated(() => hostTokenBudgetSchema.parse(childPolicy.tokenBudget));
+      validated(() =>
+        hostPrepareResponseSchema.shape.allowedToolNames.parse(
+          childPolicy.allowedToolNames,
+        ),
+      );
       await checkInput(preflight.registration);
 
       await mutate(async (tx) => {
@@ -1588,6 +1648,9 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
             ...parent.registration,
             usage: runs[0]!.document.appliedUsage ?? parent.registration.usage,
             parentRunId: parent.runId,
+            providerPolicyState: "configured",
+            tokenBudget: childPolicy.tokenBudget,
+            allowedToolNames: [...childPolicy.allowedToolNames],
             inheritedSourceRefs: [...parent.registration.sourceRefs],
             inheritedMessageSources: parent.registration.sourceRefs.filter((ref) =>
               ref.startsWith("message:"),

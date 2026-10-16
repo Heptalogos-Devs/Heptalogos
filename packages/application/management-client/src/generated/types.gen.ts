@@ -3137,12 +3137,6 @@ export type PendingAttachmentsResponses = {
                 code: string;
                 retryable: boolean;
             };
-            conversation: {
-                platform: string;
-                accountId: string;
-                conversationId: string;
-                kind: 'direct' | 'group';
-            };
         }>;
     };
 };
@@ -5978,6 +5972,10 @@ export type PrepareCognitionResponses = {
             purpose: 'world_authoring' | 'subject_deliberation' | 'professional_execution' | 'subject_rendering' | 'narrative_review' | 'reflection' | 'maintenance';
             view: 'world_author' | 'subject' | 'worker' | 'renderer' | 'review' | 'reflection' | 'maintenance';
             contactNature: 'execution_only' | 'subject_experience';
+        };
+        tokenBudget: {
+            inputTokens: number;
+            outputTokens: number;
         };
         allowedToolNames: Array<string>;
         currentSources: Array<{

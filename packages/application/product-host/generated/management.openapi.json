@@ -16466,8 +16466,7 @@
                           "partIndex",
                           "source",
                           "revision",
-                          "state",
-                          "conversation"
+                          "state"
                         ],
                         "properties": {
                           "attachmentId": {
@@ -16599,49 +16598,6 @@
                               },
                               "retryable": {
                                 "type": "boolean"
-                              }
-                            },
-                            "additionalProperties": false
-                          },
-                          "conversation": {
-                            "type": "object",
-                            "required": [
-                              "platform",
-                              "accountId",
-                              "conversationId",
-                              "kind"
-                            ],
-                            "properties": {
-                              "platform": {
-                                "type": "string",
-                                "minLength": 1,
-                                "maxLength": 2048
-                              },
-                              "accountId": {
-                                "type": "string",
-                                "minLength": 1,
-                                "maxLength": 2048
-                              },
-                              "conversationId": {
-                                "type": "string",
-                                "minLength": 1,
-                                "maxLength": 2048
-                              },
-                              "kind": {
-                                "anyOf": [
-                                  {
-                                    "type": "string",
-                                    "enum": [
-                                      "direct"
-                                    ]
-                                  },
-                                  {
-                                    "type": "string",
-                                    "enum": [
-                                      "group"
-                                    ]
-                                  }
-                                ]
                               }
                             },
                             "additionalProperties": false
@@ -33219,6 +33175,26 @@
                       ],
                       "additionalProperties": false
                     },
+                    "tokenBudget": {
+                      "type": "object",
+                      "properties": {
+                        "inputTokens": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        },
+                        "outputTokens": {
+                          "type": "integer",
+                          "exclusiveMinimum": 0,
+                          "maximum": 9007199254740991
+                        }
+                      },
+                      "required": [
+                        "inputTokens",
+                        "outputTokens"
+                      ],
+                      "additionalProperties": false
+                    },
                     "allowedToolNames": {
                       "maxItems": 1024,
                       "type": "array",
@@ -33313,6 +33289,7 @@
                     "contactRequestId",
                     "workContextId",
                     "roleScope",
+                    "tokenBudget",
                     "allowedToolNames",
                     "currentSources",
                     "allowedHistoryUserKeys",
