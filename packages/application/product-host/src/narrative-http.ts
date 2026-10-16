@@ -4,14 +4,19 @@
  * Read-only narrative management uses canonical claims and actual delivery receipts.
  * @module narrative-http
  */
+import {
+  gatewayBearer,
+  registerGatewayPost,
+  type NamedGatewayRoute,
+} from "./gateway-route.js";
 import type { FastifyInstance } from "fastify";
-import { Type, type Static, type TSchema } from "@heptalogos/schema-runtime/typebox";
+import { Type } from "@heptalogos/schema-runtime/typebox";
 import {
   claimsToSchema,
   narrativeClaimSchema,
   type createNarrativeService,
 } from "@heptalogos/subject";
-import { managementProblem, managementProblemSchema } from "@heptalogos/management";
+import { managementProblem } from "@heptalogos/management";
 /** Existing service credentials identify one bound installation; these operations cannot adopt reviews or claims. */
 export interface NarrativeHttpOptions {
   readonly authenticate: (token: string | undefined) => Promise<void>;
@@ -56,40 +61,15 @@ export function registerNarrativeHttp(
         "unavailable",
       );
     })();
-  const route = <T extends TSchema>(
-    name: string,
-    path: string,
-    input: T,
-    output: TSchema,
-    operation: (value: Static<T>) => Promise<unknown>,
-  ) =>
-    app.post(
-      "/gateway/v1/narrative/" + path,
-      {
-        onRequest: async (request) => {
-          const header = request.headers.authorization;
-          await owners().authenticate(
-            header?.startsWith("Bearer ") ? header.slice(7) : undefined,
-          );
-        },
-        schema: {
-          operationId: name,
-          body: input,
-          security: [{ gatewayService: [] }],
-          response: {
-            200: output,
-            400: managementProblemSchema,
-            401: managementProblemSchema,
-            403: managementProblemSchema,
-            409: managementProblemSchema,
-            503: managementProblemSchema,
-            500: managementProblemSchema,
-          },
-        },
-      },
-      async (request) =>
+  const route: NamedGatewayRoute = (name, path, input, output, operation) =>
+    registerGatewayPost(app, {
+      path: "/gateway/v1/narrative/" + path,
+      operationId: name,
+      input,
+      output,
+      authenticate: async (request) => owners().authenticate(gatewayBearer(request)),
+      operation: (input) =>
         owners().runMutation("gateway.narrative." + name, async () => {
-          const input = request.body as Static<T>;
           if (
             (input as { subjectId: string }).subjectId !==
             (await owners().currentSubject())
@@ -102,7 +82,7 @@ export function registerNarrativeHttp(
             );
           return operation(input);
         }),
-    );
+    });
   route(
     "claimsTo",
     "claims",

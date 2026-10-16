@@ -4,7 +4,8 @@
  * Registers authenticated world operations using the world owner's schemas.
  * @module world-http
  */
-import { managementProblem, managementProblemSchema } from "@heptalogos/management";
+import { gatewayBearer, registerGatewayPost } from "./gateway-route.js";
+import { managementProblem } from "@heptalogos/management";
 import {
   resolveWorldActorInputSchema,
   readWorldActorsInputSchema,
@@ -76,33 +77,15 @@ export function registerWorldHttp(app: FastifyInstance, options?: WorldHttpOptio
     output: TSchema,
     operation: (value: Static<T>) => Promise<unknown>,
   ) =>
-    app.post(
-      "/gateway/v1/world/" + name,
-      {
-        onRequest: async (request) => {
-          const header = request.headers.authorization;
-          await owners().authenticate(
-            header?.startsWith("Bearer ") ? header.slice(7) : undefined,
-          );
-        },
-        schema: {
-          operationId: "world" + name[0]!.toUpperCase() + name.slice(1),
-          body: input,
-          security: [{ gatewayService: [] }],
-          response: {
-            200: output,
-            400: managementProblemSchema,
-            401: managementProblemSchema,
-            403: managementProblemSchema,
-            409: managementProblemSchema,
-            503: managementProblemSchema,
-            500: managementProblemSchema,
-          },
-        },
-      },
-      async (request) =>
+    registerGatewayPost(app, {
+      path: "/gateway/v1/world/" + name,
+      operationId: "world" + name[0]!.toUpperCase() + name.slice(1),
+      input,
+      output,
+      authenticate: async (request) => owners().authenticate(gatewayBearer(request)),
+      operation: (input) =>
         owners().runMutation("management.world." + name, async () => {
-          const body = request.body as {
+          const body = input as {
             subjectId?: string;
             definition?: { subjectId?: string };
           };
@@ -116,9 +99,9 @@ export function registerWorldHttp(app: FastifyInstance, options?: WorldHttpOptio
               "Use the current bound Subject",
               "authorization",
             );
-          return operation(request.body as Static<T>);
+          return operation(input);
         }),
-    );
+    });
   route("configure", configureWorldSchema, worldStateSchema, (input) =>
     owners().worlds.configure(input),
   );

@@ -4,6 +4,7 @@
  * Authenticated reads of actual foreground, saved attention choices and effective policy.
  * @module reactor-http
  */
+import { gatewayBearer, registerGatewayPost } from "./gateway-route.js";
 import type { FastifyInstance } from "fastify";
 import { Type, type Static, type TSchema } from "@heptalogos/schema-runtime/typebox";
 import {
@@ -19,7 +20,6 @@ import {
   reactorPolicySchema,
   subjectRoleBindingSchema,
   managementProblem,
-  managementProblemSchema,
   type ProductSettings,
 } from "@heptalogos/management";
 const object = { additionalProperties: false } as const;
@@ -76,32 +76,13 @@ export function registerReactorHttp(
     output: TSchema,
     operation: (input: Static<T>) => Promise<unknown>,
   ) =>
-    app.post(
-      "/gateway/v1/reactor/" + name,
-      {
-        onRequest: async (request) => {
-          const header = request.headers.authorization;
-          await owners().authenticate(
-            header?.startsWith("Bearer ") ? header.slice(7) : undefined,
-          );
-        },
-        schema: {
-          operationId: "reactor" + name[0]!.toUpperCase() + name.slice(1),
-          body: input,
-          security: [{ gatewayService: [] }],
-          response: {
-            200: output,
-            400: managementProblemSchema,
-            401: managementProblemSchema,
-            403: managementProblemSchema,
-            409: managementProblemSchema,
-            503: managementProblemSchema,
-            500: managementProblemSchema,
-          },
-        },
-      },
-      async (request) => {
-        const input = request.body as Static<T>;
+    registerGatewayPost(app, {
+      path: "/gateway/v1/reactor/" + name,
+      operationId: "reactor" + name[0]!.toUpperCase() + name.slice(1),
+      input,
+      output,
+      authenticate: async (request) => owners().authenticate(gatewayBearer(request)),
+      operation: async (input) => {
         if (
           (input as { subjectId: string }).subjectId !==
           (await owners().currentSubject())
@@ -114,7 +95,7 @@ export function registerReactorHttp(
           );
         return operation(input);
       },
-    );
+    });
   route(
     "status",
     Type.Object({ subjectId: id, reactionId: Type.Optional(id) }, object),

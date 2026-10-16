@@ -6,17 +6,9 @@
  */
 import * as api from "./generated/index.js";
 import type * as wire from "./generated/types.gen.js";
-import type { createClient } from "./generated/client/index.js";
-type Base = {
-  readonly client: ReturnType<typeof createClient>;
-  readonly throwOnError: true;
-  readonly responseStyle: "fields";
-  readonly signal?: AbortSignal;
-};
+import type { GatewayOperationRequest } from "./gateway-operation.js";
 /** Management can inspect actual claims and receipt links; it cannot manufacture a review. */
-export function createNarrativeOperations(
-  request: <T>(operation: (base: Base) => Promise<{ readonly data: T }>) => Promise<T>,
-) {
+export function createNarrativeOperations(request: GatewayOperationRequest) {
   return {
     claimsTo: (body: wire.ClaimsToData["body"]) =>
       request((base) => api.claimsTo({ ...base, body })),

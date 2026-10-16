@@ -31,6 +31,7 @@ import {
 } from "@nous-wave/client/host-bridge";
 import { managementProblem, managementProblemSchema } from "@heptalogos/management";
 import { tokenFromRequest } from "./http-auth.js";
+import { registerGatewayPost } from "./gateway-route.js";
 import {
   activityDispatchInputSchema,
   activityDispatchResultSchema,
@@ -119,42 +120,23 @@ export function registerGatewayHttp(
     output: TSchema,
     operation: (value: Static<T>) => Promise<unknown>,
     mutation = false,
-  ) => {
-    app.post(
+  ) =>
+    registerGatewayPost(app, {
       path,
-      {
-        bodyLimit: 16 * 1024 * 1024,
-        onRequest: async (request) => {
-          await owners().authenticate(tokenFromRequest(request));
-        },
-        schema: {
-          operationId: name,
-          body: input,
-          security: [{ gatewayService: [] }],
-          response: {
-            200: output,
-            400: managementProblemSchema,
-            401: managementProblemSchema,
-            403: managementProblemSchema,
-            409: managementProblemSchema,
-            503: managementProblemSchema,
-            500: managementProblemSchema,
-          },
-        },
-      },
-      async (request, reply) => {
-        // The authenticated native call has its own Activity deadline. A quiet
-        // model/tool turn must not inherit the short upload inactivity timer.
+      operationId: name,
+      input,
+      output,
+      bodyLimit: 16 * 1024 * 1024,
+      authenticate: async (request) => owners().authenticate(tokenFromRequest(request)),
+      operation: async (input, _request, reply) => {
+        // Native model/tool calls retain their existing Activity deadline.
         if (name === "dispatchActivity" || name === "takeActivityOpportunity")
           reply.raw.setTimeout(0);
         return mutation
-          ? owners().runMutation("gateway." + name, () =>
-              operation(request.body as Static<T>),
-            )
-          : operation(request.body as Static<T>);
+          ? owners().runMutation("gateway." + name, () => operation(input))
+          : operation(input);
       },
-    );
-  };
+    });
   const receive = async (conversation: messaging.NativeConversation) => {
     const scope = await owners().scope();
     if (

@@ -6,17 +6,9 @@
  */
 import * as api from "./generated/index.js";
 import type * as wire from "./generated/types.gen.js";
-import type { createClient } from "./generated/client/index.js";
-type Base = {
-  readonly client: ReturnType<typeof createClient>;
-  readonly throwOnError: true;
-  readonly responseStyle: "fields";
-  readonly signal?: AbortSignal;
-};
+import type { GatewayOperationRequest } from "./gateway-operation.js";
 /** Every wire DTO is generated from the world owner; there is no second HTTP transport. */
-export function createWorldOperations(
-  request: <T>(operation: (base: Base) => Promise<{ readonly data: T }>) => Promise<T>,
-) {
+export function createWorldOperations(request: GatewayOperationRequest) {
   return {
     worldCalendarRead: (body: wire.WorldCalendarReadData["body"]) =>
       request((base) => api.worldCalendarRead({ ...base, body })),

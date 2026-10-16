@@ -6,17 +6,9 @@
  */
 import * as api from "./generated/index.js";
 import type * as wire from "./generated/types.gen.js";
-import type { createClient } from "./generated/client/index.js";
-type Base = {
-  readonly client: ReturnType<typeof createClient>;
-  readonly throwOnError: true;
-  readonly responseStyle: "fields";
-  readonly signal?: AbortSignal;
-};
+import type { GatewayOperationRequest } from "./gateway-operation.js";
 /** These operations never fabricate an admitted decision or completed effect. */
-export function createReactorOperations(
-  request: <T>(operation: (base: Base) => Promise<{ readonly data: T }>) => Promise<T>,
-) {
+export function createReactorOperations(request: GatewayOperationRequest) {
   return {
     reactorStatus: (body: wire.ReactorStatusData["body"]) =>
       request((base) => api.reactorStatus({ ...base, body })),

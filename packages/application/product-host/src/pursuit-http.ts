@@ -4,9 +4,14 @@
  * Registers the service-authenticated Pursuit API from its owner schemas.
  * @module pursuit-http
  */
-import { managementProblem, managementProblemSchema } from "@heptalogos/management";
+import {
+  gatewayBearer,
+  registerGatewayPost,
+  type NamedGatewayRoute,
+} from "./gateway-route.js";
+import { managementProblem } from "@heptalogos/management";
 import type { FastifyInstance } from "fastify";
-import { Type, type Static, type TSchema } from "@heptalogos/schema-runtime/typebox";
+import { Type } from "@heptalogos/schema-runtime/typebox";
 import {
   listPursuitsSchema,
   pursuitHistorySchema,
@@ -43,41 +48,17 @@ export function registerPursuitHttp(
         "unavailable",
       );
     })();
-  const route = <T extends TSchema>(
-    name: string,
-    path: string,
-    input: T,
-    output: TSchema,
-    operation: (value: Static<T>) => Promise<unknown>,
-  ) =>
-    app.post(
-      "/gateway/v1/pursuit/" + path,
-      {
-        onRequest: async (request) => {
-          const header = request.headers.authorization;
-          await owners().authenticate(
-            header?.startsWith("Bearer ") ? header.slice(7) : undefined,
-          );
-        },
-        schema: {
-          operationId: name,
-          body: input,
-          response: {
-            200: output,
-            400: managementProblemSchema,
-            401: managementProblemSchema,
-            403: managementProblemSchema,
-            409: managementProblemSchema,
-            503: managementProblemSchema,
-            500: managementProblemSchema,
-          },
-          security: [{ gatewayService: [] }],
-        },
-      },
-      async (request) =>
+  const route: NamedGatewayRoute = (name, path, input, output, operation) =>
+    registerGatewayPost(app, {
+      path: "/gateway/v1/pursuit/" + path,
+      operationId: name,
+      input,
+      output,
+      authenticate: async (request) => owners().authenticate(gatewayBearer(request)),
+      operation: (input) =>
         owners().runMutation("gateway." + name, async () => {
           if (
-            (request.body as { subjectId?: string }).subjectId !==
+            (input as { subjectId?: string }).subjectId !==
             (await owners().currentSubject())
           )
             throw managementProblem(
@@ -86,9 +67,9 @@ export function registerPursuitHttp(
               "Use the current bound Subject",
               "authorization",
             );
-          return operation(request.body as Static<T>);
+          return operation(input);
         }),
-    );
+    });
   route("listPursuits", "list", listPursuitsSchema, listPursuitsResultSchema, (input) =>
     owners().pursuits.list(input),
   );
