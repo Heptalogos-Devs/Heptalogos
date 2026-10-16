@@ -177,7 +177,7 @@ async function fixture() {
         requestId: randomUUID(),
         sourceClass: "message",
         actorEntityRef: `entity:author:${index}`,
-        externalObjectRef: `message:${messageRefs[index]}`,
+        externalObjectRef: `object:heptalogos:message:${messageRefs[index]}`,
         conversationRef: "conversation:qq:registered",
         occurredTime: {
           value: {
@@ -662,6 +662,71 @@ real("mandatory native tool execution admission", () => {
       ).rejects.toMatchObject({
         problem: { problemCode: "gateway.native_tool_unavailable" },
       });
+    } finally {
+      await f.c.close();
+    }
+  }, 120000);
+});
+
+real("physical delivery feedback", () => {
+  it("keeps one exact receipt pending while Nous is offline and commits its real result once after recovery", async () => {
+    const f = await fixture();
+    try {
+      const response = await f.c.run(() => f.bridge.prepare(f.input));
+      await admitSelected(f, response);
+      const fact = {
+        subjectId: f.input.subjectId,
+        activityId: f.activity.activityId,
+        runId: f.input.native.runId,
+        reference: randomUUID(),
+        nativeIntentId: "actual-final-intent",
+        channel: "heptalogos-qq",
+        accountId: "bot",
+        to: "group:target",
+        sourceIndex: 0,
+        partIndex: 0,
+        attemptId: randomUUID(),
+        recordedAt: new Date().toISOString(),
+        outcome: {
+          state: "accepted" as const,
+          platformMessageId: "90071992547409939999",
+          acceptedAt: new Date().toISOString(),
+        },
+      };
+      f.setNousUnavailable(true);
+      await f.c.run(() => f.bridge.recordDeliveryFact(fact));
+      await f.c.run(() => f.bridge.recordDeliveryFact(fact));
+      const pending = await readRepositorySql<{
+        document: { observation: Record<string, unknown> };
+        receipt: unknown;
+      }>(
+        f.c.persistence,
+        "SELECT document,receipt FROM heptalogos.cognition_pending_feedback WHERE run_id=$1",
+        [fact.runId],
+      );
+      expect(pending).toHaveLength(1);
+      expect(pending[0]!.receipt).toBeNull();
+      const observed = sdk.decodeObservationInput(pending[0]!.document.observation);
+      expect(observed.sourceClass).toBe("host_event");
+      expect(observed.externalObjectRef).toBe(
+        "object:heptalogos:delivery:" + fact.attemptId,
+      );
+      expect(observed.actorEntityRef).toBe(f.actor);
+      expect(observed.conversationRef).toBe("conversation:qq:registered");
+      expect(observed.context!.outcome_state).toBe("accepted");
+      f.setNousUnavailable(false);
+      await f.c.run(() => f.bridge.finishRun(fact.runId, "completed"));
+      expect(await f.c.run(() => f.bridge.flushPendingFeedback(32))).toEqual({
+        delivered: 1,
+      });
+      expect(await f.c.run(() => f.bridge.flushPendingFeedback(32))).toEqual({
+        delivered: 0,
+      });
+      expect(f.submissions).toHaveLength(1);
+      expect(
+        JSON.parse(sdk.decodeObservationInput(f.submissions[0]).material.value.text)
+          .outcome.platformMessageId,
+      ).toBe(fact.outcome.platformMessageId);
     } finally {
       await f.c.close();
     }

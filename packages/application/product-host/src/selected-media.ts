@@ -56,7 +56,7 @@ export function createSelectedMediaUploader(options: {
           observation: encodeObservationInput({
             ...original,
             requestId: randomUUID(),
-            externalObjectRef: ref,
+            externalObjectRef: "object:heptalogos:" + ref,
             material: { case: "artifactId", value: artifact.artifactId },
             context: {
               ...original.context,

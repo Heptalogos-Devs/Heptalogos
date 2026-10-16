@@ -21,6 +21,7 @@ import {
   activitySchema,
   type LifeActivity,
   type createLifeService,
+  type AgencyDeliveryFact,
 } from "@heptalogos/subject";
 import { compileSchema } from "@heptalogos/schema-runtime";
 import type { MessagingService } from "@heptalogos/messaging";
@@ -300,6 +301,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
       },
     ): Promise<ActivityDispatchResult>;
     readRun: typeof readRun;
+    recordDeliveryFact(fact: AgencyDeliveryFact): Promise<void>;
     finishRun(
       runId: string,
       state: "completed" | "cancelled" | "failed" | "uncertain",
@@ -469,7 +471,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
     },
     async prepare(value) {
       const input = validated(() => hostPrepareRequestSchema.parse(value));
-      return mutate(async (tx) => {
+      const prepared = await mutate(async (tx) => {
         await sessionLock(tx, input.native.sessionKey);
         const registered = await sql<{ document: StoredInput }>(
           tx,
@@ -704,6 +706,8 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         );
         return response;
       });
+      await service.flushPendingFeedback(32);
+      return prepared;
     },
     async admitted(value) {
       const input = validated(() => hostAdmittedRequestSchema.parse(value));
@@ -1027,6 +1031,86 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
       });
     },
     readRun,
+    async recordDeliveryFact(fact) {
+      const run = await readRun(fact.runId);
+      if (
+        !run ||
+        run.registration.subjectId !== fact.subjectId ||
+        run.registration.activityId !== fact.activityId
+      )
+        deny(
+          "native_delivery_changed",
+          "The physical fact must retain its actual registered producer",
+        );
+      const rows = await readRepositorySql<{ document: Contact }>(
+        options.persistence,
+        "SELECT document FROM heptalogos.life_native_contact WHERE run_id=$1 AND document ? 'admitted' ORDER BY recorded_at,contact_request_id LIMIT 1",
+        [fact.runId],
+      );
+      const contact = rows[0]?.document;
+      if (!contact?.admitted)
+        deny(
+          "native_delivery_changed",
+          "The actual producer has no admitted cognition contact",
+        );
+      const hash = createHash("sha256")
+        .update(
+          JSON.stringify([
+            fact.reference,
+            fact.sourceIndex,
+            fact.partIndex,
+            fact.attemptId,
+            fact.outcome.state,
+          ]),
+        )
+        .digest();
+      hash[6] = (hash[6]! & 15) | 128;
+      hash[8] = (hash[8]! & 63) | 128;
+      const hex = hash.subarray(0, 16).toString("hex");
+      const requestId = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+      const usage = decodeCognitionUsage(
+        contact.appliedUsage ?? contact.response.usage,
+      );
+      await service.feedback({
+        ...identity(contact.request),
+        stage: "pending",
+        observation: encodeObservationInput({
+          subjectId: fact.subjectId,
+          sessionId: contact.request.nousSessionId,
+          requestId,
+          sourceClass: "host_event",
+          externalObjectRef: "object:heptalogos:delivery:" + fact.attemptId,
+          conversationRef: usage.audience!.conversationRef,
+          actorEntityRef: run.registration.actorEntityRef,
+          observedAt: timestampFromDate(new Date(fact.recordedAt)),
+          ...(fact.outcome.state === "accepted"
+            ? {
+                occurredTime: {
+                  value: {
+                    case: "instant" as const,
+                    value: timestampFromDate(new Date(fact.outcome.acceptedAt)),
+                  },
+                },
+              }
+            : {}),
+          material: {
+            case: "inlineText",
+            value: { text: JSON.stringify(fact), mediaType: "application/json" },
+          },
+          context: {
+            actual_producer: "heptalogos.agency",
+            native_run_ref: fact.runId,
+            native_intent_ref: fact.nativeIntentId,
+            delivery_reference: fact.reference,
+            source_index: fact.sourceIndex,
+            part_index: fact.partIndex,
+            outcome_state: fact.outcome.state,
+          },
+        }),
+      });
+      // A platform acknowledgement waits for local durability, not cognition
+      // networking. The dispatch completion or next preparation drains this outbox.
+    },
     async finishRun(runId, state) {
       await mutate(async (tx) => {
         const rows = await sql<{ state: string }>(

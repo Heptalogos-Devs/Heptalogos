@@ -75,6 +75,8 @@ async function fixture(replyToMode: "first" | "all" = "all") {
   );
   const control = {
     worker: false,
+    sourceRefs: ["occurrence:shared"],
+    messageSources: [] as { sourceRef: string; conversationRef: string }[],
     beforeAuthorityReturn: undefined as undefined | (() => Promise<void>),
   };
   const agency = createAgencyService({
@@ -89,7 +91,8 @@ async function fixture(replyToMode: "first" | "all" = "all") {
         role: control.worker ? "worker" : "main",
         actorEntityRef: actor,
         conversationRef: "qq:allowed",
-        sourceRefs: ["occurrence:shared"],
+        sourceRefs: control.sourceRefs,
+        messageSources: control.messageSources,
       };
     },
   });
@@ -421,6 +424,28 @@ real("Agency adopts actual native payloads on real fenced PostgreSQL", () => {
     } finally {
       release();
       await monitor.end();
+      await f.c.close();
+    }
+  }, 120000);
+});
+
+real("canonical future message source transmission", () => {
+  it("uses adopted conversation observation for verified future messages and rejects another conversation's source", async () => {
+    const f = await fixture();
+    try {
+      const sourceRef = "message:" + randomUUID();
+      f.control.sourceRefs = [sourceRef];
+      f.control.messageSources = [{ sourceRef, conversationRef: "qq:allowed" }];
+      expect(await f.c.run(() => f.agency.adoptDelivery(f.request))).toHaveProperty(
+        "reference",
+      );
+      f.control.messageSources = [{ sourceRef, conversationRef: "qq:private" }];
+      await expect(
+        f.c.run(() =>
+          f.agency.adoptDelivery({ ...f.request, nativeIntentId: randomUUID() }),
+        ),
+      ).rejects.toMatchObject({ problem: { problemCode: "agency.source_denied" } });
+    } finally {
       await f.c.close();
     }
   }, 120000);

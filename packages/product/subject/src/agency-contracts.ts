@@ -104,15 +104,38 @@ export interface AgencyRunAuthority {
   readonly actorEntityRef: string;
   readonly conversationRef: string;
   readonly sourceRefs: readonly string[];
+  /** Canonical selected messages verified by the Host's Messaging owner. */
+  readonly messageSources: readonly {
+    readonly sourceRef: string;
+    readonly conversationRef: string;
+  }[];
 }
 /** Agency owns semantic adoption and effect facts; it starts no sender or retry worker. */
 export interface AgencyOptions {
   readonly persistence: PersistenceService;
   readonly now: () => string;
+  /** Runs after the physical fact is durable, outside its write transaction. */
+  readonly onDeliveryRecorded?: (fact: AgencyDeliveryFact) => Promise<void>;
   /** External propagation checks run before the short send-point transaction. */
   readonly checkSources: (runId: string) => Promise<void>;
   readonly authority: (
     runId: string,
     recipient: { channel: string; accountId: string; to: string },
   ) => Promise<AgencyRunAuthority>;
+}
+/** A physical attempt fact; an accepted platform receipt does not imply human reading. */
+export interface AgencyDeliveryFact {
+  readonly subjectId: string;
+  readonly activityId: string;
+  readonly runId: string;
+  readonly reference: string;
+  readonly nativeIntentId: string;
+  readonly channel: string;
+  readonly accountId: string;
+  readonly to: string;
+  readonly sourceIndex: number;
+  readonly partIndex: number;
+  readonly attemptId: string;
+  readonly recordedAt: string;
+  readonly outcome: Static<typeof deliveryOutcomeSchema>;
 }

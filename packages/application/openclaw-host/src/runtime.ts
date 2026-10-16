@@ -8,7 +8,8 @@
 import { createGatewayHostClient } from "@heptalogos/management-client/gateway";
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk/channel-plugin-common";
 import { defineChannelPluginEntry } from "openclaw/plugin-sdk/core";
-import { createQqChannel } from "./channel.js";
+import { createQqAccountRuntime } from "./account-runtime.js";
+import { createQqChannel, type QqChannelOptions } from "./channel.js";
 import { parsePluginConfig, readConnectionFile, readServiceToken } from "./config.js";
 import { createQqMessageAdapter } from "./delivery.js";
 import { createQqIngress } from "./ingress.js";
@@ -19,6 +20,8 @@ import { OneBotTransport } from "./transport.js";
 import { createQqResourcePump } from "./resources.js";
 import { synchronizeQqHistory, type HistoryEnvelope } from "./history-sync.js";
 import { resolveQqNativeRoute } from "./routing.js";
+
+type StartContext = Parameters<QqChannelOptions["startAccount"]>[0];
 
 /** Registers one account from protected existing files; scopes come only from the Host. */
 export function registerQqChannel(api: OpenClawPluginApi): void {
@@ -38,12 +41,11 @@ export function registerQqChannel(api: OpenClawPluginApi): void {
       ),
       new Set(),
     );
-  // The adapter exists before gateway startup, but cannot send until the native account owns it.
-  let delivery: ReturnType<typeof createQqMessageAdapter> | undefined;
-  const requireDelivery = () => {
-    if (!delivery) throw Error("QQ native account has not started");
-    return delivery;
-  };
+  const account = createQqAccountRuntime<ReturnType<typeof createQqMessageAdapter>>(
+    config.hostAnchorRoot,
+    connection.accountId,
+  );
+  const requireDelivery = () => account.adapter();
   const channel = createQqChannel({
     accountId: connection.accountId,
     maxTextBytes: config.maxTextBytes,
@@ -61,8 +63,8 @@ export function registerQqChannel(api: OpenClawPluginApi): void {
         media: (context) => requireDelivery().send!.media!(context),
       },
     },
-    startAccount: async (context) => {
-      if (context.accountId !== connection.accountId || delivery)
+    startAccount: account.ownLifecycle(async (context: StartContext, ownership) => {
+      if (context.accountId !== connection.accountId)
         throw Error("QQ native account lifecycle is already owned or mismatched");
       const controller = new AbortController();
       const signal = AbortSignal.any([context.abortSignal, controller.signal]);
@@ -117,7 +119,10 @@ export function registerQqChannel(api: OpenClawPluginApi): void {
         void host
           .takeActivityOpportunity({
             accountId: connection.accountId,
-            conversation: { kind: conversation.kind, id: conversation.conversationId },
+            conversation: {
+              kind: conversation.kind,
+              id: conversation.conversationId,
+            },
           })
           .catch(() => {
             if (!signal.aborted) report("activity_opportunity_unavailable");
@@ -266,15 +271,18 @@ export function registerQqChannel(api: OpenClawPluginApi): void {
           return result.factId;
         },
       });
-      delivery = createQqMessageAdapter({
-        host,
-        transport,
-        presence,
-        accountId: connection.accountId,
-        maxTextBytes: config.maxTextBytes,
-        mediaMaxBytes: config.mediaMaxBytes,
-        onError: report,
-      });
+      account.activate(
+        ownership,
+        createQqMessageAdapter({
+          host,
+          transport,
+          presence,
+          accountId: connection.accountId,
+          maxTextBytes: config.maxTextBytes,
+          mediaMaxBytes: config.mediaMaxBytes,
+          onError: report,
+        }),
+      );
       monitor.start();
       transport.start();
       const timer = setInterval(() => {
@@ -287,16 +295,20 @@ export function registerQqChannel(api: OpenClawPluginApi): void {
             signal.addEventListener("abort", () => resolve(), { once: true }),
           );
       } finally {
+        account.deactivate(ownership);
         controller.abort();
         clearInterval(timer);
         await transport.stop();
         await monitor.stop();
         await history;
         await pump.stop();
-        delivery = undefined;
-        context.setStatus({ ...context.getStatus(), connected: false, running: false });
+        context.setStatus({
+          ...context.getStatus(),
+          connected: false,
+          running: false,
+        });
       }
-    },
+    }),
   });
   defineChannelPluginEntry({
     id: "heptalogos-qq",

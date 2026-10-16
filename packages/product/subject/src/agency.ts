@@ -67,7 +67,25 @@ function active(authority: AgencyRunAuthority) {
     )
   )
     deny("agency.scope_denied", "The actual conversation has no send grant");
-  if (authority.sourceRefs.some((ref) => !a.scope!.sourceRefs.includes(ref)))
+  if (
+    authority.sourceRefs.some(
+      (ref) =>
+        !a.scope!.sourceRefs.includes(ref) &&
+        !(
+          ref.startsWith("message:") &&
+          authority.messageSources.some(
+            (source) =>
+              source.sourceRef === ref &&
+              source.conversationRef === authority.conversationRef &&
+              a.scope!.conversations.some(
+                (c) =>
+                  c.conversationRef === source.conversationRef &&
+                  c.operations.includes("observe"),
+              ),
+          )
+        ),
+    )
+  )
     deny(
       "agency.source_denied",
       "A used source cannot be transmitted under the current Activity scope",
@@ -394,7 +412,8 @@ export function createAgencyService(options: AgencyOptions) {
         recordDeliverySchema,
         value,
       );
-      return options.persistence.mutate((context) =>
+      const behavior = await load(input.reference);
+      await options.persistence.mutate((context) =>
         useRepositoryMutationTransaction(context, async (tx) => {
           const rows = await executeRepositorySql<{
             state: string;
@@ -442,6 +461,33 @@ export function createAgencyService(options: AgencyOptions) {
           return { recorded: true as const };
         }),
       );
+      if (options.onDeliveryRecorded) {
+        const rows = await readRepositorySql<{
+          updated_at: string | Date;
+          document: { attemptId: string; outcome: typeof input.outcome };
+        }>(
+          options.persistence,
+          "SELECT updated_at,document FROM heptalogos.agency_delivery_part WHERE behavior_id=$1 AND source_index=$2 AND part_index=$3",
+          [input.reference, input.sourceIndex, input.partIndex],
+        );
+        const saved = rows[0]!;
+        await options.onDeliveryRecorded({
+          subjectId: behavior.subjectId,
+          activityId: behavior.activityId,
+          runId: behavior.request.runId,
+          reference: input.reference,
+          nativeIntentId: behavior.request.nativeIntentId,
+          channel: behavior.request.channel,
+          accountId: behavior.request.accountId,
+          to: behavior.request.to,
+          sourceIndex: input.sourceIndex,
+          partIndex: input.partIndex,
+          attemptId: saved.document.attemptId,
+          outcome: saved.document.outcome,
+          recordedAt: new Date(saved.updated_at).toISOString(),
+        });
+      }
+      return { recorded: true as const };
     },
   };
 }

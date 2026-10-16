@@ -76,7 +76,7 @@ export function createInstalledNativeDispatcher(options: {
         killTimer = setTimeout(() => child.kill("SIGKILL"), 5_000);
       };
       // Matches the public CLI's RPC timeout, plus process shutdown allowance.
-      const timer = setTimeout(stop, 675_000);
+      const timer = setTimeout(stop, params.timeout * 1000 + 45_000);
       options.signal.addEventListener("abort", stop, { once: true });
       if (options.signal.aborted) stop();
       child.stdout.on("data", (chunk: Buffer) => {

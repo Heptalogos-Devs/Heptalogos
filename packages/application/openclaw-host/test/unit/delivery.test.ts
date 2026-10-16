@@ -9,6 +9,7 @@ import { tmpdir } from "node:os";
 import { WebSocketServer } from "ws";
 import { createGatewayHostClient } from "@heptalogos/management-client/gateway";
 import { sendDurableMessageBatch } from "openclaw/plugin-sdk/channel-message";
+import { createQqAccountRuntime } from "../../src/account-runtime.js";
 import { createQqMessageAdapter } from "../../src/delivery.js";
 import { createQqChannel } from "../../src/channel.js";
 import { QqScopePolicy } from "../../src/policy.js";
@@ -205,10 +206,33 @@ it("uses public durable native send with real SQLite, generated Host HTTP and on
     mediaMaxBytes: 1024,
     onError: () => {},
   });
+  // Native request/discovery registration is a distinct channel object, but must use the already running physical account.
+  const activeAccount = createQqAccountRuntime<typeof message>(
+    hostAnchorRoot,
+    accountId,
+  );
+  const ownership = activeAccount.acquire();
+  activeAccount.activate(ownership, message);
+  const discoveryAccount = createQqAccountRuntime<typeof message>(
+    hostAnchorRoot,
+    accountId,
+  );
+  const discoveredMessage: typeof message = {
+    durableFinal: message.durableFinal,
+    deliveryCustody: {
+      adopt: (context) => discoveryAccount.adapter().deliveryCustody!.adopt(context),
+      authorize: (context) =>
+        discoveryAccount.adapter().deliveryCustody!.authorize(context),
+    },
+    send: {
+      text: (context) => discoveryAccount.adapter().send!.text!(context),
+      media: (context) => discoveryAccount.adapter().send!.media!(context),
+    },
+  };
   const channel = createQqChannel({
     accountId,
     maxTextBytes: 4096,
-    message,
+    message: discoveredMessage,
     startAccount: async () => {},
   });
   const registry = await nativeRegistry(channel);
@@ -315,8 +339,10 @@ it("uses public durable native send with real SQLite, generated Host HTTP and on
     ).rejects.toMatchObject({ code: "OPENCLAW_PLATFORM_MESSAGE_NOT_DISPATCHED" });
     expect(networkSends).toBe(5);
   } finally {
+    activeAccount.deactivate(ownership);
     controller.abort();
     await transport.stop();
+    activeAccount.release(ownership);
     for (const socket of wss.clients) socket.terminate();
     await new Promise<void>((resolve) => wss.close(() => resolve()));
     hostServer.closeAllConnections();

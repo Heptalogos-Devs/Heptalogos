@@ -40,7 +40,7 @@ export interface ActivityDispatchOptions {
   >;
   readonly native: Pick<
     ReturnType<typeof createNativeCognitionBridge>,
-    "registerInput" | "readDispatch" | "finishDispatch"
+    "registerInput" | "readDispatch" | "finishDispatch" | "flushPendingFeedback"
   >;
   readonly routes: Pick<ReturnType<typeof createChannelRouteStore>, "read">;
   readonly scope: () => Promise<GatewayScope>;
@@ -239,13 +239,13 @@ export function createActivityDispatcher(options: ActivityDispatchOptions) {
         intent: activity.purpose,
         audience: {
           conversationRef: input.conversationRef,
-          visibility: actual.kind === "group" ? "public" : "direct",
+          visibility: actual.kind === "group" ? "group" : "direct",
           channelRef: "heptalogos-qq",
           ...(group ? { groupEntityRef: group.entityRef } : {}),
         },
         participants: [...new Set(authors.values())].map((entityRef) => ({
           entityRef,
-          role: "actual_author",
+          role: "speaker",
         })),
         sourceRead: {
           subjectId: input.subjectId,
@@ -259,7 +259,7 @@ export function createActivityDispatcher(options: ActivityDispatchOptions) {
           subjectId: input.subjectId,
           requestId: randomUUID(),
           sourceClass: "message",
-          externalObjectRef: "message:" + material.messageId,
+          externalObjectRef: "object:heptalogos:message:" + material.messageId,
           conversationRef: input.conversationRef,
           actorEntityRef: authors.get(material.messageId)!,
           entities: [
@@ -340,6 +340,11 @@ export function createActivityDispatcher(options: ActivityDispatchOptions) {
         );
       try {
         const outcome = await options.dispatch(params);
+        try {
+          await options.native.flushPendingFeedback(32);
+        } catch {
+          /* Actual pending results survive an offline cognition service. */
+        }
         return publicResult(
           await options.native.finishDispatch(
             input.subjectId,

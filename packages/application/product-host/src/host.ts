@@ -146,9 +146,11 @@ export async function startProductHost(
   let claim: Awaited<ReturnType<typeof startFirstClaimMaintenance>> | undefined;
   let runRoot: string | undefined;
   let closing: Promise<void> | undefined;
+  const dispatchController = new AbortController();
   const close = (): Promise<void> => {
     if (closing) return closing;
     closing = (async () => {
+      dispatchController.abort();
       const failures: unknown[] = [];
       const settle = async (operation: () => Promise<unknown>) => {
         try {
@@ -304,7 +306,7 @@ export async function startProductHost(
           anchorRoot: options.anchorRoot,
           configurationRoot: owned.paths.resolve("CONFIGURATION").canonicalPath,
           installationId: owned.installationId,
-          signal: host.signal,
+          signal: AbortSignal.any([host.signal, dispatchController.signal]),
         }),
     });
     const recoveryConfiguration = await product.configuration();

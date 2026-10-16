@@ -115,12 +115,17 @@ export function registerGatewayHttp(
           },
         },
       },
-      async (request) =>
-        mutation
+      async (request, reply) => {
+        // The authenticated native call has its own Activity deadline. A quiet
+        // model/tool turn must not inherit the short upload inactivity timer.
+        if (name === "dispatchActivity" || name === "takeActivityOpportunity")
+          reply.raw.setTimeout(0);
+        return mutation
           ? owners().runMutation("gateway." + name, () =>
               operation(request.body as Static<T>),
             )
-          : operation(request.body as Static<T>),
+          : operation(request.body as Static<T>);
+      },
     );
   };
   const receive = async (conversation: messaging.NativeConversation) => {

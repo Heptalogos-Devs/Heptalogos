@@ -25,6 +25,12 @@ async function readParameters(): Promise<Record<string, unknown>> {
   for (const field of ["idempotencyKey", "sessionKey", "message"])
     if (typeof params[field] !== "string" || !params[field])
       throw Error("dispatch_input_invalid");
+  if (
+    !Number.isInteger(params.timeout) ||
+    Number(params.timeout) < 1 ||
+    Number(params.timeout) > 3600
+  )
+    throw Error("dispatch_timeout_invalid");
   return params;
 }
 try {
@@ -32,7 +38,11 @@ try {
   const params = await readParameters();
   const result = await callGatewayFromCli(
     "agent",
-    { expectFinal: true, timeout: "660000", json: true },
+    {
+      expectFinal: true,
+      timeout: String(Number(params.timeout) * 1000 + 30_000),
+      json: true,
+    },
     params,
     { expectFinal: true, progress: false },
   );

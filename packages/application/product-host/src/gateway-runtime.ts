@@ -23,7 +23,11 @@ import { createNativeCognitionBridge } from "./native-cognition.js";
 import { connectProductNous } from "./nous.js";
 import { createActivityOpportunity } from "./activity-opportunity.js";
 import { createSelectedMediaUploader } from "./selected-media.js";
-import { hasCanonicalNativeMessages } from "./native-source-selection.js";
+import { decodeCognitionUsage } from "@nous-wave/client/host-bridge";
+import {
+  hasCanonicalNativeMessages,
+  hasAuthorizedNativeSources,
+} from "./native-source-selection.js";
 import { createActivityDispatcher } from "./activity-dispatch.js";
 import type { NativeActivityDispatch } from "./activity-dispatch-contracts.js";
 import type { GatewayScope } from "./gateway-contracts.js";
@@ -251,6 +255,7 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
   const agency = createAgencyService({
     persistence: options.persistence,
     now: options.now,
+    onDeliveryRecorded: (fact) => native.recordDeliveryFact(fact),
     checkSources: async (runId) => {
       const run = await native.readRun(runId);
       if (!run) denied("The producer run is not registered by the Host");
@@ -309,6 +314,17 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
         denied("The recipient has no actual canonical conversation");
       const activity = await life.get(current.subjectId, run.registration.activityId);
       if (!activity?.scope) denied("The original adopted Activity is unavailable");
+      const audience = decodeCognitionUsage(run.registration.usage).audience
+        ?.conversationRef;
+      const targetRef = "conversation:heptalogos:" + found.conversationIds[0]!;
+      if (
+        audience !== targetRef ||
+        !hasAuthorizedNativeSources(activity, run.registration) ||
+        !(await hasCanonicalNativeMessages(run.registration, messaging))
+      )
+        denied(
+          "The actual producer audience and selected canonical sources cannot be rebound to another delivery",
+        );
       assertScopeWithin(
         activity.scope,
         await authority(
@@ -325,6 +341,10 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
         actorEntityRef: run.registration.actorEntityRef,
         conversationRef: "conversation:heptalogos:" + found.conversationIds[0]!,
         sourceRefs: run.registration.sourceRefs,
+        messageSources: run.registration.messageRefs.map((ref) => ({
+          sourceRef: "message:" + ref,
+          conversationRef: targetRef,
+        })),
       };
     },
   });

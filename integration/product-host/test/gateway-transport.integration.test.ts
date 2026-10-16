@@ -160,3 +160,44 @@ it("uses the generated service client for real bounded media and raw archives, a
     await rm(root, { recursive: true, force: true });
   }
 });
+
+it("keeps an authenticated native opportunity response alive beyond the short HTTP inactivity deadline", async () => {
+  const app = await createProductHttpApp({
+    identity: { installationId: createInstallationId(), bootId: createBootId() },
+    authentication: {} as ManagementAuthentication,
+    product: {} as ProductManagement,
+    onAdministratorClaimed: async () => {},
+    gateway: {
+      authenticate: async () => {},
+      runMutation: async (_kind, run) => run(),
+      opportunity: async () => {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        return { decision: "defer" };
+      },
+    } as unknown as GatewayHttpOptions,
+  });
+  app.server.setTimeout(100);
+  try {
+    await app.listen({ host: "127.0.0.1", port: 0 });
+    const address = app.server.address();
+    if (!address || typeof address === "string") throw Error("No listener");
+    const response = await fetch(
+      `http://127.0.0.1:${address.port}/gateway/v1/activity/opportunity`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          authorization: "Bearer channel-service-fixture",
+        },
+        body: JSON.stringify({
+          accountId: "actual",
+          conversation: { kind: "group", id: "test" },
+        }),
+      },
+    );
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ decision: "defer" });
+  } finally {
+    await app.close();
+  }
+});

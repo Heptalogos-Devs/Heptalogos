@@ -36,7 +36,7 @@ export function hasAuthorizedNativeSources(
     const observation = decodeObservationInput(contact.observation);
     if (
       observation.subjectId !== registration.subjectId ||
-      observation.externalObjectRef !== ref ||
+      observation.externalObjectRef !== "object:heptalogos:" + ref ||
       observation.conversationRef !== target ||
       observation.sourceClass !== "message"
     )
