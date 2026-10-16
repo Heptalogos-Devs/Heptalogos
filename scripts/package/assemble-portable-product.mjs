@@ -500,6 +500,26 @@ async function main() {
   );
   if (!/18\.6/u.test(postgresVersion))
     fail("Expected PostgreSQL 18.6, observed " + postgresVersion);
+  const postgresLicenseMaterials =
+    process.platform === "win32"
+      ? [
+          ["server_license.txt", "postgresql-server-license.txt"],
+          [
+            "commandlinetools_3rd_party_licenses.txt",
+            "postgresql-commandline-third-party.txt",
+          ],
+        ]
+      : [
+          ["COPYRIGHT", "postgresql/COPYRIGHT"],
+          ["LICENSE", "postgresql/LICENSE"],
+          ["README.md", "postgresql/README.md"],
+        ];
+  for (const [source] of postgresLicenseMaterials) {
+    await requireFile(
+      join(options.postgresRoot, source),
+      `PostgreSQL distribution license material ${source}`,
+    );
+  }
   await requireFile(
     join(options.hostArtifact, "bin.js"),
     "built Product Host artifact",
@@ -604,14 +624,11 @@ async function main() {
       join(options.nodeRoot, "LICENSE"),
       join(options.target, "licenses/node-LICENSE.txt"),
     );
-    await cp(
-      join(options.postgresRoot, "server_license.txt"),
-      join(options.target, "licenses/postgresql-server-license.txt"),
-    );
-    await cp(
-      join(options.postgresRoot, "commandlinetools_3rd_party_licenses.txt"),
-      join(options.target, "licenses/postgresql-commandline-third-party.txt"),
-    );
+    for (const [source, destination] of postgresLicenseMaterials) {
+      const target = join(options.target, "licenses", destination);
+      await mkdir(dirname(target), { recursive: true });
+      await cp(join(options.postgresRoot, source), target);
+    }
   }
   await cp(
     join(repositoryRoot, "LICENSE"),
