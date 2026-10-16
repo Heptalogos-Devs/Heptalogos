@@ -464,7 +464,7 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
     async readRealization(
       subjectId: string,
       operationId: string,
-    ): Promise<unknown | undefined> {
+    ): Promise<unknown> {
       const rows = await readRepositorySql<{ document: unknown }>(
         options.persistence,
         "SELECT document FROM heptalogos.world_realization WHERE subject_id=$1 AND operation_id=$2",
