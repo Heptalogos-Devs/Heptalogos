@@ -9,7 +9,7 @@
 - 程序组织 Reactor：同 Subject 一条前台主观决定链，跨群共用焦点；后台世界、专业任务、压缩及 Nous 反思可并行。逻辑前台资格不等于跨模型数据库长锁，不另建通用 Runtime、Reactor DB 或租约框架。
 - 强审议选择参与、动作和表达意图；情境卡与对象目录来自真实 owner。手机/QQ/浏览器/世界动作执行正式读取、实现与交接；未读正文不提前进入主观输入。长 worker 开始后保存继续信息并让出，ready 只产生机会，具体查看才 release。
 - WorldProfile 与可选 Seed 独立。重复规律、例外、稳定实例、滚动计划和已实现事件共同构成日历；世界与内部活动不依赖 QQ。生活状态按已实现区间积分精力，真实费用/并发独立计量。
-- 所有 Subject 自然表达及人格动作经过独立 subject.render，输出自然文本、无需 FC；目标 doubao-seed-character-260628，操作者已明确授权 Lite 临时担任独立 renderer。后续切换沿实际原生profile，不以execution尾段代替。
+- 所有 Subject 自然表达及人格动作经过独立 subject.render，输出自然文本、无需 FC；目标 doubao-seed-character-260628，操作者最新明确授权 Mini 临时用于产品角色及独立 renderer。后续切换沿实际原生profile，不以execution尾段代替。
 - render→一次窄review→NarrativeCommit 在原Host短事务采用兼容细节、Claim、承诺与唯一待派发身份；世界、认识、听众版本、实际效果分别保存。明确隐瞒必须事先采用，uncertain 不自动重发。
 - 关键进展同步存Activity/WorkContext，摘要沿唯一原生 compactor 后台处理固定完整前缀、CAS保留新尾部，硬超窗才等待。长期认知由唯一Nous及其已有反思维护，不双写人格或重建认知域。
 - 普通管理无需模型：完整CLI/生成ManagementClient支持课表、当前生活、注意理由、角色、历史及有限清理。主体与维护OpenClaw实例及秘密分离。
