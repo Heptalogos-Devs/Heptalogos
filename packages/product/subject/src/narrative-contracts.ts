@@ -71,38 +71,32 @@ export const narrativeClaimSchema = Type.Object(
     quote: text,
     content: text,
     entityRefs: refs,
-    kind: Type.Union(
-      (
-        [
-          "life",
-          "identity",
-          "knowledge",
-          "relationship",
-          "commitment",
-          "external_result",
-        ] as const
-      ).map((v) => Type.Literal(v)),
-    ),
-    stance: Type.Union(
-      (["asserted", "uncertain", "conditional", "reported", "deliberate"] as const).map(
-        (v) => Type.Literal(v),
-      ),
-    ),
+    kind: Type.Union([
+      Type.Literal("life"),
+      Type.Literal("identity"),
+      Type.Literal("knowledge"),
+      Type.Literal("relationship"),
+      Type.Literal("commitment"),
+      Type.Literal("external_result"),
+    ]),
+    stance: Type.Union([
+      Type.Literal("asserted"),
+      Type.Literal("uncertain"),
+      Type.Literal("conditional"),
+      Type.Literal("reported"),
+      Type.Literal("deliberate"),
+    ]),
     polarity: Type.Union([Type.Literal("affirm"), Type.Literal("deny")]),
     about: Type.Union([worldIntervalSchema, Type.Null()]),
-    basis: Type.Union(
-      (
-        [
-          "world",
-          "cognition",
-          "new_virtual_detail",
-          "commitment",
-          "deliberate",
-          "uncertain",
-          "report",
-        ] as const
-      ).map((v) => Type.Literal(v)),
-    ),
+    basis: Type.Union([
+      Type.Literal("world"),
+      Type.Literal("cognition"),
+      Type.Literal("new_virtual_detail"),
+      Type.Literal("commitment"),
+      Type.Literal("deliberate"),
+      Type.Literal("uncertain"),
+      Type.Literal("report"),
+    ]),
     sourceRefs: refs,
     eventRefs: refs,
     cognitionRefs: refs,
@@ -152,11 +146,12 @@ export const claimsToSchema = Type.Object(
     conversationRef: ref,
     about: Type.Optional(worldIntervalSchema),
     status: Type.Optional(
-      Type.Union(
-        (["adopted", "expressed", "uncertain", "not_sent"] as const).map((v) =>
-          Type.Literal(v),
-        ),
-      ),
+      Type.Union([
+        Type.Literal("adopted"),
+        Type.Literal("expressed"),
+        Type.Literal("uncertain"),
+        Type.Literal("not_sent"),
+      ]),
     ),
     afterClaimId: Type.Optional(id),
     limit: Type.Integer({ minimum: 1, maximum: 128 }),

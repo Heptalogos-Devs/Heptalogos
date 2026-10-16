@@ -362,6 +362,12 @@ export function createActivityDispatcher(options: ActivityDispatchOptions) {
           nativeRunId,
           prompt,
           role: "main",
+          roleScope: {
+            role: "subject.deliberation",
+            purpose: "subject_deliberation",
+            view: "subject",
+            contactNature: "subject_experience",
+          },
           actorEntityRef: self.entityRef,
           workContextId: activity.workContextId,
           usage,

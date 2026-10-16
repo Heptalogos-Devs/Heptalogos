@@ -60,10 +60,44 @@ export const qqAuthorizationSchema = Type.Object(
   { additionalProperties: false },
 );
 
+/** Product duties select native profiles; provider/model/credentials remain native-owned. */
+export const subjectRoleBindingSchema = Type.Object(
+  {
+    role: Type.Union([
+      Type.Literal("world.planner"),
+      Type.Literal("subject.deliberation"),
+      Type.Literal("subject.execution"),
+      Type.Literal("subject.render"),
+      Type.Literal("narrative.review"),
+    ]),
+    nativeAgentRef: Type.String({ pattern: "^[a-z0-9][a-z0-9_-]{0,63}$" }),
+    enabled: Type.Boolean(),
+    outputContract: Type.Union([
+      Type.Literal("natural_text"),
+      Type.Literal("structured_json"),
+    ]),
+    deadlineMs: Type.Integer({ minimum: 1000, maximum: 3_600_000 }),
+    outputTokens: Type.Integer({ minimum: 128, maximum: 65536 }),
+    inputTokens: Type.Integer({ minimum: 1024, maximum: 2_097_152 }),
+    allowedTools: Type.Array(Type.String({ minLength: 1, maxLength: 128 }), {
+      maxItems: 128,
+      uniqueItems: true,
+    }),
+    fallbackAgentRefs: Type.Array(
+      Type.String({ pattern: "^[a-z0-9][a-z0-9_-]{0,63}$" }),
+      { maxItems: 8, uniqueItems: true },
+    ),
+  },
+  { additionalProperties: false },
+);
+/** Duties have independently configurable native execution and bounded resources. */
+export type SubjectRoleBinding = Static<typeof subjectRoleBindingSchema>;
+
 /** Settings owned and consumed by the product host; credentials remain secret references. */
 export const productSettingsSchema = Type.Object(
   {
     qq: Type.Optional(qqAuthorizationSchema),
+    roles: Type.Optional(Type.Array(subjectRoleBindingSchema, { maxItems: 5 })),
     nous: Type.Object(
       {
         runRoot: Type.String({ minLength: 1 }),

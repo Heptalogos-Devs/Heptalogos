@@ -50,6 +50,7 @@ export type NativeActivityParams = {
   readonly agentId: string;
   readonly sessionKey: string;
   readonly message: string;
+  readonly extraSystemPrompt?: string;
   readonly idempotencyKey: string;
   readonly timeout: number;
   readonly toolBindings: {

@@ -70,3 +70,6 @@ export {
 export type { ManagedSubject, CreateProductSubject, BoundSubject } from "./product.js";
 
 export { qqAuthorizationSchema } from "./product.js";
+
+export { subjectRoleBindingSchema } from "./product.js";
+export type { SubjectRoleBinding } from "./product.js";
