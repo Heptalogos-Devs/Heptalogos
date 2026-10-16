@@ -22,6 +22,8 @@ import {
   type LifeActivity,
   type createLifeService,
   type AgencyDeliveryFact,
+  type ActivityOpportunity,
+  consumeActivityOpportunity,
 } from "@heptalogos/subject";
 import { compileSchema } from "@heptalogos/schema-runtime";
 import type { MessagingService } from "@heptalogos/messaging";
@@ -71,6 +73,7 @@ export interface Registration {
   readonly messageRefs: readonly string[];
   readonly inheritedMessageSources?: readonly string[];
   readonly contacts: HostPrepareResponse["contacts"];
+  readonly opportunity?: ActivityOpportunity;
 }
 type NativeDispatchRecord = {
   requestId: string;
@@ -479,6 +482,13 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
             );
           return;
         }
+        if (registration.opportunity)
+          await consumeActivityOpportunity(
+            tx,
+            activity,
+            registration.opportunity,
+            options.now(),
+          );
         await sql(
           tx,
           "INSERT INTO heptalogos.life_native_input(session_key,native_run_id,prompt_digest,subject_id,activity_id,document,recorded_at) VALUES($1,$2,$3,$4,$5,$6::jsonb,$7)",

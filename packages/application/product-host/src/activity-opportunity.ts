@@ -7,6 +7,7 @@
 import { createHash } from "node:crypto";
 import { Type, type Static } from "@heptalogos/schema-runtime/typebox";
 import type { createLifeService } from "@heptalogos/subject";
+import { captureActivityOpportunity } from "@heptalogos/subject";
 import type { MessagingService } from "@heptalogos/messaging";
 import { activityDispatchResultSchema } from "./activity-dispatch-contracts.js";
 import type { createActivityDispatcher } from "./activity-dispatch.js";
@@ -37,13 +38,17 @@ export const activityOpportunityResultSchema = Type.Object(
   },
   { additionalProperties: false },
 );
+function requestIdentity(parts: readonly unknown[]): string {
+  const hash = createHash("sha256").update(JSON.stringify(parts)).digest("hex");
+  return `${hash.slice(0, 8)}-${hash.slice(8, 12)}-8${hash.slice(13, 16)}-a${hash.slice(17, 20)}-${hash.slice(20, 32)}`;
+}
 /** One actual native opportunity; Host owns no timer, model loop or network retry worker. */
 export function createActivityOpportunity(options: {
   readonly scope: () => Promise<GatewayScope>;
   readonly enabled: () => Promise<boolean>;
   readonly life: Pick<
     ReturnType<typeof createLifeService>,
-    "schedule" | "takeAttention"
+    "schedule" | "takeAttention" | "worldNow"
   >;
   readonly messaging: Pick<
     MessagingService,
@@ -102,7 +107,30 @@ export function createActivityOpportunity(options: {
     if (!activity) return { decision: "defer" };
     const pending = await options.messaging.listPending({ conversationId, limit: 128 });
     const next = pending.pending.find((p) => p.kind === "message");
-    if (!next) return { decision: "defer" };
+    if (!next) {
+      const world = await options.life.worldNow(current.subjectId);
+      const due = schedule.activities.find(
+        (a) =>
+          a.scope?.conversations.some(
+            (c) => c.conversationRef === target && c.operations.includes("observe"),
+          ) && captureActivityOpportunity(a, world),
+      );
+      if (!due) return { decision: "defer" };
+      const requestId = requestIdentity([
+        "activity-continuation-v1",
+        due.activityId,
+        due.revision,
+        due.nextOpportunity,
+      ]);
+      const dispatch = await options.activities.dispatch({
+        requestId,
+        subjectId: current.subjectId,
+        activityId: due.activityId,
+        conversationRef: target,
+        messageRefs: [],
+      });
+      return { decision: "dispatched", dispatch };
+    }
     const sources = await options.messaging.messageSources({
       messageRefs: [next.factId],
       conversationIds: [conversationId],
@@ -142,17 +170,12 @@ export function createActivityOpportunity(options: {
       ],
     });
     if (attention.decision !== "read") return { decision: "defer" };
-    const hash = createHash("sha256")
-      .update(
-        JSON.stringify([
-          "activity-opportunity-v1",
-          next.pendingRef,
-          target,
-          next.factId,
-        ]),
-      )
-      .digest("hex");
-    const requestId = `${hash.slice(0, 8)}-${hash.slice(8, 12)}-8${hash.slice(13, 16)}-a${hash.slice(17, 20)}-${hash.slice(20, 32)}`;
+    const requestId = requestIdentity([
+      "activity-opportunity-v1",
+      next.pendingRef,
+      target,
+      next.factId,
+    ]);
     const dispatch = await options.activities.dispatch({
       requestId,
       subjectId: current.subjectId,

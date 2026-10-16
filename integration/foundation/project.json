@@ -34,7 +34,7 @@
       }
     },
     "typecheck": {
-      "dependsOn": ["^build"],
+      "dependsOn": ["^build", "^typecheck"],
       "executor": "nx:run-commands",
       "options": {
         "command": "tsc --noEmit -p integration/foundation/tsconfig.json"

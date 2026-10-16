@@ -97,6 +97,7 @@ export async function hasCanonicalNativeMessages(
       ).map((ref) => ref.slice(8)),
     ]),
   ];
+  if (!messageRefs.length) return registration.contacts.length === 0;
   const result = await messaging.messageSources({
     messageRefs,
     conversationIds: [conversationId],

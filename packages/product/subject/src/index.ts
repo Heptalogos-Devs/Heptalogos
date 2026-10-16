@@ -6,7 +6,12 @@
  * @packageDocumentation
  */
 export * from "./contracts.js";
-export { createLifeService, assertScopeWithin } from "./life.js";
+export {
+  createLifeService,
+  assertScopeWithin,
+  captureActivityOpportunity,
+  consumeActivityOpportunity,
+} from "./life.js";
 export { subjectProblem } from "./problems.js";
 
 export * from "./agency-contracts.js";

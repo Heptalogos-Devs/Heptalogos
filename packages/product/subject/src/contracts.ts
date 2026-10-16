@@ -118,6 +118,12 @@ export const activitySchema = Type.Object(
 );
 /** Canonical Activity projection. */
 export type LifeActivity = Static<typeof activitySchema>;
+/** Captured by Life outside a write transaction; consumption rechecks the locked Activity. */
+export interface ActivityOpportunity {
+  readonly expectedRevision: number;
+  readonly scheduledAt: Static<typeof worldPointSchema>;
+  readonly world: Static<typeof worldPointSchema>;
+}
 /** An unadopted proposal, including idempotent creation identity. */
 export const proposeActivitySchema = Type.Object(
   {

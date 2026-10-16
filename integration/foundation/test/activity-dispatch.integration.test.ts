@@ -266,38 +266,50 @@ real("trusted Activity native input dispatch", () => {
           expect(params.message).not.toContain("PRIVATE MUST NOT ENTER");
           const usage = sdk.decodeCognitionUsage(saved[0]!.document.registration.usage);
           expect(usage.sourceRead.originConversationRefs).toEqual([
-            params.deliver ? target : waterTarget,
+            saved[0]!.document.registration.opportunity || params.deliver
+              ? target
+              : waterTarget,
           ]);
           expect(usage.sourceRead.sourceRefs).toEqual([
             expect.objectContaining({ kind: "work_context", value: workContextId }),
           ]);
-          const observation = sdk.decodeObservationInput(
-            saved[0]!.document.registration.contacts[0]!.observation,
-          );
-          expect(
-            hasAuthorizedNativeSources(activity, saved[0]!.document.registration),
-          ).toBe(true);
-          const forged = structuredClone(saved[0]!.document.registration);
-          const wrongObservation = sdk.decodeObservationInput(
-            forged.contacts[0]!.observation,
-          );
-          wrongObservation.conversationRef =
-            "conversation:heptalogos:" + privateMessage.conversationId;
-          const forgedContacts = [
-            {
-              ...forged.contacts[0]!,
-              observation: sdk.encodeObservationInput(wrongObservation),
-            },
-          ];
-          expect(
-            hasAuthorizedNativeSources(activity, {
-              ...forged,
-              contacts: forgedContacts,
-            }),
-          ).toBe(false);
-          expect(observation.actorEntityRef).toBe(author.entityRef);
-          expect(observation.occurredTime.value.case).toBe("instant");
-          expect(typeof observation.context.host_received_at).toBe("string");
+          const continuation = saved[0]!.document.registration.opportunity;
+          if (continuation) {
+            expect(params.deliver).toBe(false);
+            expect(saved[0]!.document.registration.contacts).toEqual([]);
+            expect(saved[0]!.document.registration.sourceRefs).toEqual([]);
+            expect(
+              (await life.get(subjectId, activity.activityId))?.nextOpportunity,
+            ).toBeNull();
+          } else {
+            const observation = sdk.decodeObservationInput(
+              saved[0]!.document.registration.contacts[0]!.observation,
+            );
+            expect(
+              hasAuthorizedNativeSources(activity, saved[0]!.document.registration),
+            ).toBe(true);
+            const forged = structuredClone(saved[0]!.document.registration);
+            const wrongObservation = sdk.decodeObservationInput(
+              forged.contacts[0]!.observation,
+            );
+            wrongObservation.conversationRef =
+              "conversation:heptalogos:" + privateMessage.conversationId;
+            const forgedContacts = [
+              {
+                ...forged.contacts[0]!,
+                observation: sdk.encodeObservationInput(wrongObservation),
+              },
+            ];
+            expect(
+              hasAuthorizedNativeSources(activity, {
+                ...forged,
+                contacts: forgedContacts,
+              }),
+            ).toBe(false);
+            expect(observation.actorEntityRef).toBe(author.entityRef);
+            expect(observation.occurredTime.value.case).toBe("instant");
+            expect(typeof observation.context.host_received_at).toBe("string");
+          }
           await native.prepare({
             version: 1,
             subjectId,
@@ -499,6 +511,61 @@ real("trusted Activity native input dispatch", () => {
         ).decision,
       ).toBe("defer");
       expect(dispatch).toHaveBeenCalledTimes(beforeEcho);
+      const emptyInput = { ...input, requestId: randomUUID(), messageRefs: [] };
+      await expect(c.run(() => entry.dispatch(emptyInput))).rejects.toBeDefined();
+      let current = (await life.get(subjectId, activity.activityId))!;
+      current = await c.run(() =>
+        life.progress({
+          subjectId,
+          activityId: current.activityId,
+          expectedRevision: current.revision,
+          progress: {
+            note: "PUBLIC ACTUAL TASK: continue the saved work without new messages",
+            sourceRefs: [],
+            artifactRefs: [],
+            resultRefs: [],
+          },
+          nextOpportunity: {
+            timeDomainRef: "time:real",
+            at: new Date(Date.now() + 60000).toISOString(),
+          },
+        }),
+      );
+      const publicOpportunity = {
+        accountId: "100",
+        conversation: { kind: "group" as const, id: "300" },
+      };
+      expect((await c.run(() => opportunity(publicOpportunity))).decision).toBe(
+        "defer",
+      );
+      await expect(c.run(() => entry.dispatch(emptyInput))).rejects.toBeDefined();
+      current = await c.run(() =>
+        life.progress({
+          subjectId,
+          activityId: current.activityId,
+          expectedRevision: current.revision,
+          progress: current.progress,
+          nextOpportunity: {
+            timeDomainRef: "time:real",
+            at: new Date(Date.now() - 1000).toISOString(),
+          },
+        }),
+      );
+      const beforeContinuation = dispatch.mock.calls.length;
+      const continued = await Promise.all([
+        c.run(() => opportunity(publicOpportunity)),
+        c.run(() => opportunity(publicOpportunity)),
+      ]);
+      expect(continued.some((r) => r.decision === "dispatched")).toBe(true);
+      expect(dispatch).toHaveBeenCalledTimes(beforeContinuation + 1);
+      expect(dispatch.mock.calls.at(-1)![0].deliver).toBe(false);
+      expect(
+        (await life.get(subjectId, current.activityId))?.nextOpportunity,
+      ).toBeNull();
+      expect((await c.run(() => opportunity(publicOpportunity))).decision).toBe(
+        "defer",
+      );
+      expect(dispatch).toHaveBeenCalledTimes(beforeContinuation + 1);
       const sentBeforeRevocation = dispatch.mock.calls.length;
       scope = {
         ...scope,

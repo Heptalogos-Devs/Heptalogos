@@ -9,7 +9,7 @@ const uuid = Type.String({
   pattern:
     "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
 });
-/** Exact selected real messages for an already adopted Activity. */
+/** Exact messages or a due continuation of an already adopted Activity. */
 export const activityDispatchInputSchema = Type.Object(
   {
     requestId: uuid,
@@ -18,7 +18,7 @@ export const activityDispatchInputSchema = Type.Object(
     conversationRef: Type.String({
       pattern: "^conversation:heptalogos:[0-9a-f-]{36}$",
     }),
-    messageRefs: Type.Array(uuid, { minItems: 1, maxItems: 64, uniqueItems: true }),
+    messageRefs: Type.Array(uuid, { maxItems: 64, uniqueItems: true }),
   },
   object,
 );
