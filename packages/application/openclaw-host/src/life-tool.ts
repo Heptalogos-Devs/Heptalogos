@@ -22,12 +22,16 @@ const actions =
     Parameters<ReturnType<typeof createGatewayHostClient>["nativeLife"]>[0]["request"]
   >(nativeLifeActionSchema);
 // Providers require an object at the tool root; the exact action variant is checked before Host access.
-const progress = nativeLifeActionSchema.anyOf[1];
+const variants = nativeLifeActionSchema.anyOf;
+const properties = Object.assign({}, ...variants.map((variant) => variant.properties));
 const parameters = Type.Unsafe({
   type: "object",
   properties: {
-    ...progress.properties,
-    action: { type: "string", enum: ["inspect", "progress"] },
+    ...properties,
+    action: {
+      type: "string",
+      enum: variants.flatMap((variant) => variant.properties.action.enum),
+    },
   },
   required: ["action"],
   additionalProperties: false,
@@ -54,7 +58,7 @@ export function registerLifeTool(
         name: "heptalogos_life",
         label: "Activity life",
         description:
-          "Inspect your current adopted Activity or record your own progress statement and next world opportunity. This does not prove completion or grant permissions. Inspect first for the current revision/world; rest leaves new incoming content unread until its next opportunity.",
+          "Inspect your adopted Activity; read actual Subject-visible life with lifeAt, your prior claims to this actual audience with claimsTo, explain one platform message with explainStatement, or inspect the latest admitted epistemic view. Reads retain existing source references and do not create new witnesses. progress records only your own progress statement and next world opportunity. Never invent a Subject, audience, past event or learned expertise.",
         parameters,
         async execute(toolCallId, args) {
           const parsed = compileSchema<Static<typeof actions>>(actions).validate(args);

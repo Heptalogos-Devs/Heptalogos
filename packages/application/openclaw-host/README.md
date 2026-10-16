@@ -43,3 +43,7 @@ Native discovery/request registries may register another Channel object while th
 ## 原生生活机会调度
 
 `heptalogos-world-schedule`从stdin读取正式`{realAt,wake}`：realAt为经过Nous clock映射的现实UTC节点，null表示禁用；wake携带安装anchor/身份、已有service凭据文件引用及Subject/world/Activity/request身份。它用公开`cron.add`的稳定`declarationKey=heptalogos-life:<Subject>`收敛一份`command` job，delivery为none，不启动模型轮询。该命令执行包内`world-wake-cli.js`，每次重新读取正式discovery并核对安装/boot，再将实际机会交给Host的service-only`/gateway/v1/world/advance`。原生scheduler拥有实际唤醒、进程超时和运行记录，Host不另起timer或重试worker。世界点不能直接作为realAt；暂停或无下一节点须正常禁用投影。
+
+生活工具还提供`lifeAt`（worldId、interval、可选knowledgeCutoff/分页）、`claimsTo`（可选aboutInterval/分页）、`explainStatement`（messageRef）和`epistemic`。身份与听众仍只取实际factory/run绑定；请求没有Subject、role或audience参数。lifeAt读取Subject已知/本次admitted的可见生活，claims只当前实际听众，epistemic只最近实际采用的官方Projection。explain支持平台message ID或同听众canonical message引用。读取保留原来源和Claim状态，不能把adopted草稿当已发送，也不把同一事实读取成新证人。Host在相同原生权限边界核对当前scope，不通过工具旁路世界管理或认知写入。
+
+原生RPC回归默认使用prepare-sdk准备的开发SDK；可通过`HEPTALOGOS_TEST_OPENCLAW_ROOT=/absolute/controlled-openclaw-package`显式指定当前受控包。测试仅复制程序到临时目录并链接其实际依赖，测试插件、配置和状态都在临时实例中，不改共享runtime或已安装Subject。该回归验证真实Gateway/agent/factory的read动作透传和下一run不能继承旧binding；不证明真实角色模型或完整认知链已上线。

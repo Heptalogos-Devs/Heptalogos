@@ -13,6 +13,15 @@ const native = resolve(process.argv[2]!);
 const toolModule = pathToFileURL(resolve(process.argv[3]!)).href;
 const root = await mkdtemp(join(tmpdir(), "native-bindings-"));
 const proof = join(root, "factory.jsonl");
+const readRequest = {
+  action: "lifeAt",
+  worldId: "11111111-2222-4333-8444-555555555555",
+  interval: {
+    timeDomainRef: "time:real",
+    start: "2026-10-16T00:00:00Z",
+    end: "2026-10-16T01:00:00Z",
+  },
+};
 const pluginRoot = join(native, "node_modules/binding-fixture");
 await mkdir(pluginRoot, { recursive: true });
 await writeFile(
@@ -40,7 +49,7 @@ import {registerLifeTool} from ${JSON.stringify(toolModule)};
 export default {id:'binding-fixture',name:'Life fixture',register(api){
  registerLifeTool(api,{nativeLife:async request=>{
  appendFileSync(${JSON.stringify(proof)},JSON.stringify(request)+'\\n');
- return {revision:1,purpose:'Fixture Activity',state:'active',mode:'work',world:{timeDomainRef:'time:real',at:'2026-10-16T00:00:00Z'},nextOpportunity:null,progress:{note:'',sourceRefs:[],artifactRefs:[],resultRefs:[]},feedbackOmitted:false};
+ return {action:'lifeAt',retrievalOnly:true,sourceRefs:['world-event:fixture:known:1'],data:{events:[{content:'The known math class'}]}};
  }});
 }};
 `,
@@ -82,7 +91,7 @@ const provider = createServer((req, res) => {
                     function: {
                       name: "heptalogos_life",
                       arguments: JSON.stringify({
-                        action: "inspect",
+                        ...readRequest,
                         ...(second ? { nativeRunId: "model-forged-previous-run" } : {}),
                       }),
                     },
@@ -112,7 +121,7 @@ const provider = createServer((req, res) => {
               function: {
                 name: "heptalogos_life",
                 arguments: JSON.stringify({
-                  action: "inspect",
+                  ...readRequest,
                   ...(second ? { nativeRunId: "model-forged-previous-run" } : {}),
                 }),
               },
@@ -311,10 +320,11 @@ try {
   assert.equal(entries[0]!.sessionKey, sessionKey);
   assert(entries[0]!.sessionId.length > 0);
   assert(entries[0]!.toolCallId.length > 0);
-  assert.deepEqual(entries[0]!.request, { action: "inspect" });
+  assert.deepEqual(entries[0]!.request, readRequest);
   console.log(
     JSON.stringify({
       nativeAgentRpcLifeTool: "PASS",
+      nativeLifeReadAction: "PASS",
       unboundNextRun: "PASS",
       modelCalls,
       paidCalls: 0,
