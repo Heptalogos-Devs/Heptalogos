@@ -13,6 +13,7 @@ import type {
   worldEventInputSchema,
 } from "./world-contracts.js";
 import type { expandWorldRoutines } from "./world-calendar.js";
+import { worldIntervalBoundaries } from "./world-interval-boundaries.js";
 type Plan = Static<typeof worldScheduleItemSchema>;
 /** A partial participation record does not close the unrecorded remainder of a course. */
 export function scheduleFullyRealized(
@@ -49,16 +50,7 @@ export function realizeRuleSegments(
         Date.parse(event.interval.start) < end &&
         Date.parse(event.interval.end) > start,
     );
-    const boundaries = [
-      ...new Set([
-        start,
-        end,
-        ...related.flatMap((event) => [
-          Math.max(start, Date.parse(event.interval.start)),
-          Math.min(end, Date.parse(event.interval.end)),
-        ]),
-      ]),
-    ].sort((a, b) => a - b);
+    const boundaries = worldIntervalBoundaries(start, end, related);
     for (let index = 1; index < boundaries.length; index++) {
       const left = boundaries[index - 1]!,
         right = boundaries[index]!;

@@ -28,6 +28,7 @@ import {
   type AdoptWorldDeviceView,
 } from "./world-profile-contracts.js";
 import { subjectProblem } from "./problems.js";
+import { worldIntervalBoundaries } from "./world-interval-boundaries.js";
 function conflict(detail: string): never {
   throw subjectProblem(
     "world.living_conflict",
@@ -74,19 +75,12 @@ export function integrateWorldEnergy(
       Date.parse(event.interval.end) > start &&
       Date.parse(event.interval.start) < end,
   );
-  const points = [
-    ...new Set([
-      start,
-      end,
-      ...policies
-        .map((record) => Date.parse(record.policyEffectiveAt.at))
-        .filter((at) => at > start && at < end),
-      ...relevant.flatMap((event) => [
-        Math.max(start, Date.parse(event.interval.start)),
-        Math.min(end, Date.parse(event.interval.end)),
-      ]),
-    ]),
-  ].sort((a, b) => a - b);
+  const points = worldIntervalBoundaries(
+    start,
+    end,
+    relevant,
+    policies.map((record) => Date.parse(record.policyEffectiveAt.at)),
+  );
   let energy = baseline.energy,
     covered = 0,
     totalDuration = 0,
