@@ -13,7 +13,7 @@ const dist = dirname(
 // plugin imports remain exclusively public SDK entrypoints.
 export async function nativeQueue(
   stateDir: string,
-): Promise<ChannelIngressQueue<string>> {
+): Promise<{ queue: ChannelIngressQueue<string>; close: () => boolean }> {
   const provider = (await import(
     pathToFileURL(join(dist, "ingress-queue-C7H3VLUf.js")).href
   )) as {
@@ -23,7 +23,24 @@ export async function nativeQueue(
       stateDir: string;
     }) => ChannelIngressQueue<string>;
   };
-  return provider.t({ channelId: "heptalogos-qq", accountId: "3644596926", stateDir });
+  const state = (await import(
+    pathToFileURL(join(dist, "openclaw-state-db-cache-AunrvrzG.js")).href
+  )) as {
+    _: (options: { env: NodeJS.ProcessEnv }) => string;
+    r: (path: string) => boolean;
+  };
+  const databasePath = state._({
+    env: { ...process.env, OPENCLAW_STATE_DIR: stateDir },
+  });
+  return {
+    queue: provider.t({
+      channelId: "heptalogos-qq",
+      accountId: "3644596926",
+      stateDir,
+    }),
+    // The pinned native owner caches SQLite beyond monitor.stop(); release only this fixture's handle.
+    close: () => state.r(databasePath),
+  };
 }
 export async function nativeRegistry(plugin: ChannelPlugin) {
   const provider = (await import(
