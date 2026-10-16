@@ -3,13 +3,14 @@
 This group contains current Product semantic owners that compose on top of
 Foundation mechanics:
 
-- [`@heptalogos/messaging`](./messaging/README.md) owns the built-in
-  Administrator to Subject Chat conversation and canonical MessageFact path.
+- [`@heptalogos/identity`](./identity/README.md) owns opaque Host Entities and
+  formal account, UID, group and Subject self associations.
+- [`@heptalogos/messaging`](./messaging/README.md) owns native MessageFacts,
+  ordered parts, material state, pending references and scoped reading.
 - [`@heptalogos/subject`](./subject/README.md) owns persistent Subject
   authority and the bounded L4 conversation communication path from Reaction
   through optional CommunicationCommit, Expression, and local reply.
 
-Messaging remains independent of Subject implementation. ProductHost supplies
-the narrow composition callback needed for an accepted inbound fact and joins
-both owners to the existing RuntimeKernel, WorkQueue, DBOS, and Fastify
-surfaces.
+Messaging and Identity remain independent of Subject implementation. The Host
+provides the current fenced Activity; Channel owns protocol work and the Life
+consumer decides actual contact.

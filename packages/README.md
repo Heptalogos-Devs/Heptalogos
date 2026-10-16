@@ -23,7 +23,7 @@ Current groups:
 | [data](./data/README.md)             | Canonical schema and Host-fenced persistence                      | `canonical-schema`, `persistence`                                                                |
 | [runtime](./runtime/README.md)       | In-process substrate and semantic runtime reconciliation          | `runtime-substrate`, `runtime-kernel`                                                            |
 | [execution](./execution/README.md)   | Lineage, evidence, signals, durable work, DBOS, and effects       | `execution-lineage`, `evidence`, `signal`, `work-queue`, `durable-execution`, `effect-operation` |
-| [product](./product/README.md)       | Current Product semantic owners and bounded vertical capabilities | `subject`, `messaging`                                                                           |
+| [product](./product/README.md)       | Current Product semantic owners and bounded vertical capabilities | `subject`, `messaging`, `identity`                                                               |
 
 Each package README owns its package purpose, semantic boundary, public
 surface, verification, and handoffs. Group READMEs own only their local map and

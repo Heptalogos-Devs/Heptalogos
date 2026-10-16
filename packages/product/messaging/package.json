@@ -15,11 +15,9 @@
     }
   },
   "dependencies": {
-    "@heptalogos/evidence": "workspace:*",
-    "@heptalogos/execution-lineage": "workspace:*",
     "@heptalogos/foundation-contracts": "workspace:*",
     "@heptalogos/persistence": "workspace:*",
-    "@heptalogos/time-service": "workspace:*"
+    "@heptalogos/schema-runtime": "workspace:*"
   },
   "devDependencies": {
     "vitest": "catalog:"

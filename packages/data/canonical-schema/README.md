@@ -42,7 +42,10 @@ parallel schema authorities.
 ## Verification
 
 Run `pnpm nx run canonical-schema:test`, lint, typecheck, and the relevant real
-PostgreSQL initialization/integration scenarios. Any baseline rewrite also
+PostgreSQL initialization/integration scenarios. The incremental `0004_messaging_identity` migration preserves existing message
+records while extending their canonical material and identity ownership.
+
+Any baseline rewrite also
 requires the PRE_PRODUCTION reset/recreate procedure and full repository gates.
 
 ## Architecture references

@@ -10,6 +10,8 @@ const source = (group: string, packageName: string, file = "index.js") =>
   resolve(repositoryRoot, "packages", group, packageName, "dist", file);
 
 const aliases = {
+  "@heptalogos/messaging": source("product", "messaging"),
+  "@heptalogos/identity": source("product", "identity"),
   "@heptalogos/foundation-contracts": source("foundation", "foundation-contracts"),
   "@heptalogos/schema-runtime/typebox": source(
     "foundation",
