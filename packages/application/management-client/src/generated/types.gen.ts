@@ -3137,6 +3137,12 @@ export type PendingAttachmentsResponses = {
                 code: string;
                 retryable: boolean;
             };
+            conversation: {
+                platform: string;
+                accountId: string;
+                conversationId: string;
+                kind: 'direct' | 'group';
+            };
         }>;
     };
 };

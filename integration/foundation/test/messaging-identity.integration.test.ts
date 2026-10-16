@@ -261,6 +261,7 @@ real.sequential("native Messaging and Host Identity on real fenced PostgreSQL", 
       const attachment = (
         await c.messaging.listAttachments({ limit: 100 })
       ).attachments.find((a) => a.messageId === first.factId)!;
+      expect(attachment.conversation).toEqual(conversation);
       const acquiring = await c.run(() =>
         c.messaging.updateAttachment({
           attachmentId: attachment.attachmentId,
@@ -352,7 +353,10 @@ real.sequential("native Messaging and Host Identity on real fenced PostgreSQL", 
         (await c.messaging.listAttachments({ limit: 100 })).attachments.some(
           (a) =>
             a.referenceId === reference.referenceId &&
-            a.nodePath?.endsWith("root/child"),
+            a.nodePath?.endsWith("root/child") &&
+            a.conversation.accountId === conversation.accountId &&
+            a.conversation.conversationId === conversation.conversationId &&
+            a.conversation.kind === "group",
         ),
       ).toBe(true);
       const expanded = await c.messaging.prepareRead({

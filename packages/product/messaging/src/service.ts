@@ -36,6 +36,7 @@ import {
   type MessagingService,
   type MessagingServiceOptions,
   type MessageFact,
+  type NativeConversation,
   type MessageAttachment,
   type MessageReference,
   type PrepareReadResult,
@@ -606,16 +607,19 @@ export function createMessagingService(
       check(validators.attachments, input);
       return read(async (tx) => ({
         attachments: (
-          await sql<{ document: unknown }>(
+          await sql<{ document: unknown; conversation: unknown }>(
             tx,
-            `SELECT a.document FROM heptalogos.message_attachment a JOIN heptalogos.message_fact m USING(message_id) WHERE a.state=ANY($1::text[]) AND ($3::uuid[] IS NULL OR m.conversation_id=ANY($3::uuid[])) ORDER BY a.attachment_id LIMIT $2`,
+            `SELECT a.document, m.document->'conversation' AS conversation FROM heptalogos.message_attachment a JOIN heptalogos.message_fact m USING(message_id) WHERE a.state=ANY($1::text[]) AND ($3::uuid[] IS NULL OR m.conversation_id=ANY($3::uuid[])) ORDER BY a.attachment_id LIMIT $2`,
             [
               input.states ?? ["pending", "failed"],
               input.limit,
               input.conversationIds ?? null,
             ],
           )
-        ).map((r) => document<MessageAttachment>(r.document)),
+        ).map((r) => ({
+          ...document<MessageAttachment>(r.document),
+          conversation: document<NativeConversation>(r.conversation),
+        })),
       }));
     },
     async updateAttachment(input) {

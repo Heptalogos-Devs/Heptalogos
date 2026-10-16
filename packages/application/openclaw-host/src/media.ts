@@ -18,6 +18,8 @@ import { nativeId, record } from "./lossless.js";
 /** Downloader limits are real byte/time/concurrency inputs, not advisory metadata. */
 export interface MediaAcquisitionOptions {
   readonly tempRoot: string;
+  /** Actual source envelope group, never inferred from a filename or model argument. */
+  readonly groupId?: string;
   readonly exportRoots: readonly string[];
   readonly maxBytes: number;
   readonly timeoutMs: number;
@@ -99,16 +101,19 @@ export async function acquireProtocolMedia(
   if (identity) {
     const refreshed = await transport
       .read(
-        type === "image" || type === "mface"
-          ? "get_image"
-          : type === "record" || type === "audio"
-            ? "get_record"
-            : "get_file",
+        type === "file" && options.groupId
+          ? "get_group_file_url"
+          : type === "image" || type === "mface"
+            ? "get_image"
+            : type === "record" || type === "audio"
+              ? "get_record"
+              : "get_file",
         {
           [type === "image" || type === "mface" || type === "record" || type === "audio"
             ? "file"
             : "file_id"]: identity,
           ...(type === "record" || type === "audio" ? { out_format: "mp3" } : {}),
+          ...(type === "file" && options.groupId ? { group_id: options.groupId } : {}),
         },
         options.signal,
       )
