@@ -163,6 +163,7 @@ export const realizeWorldSchema = Type.Object(
     expectedRevision: Type.Integer({ minimum: 1 }),
     interval: worldIntervalSchema,
     events: Type.Array(worldEventInputSchema, { maxItems: 128 }),
+    schedule: Type.Optional(Type.Array(worldScheduleItemSchema, { maxItems: 256 })),
     coverage: Type.Union([Type.Literal("complete"), Type.Literal("limited")]),
   },
   object,

@@ -210,7 +210,7 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
       if (
         event.scheduleId &&
         ![
-          ...state.schedule,
+          ...(input.schedule ?? state.schedule),
           ...expandWorldRoutines(state.definition, input.interval).map(
             (value) => value.schedule,
           ),
@@ -282,7 +282,24 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
       );
       events.push(canonical);
     }
-    const next = { ...state, revision: state.revision + 1, updatedAt: at };
+    if (input.schedule)
+      for (const item of input.schedule) {
+        interval(item.interval, state.definition.timeDomainRef);
+        if (
+          !state.definition.places.some((place) => place.placeRef === item.placeRef) ||
+          item.actorRefs.some(
+            (actor) =>
+              !state.definition.actors.some((known) => known.entityRef === actor),
+          )
+        )
+          conflict("A world patch schedule requires adopted entities");
+      }
+    const next = {
+      ...state,
+      schedule: input.schedule ?? state.schedule,
+      revision: state.revision + 1,
+      updatedAt: at,
+    };
     await saveState(tx, next);
     const result = {
       revision: next.revision,
@@ -437,6 +454,16 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
         contactNature: "execution_only" as const,
       };
     },
+    /** Last attempted realization endpoint is scheduling progress, not a complete-coverage claim. */
+    async realizationCursor(subjectId: string, worldId: string) {
+      const rows = await readRepositorySql<{ at: string; domain: string }>(
+        options.persistence,
+        `SELECT document->'interval'->>'end' AS at,document->'interval'->>'timeDomainRef' AS domain FROM heptalogos.world_realization
+WHERE subject_id=$1 AND world_id=$2 AND document->'interval' IS NOT NULL ORDER BY (document->'interval'->>'end')::timestamptz DESC LIMIT 1`,
+        [subjectId, worldId],
+      );
+      return rows[0] ? { timeDomainRef: rows[0].domain, at: rows[0].at } : null;
+    },
     /** Realizes fixed adopted calendar rules, while choices remain actual planner/Subject opportunities. */
     async advanceRules(
       subjectId: string,
@@ -506,6 +533,19 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
             : [],
       }));
       // Calendar rules define only their own slots. Unspecified intervals keep explicit limited coverage.
+      const batchRange =
+        due.length > 128
+          ? {
+              ...range,
+              end: batch.reduce(
+                (latest, item) =>
+                  Date.parse(item.schedule.interval.end) > Date.parse(latest)
+                    ? item.schedule.interval.end
+                    : latest,
+                range.start,
+              ),
+            }
+          : range;
       const patch = {
         operationId: uuidv5(
           `advance:${state.revision}:${range.start}:${range.end}`,
@@ -514,7 +554,7 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
         subjectId,
         worldId,
         expectedRevision: state.revision,
-        interval: range,
+        interval: batchRange,
         events,
         coverage: "limited" as const,
       };
@@ -570,6 +610,21 @@ AND ($6::timestamptz IS NULL OR recorded_at<=$6::timestamptz) ORDER BY document-
           recordedAt: new Date(row.recorded_at).toISOString(),
         })),
       };
+    },
+    /** Filters recent visible state against actual accepted releases in one owner read. */
+    async releasedEventIds(
+      subjectId: string,
+      worldId: string,
+      eventIds: readonly string[],
+    ) {
+      if (eventIds.length > 128)
+        conflict("Release lookups are bounded to the current 128-event view");
+      const rows = await readRepositorySql<{ event_id: string }>(
+        options.persistence,
+        "SELECT event_id FROM heptalogos.world_contact_release WHERE subject_id=$1 AND world_id=$2 AND event_id=ANY($3::uuid[])",
+        [subjectId, worldId, eventIds],
+      );
+      return rows.map((row) => row.event_id);
     },
     /** Retries only contact handoff, never realization or external effects. */
     async pendingContacts(subjectId: string, worldId: string, limit = 64) {

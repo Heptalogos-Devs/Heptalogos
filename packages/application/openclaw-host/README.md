@@ -39,3 +39,7 @@ Native discovery/request registries may register another Channel object while th
 `heptalogos_life` 只在 Host 为实际 agent RPC 附上 `toolBindings.heptalogos = { nativeRunId, activityRef }`，且当前 SDK factory 提供真实 agent/Session 时注册。`inspect` 返回本次已采纳 Activity 的 revision、world、进展和下一处理点；`progress` 只接收主体自身 note、expectedRevision、mode 与下一 world point。身份、授权、来源和成果引用不进入模型参数。Host 检查当前原生 run、已接纳 contact、Activity/Pursuit 与 operator 工具权限；进展引用只取本次真实来源和已提交反馈，note 明确标为主体陈述。
 
 工具需要 operator 和 Activity 同时明确授权 `heptalogos_life`。改变 mode 不完成或暂停当前 Activity，当前 run 可以正常结束。rest 在下一处理点到期前不读取新来信；到期时 Life 以同一 world 与 revision CAS 转回 work，再由既有原生 opportunity 入口继续。wait 保留来信注意语义，也可按已保存下一点继续。模型工具不取得管理或发送权限。
+
+## 原生生活机会调度
+
+`heptalogos-world-schedule`从stdin读取正式`{realAt,wake}`：realAt为经过Nous clock映射的现实UTC节点，null表示禁用；wake携带安装anchor/身份、已有service凭据文件引用及Subject/world/Activity/request身份。它用公开`cron.add`的稳定`declarationKey=heptalogos-life:<Subject>`收敛一份`command` job，delivery为none，不启动模型轮询。该命令执行包内`world-wake-cli.js`，每次重新读取正式discovery并核对安装/boot，再将实际机会交给Host的service-only`/gateway/v1/world/advance`。原生scheduler拥有实际唤醒、进程超时和运行记录，Host不另起timer或重试worker。世界点不能直接作为realAt；暂停或无下一节点须正常禁用投影。

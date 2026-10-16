@@ -361,6 +361,9 @@ importers:
       fastify:
         specifier: 'catalog:'
         version: 5.12.5
+      uuid:
+        specifier: 'catalog:'
+        version: 14.0.2
       write-file-atomic:
         specifier: 'catalog:'
         version: 8.0.0

@@ -13,7 +13,10 @@
     "README.md",
     "LICENSE",
     "NOTICE",
-    "dist/prepare-gateway.js"
+    "dist/prepare-gateway.js",
+    "dist/dispatch.js",
+    "dist/world-schedule.js",
+    "dist/world-wake-cli.js"
   ],
   "exports": {
     ".": {
@@ -57,6 +60,7 @@
   ],
   "bin": {
     "heptalogos-qq-prepare": "./dist/prepare-gateway.js",
-    "heptalogos-qq-dispatch": "./dist/dispatch.js"
+    "heptalogos-qq-dispatch": "./dist/dispatch.js",
+    "heptalogos-world-schedule": "./dist/world-schedule.js"
   }
 }

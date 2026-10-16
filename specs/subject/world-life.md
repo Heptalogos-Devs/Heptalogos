@@ -39,3 +39,7 @@ knowledgeAtWorldTime读取已实现故事中角色截至该世界点的见闻；
 参见[主体活动](subject-base.md)、[叙事与陈述](narrative-claims.md)、[时间](../execution/time.md)。
 
 日历规律保留localStart、durationMinutes、weekdays、validFrom/validUntil、地点/人物和fixed/choice。IANA跳过时间向后平移、重复时间取较早项，均由Temporal处理；发生身份由world/rule/local-date经uuid库固定。prepareAdvance投影前2小时场景与后24小时日程，advanceRules每批最多128事件，未设定/未选择区间保留limited；重复机会读取既有event而不重复实现。
+
+当前`createWorldOpportunity`串联固定规则实现、必要world.planner和Subject审议；世界作者frame与Subject可见材料分开。候选contact构造不代表主体感知；只有真实deliberation provider admission及accepted contact receipt成立才ack世界待接触事件，失败/uncertain保留pending。planner事件producer绑定实际RoleRun，不能由模型自报。后续选择交给Life/Agency的adoptDeliberation消费者。原生cron.command helper投影同Subject唯一声明job，wake按当前安装discovery调用service机会；正式安装组合与真实模型/跨日结果仍需按活动计划验收。
+
+虚拟人物由Identity `resolveWorldActor(worldId,actorKey)`取得稳定canonical EntityRef，跨世界同key不合并，`linkAccount`拒绝为虚拟人物绑定真实协议账号。Subject本人使用ensureSubjectEntity；世界采用adapter需分别核对本人self与其余actor的exact world scope。

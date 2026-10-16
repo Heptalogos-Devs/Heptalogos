@@ -38,7 +38,8 @@
     "write-file-atomic": "catalog:",
     "@heptalogos/subject": "workspace:*",
     "@heptalogos/messaging": "workspace:*",
-    "@heptalogos/identity": "workspace:*"
+    "@heptalogos/identity": "workspace:*",
+    "uuid": "catalog:"
   },
   "devDependencies": {
     "vitest": "catalog:"
