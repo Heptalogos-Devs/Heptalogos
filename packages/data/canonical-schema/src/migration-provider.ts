@@ -27,6 +27,8 @@ import { observationDomainTimeMigration } from "./migrations/0011-observation-do
 import { roleResultsMigration } from "./migrations/0009-role-results.js";
 import { subjectDecisionsMigration } from "./migrations/0012-subject-decisions.js";
 
+import { worldHostLifecycleMigration } from "./migrations/0013-world-host-lifecycle.js";
+
 const migrations: Readonly<Record<string, Migration>> = Object.freeze({
   "0001_foundation_baseline": foundationBaselineMigration,
   "0002_product_gateway_prerequisites": productGatewayPrerequisitesMigration,
@@ -40,6 +42,7 @@ const migrations: Readonly<Record<string, Migration>> = Object.freeze({
   "0010_narrative": narrativeMigration,
   "0011_observation_domain_time": observationDomainTimeMigration,
   "0012_subject_decisions": subjectDecisionsMigration,
+  "0013_world_host_lifecycle": worldHostLifecycleMigration,
 });
 
 /** Provides the current canonical migration set to Kysely's Migrator. */
@@ -63,4 +66,5 @@ export const canonicalMigrationNames = Object.freeze([
   "0010_narrative",
   "0011_observation_domain_time",
   "0012_subject_decisions",
+  "0013_world_host_lifecycle",
 ] as const);

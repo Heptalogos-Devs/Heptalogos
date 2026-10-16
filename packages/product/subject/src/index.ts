@@ -29,3 +29,9 @@ export { expandWorldRoutines, worldOccurrenceId } from "./world-calendar.js";
 
 export * from "./deliberation-contracts.js";
 export { createDeliberationService } from "./deliberation.js";
+
+export {
+  createWorldHostLifecycleService,
+  type WorldHostClock,
+  type WorldHostLifecycleReceipt,
+} from "./world-lifecycle.js";
