@@ -16466,7 +16466,8 @@
                           "partIndex",
                           "source",
                           "revision",
-                          "state"
+                          "state",
+                          "conversation"
                         ],
                         "properties": {
                           "attachmentId": {
@@ -16598,6 +16599,49 @@
                               },
                               "retryable": {
                                 "type": "boolean"
+                              }
+                            },
+                            "additionalProperties": false
+                          },
+                          "conversation": {
+                            "type": "object",
+                            "required": [
+                              "platform",
+                              "accountId",
+                              "conversationId",
+                              "kind"
+                            ],
+                            "properties": {
+                              "platform": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 2048
+                              },
+                              "accountId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 2048
+                              },
+                              "conversationId": {
+                                "type": "string",
+                                "minLength": 1,
+                                "maxLength": 2048
+                              },
+                              "kind": {
+                                "anyOf": [
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "direct"
+                                    ]
+                                  },
+                                  {
+                                    "type": "string",
+                                    "enum": [
+                                      "group"
+                                    ]
+                                  }
+                                ]
                               }
                             },
                             "additionalProperties": false

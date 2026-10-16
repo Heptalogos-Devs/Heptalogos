@@ -92,7 +92,21 @@ export function createQqResourcePump(options: QqResourceOptions): {
               attachment.source.reference,
               readArchive,
             );
+            const parent = attachment.conversation;
+            if (
+              parent.platform !== "qq" ||
+              parent.accountId !== options.accountId ||
+              !current.conversations.some(
+                (conversation) =>
+                  conversation.kind === parent.kind &&
+                  conversation.conversationId === parent.conversationId &&
+                  conversation.receive,
+              )
+            )
+              throw new QqMediaError("source_scope_changed", false);
+            const groupId = parent.kind === "group" ? parent.conversationId : undefined;
             acquired = await acquireProtocolMedia(options.transport, segment, {
+              ...(groupId ? { groupId } : {}),
               tempRoot: options.config.mediaTempRoot,
               exportRoots: options.config.napcatExportRoots,
               maxBytes: options.config.mediaMaxBytes,

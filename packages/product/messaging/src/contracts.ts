@@ -456,9 +456,16 @@ export const pendingAttachmentsInputSchema = Type.Object(
   },
   object,
 );
-/** Returns independent attachment state and protected acquisition source references. */
+/** Returns attachment state, protected acquisition refs and authoritative parent conversation metadata. */
 export const pendingAttachmentsResultSchema = Type.Object(
-  { attachments: Type.Array(attachmentSchema) },
+  {
+    attachments: Type.Array(
+      Type.Object(
+        { ...attachmentSchema.properties, conversation: nativeConversationSchema },
+        object,
+      ),
+    ),
+  },
   object,
 );
 /** Returns unresolved or partially expanded reply/forward references. */
