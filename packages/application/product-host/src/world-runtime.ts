@@ -4,6 +4,7 @@
  * Connects existing world owners to native roles, formal contacts and one native scheduler.
  * @module world-runtime
  */
+import { readActiveLifePage } from "./activity-page.js";
 import { v5 as uuidv5 } from "uuid";
 import { projectWorldDeadline, type NousClient } from "@nous-wave/client";
 import {
@@ -126,12 +127,7 @@ export function createWorldRuntime(options: {
     let fallback:
       { subjectId: string; worldId: string; activityId: string } | undefined;
     do {
-      const page = await options.life.schedule({
-        subjectId,
-        states: ["active"],
-        limit: 128,
-        ...(afterId ? { afterId } : {}),
-      });
+      const page = await readActiveLifePage(options.life, subjectId, afterId);
       for (const activity of page.activities) {
         if (!activity.scope) continue;
         await options.authorize(activity);

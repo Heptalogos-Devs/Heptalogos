@@ -811,23 +811,11 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
             },
           });
         }
-        if (object.owner === "world" && object.kind === "world_entry") {
-          const read = await readInitialSetting(reaction, object.sourceRef, nextRunId);
-          await adoptView(reaction, actionId, {
-            kind: "page",
-            materialRef: object.sourceRef,
-          });
-          return result("completed", [object.sourceRef], {
-            view: {
-              ...input.view,
-              contacts: read.contacts,
-              sourceRefs: [...new Set([...input.view.sourceRefs, object.sourceRef])],
-              context: read.context,
-            },
-          });
-        }
         if (object.owner === "world") {
-          const read = await readWorld(reaction, object, nextRunId);
+          const read =
+            object.kind === "world_entry"
+              ? await readInitialSetting(reaction, object.sourceRef, nextRunId)
+              : await readWorld(reaction, object, nextRunId);
           await adoptView(reaction, actionId, {
             kind: "page",
             materialRef: object.sourceRef,

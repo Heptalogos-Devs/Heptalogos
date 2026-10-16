@@ -7,7 +7,7 @@ import {
   digestCanonicalJson,
   type CanonicalJsonValue,
 } from "@heptalogos/foundation-contracts";
-import { compileSchema } from "@heptalogos/schema-runtime";
+import { createSubjectSchemaReader } from "./checked-schema.js";
 import {
   readRepositorySql,
   executeRepositorySql as sql,
@@ -35,17 +35,14 @@ function denied(detail: string): never {
     detail,
   );
 }
-function checked<T>(schema: Parameters<typeof compileSchema<T>>[0], value: unknown): T {
-  const result = compileSchema<T>(schema).validate(value);
-  if (!result.ok)
-    throw subjectProblem(
-      "reactor.invalid_input",
-      "Invalid Reactor state",
-      "Use the current owner contract",
-      "validation",
-    );
-  return result.value;
-}
+const checked = createSubjectSchemaReader(() => {
+  throw subjectProblem(
+    "reactor.invalid_input",
+    "Invalid Reactor state",
+    "Use the current owner contract",
+    "validation",
+  );
+});
 /** Owns qualifications and receipts; Attention ranks sources and native owners retain actual results. */
 export function createSubjectReactorService(options: SubjectReactorOptions) {
   const readReaction = async (
@@ -121,6 +118,31 @@ export function createSubjectReactorService(options: SubjectReactorOptions) {
   const mutate = <T>(fn: (tx: PersistenceInternalTransaction) => Promise<T>) =>
     options.persistence.mutate((context) =>
       useRepositoryMutationTransaction(context, fn),
+    );
+  const mutateRun = <T>(
+    input: {
+      subjectId: string;
+      activityId: string;
+      focus: ForegroundQualification;
+      runId: string;
+    },
+    budget: boolean,
+    update: (
+      tx: PersistenceInternalTransaction,
+      reaction: SubjectReaction,
+    ) => Promise<T>,
+  ) =>
+    mutate(async (tx) =>
+      update(
+        tx,
+        await assertCurrentIn(
+          tx,
+          input.subjectId,
+          input.activityId,
+          input.focus,
+          budget,
+        ),
+      ),
     );
   const readAction = async (
     subjectId: string,
@@ -362,13 +384,7 @@ export function createSubjectReactorService(options: SubjectReactorOptions) {
       focus: ForegroundQualification;
       runId: string;
     }) {
-      return mutate(async (tx) => {
-        const reaction = await assertCurrentIn(
-          tx,
-          input.subjectId,
-          input.activityId,
-          input.focus,
-        );
+      return mutateRun(input, true, async (tx, reaction) => {
         if (reaction.currentRunId && reaction.currentRunId !== input.runId)
           denied("Another foreground role is still running");
         const claimed = !reaction.currentRunId;
@@ -385,14 +401,7 @@ export function createSubjectReactorService(options: SubjectReactorOptions) {
       focus: ForegroundQualification;
       runId: string;
     }) {
-      return mutate(async (tx) => {
-        const reaction = await assertCurrentIn(
-          tx,
-          input.subjectId,
-          input.activityId,
-          input.focus,
-          false,
-        );
+      return mutateRun(input, false, async (tx, reaction) => {
         if (reaction.currentRunId !== input.runId)
           denied("The completed role is not this foreground's exact pending call");
         const { currentRunId: _, ...settled } = reaction;

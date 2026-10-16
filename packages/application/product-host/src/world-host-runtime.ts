@@ -4,6 +4,7 @@
  * Applies an adopted pause policy through public clock CAS, with retained owner receipts.
  * @module world-host-runtime
  */
+import { readActiveLifePage } from "./activity-page.js";
 import { NousError, type NousClient } from "@nous-wave/client";
 import type {
   createLifeService,
@@ -65,12 +66,7 @@ export function createWorldHostRuntime(options: {
     }
     let afterId: string | undefined;
     do {
-      const page = await options.life.schedule({
-        subjectId,
-        states: ["active"],
-        limit: 128,
-        ...(afterId ? { afterId } : {}),
-      });
+      const page = await readActiveLifePage(options.life, subjectId, afterId);
       for (const activity of page.activities) {
         for (const source of activity.scope?.sourceRefs ?? []) {
           const worldId = /^world:([0-9a-f-]{36})$/i.exec(source)?.[1];

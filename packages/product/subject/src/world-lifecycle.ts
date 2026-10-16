@@ -116,6 +116,48 @@ export function createWorldHostLifecycleService(options: {
       conflict("Use the currently retained Host pause operation");
     return current;
   };
+  const confirmClock = (
+    phase: "pause" | "resume",
+    input: { subjectId: string; operationId: string; clock: WorldHostClock },
+  ) => {
+    valid(input.clock);
+    return change(input.subjectId, (old) => {
+      const current = same(old, input.operationId);
+      const key = phase === "pause" ? "paused" : "resumed";
+      const saved = current[key];
+      if (saved && JSON.stringify(saved) === JSON.stringify(input.clock))
+        return current;
+      const preceding = phase === "pause" ? current.before : current.paused;
+      const receiptError =
+        phase === "pause"
+          ? "Pause confirmation must be the exact CAS mutation receipt"
+          : "Resume confirmation must be the exact CAS mutation receipt";
+      if (!current.before || !preceding)
+        conflict(
+          phase === "pause"
+            ? "A pause receipt needs its actual preceding clock snapshot"
+            : receiptError,
+        );
+      const expectedRate =
+        phase === "pause"
+          ? (current.ratePolicy?.offlineRate ?? 0)
+          : (current.ratePolicy?.onlineRate ?? current.before.rate);
+      if (
+        input.clock.subjectId !== current.subjectId ||
+        input.clock.timeDomainRef !== preceding.timeDomainRef ||
+        input.clock.rate !== expectedRate ||
+        BigInt(input.clock.revision) !== BigInt(preceding.revision) + 1n
+      )
+        conflict(receiptError);
+      return {
+        ...current,
+        [key]: input.clock,
+        status: key,
+        gap: null,
+        updatedAt: options.now(),
+      };
+    });
+  };
   return {
     read,
     async recordRunning(input: {
@@ -225,31 +267,7 @@ export function createWorldHostLifecycleService(options: {
       operationId: string;
       clock: WorldHostClock;
     }) {
-      valid(input.clock);
-      return change(input.subjectId, (old) => {
-        const current = same(old, input.operationId);
-        if (
-          current.paused &&
-          JSON.stringify(current.paused) === JSON.stringify(input.clock)
-        )
-          return current;
-        if (!current.before)
-          conflict("A pause receipt needs its actual preceding clock snapshot");
-        if (
-          input.clock.subjectId !== current.subjectId ||
-          input.clock.timeDomainRef !== current.before.timeDomainRef ||
-          input.clock.rate !== (current.ratePolicy?.offlineRate ?? 0) ||
-          BigInt(input.clock.revision) !== BigInt(current.before.revision) + 1n
-        )
-          conflict("Pause confirmation must be the exact CAS mutation receipt");
-        return {
-          ...current,
-          paused: input.clock,
-          status: "paused",
-          gap: null,
-          updatedAt: options.now(),
-        };
-      });
+      return confirmClock("pause", input);
     },
     async prepareResume(input: {
       subjectId: string;
@@ -284,32 +302,7 @@ export function createWorldHostLifecycleService(options: {
       operationId: string;
       clock: WorldHostClock;
     }) {
-      valid(input.clock);
-      return change(input.subjectId, (old) => {
-        const current = same(old, input.operationId);
-        if (
-          current.resumed &&
-          JSON.stringify(current.resumed) === JSON.stringify(input.clock)
-        )
-          return current;
-        if (
-          !current.before ||
-          !current.paused ||
-          input.clock.subjectId !== current.subjectId ||
-          input.clock.timeDomainRef !== current.paused.timeDomainRef ||
-          input.clock.rate !==
-            (current.ratePolicy?.onlineRate ?? current.before.rate) ||
-          BigInt(input.clock.revision) !== BigInt(current.paused.revision) + 1n
-        )
-          conflict("Resume confirmation must be the exact CAS mutation receipt");
-        return {
-          ...current,
-          resumed: input.clock,
-          status: "resumed",
-          gap: null,
-          updatedAt: options.now(),
-        };
-      });
+      return confirmClock("resume", input);
     },
     async markUnknown(input: {
       subjectId: string;

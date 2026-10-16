@@ -645,5 +645,5 @@ real("One Subject foreground on real PostgreSQL", () => {
     } finally {
       await c.close();
     }
-  });
+  }, 15000);
 });

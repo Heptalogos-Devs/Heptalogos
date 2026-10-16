@@ -11,6 +11,8 @@ import {
 } from "@heptalogos/subject";
 const object = { additionalProperties: false } as const;
 const text = Type.String({ minLength: 1, maxLength: 2048 });
+const readPage = { limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 64 })) };
+const readCursor = Type.Optional(activitySchema.properties.activityId);
 /** Read arguments describe an already authorized owner's query, never a Subject, role or audience grant. */
 export const nativeLifeReadActionSchema = Type.Union([
   Type.Object(
@@ -19,8 +21,8 @@ export const nativeLifeReadActionSchema = Type.Union([
       worldId: activitySchema.properties.activityId,
       interval: worldIntervalSchema,
       knowledgeCutoff: Type.Optional(worldPointSchema),
-      afterEventId: Type.Optional(activitySchema.properties.activityId),
-      limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 64 })),
+      afterEventId: readCursor,
+      ...readPage,
     },
     object,
   ),
@@ -28,8 +30,8 @@ export const nativeLifeReadActionSchema = Type.Union([
     {
       action: Type.Literal("claimsTo"),
       aboutInterval: Type.Optional(worldIntervalSchema),
-      afterClaimId: Type.Optional(activitySchema.properties.activityId),
-      limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 64 })),
+      afterClaimId: readCursor,
+      ...readPage,
     },
     object,
   ),
