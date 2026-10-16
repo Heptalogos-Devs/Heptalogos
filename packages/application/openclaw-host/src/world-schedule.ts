@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Projects the next real due point through the public native cron command API. @module world-schedule */
+/**
+ * Projects the next real due point through the public native cron command API.
+ * @module world-schedule
+ */
 import { callGatewayFromCli } from "openclaw/plugin-sdk/gateway-runtime";
 import { fileURLToPath } from "node:url";
 import { validateWorldWake } from "./world-wake.js";

@@ -1,6 +1,9 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Actual Reactor reads and native opportunity projection through generated transport. @module reactor-operations */
+/**
+ * Actual Reactor reads and native opportunity projection through generated transport.
+ * @module reactor-operations
+ */
 import * as api from "./generated/index.js";
 import type * as wire from "./generated/types.gen.js";
 import type { createClient } from "./generated/client/index.js";

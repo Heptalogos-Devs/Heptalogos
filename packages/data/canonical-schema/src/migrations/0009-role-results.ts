@@ -1,9 +1,13 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Execution-only result custody and explicit bounded Subject release. @module role-results-migration */
+/**
+ * Execution-only result custody and explicit bounded Subject release.
+ * @module role-results-migration
+ */
 import { sql, type Kysely } from "kysely";
 import type { Migration } from "kysely/migration";
 import type { CanonicalDatabase } from "../migration-pool.js";
+/** Retains execution results until explicit authorized Subject release. */
 export const roleResultsMigration: Migration = {
   async up(db: Kysely<CanonicalDatabase>): Promise<void> {
     await sql

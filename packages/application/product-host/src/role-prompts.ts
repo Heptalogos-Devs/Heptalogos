@@ -1,6 +1,9 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Versioned product duties; source data stays separate from these templates. @module role-prompts */
+/**
+ * Versioned product duties; source data stays separate from these templates.
+ * @module role-prompts
+ */
 import type { SubjectRoleBinding } from "@heptalogos/management";
 /** Roles are duties of one persistent Subject, never a second cognition store. */
 export const ROLE_PROMPTS: Readonly<

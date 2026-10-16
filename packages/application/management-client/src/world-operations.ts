@@ -1,6 +1,9 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Schema-generated world operations share the existing authenticated gateway client. @module world-operations */
+/**
+ * Schema-generated world operations share the existing authenticated gateway client.
+ * @module world-operations
+ */
 import * as api from "./generated/index.js";
 import type * as wire from "./generated/types.gen.js";
 import type { createClient } from "./generated/client/index.js";

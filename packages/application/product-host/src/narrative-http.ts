@@ -1,6 +1,9 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Read-only narrative management uses canonical claims and actual delivery receipts. @module narrative-http */
+/**
+ * Read-only narrative management uses canonical claims and actual delivery receipts.
+ * @module narrative-http
+ */
 import type { FastifyInstance } from "fastify";
 import { Type, type Static, type TSchema } from "@heptalogos/schema-runtime/typebox";
 import {

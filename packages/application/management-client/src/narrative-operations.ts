@@ -1,6 +1,9 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Read-only narrative calls use the schema-generated shared transport. @module narrative-operations */
+/**
+ * Read-only narrative calls use the schema-generated shared transport.
+ * @module narrative-operations
+ */
 import * as api from "./generated/index.js";
 import type * as wire from "./generated/types.gen.js";
 import type { createClient } from "./generated/client/index.js";

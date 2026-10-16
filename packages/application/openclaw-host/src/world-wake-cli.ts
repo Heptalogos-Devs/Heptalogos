@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Installed deterministic command entry; secret contents never appear in argv or output. @module world-wake-cli */
+/**
+ * Installed deterministic command entry; secret contents never appear in argv or output.
+ * @module world-wake-cli
+ */
 import { wakeWorld } from "./world-wake.js";
 try {
   process.stdin.setEncoding("utf8");

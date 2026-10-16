@@ -1,6 +1,9 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Explicit administrator Clock operations through the sole official Nous Client. @module world-clock */
+/**
+ * Explicit administrator Clock operations through the sole official Nous Client.
+ * @module world-clock
+ */
 import { NousError, type NousClient } from "@nous-wave/client";
 import { managementProblem } from "@heptalogos/management";
 import { timestampFromDate } from "@nous-wave/client/host-bridge";

@@ -1,6 +1,9 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Normal authenticated commands for the actual Subject foreground and metadata choices. @module commands/reactor */
+/**
+ * Normal authenticated commands for the actual Subject foreground and metadata choices.
+ * @module commands/reactor
+ */
 import { Args, Flags } from "@oclif/core";
 import { BaseCommand, CliFailure, toCliFailure } from "../base-command.js";
 import { openOperatorGateway } from "../gateway-access.js";
@@ -21,6 +24,7 @@ export default class Reactor extends BaseCommand {
     "operation-ref": Flags.string({ description: "wake 的明确幂等操作引用" }),
     limit: Flags.integer({ min: 1, max: 128, default: 32 }),
   };
+  /** Executes the selected authenticated operator request. */
   async run() {
     const { args, flags } = await this.parse(Reactor);
     return this.execute(

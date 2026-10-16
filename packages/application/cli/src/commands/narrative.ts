@@ -1,6 +1,9 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Queries adopted claims and actual statement receipts without writing product truth. @module commands/narrative */
+/**
+ * Queries adopted claims and actual statement receipts without writing product truth.
+ * @module commands/narrative
+ */
 import { Args, Flags } from "@oclif/core";
 import { BaseCommand, CliFailure, toCliFailure } from "../base-command.js";
 import { openOperatorGateway } from "../gateway-access.js";
@@ -25,6 +28,7 @@ export default class Narrative extends BaseCommand {
     "after-claim-id": Flags.string(),
     limit: Flags.integer({ min: 1, max: 128, default: 50 }),
   };
+  /** Executes the selected authenticated operator request. */
   async run() {
     const { flags, args } = await this.parse(Narrative);
     return this.execute(

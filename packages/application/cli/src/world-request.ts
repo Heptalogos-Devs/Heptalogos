@@ -1,6 +1,9 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Builds explicit world owner requests from ordinary CLI flags. @module world-request */
+/**
+ * Builds explicit world owner requests from ordinary CLI flags.
+ * @module world-request
+ */
 import { CliFailure } from "./base-command.js";
 /** CLI names route to generated owner operations; none of them reads private storage. */
 export const worldOperations = {

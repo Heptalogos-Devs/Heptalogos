@@ -1,6 +1,9 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Completes normal service startup with the existing native scheduling entry. @module service-reactor */
+/**
+ * Completes normal service startup with the existing native scheduling entry.
+ * @module service-reactor
+ */
 import { randomUUID } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 import { openLocalManagementClient } from "@heptalogos/management-client/node";

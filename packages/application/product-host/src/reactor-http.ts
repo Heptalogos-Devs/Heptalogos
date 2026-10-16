@@ -1,6 +1,9 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Authenticated reads of actual foreground, saved attention choices and effective policy. @module reactor-http */
+/**
+ * Authenticated reads of actual foreground, saved attention choices and effective policy.
+ * @module reactor-http
+ */
 import type { FastifyInstance } from "fastify";
 import { Type, type Static, type TSchema } from "@heptalogos/schema-runtime/typebox";
 import {

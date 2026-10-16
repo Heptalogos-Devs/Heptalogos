@@ -1,6 +1,9 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Service-only native scheduler entry; ordinary chat has no management authority. @module world-opportunity-http */
+/**
+ * Service-only native scheduler entry; ordinary chat has no management authority.
+ * @module world-opportunity-http
+ */
 import { Type, type Static } from "@heptalogos/schema-runtime/typebox";
 import { readWorldSchema } from "@heptalogos/subject";
 import { managementProblem, managementProblemSchema } from "@heptalogos/management";

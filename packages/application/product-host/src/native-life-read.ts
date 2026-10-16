@@ -1,6 +1,9 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Reads canonical life/claims for the actual bound native caller without recording new observations. @module native-life-read */
+/**
+ * Reads canonical life/claims for the actual bound native caller without recording new observations.
+ * @module native-life-read
+ */
 import { decodeProjection, encodeProjection } from "@nous-wave/client/host-bridge";
 import type { createWorldLifeService } from "@heptalogos/subject";
 import type { MessagingService } from "@heptalogos/messaging";

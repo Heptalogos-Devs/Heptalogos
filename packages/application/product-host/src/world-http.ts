@@ -1,6 +1,9 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Registers authenticated world operations using the world owner's schemas. @module world-http */
+/**
+ * Registers authenticated world operations using the world owner's schemas.
+ * @module world-http
+ */
 import { managementProblem, managementProblemSchema } from "@heptalogos/management";
 import {
   resolveWorldActorInputSchema,

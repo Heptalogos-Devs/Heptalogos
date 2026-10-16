@@ -1,6 +1,9 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Explicit world operations through the same local administrator and generated Gateway client. @module commands/world */
+/**
+ * Explicit world operations through the same local administrator and generated Gateway client.
+ * @module commands/world
+ */
 import { Args, Flags } from "@oclif/core";
 import { readFile, stat } from "node:fs/promises";
 import { BaseCommand, CliFailure, toCliFailure } from "../base-command.js";
@@ -64,6 +67,7 @@ export default class World extends BaseCommand {
       description: "从标准输入读取完整 JSON 请求",
     }),
   };
+  /** Executes the selected authenticated operator request. */
   async run() {
     const { flags, args } = await this.parse(World);
     const operation = args.operation as keyof typeof worldOperations;
