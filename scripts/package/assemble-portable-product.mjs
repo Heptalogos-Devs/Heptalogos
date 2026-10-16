@@ -487,7 +487,7 @@ async function collectPackageLicenses(roots) {
           // pnpm licenses can report a virtual-store path for a hoisted install.
           // Resolve only the exact installed name/version, including nested copies.
           const packageJsons = [...paths]
-            .sort()
+            .sort((left, right) => left.localeCompare(right))
             .map((path) =>
               relative(root, join(path, "package.json")).split(sep).join("/"),
             );
