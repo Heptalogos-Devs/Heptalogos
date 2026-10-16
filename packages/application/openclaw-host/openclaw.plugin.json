@@ -6,6 +6,11 @@
   "channels": [
     "heptalogos-qq"
   ],
+  "contracts": {
+    "tools": [
+      "heptalogos_life"
+    ]
+  },
   "configSchema": {
     "type": "object",
     "required": [

@@ -58,7 +58,7 @@ async function admitSelected(
 }
 const real = qualifiedPgBin ? describe : describe.skip;
 afterEach(cleanupCanonicalPostgresFixtures);
-async function fixture() {
+async function fixture(tools = ["read"]) {
   const c = await composeProductPersistence();
   const subjectId = randomUUID();
   const actor = `entity:subject:${randomUUID()}`;
@@ -71,7 +71,7 @@ async function fixture() {
         operations: ["observe" as const, "send" as const],
       },
     ],
-    tools: ["read"],
+    tools,
     sourceRefs: ["occurrence:registered"],
     maxRunMs: 60000,
   };
@@ -788,6 +788,145 @@ real("native external checks do not occupy the fenced input transaction", () => 
       expect(rows[0]!.count).toBe(0);
     } finally {
       release?.();
+      await f.c.close();
+    }
+  }, 120000);
+});
+
+real("native Life bound to the current admitted run", () => {
+  it("records only Host selected/committed references, preserves active mode, and fences stale/cross-run/grant changes", async () => {
+    const f = await fixture(["read", "heptalogos_life"]);
+    try {
+      const prepared = await f.c.run(() => f.bridge.prepare(f.input));
+      await admitSelected(f, prepared);
+      const base = {
+        nativeRunId: f.input.native.runId,
+        activityRef: f.activity.activityId,
+        nativeAgentId: f.input.native.agentId,
+        sessionKey: f.input.native.sessionKey,
+        sessionId: f.input.native.sessionId,
+        toolCallId: "actual-sdk-life-call",
+      };
+      const view = await f.c.run(() =>
+        f.bridge.life({ ...base, request: { action: "inspect" } }),
+      );
+      for (const bad of [
+        { nativeRunId: randomUUID() },
+        { activityRef: randomUUID() },
+        { sessionId: "other-native-session" },
+        { nativeAgentId: "worker" },
+        { sessionKey: "another-run" },
+      ])
+        await expect(
+          f.c.run(() =>
+            f.bridge.life({ ...base, ...bad, request: { action: "inspect" } }),
+          ),
+        ).rejects.toMatchObject({
+          problem: { problemCode: "gateway.native_life_unavailable" },
+        });
+      await expect(
+        f.c.run(() =>
+          f.bridge.life({
+            ...base,
+            request: { action: "inspect", sourceRefs: ["invented"] } as never,
+          }),
+        ),
+      ).rejects.toBeDefined();
+      await expect(
+        f.c.run(() =>
+          f.bridge.life({
+            ...base,
+            request: {
+              action: "progress",
+              note: "claim",
+              expectedRevision: view.revision,
+              mode: "rest",
+              nextOpportunity: {
+                timeDomainRef: "wrong-world",
+                at: new Date().toISOString(),
+              },
+            },
+          }),
+        ),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "life.time_domain_unavailable" },
+      });
+      // An actual committed tool fact, not its text, is the only added result evidence.
+      const observationRequestId = randomUUID(),
+        occurrenceId = randomUUID(),
+        artifactId = randomUUID();
+      await f.c.run(() =>
+        f.bridge.feedback({
+          ...sdk.hostContactIdentitySchema.strip().parse(f.input),
+          stage: "pending",
+          observation: sdk.encodeObservationInput({
+            requestId: observationRequestId,
+            subjectId: f.input.subjectId,
+            sessionId: f.input.nousSessionId,
+            sourceClass: "tool",
+            observedAt: sdk.timestampFromDate(new Date()),
+            material: {
+              case: "inlineText",
+              value: { text: "ACTUAL SYNTHETIC TOOL RESULT", mediaType: "text/plain" },
+            },
+          }),
+        }),
+      );
+      await f.c.run(() =>
+        f.bridge.feedback({
+          ...sdk.hostContactIdentitySchema.strip().parse(f.input),
+          stage: "committed",
+          observationRequestId,
+          receipt: sdk.encodeAcceptedObservation({ occurrenceId, artifactId }),
+        }),
+      );
+      const progress = {
+        action: "progress" as const,
+        note: "I am resting until the next point",
+        expectedRevision: view.revision,
+        mode: "rest" as const,
+        nextOpportunity: {
+          timeDomainRef: view.world.timeDomainRef,
+          at: new Date(Date.now() + 60000).toISOString(),
+        },
+      };
+      const result = await f.c.run(() => f.bridge.life({ ...base, request: progress }));
+      expect(result).toMatchObject({
+        state: "active",
+        mode: "rest",
+        progress: {
+          note: "Subject progress statement: " + progress.note,
+          sourceRefs: f.registration.sourceRefs,
+          artifactRefs: ["artifact:" + artifactId],
+          resultRefs: ["occurrence:" + occurrenceId],
+        },
+      });
+      await expect(
+        f.c.run(() => f.bridge.life({ ...base, request: progress })),
+      ).rejects.toMatchObject({ problem: { problemCode: "life.conflict" } });
+      expect(
+        (
+          await f.c.run(() =>
+            f.bridge.life({ ...base, request: { action: "inspect" } }),
+          )
+        ).revision,
+      ).toBe(result.revision);
+      // External checks finish outside the mutation fence; a revocation during them wins locally.
+      f.setExternalCheck(async () => {
+        f.revoke();
+      });
+      await expect(
+        f.c.run(() =>
+          f.bridge.life({
+            ...base,
+            request: { ...progress, expectedRevision: result.revision },
+          }),
+        ),
+      ).rejects.toBeDefined();
+      expect(
+        (await f.life.get(f.input.subjectId, f.activity.activityId))?.revision,
+      ).toBe(result.revision);
+    } finally {
       await f.c.close();
     }
   }, 120000);

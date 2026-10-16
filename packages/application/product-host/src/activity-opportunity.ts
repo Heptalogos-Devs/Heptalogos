@@ -48,7 +48,7 @@ export function createActivityOpportunity(options: {
   readonly enabled: () => Promise<boolean>;
   readonly life: Pick<
     ReturnType<typeof createLifeService>,
-    "schedule" | "takeAttention" | "worldNow"
+    "schedule" | "takeAttention" | "worldNow" | "resumeDue"
   >;
   readonly messaging: Pick<
     MessagingService,
@@ -94,6 +94,27 @@ export function createActivityOpportunity(options: {
       states: ["active"],
       limit: 128,
     });
+    const world = await options.life.worldNow(current.subjectId);
+    for (let i = 0; i < schedule.activities.length; i++) {
+      const quiet = schedule.activities[i]!;
+      if (
+        quiet.mode === "work" ||
+        !quiet.scope?.conversations.some(
+          (c) => c.conversationRef === target && c.operations.includes("observe"),
+        )
+      )
+        continue;
+      if (!captureActivityOpportunity({ ...quiet, mode: "work" }, world)) continue;
+      // Life owns the quiet -> work CAS; a concurrent progress update cannot be overwritten.
+      schedule.activities[i] = await options.life.resumeDue(
+        {
+          subjectId: quiet.subjectId,
+          activityId: quiet.activityId,
+          expectedRevision: quiet.revision,
+        },
+        world,
+      );
+    }
     if (schedule.activities.some((a) => a.mode === "rest")) return { decision: "rest" };
     const activity = schedule.activities.find(
       (a) =>
@@ -108,7 +129,6 @@ export function createActivityOpportunity(options: {
     const pending = await options.messaging.listPending({ conversationId, limit: 128 });
     const next = pending.pending.find((p) => p.kind === "message");
     if (!next) {
-      const world = await options.life.worldNow(current.subjectId);
       const due = schedule.activities.find(
         (a) =>
           a.scope?.conversations.some(

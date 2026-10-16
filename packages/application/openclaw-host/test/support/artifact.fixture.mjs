@@ -219,11 +219,18 @@ if (process.argv.includes("--actual-loader")) {
     (item) => item.plugin.id === "heptalogos-qq",
   )?.plugin;
   assert.ok(channel, JSON.stringify(registry.diagnostics));
+  assert.ok(
+    registry.tools.some((tool) => tool.names.includes("heptalogos_life")),
+    JSON.stringify(registry.diagnostics),
+  );
 } else {
   entry.register({
     pluginConfig: config,
     registrationMode: "full",
     logger: { warn: (code) => failures.push(code) },
+    registerTool: (factory) => {
+      assert.equal(factory({}), null, "Unbound factory cannot expose Life");
+    },
     registerChannel: (value) => {
       channel = value.plugin;
     },

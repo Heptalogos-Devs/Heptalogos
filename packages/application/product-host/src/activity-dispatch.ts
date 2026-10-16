@@ -342,6 +342,7 @@ export function createActivityDispatcher(options: ActivityDispatchOptions) {
         sessionKey: route.sessionKey,
         message: prompt,
         idempotencyKey: nativeRunId,
+        toolBindings: { heptalogos: { nativeRunId, activityRef: activity.activityId } },
         timeout: Math.max(1, Math.ceil(activity.scope.maxRunMs / 1000)),
         ...(deliver
           ? {

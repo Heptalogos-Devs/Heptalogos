@@ -30204,6 +30204,28 @@
                         "type": "null"
                       }
                     ]
+                  },
+                  "mode": {
+                    "anyOf": [
+                      {
+                        "type": "string",
+                        "enum": [
+                          "work"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "rest"
+                        ]
+                      },
+                      {
+                        "type": "string",
+                        "enum": [
+                          "wait"
+                        ]
+                      }
+                    ]
                   }
                 },
                 "additionalProperties": false
@@ -33800,6 +33822,849 @@
                     "version",
                     "accepted"
                   ],
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "problemCode",
+                    "category",
+                    "retryClass",
+                    "schemaVersion"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "problemCode": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "type": "string"
+                    },
+                    "retryClass": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "immediate"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "backoff"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "after-change"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "manual"
+                          ]
+                        }
+                      ]
+                    },
+                    "schemaVersion": {
+                      "type": "number",
+                      "enum": [
+                        1
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "problemCode",
+                    "category",
+                    "retryClass",
+                    "schemaVersion"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "problemCode": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "type": "string"
+                    },
+                    "retryClass": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "immediate"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "backoff"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "after-change"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "manual"
+                          ]
+                        }
+                      ]
+                    },
+                    "schemaVersion": {
+                      "type": "number",
+                      "enum": [
+                        1
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "problemCode",
+                    "category",
+                    "retryClass",
+                    "schemaVersion"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "problemCode": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "type": "string"
+                    },
+                    "retryClass": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "immediate"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "backoff"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "after-change"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "manual"
+                          ]
+                        }
+                      ]
+                    },
+                    "schemaVersion": {
+                      "type": "number",
+                      "enum": [
+                        1
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "problemCode",
+                    "category",
+                    "retryClass",
+                    "schemaVersion"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "problemCode": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "type": "string"
+                    },
+                    "retryClass": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "immediate"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "backoff"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "after-change"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "manual"
+                          ]
+                        }
+                      ]
+                    },
+                    "schemaVersion": {
+                      "type": "number",
+                      "enum": [
+                        1
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "problemCode",
+                    "category",
+                    "retryClass",
+                    "schemaVersion"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "problemCode": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "type": "string"
+                    },
+                    "retryClass": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "immediate"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "backoff"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "after-change"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "manual"
+                          ]
+                        }
+                      ]
+                    },
+                    "schemaVersion": {
+                      "type": "number",
+                      "enum": [
+                        1
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "problemCode",
+                    "category",
+                    "retryClass",
+                    "schemaVersion"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "problemCode": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "type": "string"
+                    },
+                    "retryClass": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "immediate"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "backoff"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "after-change"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "manual"
+                          ]
+                        }
+                      ]
+                    },
+                    "schemaVersion": {
+                      "type": "number",
+                      "enum": [
+                        1
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/gateway/v1/native/life": {
+      "post": {
+        "operationId": "nativeLife",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "nativeRunId",
+                  "activityRef",
+                  "nativeAgentId",
+                  "sessionKey",
+                  "sessionId",
+                  "toolCallId",
+                  "request"
+                ],
+                "properties": {
+                  "nativeRunId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+                  },
+                  "activityRef": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+                  },
+                  "nativeAgentId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048
+                  },
+                  "sessionKey": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048
+                  },
+                  "sessionId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048
+                  },
+                  "toolCallId": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 2048
+                  },
+                  "request": {
+                    "anyOf": [
+                      {
+                        "type": "object",
+                        "required": [
+                          "action"
+                        ],
+                        "properties": {
+                          "action": {
+                            "type": "string",
+                            "enum": [
+                              "inspect"
+                            ]
+                          }
+                        },
+                        "additionalProperties": false
+                      },
+                      {
+                        "type": "object",
+                        "required": [
+                          "action",
+                          "note",
+                          "expectedRevision",
+                          "nextOpportunity",
+                          "mode"
+                        ],
+                        "properties": {
+                          "action": {
+                            "type": "string",
+                            "enum": [
+                              "progress"
+                            ]
+                          },
+                          "note": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 4000
+                          },
+                          "expectedRevision": {
+                            "type": "integer",
+                            "minimum": 1
+                          },
+                          "nextOpportunity": {
+                            "anyOf": [
+                              {
+                                "type": "object",
+                                "required": [
+                                  "timeDomainRef",
+                                  "at"
+                                ],
+                                "properties": {
+                                  "timeDomainRef": {
+                                    "type": "string",
+                                    "minLength": 1,
+                                    "maxLength": 2048
+                                  },
+                                  "at": {
+                                    "type": "string",
+                                    "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?Z$"
+                                  }
+                                },
+                                "additionalProperties": false
+                              },
+                              {
+                                "type": "null"
+                              }
+                            ]
+                          },
+                          "mode": {
+                            "anyOf": [
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "work"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "rest"
+                                ]
+                              },
+                              {
+                                "type": "string",
+                                "enum": [
+                                  "wait"
+                                ]
+                              }
+                            ]
+                          }
+                        },
+                        "additionalProperties": false
+                      }
+                    ]
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "gatewayService": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "revision",
+                    "purpose",
+                    "state",
+                    "mode",
+                    "world",
+                    "nextOpportunity",
+                    "progress",
+                    "feedbackOmitted"
+                  ],
+                  "properties": {
+                    "revision": {
+                      "type": "integer",
+                      "minimum": 1
+                    },
+                    "purpose": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 4096
+                    },
+                    "state": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "planned"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "active"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "paused"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "completed"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "cancelled"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "failed"
+                          ]
+                        }
+                      ]
+                    },
+                    "mode": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "work"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "rest"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "wait"
+                          ]
+                        }
+                      ]
+                    },
+                    "world": {
+                      "type": "object",
+                      "required": [
+                        "timeDomainRef",
+                        "at"
+                      ],
+                      "properties": {
+                        "timeDomainRef": {
+                          "type": "string",
+                          "minLength": 1,
+                          "maxLength": 2048
+                        },
+                        "at": {
+                          "type": "string",
+                          "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?Z$"
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "nextOpportunity": {
+                      "anyOf": [
+                        {
+                          "type": "object",
+                          "required": [
+                            "timeDomainRef",
+                            "at"
+                          ],
+                          "properties": {
+                            "timeDomainRef": {
+                              "type": "string",
+                              "minLength": 1,
+                              "maxLength": 2048
+                            },
+                            "at": {
+                              "type": "string",
+                              "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?Z$"
+                            }
+                          },
+                          "additionalProperties": false
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    },
+                    "progress": {
+                      "type": "object",
+                      "required": [
+                        "note",
+                        "sourceRefs",
+                        "artifactRefs",
+                        "resultRefs"
+                      ],
+                      "properties": {
+                        "note": {
+                          "type": "string",
+                          "maxLength": 8192
+                        },
+                        "sourceRefs": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 2048
+                          },
+                          "maxItems": 128,
+                          "uniqueItems": true
+                        },
+                        "artifactRefs": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 2048
+                          },
+                          "maxItems": 128,
+                          "uniqueItems": true
+                        },
+                        "resultRefs": {
+                          "type": "array",
+                          "items": {
+                            "type": "string",
+                            "minLength": 1,
+                            "maxLength": 2048
+                          },
+                          "maxItems": 128,
+                          "uniqueItems": true
+                        }
+                      },
+                      "additionalProperties": false
+                    },
+                    "feedbackOmitted": {
+                      "type": "boolean"
+                    }
+                  },
                   "additionalProperties": false
                 }
               }

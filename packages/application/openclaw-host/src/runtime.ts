@@ -19,6 +19,7 @@ import { OneBotPresence } from "./presence.js";
 import { OneBotTransport } from "./transport.js";
 import { createQqResourcePump } from "./resources.js";
 import { synchronizeQqHistory, type HistoryEnvelope } from "./history-sync.js";
+import { registerLifeTool } from "./life-tool.js";
 import { resolveQqNativeRoute } from "./routing.js";
 
 type StartContext = Parameters<QqChannelOptions["startAccount"]>[0];
@@ -31,6 +32,7 @@ export function registerQqChannel(api: OpenClawPluginApi): void {
     hostAnchorRoot: config.hostAnchorRoot,
     serviceToken: readServiceToken(config.serviceTokenFile),
   });
+  registerLifeTool(api, host);
   const report = (code: string) => api.logger.warn(`QQ channel: ${code}`);
   const receivePolicy = (scope: Awaited<ReturnType<typeof host.gatewayScope>>) =>
     new QqScopePolicy(

@@ -5,6 +5,7 @@
  * Typed service-only client over schema-generated Host operations.
  * @module gateway-client
  */
+export { nativeLifeActionSchema } from "./generated/native-life-schema.gen.js";
 import { createPursuitOperations } from "./pursuit-operations.js";
 import * as api from "./generated/index.js";
 import type * as wire from "./generated/types.gen.js";
@@ -45,6 +46,8 @@ export function createGatewayHostClient(options: GatewayHostClientOptions) {
   };
   return Object.freeze({
     ...createPursuitOperations(requestGateway),
+    nativeLife: (body: wire.NativeLifeData["body"]) =>
+      requestGateway((base) => api.nativeLife({ ...base, body })),
     registerChannelRoute: (body: wire.RegisterChannelRouteData["body"]) =>
       requestGateway((base) => api.registerChannelRoute({ ...base, body })),
 

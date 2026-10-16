@@ -33,3 +33,9 @@ node scripts/prepare-sdk.mjs /absolute/path/to/official-runtime
 `heptalogos-qq-dispatch` 从 stdin 接收 Host 已预登记的原生 agent 参数，使用正式 SDK 执行单次派发并等待实际终态。配置、状态和凭据沿该原生实例的环境提供，命令行不携带消息或密钥；未知结果不自动重试。
 
 Native discovery/request registries may register another Channel object while the actual account is already running. QQ resolves that account through the public SDK named runtime store, scoped to installation/account, rather than a registration-local delivery closure. Startup claims synchronously before awaiting prerequisites; another lifecycle cannot create a parallel sender. Shutdown disables new adapter use while draining and releases only its own lifecycle identity. Custody and Host begin/record remain on the original message adapter.
+
+## Activity Life 工具
+
+`heptalogos_life` 只在 Host 为实际 agent RPC 附上 `toolBindings.heptalogos = { nativeRunId, activityRef }`，且当前 SDK factory 提供真实 agent/Session 时注册。`inspect` 返回本次已采纳 Activity 的 revision、world、进展和下一处理点；`progress` 只接收主体自身 note、expectedRevision、mode 与下一 world point。身份、授权、来源和成果引用不进入模型参数。Host 检查当前原生 run、已接纳 contact、Activity/Pursuit 与 operator 工具权限；进展引用只取本次真实来源和已提交反馈，note 明确标为主体陈述。
+
+工具需要 operator 和 Activity 同时明确授权 `heptalogos_life`。改变 mode 不完成或暂停当前 Activity，当前 run 可以正常结束。rest 在下一处理点到期前不读取新来信；到期时 Life 以同一 world 与 revision CAS 转回 work，再由既有原生 opportunity 入口继续。wait 保留来信注意语义，也可按已保存下一点继续。模型工具不取得管理或发送权限。

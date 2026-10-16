@@ -56,6 +56,7 @@ await writeFile(
       description: "Host-governed first-party QQ channel",
       version: pkg.version,
       channels: ["heptalogos-qq"],
+      contracts: { tools: ["heptalogos_life"] },
       configSchema: qqPluginConfigSchema,
     },
     null,
