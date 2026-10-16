@@ -569,6 +569,11 @@ export function createMessagingService(
               JSON.stringify(transactionLineage(context)),
             ],
           );
+        await sql(
+          tx,
+          `UPDATE heptalogos.messaging_pending SET completed=true WHERE kind='message' AND fact_id=ANY($1::uuid[])`,
+          [input.messageRefs],
+        );
       });
     },
     async listPending(input) {
