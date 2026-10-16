@@ -37,7 +37,7 @@ export const nativeLifeReadActionSchema = Type.Union([
   Type.Object({ action: Type.Literal("epistemic") }, object),
 ]);
 /** No Subject, source, artifact, permission or result identity comes from model arguments. */
-export const nativeLifeActionSchema = Type.Union([
+const nativeLifeActionSchema = Type.Union([
   Type.Object({ action: Type.Literal("inspect") }, object),
   Type.Object(
     {
@@ -55,7 +55,7 @@ export const nativeLifeActionSchema = Type.Union([
   nativeLifeReadActionSchema.anyOf[3],
 ]);
 /** Read results are derived uses of existing canonical sources, not fresh external testimony. */
-export const nativeLifeReadResponseSchema = Type.Object(
+const nativeLifeReadResponseSchema = Type.Object(
   {
     action: Type.Union([
       Type.Literal("lifeAt"),
@@ -96,6 +96,7 @@ const nativeLifeActivityResponseSchema = Type.Object(
   },
   object,
 );
+/** Each native read retains its actual discriminated owner response. */
 export const nativeLifeResponseSchema = Type.Union([
   nativeLifeActivityResponseSchema,
   nativeLifeReadResponseSchema,

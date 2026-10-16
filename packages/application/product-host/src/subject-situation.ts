@@ -35,7 +35,10 @@ import {
   decodeAcceptedObservation,
   type HostPrepareResponse,
 } from "@nous-wave/client/host-bridge";
-import type { createNativeCognitionBridge } from "./native-cognition.js";
+import type {
+  NativeRoleResults,
+  createNativeCognitionBridge,
+} from "./native-cognition.js";
 import type { createActivityDispatcher } from "./activity-dispatch.js";
 import type { createSubjectRoles } from "./subject-roles.js";
 import type { createSubjectDecisionHandler } from "./subject-decisions.js";
@@ -853,7 +856,7 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
             reaction.subjectId,
             releaseId,
           );
-          const retained = previous
+          const retained: NativeRoleResults | undefined = previous
             ? undefined
             : await options.native.readRoleResults(reaction.subjectId, childRunId);
           const generated = retained?.results.filter(

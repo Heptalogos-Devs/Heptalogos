@@ -24,7 +24,10 @@ import {
   decodeCognitionUsage,
   type HostPrepareResponse,
 } from "@nous-wave/client/host-bridge";
-import type { createNativeCognitionBridge } from "./native-cognition.js";
+import type {
+  NativeAppliedContext,
+  createNativeCognitionBridge,
+} from "./native-cognition.js";
 import type { createSubjectRoles } from "./subject-roles.js";
 const namespace = "99bf4a61-c35f-4b41-a405-d0c3feef100f";
 /** Stable phase identities prevent a handler retry from replaying paid work or effects. */
@@ -204,7 +207,9 @@ export function createSubjectDecisionHandler(options: {
           "Use the exact adopted subjective source run",
         );
       const decision = adopted.decision;
-      const applied = await options.native.readAppliedContext(input.run.runId);
+      const applied: NativeAppliedContext = await options.native.readAppliedContext(
+        input.run.runId,
+      );
       if (!applied)
         denied(
           "subject.cognition_not_admitted",

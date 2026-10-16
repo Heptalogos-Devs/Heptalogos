@@ -92,7 +92,7 @@ const SCOPE: Readonly<Record<SubjectRoleBinding["role"], HostRoleScope>> = {
   },
 };
 /** Trusted role binding maps product duty to its exact native identity and knowledge view. */
-export function roleScope(role: SubjectRoleBinding["role"]): HostRoleScope {
+function roleScope(role: SubjectRoleBinding["role"]): HostRoleScope {
   return { ...SCOPE[role] };
 }
 function denied(code: string, detail: string): never {
@@ -105,7 +105,7 @@ function denied(code: string, detail: string): never {
   );
 }
 /** Reads only the pinned native public agent response shape, keeping raw data in protected persistence. */
-export function nativeRoleText(raw: unknown): string {
+function nativeRoleText(raw: unknown): string {
   if (!raw || typeof raw !== "object" || Array.isArray(raw))
     denied(
       "role.native_result_invalid",

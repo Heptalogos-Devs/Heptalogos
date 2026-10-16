@@ -21,7 +21,7 @@ import {
 } from "@nous-wave/client/host-bridge";
 import type { Registration } from "./native-cognition.js";
 /** Only the original entry setting is readable; actor secrets, rules and the rest of the profile stay out. */
-export function initialSettingMaterial(profile: AdoptedWorldProfile) {
+function initialSettingMaterial(profile: AdoptedWorldProfile) {
   return {
     kind: "initial_setting",
     worldId: profile.worldId,

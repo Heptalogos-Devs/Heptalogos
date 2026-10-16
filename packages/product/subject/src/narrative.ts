@@ -167,7 +167,7 @@ export function validateNarrativeCandidate(
   }
 }
 /** Dependencies are existing semantic owners, with one actual trusted review invocation. */
-export interface NarrativeOptions {
+interface NarrativeOptions {
   readonly persistence: PersistenceService;
   readonly life: Pick<ReturnType<typeof createLifeService>, "progressIn">;
   readonly decisions: Pick<ReturnType<typeof createDeliberationService>, "read">;

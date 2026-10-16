@@ -18,7 +18,7 @@ export interface InstalledNativeOptions {
   readonly signal: AbortSignal;
 }
 /** One real projection into the existing native scheduler. */
-export interface NativeWorldScheduleInput {
+interface NativeWorldScheduleInput {
   readonly realAt: string | null;
   readonly subjectId: string;
   readonly worldId?: string;
