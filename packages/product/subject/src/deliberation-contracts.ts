@@ -31,22 +31,18 @@ export const decisionExpressionIntentSchema = Type.Object(
 /** One bounded subjective choice; accompanying expression is explicit and never inferred from its action. */
 export const deliberationDecisionSchema = Type.Object(
   {
-    action: Type.Union(
-      (
-        [
-          "continue_activity",
-          "observe",
-          "defer",
-          "decline",
-          "ask",
-          "communicate",
-          "learn",
-          "delegate",
-          "initiate_activity",
-          "rest",
-        ] as const
-      ).map((value) => Type.Literal(value)),
-    ),
+    action: Type.Union([
+      Type.Literal("continue_activity"),
+      Type.Literal("observe"),
+      Type.Literal("defer"),
+      Type.Literal("decline"),
+      Type.Literal("ask"),
+      Type.Literal("communicate"),
+      Type.Literal("learn"),
+      Type.Literal("delegate"),
+      Type.Literal("initiate_activity"),
+      Type.Literal("rest"),
+    ]),
     reason: summary,
     nextOpportunity: Type.Optional(Type.Union([worldPointSchema, Type.Null()])),
     expressionIntent: Type.Optional(decisionExpressionIntentSchema),
@@ -65,7 +61,7 @@ export const adoptDeliberationSchema = Type.Object(
     operationId: id,
     subjectId: id,
     activityId: id,
-    sourceRunId: id,
+    sourceRunId: ref,
     expectedActivityRevision: Type.Integer({ minimum: 1 }),
     decision: deliberationDecisionSchema,
   },
@@ -81,7 +77,7 @@ export const decisionCommitSchema = Type.Object(
     operationId: id,
     subjectId: id,
     activityId: id,
-    sourceRunId: id,
+    sourceRunId: ref,
     previousActivityRevision: Type.Integer({ minimum: 1 }),
     activityRevision: Type.Integer({ minimum: 1 }),
     decision: deliberationDecisionSchema,

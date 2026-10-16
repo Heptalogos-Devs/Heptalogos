@@ -19,7 +19,7 @@ real("Subject DecisionCommit under real fenced PostgreSQL", () => {
   it("adopts one exact choice under CAS, retains explicit rest expression and replays canonical decisions without live dependencies", async () => {
     const current = await composeProductPersistence();
     const subjectId = randomUUID(),
-      sourceRunId = randomUUID(),
+      sourceRunId = "native:subject:deliberation:" + randomUUID(),
       world = { timeDomainRef: "school", at: "2026-10-16T12:00:00.000Z" };
     const authority = {
       conversations: [],
@@ -242,7 +242,7 @@ real("Subject DecisionCommit under real fenced PostgreSQL", () => {
   it("rolls back an already updated Life mode when the same decision transaction fails", async () => {
     const current = await composeProductPersistence();
     const subjectId = randomUUID(),
-      sourceRunId = randomUUID(),
+      sourceRunId = "native:subject:deliberation:" + randomUUID(),
       world = { timeDomainRef: "school", at: "2026-10-16T12:00:00.000Z" },
       scope = { conversations: [], sourceRefs: [], tools: [], maxRunMs: 60000 };
     const life = createLifeService({

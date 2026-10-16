@@ -12,7 +12,7 @@ export const subjectDecisionsMigration: Migration = {
         `
 CREATE TABLE heptalogos.subject_decision (
  decision_id uuid PRIMARY KEY,subject_id uuid NOT NULL,activity_id uuid NOT NULL REFERENCES heptalogos.life_activity(activity_id),
- operation_id uuid NOT NULL,source_run_id uuid NOT NULL,request_digest text NOT NULL,
+ operation_id uuid NOT NULL,source_run_id text NOT NULL,request_digest text NOT NULL,
  document jsonb NOT NULL CHECK(jsonb_typeof(document)='object'),adopted_at timestamptz NOT NULL,lineage_context_ref jsonb NOT NULL,
  UNIQUE(subject_id,operation_id)
 );
