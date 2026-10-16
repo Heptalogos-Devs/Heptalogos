@@ -62,7 +62,10 @@ async function admitSelected(
 }
 const real = qualifiedPgBin ? describe : describe.skip;
 afterEach(cleanupCanonicalPostgresFixtures);
-async function fixture(tools = ["read"]) {
+async function fixture(
+  tools = ["read"],
+  readLife?: NativeCognitionOptions["readLife"],
+) {
   const c = await composeProductPersistence();
   const subjectId = randomUUID();
   const actor = `entity:subject:${randomUUID()}`;
@@ -141,6 +144,7 @@ async function fixture(tools = ["read"]) {
     persistence: c.persistence,
     life,
     now,
+    ...(readLife ? { readLife } : {}),
     resolveChildProviderPolicy: async () => ({
       tokenBudget: { inputTokens: 8192, outputTokens: 2048 },
       allowedToolNames: tools,
@@ -934,6 +938,94 @@ real("native external checks do not occupy the fenced input transaction", () => 
 });
 
 real("native Life bound to the current admitted run", () => {
+  it("uses admitted owner reads without a new external root and fences permission changes", async () => {
+    let duringRead = async () => {};
+    const readLife = vi.fn<NonNullable<NativeCognitionOptions["readLife"]>>(
+      async (_binding, request) => {
+        await duringRead();
+        return {
+          action: request.action,
+          retrievalOnly: true,
+          sourceRefs: ["claim:canonical"],
+          data: { existing: true },
+        };
+      },
+    );
+    const f = await fixture(["heptalogos_life"], readLife);
+    try {
+      const prepared = await f.c.run(() => f.bridge.prepare(f.input));
+      await admitSelected(f, prepared);
+      const base = {
+        nativeRunId: f.input.native.runId,
+        activityRef: f.activity.activityId,
+        nativeAgentId: f.input.native.agentId,
+        sessionKey: f.input.native.sessionKey,
+        sessionId: f.input.native.sessionId,
+        toolCallId: "actual-read",
+        request: { action: "epistemic" as const },
+      };
+      await expect(f.c.run(() => f.bridge.life(base))).resolves.toMatchObject({
+        retrievalOnly: true,
+      });
+      expect(readLife.mock.calls[0]![0]).toMatchObject({
+        subjectId: f.input.subjectId,
+        nativeRunId: f.input.native.runId,
+        role: "subject.deliberation",
+        admittedProjection: { consumerId: "consumer:fixture" },
+      });
+      const pending = await f.c.run(() =>
+        f.bridge.feedback({
+          ...sdk.hostContactIdentitySchema.strip().parse(f.input),
+          stage: "pending",
+          observation: sdk.encodeObservationInput({
+            requestId: randomUUID(),
+            subjectId: f.input.subjectId,
+            sessionId: f.input.nousSessionId,
+            sourceClass: "tool",
+            observedAt: sdk.timestampFromDate(new Date()),
+            context: { tool_name: "heptalogos_life", tool_call_id: "actual-read" },
+            material: {
+              case: "inlineText",
+              value: { text: "existing owner projection", mediaType: "text/plain" },
+            },
+          }),
+        }),
+      );
+      expect(pending).toMatchObject({ retainedOnly: true });
+      const forged = await f.c.run(() =>
+        f.bridge.feedback({
+          ...sdk.hostContactIdentitySchema.strip().parse(f.input),
+          stage: "pending",
+          observation: sdk.encodeObservationInput({
+            requestId: randomUUID(),
+            subjectId: f.input.subjectId,
+            sessionId: f.input.nousSessionId,
+            sourceClass: "tool",
+            observedAt: sdk.timestampFromDate(new Date()),
+            context: {
+              tool_name: "heptalogos_life",
+              tool_call_id: "toString",
+              retrievalOnly: true,
+            },
+            material: {
+              case: "inlineText",
+              value: { text: "unproven read payload", mediaType: "text/plain" },
+            },
+          }),
+        }),
+      );
+      expect(forged).toMatchObject({ retainedOnly: false });
+      expect(f.recordObservation).not.toHaveBeenCalled();
+      duringRead = async () => {
+        f.revoke();
+      };
+      await expect(
+        f.c.run(() => f.bridge.life({ ...base, toolCallId: "revoked-read" })),
+      ).rejects.toBeDefined();
+    } finally {
+      await f.c.close();
+    }
+  }, 120000);
   it("records only Host selected/committed references, preserves active mode, and fences stale/cross-run/grant changes", async () => {
     const f = await fixture(["read", "heptalogos_life"]);
     try {

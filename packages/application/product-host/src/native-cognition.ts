@@ -67,7 +67,13 @@ import { hasAuthorizedNativeSources } from "./native-source-selection.js";
 import {
   nativeLifeRequestSchema,
   type NativeLifeRequest,
+  type NativeLifeReadAction,
+  type NativeLifeReadResponse,
 } from "./native-life-contracts.js";
+import {
+  isNativeLifeReadAction,
+  type BoundLifeReadBinding,
+} from "./native-life-read.js";
 import type { GatewayCognitionBridge } from "./gateway-http.js";
 
 /** Persisted exact native-run selection; only the trusted Host may construct it. */
@@ -168,9 +174,22 @@ type Contact = {
   messageRefs: readonly string[];
   admitted?: HostAdmittedRequest;
   appliedUsage?: HostPrepareResponse["usage"];
+  lifeReads?: Record<
+    string,
+    {
+      requestDigest: string;
+      action: NativeLifeReadAction["action"];
+      sourceRefs: readonly string[];
+      completed?: true;
+    }
+  >;
 };
+const lifeReadTrace = (contact: Contact, toolCallId: string) =>
+  contact.lifeReads && Object.hasOwn(contact.lifeReads, toolCallId)
+    ? contact.lifeReads[toolCallId]
+    : undefined;
 type Pending = {
-  origin?: "agency_delivery";
+  origin?: "agency_delivery" | "life_retrieval";
   identity: Omit<HostPrepareRequest, "promptDigest">;
   observation: HostPrepareResponse["contacts"][number]["observation"];
   factsDigest: string;
@@ -183,6 +202,10 @@ export interface NativeCognitionOptions {
     ReturnType<typeof createLifeService>,
     "get" | "worldNow" | "progressIn"
   >;
+  readonly readLife?: (
+    binding: BoundLifeReadBinding,
+    request: NativeLifeReadAction,
+  ) => Promise<NativeLifeReadResponse>;
   readonly now: () => string;
   /** Existing product role configuration supplies the actual execution profile policy. */
   readonly resolveChildProviderPolicy?: (
@@ -1204,6 +1227,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         );
         if (
           results.length !== input.resultIds.length ||
+          results.some((row) => row.document.origin === "life_retrieval") ||
           Buffer.byteLength(JSON.stringify(results)) > 1048576
         )
           deny(
@@ -1403,7 +1427,91 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         );
       await checkInput(preflight.registration);
       const world = await options.life.worldNow(preflight.registration.subjectId);
+      const readAction = isNativeLifeReadAction(input.request)
+        ? input.request
+        : undefined;
+      const readActivity = readAction
+        ? await options.life.get(preflight.registration.subjectId, input.activityRef)
+        : undefined;
+      const readContacts = readAction
+        ? await readRepositorySql<{ document: Contact }>(
+            options.persistence,
+            "SELECT document FROM heptalogos.life_native_contact WHERE run_id=$1 AND contact_request_id=$2",
+            [input.nativeRunId, preflight.latestAppliedContactRequestId ?? null],
+          )
+        : [];
+      const readContact = readContacts[0]?.document;
+      let readResult: NativeLifeReadResponse | undefined;
+      if (readAction) {
+        if (
+          !options.readLife ||
+          !readActivity?.scope ||
+          !readContact?.admitted ||
+          !readContact.appliedUsage ||
+          !readContact.response.allowedToolNames.includes("heptalogos_life") ||
+          !readActivity.scope.tools.includes("heptalogos_life")
+        )
+          deny(
+            "native_life_unavailable",
+            "Life reads require an actual admitted invocation and configured owner reader",
+          );
+        await options.authorizeInput(preflight.registration, readActivity);
+        // Save the actual owner action before querying, so even a failed read is
+        // derived retrieval rather than fresh external testimony. No result body
+        // is published until the current authority is checked again below.
+        await mutate(async (tx) => {
+          const contact = await contactIn(tx, readContact.request);
+          const trace = {
+            requestDigest: digest(readAction),
+            action: readAction.action,
+            sourceRefs: [],
+          };
+          const previous = lifeReadTrace(contact, input.toolCallId);
+          if (previous && previous.requestDigest !== trace.requestDigest)
+            deny(
+              "native_life_changed",
+              "The actual Life tool call changed its owner read action",
+            );
+          const lifeReads = {
+            ...contact.lifeReads,
+            [input.toolCallId]: previous ?? trace,
+          };
+          if (Object.keys(lifeReads).length > 256)
+            deny(
+              "native_life_limit",
+              "This admitted invocation exhausted its bounded Life reads",
+            );
+          await sql(
+            tx,
+            "UPDATE heptalogos.life_native_contact SET document=jsonb_set(document,'{lifeReads}',$2::jsonb) WHERE contact_request_id=$1",
+            [contact.request.contactRequestId, JSON.stringify(lifeReads)],
+          );
+        });
+        const usage = decodeCognitionUsage(readContact.appliedUsage);
+        readResult = await options.readLife(
+          {
+            subjectId: preflight.registration.subjectId,
+            activityId: input.activityRef,
+            nativeRunId: input.nativeRunId,
+            role: roleScope(preflight.registration).role,
+            ...(usage.audience?.conversationRef
+              ? { audienceConversationRef: usage.audience.conversationRef }
+              : {}),
+            sourceRefs: preflight.registration.sourceRefs.filter(
+              (ref) =>
+                !ref.startsWith("world:") ||
+                readActivity.scope!.sourceRefs.includes(ref),
+            ),
+            world,
+            admittedProjection: readContact.admitted.projection,
+          },
+          readAction,
+        );
+      }
       return mutate(async (tx) => {
+        await sql(tx, "SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
+          preflight.registration.subjectId,
+        ]);
         await sessionLock(tx, input.sessionKey);
         const rows = await sql<{ state: string; document: NativeRunSnapshot }>(
           tx,
@@ -1432,8 +1540,8 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           deny("native_tool_denied", "Life is outside this Activity's adopted tools");
         const contacts = await sql<{ document: Contact }>(
           tx,
-          "SELECT document FROM heptalogos.life_native_contact WHERE run_id=$1 AND document ? 'admitted' ORDER BY recorded_at DESC,contact_request_id DESC LIMIT 1",
-          [input.nativeRunId],
+          "SELECT document FROM heptalogos.life_native_contact WHERE run_id=$1 AND contact_request_id=$2 FOR UPDATE",
+          [input.nativeRunId, run.document.latestAppliedContactRequestId ?? null],
         );
         const contact = contacts[0]?.document;
         if (
@@ -1445,13 +1553,54 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
             "native_life_unavailable",
             "Life requires the actual admitted controlled invocation",
           );
+        if (readAction && readResult) {
+          if (
+            digest(activity.scope) !== digest(readActivity?.scope) ||
+            contact.request.contactRequestId !==
+              readContact?.request.contactRequestId ||
+            digest(contact.appliedUsage) !== digest(readContact?.appliedUsage)
+          )
+            deny(
+              "native_life_scope_changed",
+              "The actual admitted contact or Activity scope changed while reading",
+            );
+          const trace = {
+            requestDigest: digest(readAction),
+            action: readAction.action,
+            sourceRefs: readResult.sourceRefs,
+            completed: true as const,
+          };
+          const previous = lifeReadTrace(contact, input.toolCallId);
+          if (previous?.completed && digest(previous) !== digest(trace))
+            deny(
+              "native_life_changed",
+              "An actual Life tool call cannot change its read request or canonical sources",
+            );
+          const lifeReads = { ...contact.lifeReads, [input.toolCallId]: trace };
+          if (Object.keys(lifeReads).length > 256)
+            deny(
+              "native_life_limit",
+              "This admitted provider invocation has exhausted its bounded Life reads",
+            );
+          await sql(
+            tx,
+            "UPDATE heptalogos.life_native_contact SET document=jsonb_set(document,'{lifeReads}',$2::jsonb) WHERE contact_request_id=$1",
+            [contact.request.contactRequestId, JSON.stringify(lifeReads)],
+          );
+          return readResult;
+        }
         if (
           input.request.action === "progress" &&
-          run.document.registration.role !== "main"
+          roleScope(run.document.registration).role !== "subject.deliberation"
         )
           deny(
             "native_life_role_denied",
-            "A worker may inspect but cannot change the parent Activity",
+            "Only the Subject deliberation role may change its Activity",
+          );
+        if (isNativeLifeReadAction(input.request))
+          deny(
+            "native_life_unavailable",
+            "The owner read did not produce a guarded result",
           );
         // Only real committed feedback can support progress; the note remains a Subject statement.
         const feedback = await sql<{
@@ -1728,8 +1877,17 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
               contactRequestId: input.contactRequestId,
             }),
           );
-          if (contact.response.roleScope.contactNature === "execution_only") {
+          const retrieval =
+            observation.sourceClass === "tool" &&
+            observation.context?.tool_name === "heptalogos_life" &&
+            typeof observation.context.tool_call_id === "string" &&
+            !!lifeReadTrace(contact, observation.context.tool_call_id);
+          if (
+            contact.response.roleScope.contactNature === "execution_only" ||
+            retrieval
+          ) {
             const document: Pending = {
+              ...(retrieval ? { origin: "life_retrieval" as const } : {}),
               identity: identity(input),
               observation: normalized,
               factsDigest: actualFeedback(normalized),
