@@ -46,6 +46,8 @@ Life/Agency 已有正式 owner 和 PostgreSQL 迁移；活动 CAS、重启进展
 
 每次自然机会最多选择一条持久 pending message；持久 pendingRef+conversation+message 生成稳定 UUID request/nativeRunId，重复机会复用原生持久 claim。进入该 owner 的 completed/uncertain/dispatching 结果后原 pending 完成，由原 native owner 保留回执/不确定性；不重新发送。撤回内容通过 metadata 跳过，不产生 Observation。真实 PostgreSQL 回归覆盖两条在采纳之后的新来信、并发机会、重复机会与撤销 send 后的静默。
 
+显式 Activity 批量派发与自然机会共用 Messaging 的实际接触边界：Host 在原生输入被 admitted 后记录精确 message contact，并在同一事务中完成这些消息的 pending，避免自然机会重复回应已读批次。prepareRead、选源或未 admitted 的输入不完成 pending；未接触消息和平台事件继续保留待处理，既有材料仍可按权限重读。
+
 观察和发送分别检查：仅 observe 的目标（包括群 1072706649）仍可派发学习/处理，参数固定 `deliver=false`，不附带 channel/accountId/to，不产生外发；结果保留于 Host/Nous。仅 Activity 与当前 operator 都允许该目标 send 时，才使用 `deliver=true` 和准确渠道/账号/目标。同一 Activity 同时包含观察群和测试群时，每次 sourceRead origin 与材料仍仅属于本次目标。底层 Agency/QQ adapter 的发送拒绝保持不变。
 
 ## Pursuit 与正式条件评价

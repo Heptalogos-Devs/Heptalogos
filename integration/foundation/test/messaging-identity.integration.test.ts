@@ -370,6 +370,11 @@ real.sequential("native Messaging and Host Identity on real fenced PostgreSQL", 
         )?.nodes,
       ).toHaveLength(2);
       expect(JSON.stringify(expanded)).not.toContain("protected");
+      expect(
+        (await c.messaging.listPending({ limit: 100 })).pending.some(
+          (p) => p.kind === "message" && p.factId === first.factId,
+        ),
+      ).toBe(true);
       await c.run(() =>
         c.messaging.recordContact({
           subjectId: audience.subjectId,
@@ -378,6 +383,26 @@ real.sequential("native Messaging and Host Identity on real fenced PostgreSQL", 
           observedAt: "2026-10-15T15:01:00.000Z",
         }),
       );
+      const afterContact = (await c.messaging.listPending({ limit: 100 })).pending;
+      expect(afterContact.some((p) => p.factId === first.factId)).toBe(false);
+      expect(afterContact.some((p) => p.factId === more[0]!.results[0]!.factId)).toBe(
+        true,
+      );
+      await expect(
+        c.run(() =>
+          c.messaging.recordContact({
+            subjectId: audience.subjectId,
+            contactId: "failed-contact",
+            messageRefs: [more[0]!.results[0]!.factId, createCanonicalMessageId()],
+            observedAt: "2026-10-15T15:01:00.000Z",
+          }),
+        ),
+      ).rejects.toThrow();
+      expect(
+        (await c.messaging.listPending({ limit: 100 })).pending.some(
+          (p) => p.factId === more[0]!.results[0]!.factId,
+        ),
+      ).toBe(true);
       const retract = (native: string, key: string) => ({
         kind: "event" as const,
         conversation,
