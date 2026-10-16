@@ -739,6 +739,52 @@ real("physical delivery feedback", () => {
       expect(renderPrepared.contacts).toEqual([]);
       expect(renderPrepared.allowedToolNames).toEqual([]);
       await admitSelected({ ...f, input: renderInput }, renderPrepared);
+      const firstApplied = await f.bridge.readAppliedContext(renderRunId);
+      expect(firstApplied).toMatchObject({
+        runId: renderRunId,
+        contactRequestId: renderInput.contactRequestId,
+        roleScope: renderer.roleScope,
+      });
+      expect(sdk.decodeProjection(firstApplied.projection).usage).toEqual(
+        sdk.decodeCognitionUsage(firstApplied.usage),
+      );
+      const secondInput = {
+        ...renderInput,
+        contactRequestId: randomUUID(),
+        invocationId: "renderer-next-actual-step",
+      };
+      const secondPrepared = await f.c.run(() => f.bridge.prepare(secondInput));
+      const secondProjection = sdk.encodeProjection({
+        projectionId: randomUUID(),
+        consumerId: "consumer:fixture",
+        subjectId: secondInput.subjectId,
+        sessionId: secondInput.nousSessionId,
+        usage: sdk.decodeCognitionUsage(secondPrepared.usage),
+        segments: [
+          {
+            segmentId: "actual-current",
+            domain: "runtime",
+            text: "ACTUAL NOUS PROJECTION",
+          },
+        ],
+      });
+      await f.c.run(() =>
+        f.bridge.admitted({
+          ...sdk.hostContactIdentitySchema.strip().parse(secondInput),
+          projection: secondProjection,
+          occurrences: [],
+        }),
+      );
+      await f.c.run(() =>
+        f.bridge.admitted({
+          ...sdk.hostContactIdentitySchema.strip().parse(renderInput),
+          projection: firstApplied.projection,
+          occurrences: [],
+        }),
+      );
+      expect((await f.bridge.readAppliedContext(renderRunId)).projection).toEqual(
+        secondProjection,
+      );
       const rawResultId = randomUUID();
       const raw = await f.c.run(() =>
         f.bridge.feedback({
@@ -1273,6 +1319,30 @@ real("native child completion causality", () => {
             invocationId: "cross-role",
             promptDigest: switched.promptDigest,
             native: { ...f.input.native, runId: switchedRun },
+          }),
+        ),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_role_history_changed" },
+      });
+      const otherAudienceRun = randomUUID();
+      const otherAudience = await f.c.run(() =>
+        f.bridge.registerInput({
+          ...f.registration,
+          nativeRunId: otherAudienceRun,
+          usage: {
+            ...f.registration.usage,
+            audience: { ...f.registration.usage.audience!, visibility: "internal" },
+          },
+        }),
+      );
+      await expect(
+        f.c.run(() =>
+          f.bridge.prepare({
+            ...f.input,
+            contactRequestId: randomUUID(),
+            invocationId: "cross-audience",
+            promptDigest: otherAudience.promptDigest,
+            native: { ...f.input.native, runId: otherAudienceRun },
           }),
         ),
       ).rejects.toMatchObject({

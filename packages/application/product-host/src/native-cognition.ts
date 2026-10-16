@@ -117,6 +117,7 @@ export interface NativeRunSnapshot {
   readonly nousSessionId: string;
   readonly consumerId?: string;
   readonly appliedUsage?: HostPrepareResponse["usage"];
+  readonly latestAppliedContactRequestId?: string;
 }
 /** Execution output for trusted Host orchestration, without Subject ingestion. */
 export interface NativeRoleResults {
@@ -126,6 +127,15 @@ export interface NativeRoleResults {
     observation: Record<string, CanonicalJsonValue>;
   }[];
   readonly omitted: boolean;
+}
+/** Official admitted Projection wire and actual caller metadata; no second cognition DTO. */
+export interface NativeAppliedContext {
+  readonly runId: string;
+  readonly contactRequestId: string;
+  readonly invocationId: string;
+  readonly roleScope: HostRoleScope;
+  readonly projection: HostAdmittedRequest["projection"];
+  readonly usage: HostPrepareResponse["usage"];
 }
 function dispatchResult(
   saved: StoredInput,
@@ -435,6 +445,8 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
     ): Promise<ActivityDispatchResult>;
     /** Trusted Host reads execution output; this operation creates no Subject contact. */
     readRoleResults(subjectId: string, runId: string): Promise<NativeRoleResults>;
+    /** Trusted Host reads what Nous actually applied, including its official EpistemicView. */
+    readAppliedContext(runId: string): Promise<NativeAppliedContext>;
     readRun: typeof readRun;
     recordDeliveryFact(fact: AgencyDeliveryFact): Promise<void>;
     finishRun(
@@ -699,19 +711,20 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         await sessionLock(tx, input.native.sessionKey);
         const foreignRole = await sql<{ run_id: string }>(
           tx,
-          "SELECT run_id FROM heptalogos.life_native_run WHERE subject_id=$1 AND session_key=$2 AND document#>>'{native,sessionId}'=$3 AND document#>>'{native,historyGeneration}'=$4 AND document#>'{registration,roleScope}'<>$5::jsonb LIMIT 1 FOR SHARE",
+          "SELECT run_id FROM heptalogos.life_native_run WHERE subject_id=$1 AND session_key=$2 AND document#>>'{native,sessionId}'=$3 AND document#>>'{native,historyGeneration}'=$4 AND (document#>'{registration,roleScope}'<>$5::jsonb OR document#>'{registration,usage,audience}'<>$6::jsonb) LIMIT 1 FOR SHARE",
           [
             input.subjectId,
             input.native.sessionKey,
             input.native.sessionId,
             input.native.historyGeneration,
             JSON.stringify(preflight.roleScope),
+            JSON.stringify(preflight.usage.audience),
           ],
         );
         if (foreignRole[0])
           deny(
             "native_role_history_changed",
-            "This native history contains another execution view; create a clean role Session or explicitly reset its history",
+            "This native history contains another execution view or audience; create a clean role Session or explicitly reset its history",
           );
         const registered = await sql<{ document: StoredInput }>(
           tx,
@@ -1043,7 +1056,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
             "native_scope_changed",
             "Projection scope must be exactly the registered scope and selected actual occurrence roots",
           );
-        if (runs[0])
+        if (runs[0] && !contact.admitted)
           await sql(
             tx,
             "UPDATE heptalogos.life_native_run SET document=$2::jsonb WHERE run_id=$1",
@@ -1052,6 +1065,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
               JSON.stringify({
                 ...runs[0].document,
                 consumerId: projection.consumerId,
+                latestAppliedContactRequestId: input.contactRequestId,
                 appliedUsage,
               }),
             ],
@@ -1801,6 +1815,31 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           observation: row.document.observation,
         })),
         omitted: rows.length > 64,
+      };
+    },
+    async readAppliedContext(runId) {
+      const rows = await readRepositorySql<{ document: Contact }>(
+        options.persistence,
+        "SELECT c.document FROM heptalogos.life_native_run r JOIN heptalogos.life_native_contact c ON c.contact_request_id=(r.document->>'latestAppliedContactRequestId')::uuid AND c.run_id=r.run_id WHERE r.run_id=$1",
+        [runId],
+      );
+      const contact = rows[0]?.document;
+      if (
+        !contact?.admitted ||
+        !contact.appliedUsage ||
+        contact.request.native.runId !== runId
+      )
+        deny(
+          "native_applied_context_unavailable",
+          "This exact RoleRun has no actual admitted Nous Projection",
+        );
+      return {
+        runId,
+        contactRequestId: contact.request.contactRequestId,
+        invocationId: contact.request.invocationId,
+        roleScope: contact.response.roleScope,
+        projection: contact.admitted.projection,
+        usage: contact.appliedUsage,
       };
     },
     readRun,

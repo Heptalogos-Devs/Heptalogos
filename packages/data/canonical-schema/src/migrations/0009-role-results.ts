@@ -56,6 +56,11 @@ export const roleResultsMigration: Migration = {
       .execute(db);
     await sql
       .raw(
+        `WITH latest AS (SELECT DISTINCT ON (run_id) run_id,contact_request_id FROM heptalogos.life_native_contact WHERE document ? 'admitted' ORDER BY run_id,recorded_at DESC,invocation_id DESC) UPDATE heptalogos.life_native_run r SET document=jsonb_set(r.document,'{latestAppliedContactRequestId}',to_jsonb(latest.contact_request_id::text)) FROM latest WHERE r.run_id=latest.run_id`,
+      )
+      .execute(db);
+    await sql
+      .raw(
         `INSERT INTO heptalogos.role_run_result(result_id,subject_id,run_id,document,recorded_at) SELECT f.request_id,f.subject_id,f.run_id,f.document,f.recorded_at FROM heptalogos.cognition_pending_feedback f JOIN heptalogos.life_native_run r ON r.run_id=f.run_id WHERE r.role='worker' ON CONFLICT DO NOTHING;
       DELETE FROM heptalogos.cognition_pending_feedback f USING heptalogos.life_native_run r WHERE r.run_id=f.run_id AND r.role='worker' AND f.receipt IS NULL;`,
       )
