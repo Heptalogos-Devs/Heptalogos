@@ -56,3 +56,19 @@ describe("repository boundary ownership", () => {
     expect(eslintSource).toContain('"area:service"');
   });
 });
+
+it("keeps application packaging behind dependency builds and dependency-source-sensitive copies", () => {
+  const root = new URL("../../../", import.meta.url);
+  const readProject = (name) =>
+    JSON.parse(
+      readFileSync(new URL(`packages/application/${name}/project.json`, root), "utf8"),
+    );
+  const host = readProject("product-host");
+  // An explicit dependsOn replaces the TypeScript plugin's inferred dependency edge.
+  expect(host.targets.build.dependsOn).toContain("^build");
+  for (const project of [host, readProject("cli")]) {
+    const copy = project.targets["copy-workspace-modules"];
+    expect(copy.inputs).toContain("^default");
+    expect(copy.cache).toBe(true);
+  }
+});
