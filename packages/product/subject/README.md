@@ -21,3 +21,5 @@ Product Life 和 Agency 的语义所有者。Nous 拥有主体身份与长期认
 `createDeliberationService` 采用真实主观角色的决定：`adopt`在Subject短锁与Activity CAS下同时保存不可变DecisionCommit和Life模式/下一节点，保留技术进展原文。Host提供actual run/admission/source核对，provider与clock在事务外读取，当前权限在同事务重查。`read`按decisionRef、`readOperation`按操作身份恢复已有receipt。明确expressionIntent可伴随任何choice；后续brief引用此实际采用来源，沉默不会自动变成表达。实际worker、新Activity与发送仍由原owner消费，不由本服务建立新运行循环。
 
 `Life.get(subjectId, activityId, transaction?)` 与 `WorldLife.resolveSourceRefs(input, transaction?)` 在授权/发送围栏中复用调用者事务，仍由原owner SQL和解析器读取；不会持有写连接再借读连接。
+
+`createNarrativeService`在实际DecisionCommit基础上保存ExpressionBrief，采用独立原生review后的完整renderer payload。兼容场景细节、Claim、承诺到期点与唯一Agency行为在同一Host事务提交，实际平台结果继续由Agency保存；`claimsTo`按听众及实际发送状态分页，`pendingCommitments`将尚未履约的采用记录供后续Life审议。模型、认知服务与网络始终在事务外。正式合同见[叙事与陈述](../../../specs/subject/narrative-claims.md)。

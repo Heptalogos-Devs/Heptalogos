@@ -59,3 +59,5 @@ Host 默认适配器读取本安装 `installation-services.json` 的 Subject 身
 Native cognition requires `captureObservedStamp(subjectId)` from the official Subject clock. It captures outside the write transaction and freezes the first actual message, tool/result-release or delivery encounter; retries reuse the stored observation. Realized-world contacts instead retain their typed `worldRealized.worldObserved`, with exact world/event/revision and actor-visible event scope checks.
 
 The single-connection owner integration test can also cross the actual Nous boundary when `HEPTALOGOS_TEST_NOUS_RUN_ROOT` names an independently started temporary official Core installation. It checks canonical WorldLife events, first-contact clock capture, real Observation ingestion and replay after clock advancement; it makes no model or channel call.
+
+Host按正式RoleBinding调用独立原生world/deliberation/execution/render/review，使用官方Nous投影；Activity dispatch先采用主观选择，只有明确表达意图才建立renderer brief。无QQ的世界机会和新学习Activity使用内部audience；工具和发送权限由实际Activity及当前安装配置决定。重入优先读取保留的付费结果和release receipt，执行结果须显式释放后才成为主体接触。角色工具、完整输入/输出token及连续阶段期限经过正式native控制。

@@ -4,7 +4,7 @@
 
 本文件拥有 Heptalogos 对独立 Nous/OpenClaw 的原生执行合同。旧 AIRuntime 的 GatewayProfile/ModelProfile、subject.primary/subject.expression 和独立 SDK 循环不是当前执行路由。Host 保存产品职责绑定、用途、预算和权限；OpenClaw 保存 provider/model/协议/凭据及 generation 参数；Nous 保存认知形成/embedding/rerank 配置。不得维护第二份 provider registry。
 
-当前代码已实现可信原生输入、来源/工具边界、Activity 进展及唯一发送。以下多角色链是活动计划要求的实施合同；其配置、调用、视角、独立 renderer 和 review 需全部拥有实际消费者后才能报告完成。
+当前代码已接通多角色职责绑定、可信输入、来源/工具边界、主观决定、新活动与学习、独立 renderer/review 和唯一发送；独立安装、真实模型、QQ与跨日结果仍按活动计划验收。
 
 ## 角色与可信运行
 
@@ -37,3 +37,9 @@ Prompt由职责模板、当前主体投影、世界/任务、带归属材料及�
 模型结果始终是提案。world planner 只提出 WorldPatch；renderer不持有任意工具或直接发送权；review只读相关正文与依赖，不评风格分。实际配置/权限变化在相关采用与真实效果点重查。
 
 正文读回、Claim/NarrativeCommit 由[叙事合同](../subject/narrative-claims.md)拥有，世界视角与实现由[WorldLife](../subject/world-life.md)拥有，实际唯一发送见[行为合同](../subject/reaction-behavior.md)。系统机械通知和原始文件传递保持系统/工具归属；其伴随主体文字仍走渲染。
+
+Host先读取公开agents.list，在已配置的primary/fallback中选择实际存在的profile；有已保存dispatch时先恢复原实际profile/结果，不在付费运行失败后切换再执行。角色模板通过原生extraSystemPrompt+minimal mode进入实际system输入，外部JSON只作带归属材料。结构角色附所属owner的正式JSON schema；renderer只输出自然文本。模型/协议/凭据仍完全归原生profile。
+
+专业任务工具是已采用delegation.tools与RoleBinding/Activity工具范围的交集约束，实际tokenBudget/allowedToolNames通过正式native ABI 5前置控制。整个连续决定链沿首个采用运行保存的绝对deadline，后续执行/审议/渲染/评审不能重置。RoleResult保留冻结的Activity revision、实际原生结果及期限；phase身份与semantic digest由采用决定确定，当前世界投影刷新不导致重跑旧付费阶段。
+
+执行结果优先释放有界最终生成结果，正文与原始归属共同进入新的正式Subject contact；后续主观决定由同一DecisionCommit消费者实际采用。新的initiate_activity/learn采用创建独立WorkContext和Life Activity，沿原scope重新授权，通过原生world scheduler或一次内部角色调用获得首个运行机会；不依赖QQ会话，也不把决定本身记为学习成果。

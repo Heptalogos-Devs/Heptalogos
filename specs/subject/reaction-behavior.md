@@ -38,4 +38,6 @@ accepted 保留首次可靠回执的本机 `acceptedAt`，用于原生 receipt �
 
 ## 人格与叙事采用
 
-所有Subject自然文字及人格表现动作经[原生renderer](../system/ai-runtime.md)和一次窄正文读回，由[NarrativeCommit](narrative-claims.md)统一采用兼容世界细化、Claim、承诺与唯一待派发意图。该新链在实际消费者接通前为当前待实施范围；既有prepared batch不得被误报为已渲染。world/worker/child结果仅作为任务资料，不能原生announce到QQ。系统机械通知保持系统归属。
+所有Subject自然文字及人格表现动作经[原生renderer](../system/ai-runtime.md)和一次窄正文读回，由[NarrativeCommit](narrative-claims.md)统一采用兼容世界细化、Claim、承诺与唯一待派发意图。Host已将该链注册为正式采用入口；部署及真实收件端仍按活动计划验证。world/worker/child结果仅作为任务资料，不能原生announce到QQ。系统机械通知保持系统归属。
+
+原生producer使用的派生来源（正式world-event、精确RoleResult release）须由Host沿原Activity、canonical owner记录和当前权限核验，再以authorizedDerivedSourceRefs交Agency。字符串前缀本身不能授予读取或发送权。普通消息仍沿实际听众的Messaging来源检查。
