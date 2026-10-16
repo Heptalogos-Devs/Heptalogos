@@ -2,9 +2,19 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 /** Registers authenticated world operations using the world owner's schemas. @module world-http */
 import { managementProblem, managementProblemSchema } from "@heptalogos/management";
+import {
+  resolveWorldActorInputSchema,
+  readWorldActorsInputSchema,
+  entitySchema,
+  type IdentityService,
+} from "@heptalogos/identity";
 import type { FastifyInstance } from "fastify";
 import { Type, type Static, type TSchema } from "@heptalogos/schema-runtime/typebox";
 import {
+  worldHistoryQuerySchema,
+  worldHistoryResultSchema,
+  worldCoverageQuerySchema,
+  worldCoverageResultSchema,
   advanceWorldRulesSchema,
   worldFrameSchema,
   configureWorldSchema,
@@ -20,6 +30,7 @@ import {
 export interface WorldHttpOptions {
   readonly authenticate: (token: string | undefined) => Promise<void>;
   readonly runMutation: <T>(kind: string, operation: () => Promise<T>) => Promise<T>;
+  readonly identity?: Pick<IdentityService, "resolveWorldActor" | "readWorldActors">;
   readonly worlds: ReturnType<typeof createWorldLifeService>;
   readonly currentSubject: () => Promise<string>;
 }
@@ -42,7 +53,7 @@ export function registerWorldHttp(app: FastifyInstance, options?: WorldHttpOptio
     operation: (value: Static<T>) => Promise<unknown>,
   ) =>
     app.post(
-      "/management/v1/world/" + name,
+      "/gateway/v1/world/" + name,
       {
         onRequest: async (request) => {
           const header = request.headers.authorization;
@@ -53,6 +64,7 @@ export function registerWorldHttp(app: FastifyInstance, options?: WorldHttpOptio
         schema: {
           operationId: "world" + name[0]!.toUpperCase() + name.slice(1),
           body: input,
+          security: [{ gatewayService: [] }],
           response: {
             200: output,
             400: managementProblemSchema,
@@ -113,5 +125,69 @@ export function registerWorldHttp(app: FastifyInstance, options?: WorldHttpOptio
   // The owner returns a discriminated view. Retain its schema source at the owner rather than duplicating DTOs here.
   route("query", queryWorldSchema, worldQueryResultSchema, (input) =>
     owners().worlds.query(input),
+  );
+  route("history", worldHistoryQuerySchema, worldHistoryResultSchema, (input) =>
+    owners().worlds.history(input),
+  );
+  route("coverage", worldCoverageQuerySchema, worldCoverageResultSchema, (input) =>
+    owners().worlds.coverage(
+      input.subjectId,
+      input.worldId,
+      input.interval,
+      input.asRecordedAt,
+    ),
+  );
+  const actorOwner = () => {
+    const value = owners().identity;
+    if (!value)
+      throw managementProblem(
+        "world.identity_unavailable",
+        "World actor Identity owner is unavailable",
+        "Use the current installed Identity composition",
+        "unavailable",
+      );
+    return value;
+  };
+  route(
+    "actorResolve",
+    Type.Object(
+      {
+        ...resolveWorldActorInputSchema.properties,
+        subjectId: readWorldSchema.properties.subjectId,
+      },
+      { additionalProperties: false },
+    ),
+    entitySchema,
+    (input) =>
+      actorOwner().resolveWorldActor({
+        worldId: input.worldId,
+        actorKey: input.actorKey,
+      }),
+  );
+  route(
+    "actors",
+    Type.Object(
+      {
+        ...readWorldActorsInputSchema.properties,
+        subjectId: readWorldSchema.properties.subjectId,
+      },
+      { additionalProperties: false },
+    ),
+    Type.Object(
+      {
+        actors: Type.Array(
+          Type.Object(
+            { actorKey: Type.String(), entity: entitySchema },
+            { additionalProperties: false },
+          ),
+        ),
+      },
+      { additionalProperties: false },
+    ),
+    (input) =>
+      actorOwner().readWorldActors({
+        worldId: input.worldId,
+        entityRefs: input.entityRefs,
+      }),
   );
 }

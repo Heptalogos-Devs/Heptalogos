@@ -143,19 +143,54 @@ real("WorldLife canonical realization on real fenced PostgreSQL", () => {
           },
         ],
       };
+      const hidden = {
+        ...event,
+        eventId: randomUUID(),
+        actorRefs: [teacher],
+        parentEventId: event.eventId,
+        overlap: "concurrent" as const,
+        perceptions: [
+          {
+            actorRef: teacher,
+            kind: "seen" as const,
+            at: { timeDomainRef: domain, at: range.start },
+            content: "A private teacher thought",
+          },
+        ],
+      };
       const patch = {
         operationId: randomUUID(),
         subjectId,
         worldId,
         expectedRevision: 1,
         interval: range,
-        events: [event],
+        events: [event, hidden],
         coverage: "complete" as const,
       };
       const copies = await current.run(() =>
         Promise.all([life.realize(patch), life.realize(patch)]),
       );
       expect(copies[0]).toEqual(copies[1]);
+      const exactSource = `world-event:${worldId}:${event.eventId}:1`;
+      expect(
+        await life.resolveSourceRefs({
+          subjectId,
+          sourceRefs: [
+            `world:${worldId}`,
+            exactSource,
+            `world-event:${worldId}:${event.eventId}:99`,
+            `world-event:${worldId}:${hidden.eventId}:1`,
+            `world:${randomUUID()}`,
+          ],
+        }),
+      ).toEqual([`world:${worldId}`, exactSource]);
+      expect(
+        await life.resolveSourceRefs({
+          subjectId: randomUUID(),
+          sourceRefs: [`world:${worldId}`, exactSource],
+        }),
+      ).toEqual([]);
+
       expect((await life.coverage(subjectId, worldId, range)).coverage).toBe(
         "complete",
       );
@@ -307,6 +342,14 @@ real("WorldLife canonical realization on real fenced PostgreSQL", () => {
       expect((await life.prepareAdvance(subjectId, worldId)).nextOpportunity?.at).toBe(
         "2026-10-17T02:00:00.000Z",
       );
+      const revisions = await life.history({ subjectId, worldId, limit: 2 });
+      expect(revisions.history.map((row) => row.revision)).toEqual([1, 2]);
+      expect(revisions.nextRevision).toBe(2);
+      expect(
+        (
+          await life.history({ subjectId, worldId, afterRevision: 2, limit: 2 })
+        ).history.map((row) => row.revision),
+      ).toEqual([3, 4]);
       const dst = expandWorldRoutines(
         {
           ...definition,

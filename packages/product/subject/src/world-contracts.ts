@@ -273,3 +273,54 @@ export const advanceWorldRulesSchema = Type.Object(
   { subjectId: id, worldId: id, interval: worldIntervalSchema },
   object,
 );
+/** Bounded author revision history is separate from the life-event timeline. */
+export const worldHistoryQuerySchema = Type.Object(
+  {
+    subjectId: id,
+    worldId: id,
+    afterRevision: Type.Optional(Type.Integer({ minimum: 0 })),
+    limit: Type.Integer({ minimum: 1, maximum: 128 }),
+  },
+  object,
+);
+/** Recorded world state revisions; none of these records is a new Subject perception. */
+export const worldHistoryResultSchema = Type.Object(
+  {
+    history: Type.Array(worldStateSchema),
+    nextRevision: Type.Union([Type.Integer({ minimum: 1 }), Type.Null()]),
+  },
+  object,
+);
+/** Coverage query preserves explicit world domain and real recording cutoff. */
+export const worldCoverageQuerySchema = Type.Object(
+  {
+    subjectId: id,
+    worldId: id,
+    interval: worldIntervalSchema,
+    asRecordedAt: Type.Optional(instant),
+  },
+  object,
+);
+/** Adopted coverage segments retain their real commit order and gaps. */
+export const worldCoverageResultSchema = Type.Object(
+  {
+    interval: worldIntervalSchema,
+    coverage: Type.Union([
+      Type.Literal("complete"),
+      Type.Literal("limited"),
+      Type.Literal("gap"),
+    ]),
+    segments: Type.Array(
+      Type.Object(
+        {
+          interval: worldIntervalSchema,
+          coverage: Type.Union([Type.Literal("complete"), Type.Literal("limited")]),
+          recordedAt: instant,
+        },
+        object,
+      ),
+      { maxItems: 4096 },
+    ),
+  },
+  object,
+);

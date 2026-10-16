@@ -15,6 +15,7 @@ import {
 } from "@heptalogos/persistence/repository";
 import {
   acknowledgeWorldContactSchema,
+  worldHistoryQuerySchema,
   configureWorldSchema,
   queryWorldSchema,
   realizeWorldSchema,
@@ -453,6 +454,78 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
         role: "world.planner" as const,
         contactNature: "execution_only" as const,
       };
+    },
+    /** Paginates immutable author revisions without interpreting native transcripts. */
+    async history(value: Static<typeof worldHistoryQuerySchema>) {
+      const input = checked<Static<typeof worldHistoryQuerySchema>>(
+        worldHistoryQuerySchema,
+        value,
+      );
+      const rows = await readRepositorySql<{ document: WorldState }>(
+        options.persistence,
+        "SELECT document FROM heptalogos.world_life_history WHERE subject_id=$1 AND world_id=$2 AND revision>$3 ORDER BY revision LIMIT $4",
+        [input.subjectId, input.worldId, input.afterRevision ?? 0, input.limit + 1],
+      );
+      const history = rows.slice(0, input.limit).map((row) => row.document);
+      return {
+        history,
+        nextRevision: rows.length > input.limit ? history.at(-1)!.revision : null,
+      };
+    },
+    /** Resolves actual same-Subject world roots and actor-visible event references in two bounded owner reads. */
+    async resolveSourceRefs(input: {
+      subjectId: string;
+      sourceRefs: readonly string[];
+    }) {
+      if (input.sourceRefs.length > 128)
+        conflict("World source resolution is bounded to 128 exact references");
+      const uuid =
+        "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
+      const rootPattern = new RegExp(`^world:(${uuid})$`),
+        eventPattern = new RegExp(`^world-event:(${uuid}):(${uuid}):([1-9][0-9]*)$`);
+      const roots = input.sourceRefs.flatMap((ref) => {
+        const match = rootPattern.exec(ref);
+        return match ? [match[1]!] : [];
+      });
+      const events = input.sourceRefs.flatMap((ref) => {
+        const match = eventPattern.exec(ref);
+        return match
+          ? [{ ref, worldId: match[1]!, eventId: match[2]!, revision: match[3]! }]
+          : [];
+      });
+      const actualRoots = roots.length
+        ? await readRepositorySql<{ world_id: string }>(
+            options.persistence,
+            "SELECT world_id FROM heptalogos.world_life WHERE subject_id=$1 AND world_id=ANY($2::uuid[])",
+            [input.subjectId, roots],
+          )
+        : [];
+      const actualEvents = events.length
+        ? await readRepositorySql<{
+            world_id: string;
+            event_id: string;
+            revision: string;
+          }>(
+            options.persistence,
+            `SELECT e.world_id,e.event_id,e.document->>'revision' AS revision FROM heptalogos.world_event e JOIN heptalogos.world_life w USING(subject_id,world_id)
+WHERE e.subject_id=$1 AND e.event_id=ANY($2::uuid[]) AND (EXISTS(SELECT 1 FROM jsonb_array_elements(e.document->'perceptions') p WHERE p->>'actorRef'=w.document#>>'{definition,subjectActorRef}') OR EXISTS(SELECT 1 FROM heptalogos.world_contact_release r WHERE r.subject_id=e.subject_id AND r.world_id=e.world_id AND r.event_id=e.event_id))`,
+            [input.subjectId, events.map((event) => event.eventId)],
+          )
+        : [];
+      const validRoots = new Set(actualRoots.map((row) => row.world_id.toLowerCase()));
+      const validEvents = new Set(
+        actualEvents.map((row) =>
+          `${row.world_id}:${row.event_id}:${row.revision}`.toLowerCase(),
+        ),
+      );
+      return [...new Set(input.sourceRefs)].filter((ref) => {
+        const root = rootPattern.exec(ref);
+        if (root) return validRoots.has(root[1]!.toLowerCase());
+        const event = eventPattern.exec(ref);
+        return Boolean(
+          event && validEvents.has(`${event[1]}:${event[2]}:${event[3]}`.toLowerCase()),
+        );
+      });
     },
     /** Last attempted realization endpoint is scheduling progress, not a complete-coverage claim. */
     async realizationCursor(subjectId: string, worldId: string) {
