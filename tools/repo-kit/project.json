@@ -14,7 +14,13 @@
       "executor": "nx:run-commands",
       "options": {
         "command": "vitest run --root tools/repo-kit"
-      }
+      },
+      "dependsOn": [
+        {
+          "projects": "repository",
+          "target": "build"
+        }
+      ]
     }
   }
 }

@@ -9,7 +9,7 @@
 
 import { builtinModules } from "node:module";
 import { existsSync, readdirSync, readFileSync } from "node:fs";
-import { dirname, isAbsolute, join, resolve } from "node:path";
+import { dirname, isAbsolute, join, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   authority,
@@ -181,41 +181,16 @@ for (const { manifest, path: manifestPath } of manifests) {
         );
         continue;
       }
-      // Development may consume a separately installed SDK; production uses its catalog peer.
-      if (section === "devDependencies" && specifier.startsWith("link:")) {
-        const directory = specifier.slice(5);
-        const linkedManifest = resolve(
-          dirname(manifestPath),
-          directory,
-          "package.json",
-        );
-        if (
-          isAbsolute(directory) ||
-          manifest.peerDependencies?.[name] !== "catalog:" ||
-          !existsSync(linkedManifest)
-        ) {
-          fail(
-            `${manifestPath}: linked development SDK requires a relative installed directory and catalog peer`,
-          );
-        } else {
-          const installed = JSON.parse(readFileSync(linkedManifest, "utf8"));
-          if (installed.name !== name || installed.version !== workspaceCatalog[name])
-            fail(
-              `${manifestPath}: linked development SDK must match its exact catalog peer`,
-            );
-        }
-        externalDependencyNames.add(name);
-        continue;
-      }
       if (specifier.startsWith("file:")) {
         const archive = specifier.slice(5);
         if (
           isAbsolute(archive) ||
           !archive.endsWith(".tgz") ||
+          !resolve(dirname(manifestPath), archive).startsWith(root + sep) ||
           !existsSync(resolve(dirname(manifestPath), archive))
         ) {
           fail(
-            `${manifestPath}: ${section}.${name} must reference an existing relative release archive`,
+            `${manifestPath}: ${section}.${name} must reference an existing release archive inside this checkout`,
           );
         }
         localArchiveDependencyNames.add(name);

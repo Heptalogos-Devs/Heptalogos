@@ -2,7 +2,7 @@
 
 此包为独立 OpenClaw 提供 QQ Channel，负责 OneBot 连接、协议解析、历史和媒体适配。消息、身份、活动、行为采纳和实际回执归 Heptalogos Host；认知仍使用同一 Nous 集成。插件不启动另一套 Agent Runtime。
 
-OpenClaw 2026.9.1 由 Nous 正式安装器提供，作为外部 peer，不打进 Product Host。现有私密连接文件保持 `{url, token, accountId}`；配置只引用文件，日志不输出凭据或签名媒体 URL。
+OpenClaw 2026.9.1 由 Nous 正式安装器提供，作为外部 peer，不打进 Product Host。开发和手动 CI 使用仓内未经改写的 sealed Client/installer 输入；正常 `pnpm install --frozen-lockfile` 后，`pnpm prepare:native-sdk` 在本 checkout 的 `.cache/native-sdk` 准备并校验同一受控 SDK，相关 Nx 构建与验证也会调用此入口，不需要相邻 Nous 源码或生产实例。现有私密连接文件保持 `{url, token, accountId}`；配置只引用文件，日志不输出凭据或签名媒体 URL。
 
 Host 的当前接收和效果授权在原生接纳及实际发送前再次检查。普通插件配置不能增加收件人或操作权限。文字使用 OneBot 原生 text segment，类似 CQ 码的文字也不会被当作命令。`ws.send` 之后无法确认的结果保持 uncertain，不自动重发。
 
