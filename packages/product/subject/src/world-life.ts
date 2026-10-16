@@ -312,6 +312,17 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
     return result;
   };
   const service = {
+    async readRealization(
+      subjectId: string,
+      operationId: string,
+    ): Promise<unknown | undefined> {
+      const rows = await readRepositorySql<{ document: unknown }>(
+        options.persistence,
+        "SELECT document FROM heptalogos.world_realization WHERE subject_id=$1 AND operation_id=$2",
+        [subjectId, operationId],
+      );
+      return rows[0]?.document;
+    },
     /** Same transaction owner operation for atomic narrative adoption. */
     realizeIn,
     /** Reads authoritative world state without interpreting private Nous storage. */
