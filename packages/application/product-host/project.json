@@ -6,7 +6,7 @@
   "sourceRoot": "packages/application/product-host/src",
   "targets": {
     "build": {
-      "dependsOn": ["generate:build-identities"]
+      "dependsOn": ["^build", "generate:build-identities"]
     },
     "prune-lockfile": {
       "dependsOn": ["build"],
@@ -39,7 +39,8 @@
       "outputs": ["{projectRoot}/dist/workspace_modules"],
       "options": {
         "buildTarget": "build"
-      }
+      },
+      "inputs": ["default", "^default"]
     },
     "prune": {
       "dependsOn": ["prune-lockfile", "copy-workspace-modules"],

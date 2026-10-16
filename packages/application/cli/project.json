@@ -25,14 +25,19 @@
         "{projectRoot}/dist/patches",
         "{projectRoot}/dist/local_path_modules"
       ],
-      "options": { "buildTarget": "build" }
+      "options": {
+        "buildTarget": "build"
+      }
     },
     "copy-workspace-modules": {
       "dependsOn": ["build"],
       "cache": true,
       "executor": "@nx/js:copy-workspace-modules",
       "outputs": ["{projectRoot}/dist/workspace_modules"],
-      "options": { "buildTarget": "build" }
+      "options": {
+        "buildTarget": "build"
+      },
+      "inputs": ["default", "^default"]
     },
     "prune": {
       "dependsOn": ["prune-lockfile", "copy-workspace-modules"],
@@ -43,7 +48,9 @@
     },
     "lint": {
       "executor": "nx:run-commands",
-      "options": { "command": "oxlint --type-aware packages/application/cli" }
+      "options": {
+        "command": "oxlint --type-aware packages/application/cli"
+      }
     },
     "test": {
       "executor": "nx:run-commands",

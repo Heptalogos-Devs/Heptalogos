@@ -17,7 +17,12 @@ function run(
   return new Promise((done, reject) => {
     const child = spawn(process.execPath, [entrypoint, ...args], {
       cwd,
-      env: { ...process.env, NODE_PATH: undefined, NODE_OPTIONS: undefined },
+      env: {
+        ...process.env,
+        NODE_PATH: undefined,
+        NODE_OPTIONS: undefined,
+        FORCE_COLOR: undefined,
+      },
       stdio: ["ignore", "pipe", "pipe"],
       windowsHide: true,
     });
@@ -61,9 +66,13 @@ describe("closed Management application artifact", () => {
         import { createRequire } from 'node:module';
         import assert from 'node:assert/strict';
         const require = createRequire(import.meta.url);
-        for (const retired of ['openclaw', '@openclaw/gateway-client', '@heptalogos/subject', '@heptalogos/ai-runtime', '@heptalogos/runtime-kernel', '@heptalogos/work-queue', '@heptalogos/durable-execution', '@dbos-inc/dbos-sdk']) {
+        for (const retired of ['openclaw', '@openclaw/gateway-client', '@heptalogos/ai-runtime', '@heptalogos/runtime-kernel', '@heptalogos/work-queue', '@heptalogos/durable-execution', '@dbos-inc/dbos-sdk']) {
           assert.throws(() => require.resolve(retired), { code: 'MODULE_NOT_FOUND' });
         }
+        const { createLifeService } = await import('@heptalogos/subject');
+        const life = createLifeService({});
+        assert.equal(typeof life.progressIn, 'function');
+        assert.equal(typeof life.resumeDue, 'function');
         const sdk = await import('@nous-wave/client');
         assert.equal(typeof sdk.NousError, 'function');
         console.log(JSON.stringify({ closed: true }));
