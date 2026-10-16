@@ -59,10 +59,17 @@ function boundedFailureDetail(stdout, stderr) {
       line,
     ),
   );
+  const lintWarnings = lines.filter((line) =>
+    /\bwarning\s+(?:eslint|typescript|import)[(/]/u.test(line),
+  );
   const actionable = diagnosticLines.length
     ? diagnosticLines
-    : lines.filter((line) => /\bwarning\b/iu.test(line));
-  const selected = [...actionable.slice(-12), ...lines.slice(-20)];
+    : lintWarnings.length
+      ? lintWarnings
+      : lines.filter((line) => /\bwarn(?:ing)?\b/iu.test(line));
+  const failedAt = lines.lastIndexOf("Failed tasks:");
+  const failedTasks = failedAt < 0 ? [] : lines.slice(failedAt, failedAt + 8);
+  const selected = [...actionable.slice(-12), ...failedTasks, ...lines.slice(-12)];
   const unique = [...new Set(selected)].slice(-24);
   return unique.map((line) => line.slice(0, 360)).join("\n");
 }
