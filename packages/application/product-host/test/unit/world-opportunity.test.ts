@@ -50,6 +50,7 @@ describe("world opportunity provider admission boundary", () => {
         recentEvents: [],
         nextOpportunity: { ...world, at: "2026-10-16T04:00:00.000Z" },
       }),
+      readRealization: async (): Promise<unknown> => undefined,
       realizationCursor: async () => world,
       advanceRules: vi.fn(),
       pendingContacts: async () => [event],
@@ -97,7 +98,10 @@ describe("world opportunity provider admission boundary", () => {
         sourceRefs: [event.sourceRef],
         usage: {},
       }),
-      releaseWorldContact: async () => ({ contactRef: "contact:candidate" }),
+      releaseWorldContact: async () => ({
+        contactRef: "contact:candidate",
+        selected: true,
+      }),
       acceptedWorldContact,
       adoptDeliberation,
       scheduleNext,
@@ -122,5 +126,15 @@ describe("world opportunity provider admission boundary", () => {
     });
     expect(adoptDeliberation).toHaveBeenCalledOnce();
     expect(scheduleNext).toHaveBeenCalledOnce();
+    // An adopted patch remains the paid planner result even when a later frame lacks future slots.
+    vi.spyOn(worlds, "readRealization").mockResolvedValue({ operationId: "adopted" });
+    const prepared = await worlds.prepareAdvance();
+    vi.spyOn(worlds, "prepareAdvance").mockResolvedValue({ ...prepared, schedule: [] });
+    invoke.mockClear();
+    await opportunity.advance({ ...request, requestId: randomUUID() });
+    expect(invoke).toHaveBeenCalledOnce();
+    expect(invoke).toHaveBeenCalledWith(
+      expect.objectContaining({ role: "subject.deliberation" }),
+    );
   });
 });

@@ -21,6 +21,7 @@ import {
   type ExecutionContext,
 } from "@heptalogos/execution-lineage";
 import { createEvidenceService } from "@heptalogos/evidence";
+import { join } from "node:path";
 import { createSystemTimeService } from "@heptalogos/time-service";
 import { createConfigurationService } from "@heptalogos/configuration";
 import {
@@ -52,7 +53,13 @@ import { getNousSubject, createNousSubject } from "./nous.js";
 import { inspectProductDependencies } from "./dependencies.js";
 import { createGatewayRuntime } from "./gateway-runtime.js";
 import { parseProductHostInputs, type ProductHostInputs } from "./inputs.js";
-import { createInstalledNativeDispatcher } from "./native-dispatch.js";
+import {
+  createInstalledWorldScheduler,
+  createInstalledAgentSelector,
+  type NativeAgentSelect,
+  type NativeWorldSchedule,
+  createInstalledNativeDispatcher,
+} from "./native-dispatch.js";
 
 /** Handle to the independently usable management process. */
 export interface ProductHostHandle {
@@ -68,6 +75,8 @@ export interface ProductHostHandle {
 /** Installed lifecycle roots and private PostgreSQL location. */
 export type ProductHostStartOptions = ProductHostInputs & {
   readonly dispatchNativeActivity?: import("./activity-dispatch-contracts.js").NativeActivityDispatch;
+  readonly scheduleWorld?: NativeWorldSchedule;
+  readonly selectNativeAgent?: NativeAgentSelect;
 };
 
 async function runRetainedManagementMutation<T>(
@@ -146,6 +155,7 @@ export async function startProductHost(
   let claim: Awaited<ReturnType<typeof startFirstClaimMaintenance>> | undefined;
   let runRoot: string | undefined;
   let closing: Promise<void> | undefined;
+  let stopWorldClock: (() => Promise<void>) | undefined;
   const dispatchController = new AbortController();
   const close = (): Promise<void> => {
     if (closing) return closing;
@@ -163,6 +173,7 @@ export async function startProductHost(
       await settle(async () => {
         if (app) await closeProductHttpApp(app);
       });
+      await settle(async () => stopWorldClock?.());
       if (runRoot && host)
         await settle(() => removeCurrentEndpointDescriptor(runRoot!, host!.bootId));
       await settle(async () => persistence?.close());
@@ -300,6 +311,26 @@ export async function startProductHost(
       dataRoot: locations.stateRoot,
       now: () => new Date().toISOString(),
       runMutation: runMutationActivity,
+      selectNativeAgent:
+        options.selectNativeAgent ??
+        createInstalledAgentSelector({
+          anchorRoot: options.anchorRoot,
+          configurationRoot: owned.paths.resolve("CONFIGURATION").canonicalPath,
+          installationId: owned.installationId,
+          signal: AbortSignal.any([host.signal, dispatchController.signal]),
+        }),
+      scheduleWorld:
+        options.scheduleWorld ??
+        createInstalledWorldScheduler({
+          anchorRoot: options.anchorRoot,
+          configurationRoot: owned.paths.resolve("CONFIGURATION").canonicalPath,
+          installationId: owned.installationId,
+          serviceCredentialFile: join(
+            secretPaths.resolve("SECRET").canonicalPath,
+            "channel-service-token",
+          ),
+          signal: AbortSignal.any([host.signal, dispatchController.signal]),
+        }),
       dispatchNativeActivity:
         options.dispatchNativeActivity ??
         createInstalledNativeDispatcher({
@@ -311,16 +342,27 @@ export async function startProductHost(
     });
     const recoveryConfiguration = await product.configuration();
     const recoverySubjectId = recoveryConfiguration.settings?.subject?.id;
-    if (recoverySubjectId)
+    if (recoverySubjectId) {
+      stopWorldClock = () =>
+        runMutationActivity("subject.world.host_stop", gateway.worldHostLifecycle.stop);
+      // Management remains available when its external clock cannot currently be reached.
+      await runMutationActivity(
+        "subject.world.host_start",
+        gateway.worldHostLifecycle.start,
+      ).catch(() => {});
       await runMutationActivity("subject.life.recover", () =>
         gateway.life.recover(recoverySubjectId),
       );
+    }
     const currentRunRoot = runRoot;
     app = await createProductHttpApp({
       authentication,
       product,
       gateway: gateway.http,
       pursuit: gateway.pursuitHttp,
+      world: gateway.worldHttp,
+      worldOpportunity: gateway.worldOpportunityHttp,
+      narrative: gateway.narrativeHttp,
       identity: {
         installationId: currentHost.installationId,
         bootId: currentHost.bootId,
@@ -338,6 +380,11 @@ export async function startProductHost(
       bootId: host.bootId,
       origin,
     });
+    if (recoverySubjectId)
+      await runMutationActivity(
+        "subject.world.schedule",
+        gateway.worldRuntime.reproject,
+      ).catch(() => {});
     claim = await startFirstClaimMaintenance({
       readLocalClaim: () => readFirstClaimMaterial(currentRunRoot),
       ensureClaim: (local) => authentication.ensureFirstAdministratorClaim(local),

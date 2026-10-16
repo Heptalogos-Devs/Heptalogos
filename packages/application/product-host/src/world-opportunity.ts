@@ -1,6 +1,9 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Consumes a channel-independent world opportunity through the existing native roles. @module world-opportunity */
+/**
+ * Consumes a channel-independent world opportunity through the existing native roles.
+ * @module world-opportunity
+ */
 import type { createWorldLifeService, createLifeService } from "@heptalogos/subject";
 import { realizeWorldSchema } from "@heptalogos/subject";
 import type { Static } from "@heptalogos/schema-runtime/typebox";
@@ -21,6 +24,7 @@ export interface WorldOpportunityOptions<TContact, TUsage> {
     subjectId: string;
     activityId: string;
     role: Role;
+    deadlineAt?: string;
     context: Record<string, unknown>;
     contacts: readonly TContact[];
     sourceRefs: readonly string[];
@@ -31,6 +35,8 @@ export interface WorldOpportunityOptions<TContact, TUsage> {
     result?: unknown;
     status: string;
     admitted: boolean;
+    activityRevision?: number;
+    deadlineAt?: string;
   }>;
   readonly contextFor: (input: {
     role: Role;
@@ -46,7 +52,7 @@ export interface WorldOpportunityOptions<TContact, TUsage> {
   }>;
   readonly releaseWorldContact: (
     input: WorldContact & { subjectId: string; activityId: string },
-  ) => Promise<{ contactRef: string }>;
+  ) => Promise<{ contactRef: string; selected: boolean }>;
   /** Maps a world point to a real due instant through the official clock mapping, then replaces the one native life schedule. */
   readonly acceptedWorldContact: (input: {
     runId: string;
@@ -59,7 +65,14 @@ export interface WorldOpportunityOptions<TContact, TUsage> {
     activityId: string;
     requestId: string;
     world: Point;
-    run: { runId: string; text?: string; result?: unknown; status: string };
+    run: {
+      runId: string;
+      text?: string;
+      result?: unknown;
+      status: string;
+      activityRevision?: number;
+      deadlineAt?: string;
+    };
   }) => Promise<void>;
   readonly scheduleNext: (input: {
     subjectId: string;
@@ -125,11 +138,12 @@ export function createWorldOpportunity<TContact, TUsage>(
         input.worldId,
       );
       for (const event of pending) {
-        await options.releaseWorldContact({
+        const selection = await options.releaseWorldContact({
           ...event,
           subjectId: input.subjectId,
           activityId: input.activityId,
         });
+        if (!selection.selected) continue;
         selectedRefs.push(event.sourceRef);
         selectedEvents.set(event.eventId, event);
       }
@@ -146,12 +160,23 @@ export function createWorldOpportunity<TContact, TUsage>(
             ),
         );
       let plannerRunId: string | undefined;
-      if (needsPlanner) {
+      let deadlineAt: string | undefined;
+      const priorPatch = await options.worlds.readRealization(
+        input.subjectId,
+        uuidv5("world.patch", input.requestId),
+      );
+      if (needsPlanner && !priorPatch) {
         const context = await options.contextFor({
           ...input,
           role: "world.planner",
           world: frame.world,
-          sourceRefs: [],
+          sourceRefs: [
+            ...frame.state.definition.informationSourceRefs,
+            ...frame.recentEvents.map(
+              (event) =>
+                `world-event:${input.worldId}:${event.eventId}:${"revision" in event ? event.revision : "eventRevision" in event ? event.eventRevision : 0}`,
+            ),
+          ],
         });
         const result = await options.invoke({
           ...input,
@@ -159,12 +184,24 @@ export function createWorldOpportunity<TContact, TUsage>(
           role: "world.planner",
           context: {
             frame,
-            outputContract:
-              "Return a WorldPatch with interval, events, coverage and optional replacement schedule for the next 24 world hours. The realized interval must end no later than frame.world; future arrangements belong only in schedule. Only propose compatible virtual events; do not report real external effects.",
+            outputContract: {
+              schema: realizeWorldSchema,
+              hostOwnedFields: [
+                "operationId",
+                "subjectId",
+                "worldId",
+                "expectedRevision",
+                "events[].source.kind",
+                "events[].source.producerRef",
+              ],
+              instructions:
+                "Return a WorldPatch with interval, events, coverage and optional replacement schedule for the next 24 world hours. The realized interval must end no later than frame.world; future arrangements belong only in schedule. Only propose compatible virtual events; do not report real external effects. Host identity and actual producer fields are supplied by the Host, never granted by this proposal.",
+            },
           },
           ...context,
         });
         plannerRunId = result.runId;
+        deadlineAt = result.deadlineAt;
         if (result.status !== "terminal" && result.status !== "completed")
           return { status: "planner_pending" as const, plannerRunId };
         let candidate: unknown = result.result;
@@ -220,11 +257,12 @@ export function createWorldOpportunity<TContact, TUsage>(
           input.worldId,
         )) {
           if (selectedEvents.has(event.eventId)) continue;
-          await options.releaseWorldContact({
+          const selection = await options.releaseWorldContact({
             ...event,
             subjectId: input.subjectId,
             activityId: input.activityId,
           });
+          if (!selection.selected) continue;
           selectedRefs.push(event.sourceRef);
           selectedEvents.set(event.eventId, event);
         }
@@ -244,7 +282,7 @@ export function createWorldOpportunity<TContact, TUsage>(
       const released = await options.worlds.releasedEventIds(
         input.subjectId,
         input.worldId,
-        subjectView.events.map((event) => event.eventId),
+        [...new Set(subjectView.events.map((event) => event.eventId))],
       );
       const admittedOrSelected = new Set([...released, ...selectedEvents.keys()]);
       const safeSubjectView = {
@@ -263,10 +301,15 @@ export function createWorldOpportunity<TContact, TUsage>(
         ...input,
         requestId: uuidv5("subject.deliberation", input.requestId),
         role: "subject.deliberation",
+        deadlineAt,
         context: {
           activity,
           world: frame.world,
           worldSubject: safeSubjectView,
+          worldContactCoverage: {
+            selectedEvents: selectedEvents.size,
+            limited: pending.some((event) => !selectedEvents.has(event.eventId)),
+          },
           choices: [
             "continue_activity",
             "observe",

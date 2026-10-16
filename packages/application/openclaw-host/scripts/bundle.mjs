@@ -11,6 +11,7 @@ const result = await build({
     resolve(root, "src/index.ts"),
     resolve(root, "src/prepare-gateway.ts"),
     resolve(root, "src/dispatch.ts"),
+    resolve(root, "src/agent-catalog.ts"),
     resolve(root, "src/world-schedule.ts"),
     resolve(root, "src/world-wake-cli.ts"),
   ],
