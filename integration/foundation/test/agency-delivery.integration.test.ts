@@ -83,12 +83,12 @@ async function fixture(replyToMode: "first" | "all" = "all") {
     persistence: c.persistence,
     now,
     checkSources: async () => {},
-    authority: async () => {
-      const current = (await life.get(subjectId, activity.activityId))!;
+    authority: async (_runId, _recipient, tx) => {
+      const current = (await life.get(subjectId, activity.activityId, tx))!;
       await control.beforeAuthorityReturn?.();
       return {
         activity: current,
-        role: control.worker ? "worker" : "main",
+        role: control.worker ? "subject.execution" : "subject.render",
         actorEntityRef: actor,
         conversationRef: "qq:allowed",
         sourceRefs: control.sourceRefs,

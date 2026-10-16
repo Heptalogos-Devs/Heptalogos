@@ -7,10 +7,14 @@ import {
   createAgencyService,
   createWorldLifeService,
   createNarrativeService,
+  createDeliberationService,
+  type AdoptDeliberation,
   type NarrativeReview,
 } from "@heptalogos/subject";
 import {
   executeRepositorySql as sql,
+  readRepositorySql,
+  type PersistenceInternalTransaction,
   useRepositoryMutationTransaction,
 } from "@heptalogos/persistence/repository";
 import {
@@ -76,21 +80,111 @@ real("Narrative adoption on real fenced PostgreSQL", () => {
         reason: "Chosen interaction",
       }),
     );
-    const runId = randomUUID();
-    await c.run(() =>
-      c.persistence.mutate((ctx) =>
-        useRepositoryMutationTransaction(ctx, (tx) =>
-          sql(
-            tx,
-            "INSERT INTO heptalogos.life_native_run(run_id,subject_id,activity_id,session_key,role,state,document,recorded_at,updated_at) VALUES($1,$2,$3,'renderer','main','running','{}',now(),now())",
-            [runId, subjectId, activity.activityId],
+    const retainRun = async (
+      id: string,
+      role: "subject.render" | "subject.deliberation",
+    ) =>
+      c.run(() =>
+        c.persistence.mutate((ctx) =>
+          useRepositoryMutationTransaction(ctx, (tx) =>
+            sql(
+              tx,
+              "INSERT INTO heptalogos.life_native_run(run_id,subject_id,activity_id,session_key,role,state,document,recorded_at,updated_at) VALUES($1,$2,$3,$4,'main','running',$5::jsonb,now(),now())",
+              [
+                id,
+                subjectId,
+                activity.activityId,
+                role,
+                JSON.stringify({
+                  registration: { roleScope: { role } },
+                  consumerId: "consumer:fixture:" + id,
+                }),
+              ],
+            ),
           ),
         ),
-      ),
-    );
+      );
+    const assertSourceRun = async (
+      input: AdoptDeliberation,
+      tx?: PersistenceInternalTransaction,
+    ) => {
+      const statement =
+        "SELECT subject_id,activity_id,document FROM heptalogos.life_native_run WHERE run_id=$1 AND state='running'";
+      const rows = tx
+        ? await sql<{
+            subject_id: string;
+            activity_id: string;
+            document: {
+              registration: { roleScope: { role: string } };
+              consumerId: string;
+            };
+          }>(tx, statement, [input.sourceRunId])
+        : await readRepositorySql<{
+            subject_id: string;
+            activity_id: string;
+            document: {
+              registration: { roleScope: { role: string } };
+              consumerId: string;
+            };
+          }>(c.persistence, statement, [input.sourceRunId]);
+      expect(rows[0]).toMatchObject({
+        subject_id: input.subjectId,
+        activity_id: input.activityId,
+        document: { registration: { roleScope: { role: "subject.deliberation" } } },
+      });
+      expect(rows[0]?.document.consumerId).toBeTruthy();
+    };
+    const decisions = createDeliberationService({
+      persistence: c.persistence,
+      life,
+      now,
+      worldNow: async () => ({ timeDomainRef: "time:real", at: now() }),
+      validateSourceRun: async (input) => {
+        await assertSourceRun(input);
+        return { sourceRefs: scope.sourceRefs, tools: scope.tools };
+      },
+      assertSourceRunIn: async (tx, input) => assertSourceRun(input, tx),
+    });
+    const intent = {
+      intent: "Keep the game private for now",
+      stance: "familiar",
+      qualifications: [],
+      deception: "conceal" as const,
+      eventRefs: [],
+      cognitionRefs: [],
+      priorClaimRefs: [],
+    };
+    const adoptIntent = async (
+      deception: "none" | "conceal",
+      eventRefs: string[] = [],
+    ) => {
+      const sourceRunId = randomUUID();
+      await retainRun(sourceRunId, "subject.deliberation");
+      const current = (await life.get(subjectId, activity.activityId))!;
+      const adopted = await c.run(() =>
+        decisions.adopt({
+          operationId: randomUUID(),
+          subjectId,
+          activityId: activity.activityId,
+          sourceRunId,
+          expectedActivityRevision: current.revision,
+          decision: {
+            action: "communicate",
+            reason: "An actual adopted communication intention",
+            expressionIntent: { ...intent, deception, eventRefs },
+          },
+        }),
+      );
+      expect(await decisions.read(subjectId, adopted.decisionRef)).toEqual(adopted);
+      activity = (await life.get(subjectId, activity.activityId))!;
+      return adopted;
+    };
+    const decision = await adoptIntent("conceal");
+    const runId = randomUUID();
+    await retainRun(runId, "subject.render");
     const authority = {
       activity,
-      role: "main" as const,
+      role: "subject.render" as const,
       actorEntityRef: actor,
       conversationRef: "conversation:accepted",
       sourceRefs: scope.sourceRefs,
@@ -99,7 +193,18 @@ real("Narrative adoption on real fenced PostgreSQL", () => {
     const agency = createAgencyService({
       persistence: c.persistence,
       now,
-      authority: async () => authority,
+      authority: async (id, _recipient, tx) => {
+        const statement =
+          "SELECT document#>>'{registration,roleScope,role}' AS role FROM heptalogos.life_native_run WHERE run_id=$1";
+        const roles = tx
+          ? await sql<{ role: string }>(tx, statement, [id])
+          : await readRepositorySql<{ role: string }>(c.persistence, statement, [id]);
+        return {
+          ...authority,
+          activity: (await life.get(subjectId, activity.activityId, tx))!,
+          role: roles[0]?.role ?? "unregistered",
+        };
+      },
       checkSources: async () => {},
     });
     const worlds = createWorldLifeService({
@@ -134,6 +239,8 @@ real("Narrative adoption on real fenced PostgreSQL", () => {
     };
     const narrative = createNarrativeService({
       persistence: c.persistence,
+      decisions,
+      life,
       now,
       worldNow: async () => ({ timeDomainRef: "time:real", at: now() }),
       worlds,
@@ -145,6 +252,7 @@ real("Narrative adoption on real fenced PostgreSQL", () => {
     });
     const brief = {
       briefId: randomUUID(),
+      decisionRef: decision.decisionRef,
       subjectId,
       activityId: activity.activityId,
       expectedActivityRevision: activity.revision,
@@ -229,9 +337,25 @@ real("Narrative adoption on real fenced PostgreSQL", () => {
         c.run(() => narrative.adoptDelivery({ ...prepared, to: "direct:other" })),
       ).rejects.toMatchObject({ problem: { problemCode: "narrative.conflict" } });
       const otherRun = randomUUID();
+      await retainRun(otherRun, "subject.render");
+      await expect(
+        c.run(() =>
+          narrative.saveBrief(
+            { ...brief, briefId: randomUUID(), deception: "none" },
+            otherRun,
+          ),
+        ),
+      ).rejects.toMatchObject({ problem: { problemCode: "narrative.conflict" } });
+      const withoutDeception = await adoptIntent("none");
       await c.run(() =>
         narrative.saveBrief(
-          { ...brief, briefId: randomUUID(), deception: "none" },
+          {
+            ...brief,
+            briefId: randomUUID(),
+            decisionRef: withoutDeception.decisionRef,
+            expectedActivityRevision: activity.revision,
+            deception: "none",
+          },
           otherRun,
         ),
       );
@@ -278,12 +402,52 @@ real("Narrative adoption on real fenced PostgreSQL", () => {
           schedule: [],
         }),
       );
+      const parentEventId = randomUUID();
+      await c.run(() =>
+        worlds.realize({
+          operationId: randomUUID(),
+          subjectId,
+          worldId,
+          expectedRevision: 1,
+          interval,
+          coverage: "limited",
+          events: [
+            {
+              eventId: parentEventId,
+              interval,
+              title: "Established classroom scene",
+              content: "An actual same-world scene",
+              actorRefs: [actor],
+              placeRef: "class",
+              scheduleId: null,
+              parentEventId: null,
+              causalEventRefs: [],
+              overlap: "concurrent",
+              source: {
+                kind: "rule",
+                producerRef: "fixture:established-scene",
+                sourceRefs: [],
+              },
+              perceptions: [
+                {
+                  actorRef: actor,
+                  kind: "seen",
+                  at: { timeDomainRef: "time:real", at: interval.start },
+                  content: "I was in the classroom",
+                },
+              ],
+            },
+          ],
+        }),
+      );
+      const parentSource = `world-event:${worldId}:${parentEventId}:1`;
+      const sceneDecision = await adoptIntent("conceal", [parentSource]);
       const eventId = randomUUID();
       const patch = {
         operationId: randomUUID(),
         subjectId,
         worldId,
-        expectedRevision: 1,
+        expectedRevision: 2,
         interval,
         events: [
           {
@@ -294,7 +458,7 @@ real("Narrative adoption on real fenced PostgreSQL", () => {
             actorRefs: [actor],
             placeRef: "class",
             scheduleId: null,
-            parentEventId: null,
+            parentEventId,
             causalEventRefs: [],
             overlap: "concurrent" as const,
             source: {
@@ -315,8 +479,11 @@ real("Narrative adoption on real fenced PostgreSQL", () => {
         coverage: "limited" as const,
       };
       const nextRun = randomUUID();
+      await retainRun(nextRun, "subject.render");
       const nextBrief = {
         ...brief,
+        decisionRef: sceneDecision.decisionRef,
+        eventRefs: [parentSource],
         briefId: randomUUID(),
         expectedActivityRevision: activity.revision + 1,
         worldDetailScope: {
@@ -365,9 +532,148 @@ real("Narrative adoption on real fenced PostgreSQL", () => {
             limit: 20,
           })
         ).events,
-      ).toHaveLength(0);
-      expect((await worlds.read(subjectId, worldId))?.revision).toBe(1);
+      ).toHaveLength(1);
+      expect((await worlds.read(subjectId, worldId))?.revision).toBe(2);
       expect((await narrative.claimsTo(q)).claims).toHaveLength(1);
+      const due = {
+        timeDomainRef: "time:real",
+        at: new Date(Date.now() + 86400000).toISOString(),
+      };
+      const waterClaim = review.claims[0]!;
+      review.claims.push({
+        ...waterClaim,
+        start: 5,
+        end: 10,
+        quote: "明天告诉你",
+        content: "I will tell you tomorrow",
+        kind: "commitment",
+        basis: "commitment",
+        eventRefs: [],
+      });
+      review.commitments = [
+        {
+          claimIndex: 1,
+          purpose: "Tell the friend tomorrow",
+          due,
+          sourceRefs: scope.sourceRefs,
+        },
+      ];
+      const successfulRun = randomUUID();
+      await retainRun(successfulRun, "subject.render");
+      await c.run(() =>
+        narrative.saveBrief(
+          {
+            ...nextBrief,
+            briefId: randomUUID(),
+            expectedActivityRevision: activity.revision,
+          },
+          successfulRun,
+        ),
+      );
+      const successfulPrepared = {
+        ...prepared,
+        runId: successfulRun,
+        nativeIntentId: randomUUID(),
+        preparedBatch: {
+          ...prepared.preparedBatch,
+          runId: successfulRun,
+          entries: [
+            {
+              sourceIndex: 4,
+              status: "accepted",
+              payload: { text: "我去接水，明天告诉你" },
+            },
+          ],
+        },
+      };
+      const committedWorld = await c.run(() =>
+        narrative.adoptDelivery(successfulPrepared),
+      );
+      expect((await life.get(subjectId, activity.activityId))?.nextOpportunity).toEqual(
+        due,
+      );
+      const afterCommitRevision = (await life.get(subjectId, activity.activityId))!
+        .revision;
+      expect(await c.run(() => narrative.adoptDelivery(successfulPrepared))).toEqual(
+        committedWorld,
+      );
+      expect((await life.get(subjectId, activity.activityId))!.revision).toBe(
+        afterCommitRevision,
+      );
+      expect((await worlds.read(subjectId, worldId))?.revision).toBe(3);
+      expect(
+        (
+          await worlds.query({
+            subjectId,
+            worldId,
+            interval,
+            view: "world_author",
+            limit: 20,
+          })
+        ).events.find((event) => event.eventId === eventId),
+      ).toMatchObject({
+        source: {
+          kind: "narrative",
+          producerRef: successfulRun,
+          sourceRefs: expect.arrayContaining([successfulRun, "actual-review-run"]),
+        },
+      });
+      expect(
+        (
+          await worlds.query({
+            subjectId,
+            worldId,
+            interval,
+            view: "world_author",
+            limit: 20,
+          })
+        ).events,
+      ).toHaveLength(2);
+      const newest = await narrative.claimsTo({ ...q, order: "newest", limit: 1 });
+      expect(newest.more).toBe(true);
+      expect(newest.claims[0]).toMatchObject({
+        content: "I will tell you tomorrow",
+        status: "adopted",
+      });
+      const older = await narrative.claimsTo({
+        ...q,
+        order: "newest",
+        limit: 1,
+        afterClaimId: newest.claims[0]!.claimId,
+      });
+      expect(older.more).toBe(true);
+      expect(older.claims[0]?.content).toBe("Got water");
+      const oldest = await narrative.claimsTo({
+        ...q,
+        order: "newest",
+        limit: 1,
+        afterClaimId: older.claims[0]!.claimId,
+      });
+      expect(oldest.more).toBe(false);
+      expect(oldest.claims[0]?.claimId).toBe(initial.claims[0]?.claimId);
+      const failedPart = {
+        ...part,
+        reference: committedWorld.reference,
+        deliveryQueueId: "native:world",
+        payload: { ...part.payload, text: "我去接水，明天告诉你" },
+      };
+      const failedAttempt = await c.run(() => agency.beginDelivery(failedPart));
+      if (failedAttempt.action !== "send")
+        throw Error("Expected the new exact adopted delivery");
+      await c.run(() =>
+        agency.recordDelivery({
+          reference: committedWorld.reference,
+          sourceIndex: 4,
+          partIndex: 0,
+          attemptId: failedAttempt.attemptId,
+          outcome: { state: "not_sent", code: "actual_pre_send_rejection" },
+        }),
+      );
+      expect(
+        (
+          await narrative.claimsTo({ ...q, order: "newest", status: "not_sent" })
+        ).claims.map((claim) => claim.claimId),
+      ).toEqual([newest.claims[0]!.claimId, older.claims[0]!.claimId]);
     } finally {
       await c.close();
     }
