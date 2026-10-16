@@ -1,7 +1,10 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
 
-/** Owns native facts, pending material work and audience-scoped reading without network work. @module service */
+/**
+ * Owns native facts, pending material work and audience-scoped reading without network work.
+ * @module service
+ */
 import {
   createCanonicalMessageId,
   parseInstant,

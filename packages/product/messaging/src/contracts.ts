@@ -1,7 +1,10 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
 
-/** Canonical messaging wire contracts, shared by Channel, Host and Life. @module contracts */
+/**
+ * Canonical messaging wire contracts, shared by Channel, Host and Life.
+ * @module contracts
+ */
 import { Type, type Static } from "@heptalogos/schema-runtime/typebox";
 import type { PersistenceService } from "@heptalogos/persistence";
 
@@ -25,6 +28,7 @@ export const nativeConversationSchema = Type.Object(
   },
   object,
 );
+/** The exact platform/account/conversation key used by every ingress path. */
 export type NativeConversation = Static<typeof nativeConversationSchema>;
 /** Authenticated author identity and presentation snapshot, never inferred from a nickname. */
 export const messageAuthorSchema = Type.Object(
@@ -122,8 +126,11 @@ export const acceptFactsInputSchema = Type.Object(
   },
   object,
 );
+/** One lossless native message candidate before canonical sequence allocation. */
 export type RawMessageFact = Static<typeof rawMessageFactSchema>;
+/** One concrete platform event carrying its protected source reference. */
 export type RawPlatformEvent = Static<typeof rawPlatformEventSchema>;
+/** A bounded atomic batch of native message and platform-event candidates. */
 export type AcceptFactsInput = Static<typeof acceptFactsInputSchema>;
 /** Canonical fact payload remains immutable; lifecycle changes have separate event records. */
 export const messageFactSchema = Type.Object(
@@ -145,6 +152,7 @@ export const messageFactSchema = Type.Object(
   },
   object,
 );
+/** An accepted immutable message with canonical identity, sequence and actual Host lineage. */
 export type MessageFact = Static<typeof messageFactSchema>;
 /** Atomic acceptance receipts include durable pending work references. */
 export const acceptFactsResultSchema = Type.Object(
@@ -165,6 +173,7 @@ export const acceptFactsResultSchema = Type.Object(
   },
   object,
 );
+/** Stable canonical and pending-work references for accepted or duplicate facts. */
 export type AcceptFactsResult = Static<typeof acceptFactsResultSchema>;
 /** Attachment bytes live in a CAS owner; this owner holds references and acquisition state. */
 export const attachmentSchema = Type.Object(
@@ -201,6 +210,7 @@ export const attachmentSchema = Type.Object(
   },
   object,
 );
+/** The independently revisioned acquisition state and CAS reference of one message part. */
 export type MessageAttachment = Static<typeof attachmentSchema>;
 /** Compare-and-swap acquisition updates prevent stale workers from overwriting completed work. */
 export const updateAttachmentInputSchema = Type.Object(
@@ -213,6 +223,7 @@ export const updateAttachmentInputSchema = Type.Object(
   },
   object,
 );
+/** The expected attachment revision and intended acquisition-state transition. */
 export type UpdateAttachmentInput = Static<typeof updateAttachmentInputSchema>;
 /** Forward nodes retain parent paths and claimed authors separately from authenticated envelope author. */
 export const forwardNodeSchema = Type.Object(
@@ -246,6 +257,7 @@ export const messageReferenceSchema = Type.Object(
   },
   object,
 );
+/** A revisioned reply or forward target with retained partial-resolution results. */
 export type MessageReference = Static<typeof messageReferenceSchema>;
 /** Resolution is performed outside transactions; only its bounded result is committed here. */
 export const updateReferenceInputSchema = Type.Object(
@@ -260,6 +272,7 @@ export const updateReferenceInputSchema = Type.Object(
   },
   object,
 );
+/** A compare-and-swap reference update containing newly expanded forward nodes. */
 export type UpdateReferenceInput = Static<typeof updateReferenceInputSchema>;
 /** Read authorization is supplied by the trusted Host before any relevance selection. */
 export const prepareReadInputSchema = Type.Object(
@@ -289,6 +302,7 @@ export const prepareReadInputSchema = Type.Object(
   },
   object,
 );
+/** An authorized material selection and explicit message/byte budget. */
 export type PrepareReadInput = Static<typeof prepareReadInputSchema>;
 /** Safe material excludes protected raw/envelope references. It never records an Observation. */
 const safePartSchema = Type.Object(
@@ -301,6 +315,7 @@ const safePartSchema = Type.Object(
   },
   object,
 );
+/** Defines safe ordered material without protected raw-envelope or media-source references. */
 export const readMessageMaterialSchema = Type.Object(
   {
     messageId: id,
@@ -347,6 +362,7 @@ export const readMessageMaterialSchema = Type.Object(
   },
   object,
 );
+/** Defines safe material output with explicit budget coverage and omissions. */
 export const prepareReadResultSchema = Type.Object(
   {
     materials: Type.Array(readMessageMaterialSchema),
@@ -376,6 +392,7 @@ export const prepareReadResultSchema = Type.Object(
   },
   object,
 );
+/** Ordered safe materials with actual coverage, omissions and continuation. */
 export type PrepareReadResult = Static<typeof prepareReadResultSchema>;
 /** Persist actual contact only after the consumer has really encountered the selected materials. */
 export const recordContactInputSchema = Type.Object(
@@ -387,6 +404,7 @@ export const recordContactInputSchema = Type.Object(
   },
   object,
 );
+/** A stable consumer-reported actual encounter with selected message materials. */
 export type RecordContactInput = Static<typeof recordContactInputSchema>;
 /** Pending references survive process death until an explicit completion. */
 export const pendingFactSchema = Type.Object(
@@ -398,6 +416,7 @@ export const pendingFactSchema = Type.Object(
   },
   object,
 );
+/** Bounds pending-work enumeration, optionally to one authorized conversation. */
 export const listPendingInputSchema = Type.Object(
   {
     conversationId: Type.Optional(id),
@@ -405,14 +424,17 @@ export const listPendingInputSchema = Type.Object(
   },
   object,
 );
+/** Returns persisted unfinished message/event work references in acceptance order. */
 export const listPendingResultSchema = Type.Object(
   { pending: Type.Array(pendingFactSchema) },
   object,
 );
+/** Identifies durable pending references whose consumer work has completed. */
 export const completePendingInputSchema = Type.Object(
   { pendingRefs: Type.Array(id, { minItems: 1, maxItems: 512 }) },
   object,
 );
+/** Bounds acquisition-work enumeration by the requested attachment states. */
 export const pendingAttachmentsInputSchema = Type.Object(
   {
     limit: Type.Integer({ minimum: 1, maximum: 512 }),
@@ -420,10 +442,12 @@ export const pendingAttachmentsInputSchema = Type.Object(
   },
   object,
 );
+/** Returns independent attachment state and protected acquisition source references. */
 export const pendingAttachmentsResultSchema = Type.Object(
   { attachments: Type.Array(attachmentSchema) },
   object,
 );
+/** Returns unresolved or partially expanded reply/forward references. */
 export const pendingReferencesResultSchema = Type.Object(
   { references: Type.Array(messageReferenceSchema) },
   object,
@@ -433,10 +457,12 @@ export const platformEventSchema = Type.Object(
   { ...rawPlatformEventSchema.properties, eventId: id, conversationId: id },
   object,
 );
+/** Selects concrete platform events for the trusted Host event consumer. */
 export const readEventsInputSchema = Type.Object(
   { eventRefs: Type.Array(id, { maxItems: 512 }) },
   object,
 );
+/** Returns persisted platform events with protected source-envelope references. */
 export const readEventsResultSchema = Type.Object(
   { events: Type.Array(platformEventSchema) },
   object,
@@ -447,21 +473,31 @@ export interface MessagingServiceOptions {
 }
 /** Canonical fact, material and bounded pending-state owner. */
 export interface MessagingService {
+  /** Atomically accepts or deduplicates native facts and their durable pending references. */
   accept(input: AcceptFactsInput): Promise<AcceptFactsResult>;
+  /** Returns authorized and budgeted materials without recording an Observation. */
   prepareRead(input: PrepareReadInput): Promise<PrepareReadResult>;
+  /** Retains the stable identity and time of a consumer-reported actual encounter. */
   recordContact(input: RecordContactInput): Promise<void>;
+  /** Lists durable accepted facts awaiting explicit consumer completion. */
   listPending(
     input: Static<typeof listPendingInputSchema>,
   ): Promise<Static<typeof listPendingResultSchema>>;
+  /** Completes pending references without deleting their deduplication identity. */
   completePending(input: Static<typeof completePendingInputSchema>): Promise<void>;
+  /** Lists persisted attachment acquisition state for bounded external work. */
   listAttachments(
     input: Static<typeof pendingAttachmentsInputSchema>,
   ): Promise<Static<typeof pendingAttachmentsResultSchema>>;
+  /** Commits one valid attachment-state transition using its expected revision. */
   updateAttachment(input: UpdateAttachmentInput): Promise<MessageAttachment>;
+  /** Lists pending and partial source references eligible for external expansion. */
   listReferences(
     input: Static<typeof listPendingInputSchema>,
   ): Promise<Static<typeof pendingReferencesResultSchema>>;
+  /** Appends bounded immutable forward nodes or records reply-resolution state. */
   updateReference(input: UpdateReferenceInput): Promise<MessageReference>;
+  /** Reads concrete platform events through the trusted Host consumer boundary. */
   readEvents(
     input: Static<typeof readEventsInputSchema>,
   ): Promise<Static<typeof readEventsResultSchema>>;

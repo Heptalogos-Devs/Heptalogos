@@ -1,6 +1,6 @@
 # @heptalogos/identity
 
-Identity owns opaque Host Entity references and the formal association of
+Identity owns opaque Host Entity references in `entity:heptalogos:<uuid>` form and the formal association of
 external accounts, authenticated UIDs, groups and a cognitive Subject's own
 Host identity. It owns no cognition and makes no network calls.
 
@@ -27,6 +27,9 @@ unassigned QQ account/UID to that Entity. Rebinding another account preserves
 the same Host Entity and does not create or replace a cognitive Subject. Bind
 the self account through this API before resolving it as an unrelated person;
 preexisting contradictory mappings require explicit reconciliation.
+
+Only Identity encodes or decodes EntityRefs; callers pass the returned opaque
+reference unchanged. Its private canonical columns retain UUIDs.
 
 The canonical migration owns `identity_entity`, `identity_external_key` and
 `identity_subject`. A short transaction-level identity lock serializes formal

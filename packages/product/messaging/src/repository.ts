@@ -1,7 +1,10 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
 
-/** Restricted SQL helpers for the single canonical Messaging owner. @module repository */
+/**
+ * Restricted SQL helpers for the single canonical Messaging owner.
+ * @module repository
+ */
 import {
   executeRepositorySql,
   type PersistenceInternalTransaction,

@@ -374,6 +374,8 @@ real.sequential("native Messaging and Host Identity on real fenced PostgreSQL", 
         Array.from({ length: 12 }, () => c.run(() => c.identity.resolveAccount(pair))),
       );
       expect(new Set(entities.map((e) => e.entityRef)).size).toBe(1);
+      for (const entity of entities)
+        expect(entity.entityRef).toMatch(/^entity:heptalogos:[0-9a-f-]{36}$/);
       const other = await c.run(() =>
         c.identity.resolveAccount({ platform: "qq", accountId: "other-account" }),
       );
@@ -382,6 +384,7 @@ real.sequential("native Messaging and Host Identity on real fenced PostgreSQL", 
         c.identity.resolveGroup({ platform: "qq", groupId: pair.accountId }),
       );
       expect(group.kind).toBe("group");
+      expect(group.entityRef).toMatch(/^entity:heptalogos:[0-9a-f-]{36}$/);
       expect(group.entityRef).not.toBe(entities[0]!.entityRef);
       await expect(
         c.run(() =>
@@ -407,6 +410,7 @@ real.sequential("native Messaging and Host Identity on real fenced PostgreSQL", 
         }),
       );
       expect(changed.entityRef).toBe(own.entityRef);
+      expect(own.entityRef).toMatch(/^entity:heptalogos:[0-9a-f-]{36}$/);
       expect(
         await c.identity.readSubjectEntity({ subjectId: "existing-nous-subject" }),
       ).toEqual({ entity: own });
@@ -418,6 +422,28 @@ real.sequential("native Messaging and Host Identity on real fenced PostgreSQL", 
         }),
       );
       expect(linked.entityRef).toBe(entities[0]!.entityRef);
+      expect(
+        await c.run(() =>
+          c.identity.resolveAccount({
+            platform: "another-platform",
+            accountId: "formal-explicit-link",
+          }),
+        ),
+      ).toEqual(linked);
+      for (const invalidRef of [
+        entities[0]!.entityRef.split(":")[2]!,
+        "entity:heptalogos:" + entities[0]!.entityRef,
+      ]) {
+        await expect(
+          c.run(() =>
+            c.identity.linkAccount({
+              entityRef: invalidRef,
+              platform: "qq",
+              accountId: "invalid-opaque-link",
+            }),
+          ),
+        ).rejects.toMatchObject({ problem: { problemCode: "identity.invalid_input" } });
+      }
     } finally {
       await c.close();
     }

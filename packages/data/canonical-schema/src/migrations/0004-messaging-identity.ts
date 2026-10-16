@@ -1,7 +1,10 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
 
-/** Evolves the existing recorder in place and preserves every legacy message. @module messaging-identity-migration */
+/**
+ * Evolves the existing recorder in place and preserves every legacy message.
+ * @module messaging-identity-migration
+ */
 import { sql, type Kysely } from "kysely";
 import type { Migration } from "kysely/migration";
 import type { CanonicalDatabase } from "../migration-pool.js";

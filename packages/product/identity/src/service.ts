@@ -1,7 +1,10 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
 
-/** Owns formal native identity linkage behind Host fencing. @module service */
+/**
+ * Owns formal native identity linkage behind Host fencing.
+ * @module service
+ */
 import { createUuidV7Id, createProblemError } from "@heptalogos/foundation-contracts";
 import { compileSchema } from "@heptalogos/schema-runtime";
 import {
@@ -22,6 +25,13 @@ import {
   type IdentityServiceOptions,
   type ResolveAccountInput,
 } from "./contracts.js";
+const entityPrefix = "entity:heptalogos:";
+function externalEntityRef(databaseId: string): string {
+  return entityPrefix + databaseId;
+}
+function databaseEntityId(entityRef: string): string {
+  return entityRef.slice(entityPrefix.length);
+}
 const validators = {
   account: compileSchema(resolveAccountInputSchema),
   group: compileSchema(resolveGroupInputSchema),
@@ -79,7 +89,7 @@ export function createIdentityService(
       "SELECT entity_ref,kind FROM heptalogos.identity_entity WHERE entity_ref=$1",
       [ref],
     );
-    return r ? { entityRef: r.entity_ref, kind: r.kind } : undefined;
+    return r ? { entityRef: externalEntityRef(r.entity_ref), kind: r.kind } : undefined;
   };
   const create = async (
     tx: PersistenceInternalTransaction,
@@ -92,7 +102,7 @@ export function createIdentityService(
       "INSERT INTO heptalogos.identity_entity(entity_ref,kind,lineage_context_ref) VALUES($1,$2,$3::jsonb)",
       [entityRef, kind, lineage(c)],
     );
-    return { entityRef, kind };
+    return { entityRef: externalEntityRef(entityRef), kind };
   };
   // Identity linkage is rare and bounded. One database transaction lock avoids races when an account/UID pair intersects another pair.
   const lock = (tx: PersistenceInternalTransaction) =>
@@ -116,7 +126,10 @@ export function createIdentityService(
       );
       if (r) refs.add(r.entity_ref);
     }
-    if (refs.size > 1 || (target && [...refs].some((ref) => ref !== target.entityRef)))
+    if (
+      refs.size > 1 ||
+      (target && [...refs].some((ref) => externalEntityRef(ref) !== target.entityRef))
+    )
       conflict();
     const current =
       target ??
@@ -126,7 +139,7 @@ export function createIdentityService(
       await sql(
         tx,
         "INSERT INTO heptalogos.identity_external_key(platform,kind,native_id,entity_ref) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING",
-        [input.platform, kind, native, current.entityRef],
+        [input.platform, kind, native, databaseEntityId(current.entityRef)],
       );
     return current;
   };
@@ -145,7 +158,7 @@ export function createIdentityService(
     await sql(
       tx,
       "INSERT INTO heptalogos.identity_subject(subject_id,entity_ref) VALUES($1,$2)",
-      [subjectId, next.entityRef],
+      [subjectId, databaseEntityId(next.entityRef)],
     );
     return next;
   };
@@ -171,7 +184,7 @@ export function createIdentityService(
         await sql(
           tx,
           "INSERT INTO heptalogos.identity_external_key(platform,kind,native_id,entity_ref) VALUES($1,'group',$2,$3)",
-          [input.platform, input.groupId, next.entityRef],
+          [input.platform, input.groupId, databaseEntityId(next.entityRef)],
         );
         return next;
       });
@@ -208,7 +221,7 @@ export function createIdentityService(
       check(validators.link, input);
       return mutate(async (tx, c) => {
         await lock(tx);
-        const target = await entity(tx, input.entityRef);
+        const target = await entity(tx, databaseEntityId(input.entityRef));
         if (!target) conflict();
         return resolve(tx, c, input, target);
       });
