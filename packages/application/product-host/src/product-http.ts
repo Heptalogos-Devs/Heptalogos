@@ -39,6 +39,8 @@ import {
 } from "@heptalogos/management";
 import { Type } from "@heptalogos/schema-runtime/typebox";
 import { tokenFromRequest } from "./http-auth.js";
+import { registerPursuitHttp, type PursuitHttpOptions } from "./pursuit-http.js";
+import { registerLifeReadHttp } from "./life-read-http.js";
 import { registerGatewayHttp, type GatewayHttpOptions } from "./gateway-http.js";
 
 async function withRequestSignal<T>(
@@ -69,6 +71,7 @@ export interface ProductHttpOptions {
   readonly identity: { readonly installationId: string; readonly bootId: string };
   readonly onAdministratorClaimed: () => Promise<void>;
   readonly gateway?: GatewayHttpOptions;
+  readonly pursuit?: PursuitHttpOptions;
 }
 /** Builds a loopback-only, non-model-dependent Management API. */
 export async function createProductHttpApp(options: ProductHttpOptions) {
@@ -325,6 +328,8 @@ export async function createProductHttpApp(options: ProductHttpOptions) {
         ),
   );
   registerGatewayHttp(app, options.gateway);
+  registerLifeReadHttp(app, options.gateway);
+  registerPursuitHttp(app, options.pursuit);
   return app;
 }
 

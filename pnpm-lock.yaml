@@ -353,8 +353,8 @@ importers:
         specifier: workspace:*
         version: link:../../foundation/time-service
       '@nous-wave/client':
-        specifier: file:../../../../Nous-Wave/data/releases/client/nous-wave-client-0.1.0-7599024317471c9e.tgz
-        version: file:../Nous-Wave/data/releases/client/nous-wave-client-0.1.0-7599024317471c9e.tgz
+        specifier: file:../../../../Nous-Wave/data/releases/client/nous-wave-client-0.1.0-85c34a742d44fe0c.tgz
+        version: file:../Nous-Wave/data/releases/client/nous-wave-client-0.1.0-85c34a742d44fe0c.tgz
       fastify:
         specifier: 'catalog:'
         version: 5.12.5
@@ -1996,8 +1996,8 @@ packages:
       '@emnapi/core': ^1.7.1 || ^2.0.0-alpha.4
       '@emnapi/runtime': ^1.7.1 || ^2.0.0-alpha.4
 
-  '@nous-wave/client@file:../Nous-Wave/data/releases/client/nous-wave-client-0.1.0-7599024317471c9e.tgz':
-    resolution: {integrity: sha512-aXA3Z2AGFMXIKTDDGybT+1qG8UifHSy2L+Itw+t7VGmCkE5is9+LmqcrEkBYHUi1GO6f33UBku3Z2lrJSs7Utw==, tarball: file:../Nous-Wave/data/releases/client/nous-wave-client-0.1.0-7599024317471c9e.tgz}
+  '@nous-wave/client@file:../Nous-Wave/data/releases/client/nous-wave-client-0.1.0-85c34a742d44fe0c.tgz':
+    resolution: {integrity: sha512-f1lzitTXoTAF1gxvcZP813acVpQKKU/x3ymwkJd/W4VwzivmxwvrUkOJmHCNWd6hRCZQKHbVOERvvGcE5kTuwg==, tarball: file:../Nous-Wave/data/releases/client/nous-wave-client-0.1.0-85c34a742d44fe0c.tgz}
     version: 0.1.0
     engines: {node: '>=24.21.0'}
     bundledDependencies:
@@ -6052,7 +6052,7 @@ snapshots:
       '@tybys/wasm-util': 0.10.3
     optional: true
 
-  '@nous-wave/client@file:../Nous-Wave/data/releases/client/nous-wave-client-0.1.0-7599024317471c9e.tgz':
+  '@nous-wave/client@file:../Nous-Wave/data/releases/client/nous-wave-client-0.1.0-85c34a742d44fe0c.tgz':
     dependencies:
       '@bufbuild/protobuf': 2.15.0
       '@connectrpc/connect': 2.2.0(@bufbuild/protobuf@2.15.0)

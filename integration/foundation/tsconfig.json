@@ -76,6 +76,12 @@
   "include": ["test/**/*.ts", "support/**/*.ts"],
   "references": [
     {
+      "path": "../../packages/system/management"
+    },
+    {
+      "path": "../../packages/foundation/schema-runtime"
+    },
+    {
       "path": "../../packages/application/product-host"
     },
     {
@@ -83,9 +89,6 @@
     },
     {
       "path": "../../packages/product/messaging"
-    },
-    {
-      "path": "../../packages/foundation/schema-runtime"
     },
     {
       "path": "../../packages/product/subject"

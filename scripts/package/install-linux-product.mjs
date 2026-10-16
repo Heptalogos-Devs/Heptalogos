@@ -4,6 +4,8 @@
 /** Installs built application artifacts and fixed user-systemd services on Linux.
  * @module install-linux-product
  */
+import { quoteUnit, readInstallationServices } from "./service-unit.mjs";
+import { configureMaintenanceGateway } from "./configure-maintenance.mjs";
 import { runProcessSyncChecked } from "@heptalogos/repo-kit";
 import { cp, mkdir, readFile, lstat, writeFile, chmod, rename } from "node:fs/promises";
 import { homedir } from "node:os";
@@ -56,15 +58,6 @@ function argumentsFrom(argv) {
       values.get("--cli-artifact") ??
       join(repositoryRoot, "packages/application/cli/dist"),
   };
-}
-function quoteUnit(value, command = false) {
-  if (/[\r\n\0]/u.test(value))
-    throw new Error("A service path contains unsupported control characters");
-  const escaped = value
-    .replaceAll("\\", "\\\\")
-    .replaceAll('"', '\\"')
-    .replaceAll("%", "%%");
-  return `"${command ? escaped.replaceAll("$", () => "$$") : escaped}"`;
 }
 
 /** Renders the installer-owned Host unit with bounded drain and independent Gateway lifetimes. */
@@ -272,14 +265,8 @@ export async function configureSubjectGateway({ target, environmentFile }) {
         "Subject environment file must be an absolute protected regular file",
       );
   }
-  const locator = JSON.parse(
-    await readFile(join(target, "heptalogos.bootstrap.json"), "utf8"),
-  );
-  const descriptorPath = join(
-    locator.roots.CONFIGURATION,
-    "installation-services.json",
-  );
-  const descriptor = JSON.parse(await readFile(descriptorPath, "utf8"));
+  const { locator, descriptorPath, descriptor } =
+    await readInstallationServices(target);
   const subject = descriptor.services?.subject;
   if (
     descriptor.schemaVersion !== 1 ||
@@ -362,7 +349,44 @@ function shellQuote(value) {
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    if (process.argv[2] === "configure-subject-gateway") {
+    if (process.argv[2] === "configure-maintenance") {
+      const args = process.argv.slice(3);
+      const values = new Map();
+      for (let index = 0; index < args.length; index += 2) {
+        if (
+          ![
+            "--target",
+            "--environment-file",
+            "--source-profile",
+            "--model",
+            "--port",
+          ].includes(args[index]) ||
+          !args[index + 1] ||
+          values.has(args[index])
+        )
+          throw Error(
+            "Usage: install-linux-product.mjs configure-maintenance --target <anchor> --environment-file <private-env> --source-profile <native-profile> --model <provider/model> [--port <port>]",
+          );
+        values.set(args[index], args[index + 1]);
+      }
+      for (const required of [
+        "--target",
+        "--environment-file",
+        "--source-profile",
+        "--model",
+      ])
+        if (!values.has(required))
+          throw Error(
+            "Maintenance requires explicit installation, environment and model source",
+          );
+      await configureMaintenanceGateway({
+        target: resolve(values.get("--target")),
+        environmentFile: resolve(values.get("--environment-file")),
+        sourceProfile: resolve(values.get("--source-profile")),
+        model: values.get("--model"),
+        port: values.has("--port") ? Number(values.get("--port")) : undefined,
+      });
+    } else if (process.argv[2] === "configure-subject-gateway") {
       if (
         ![5, 7].includes(process.argv.length) ||
         process.argv[3] !== "--target" ||

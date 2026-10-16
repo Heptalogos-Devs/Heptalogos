@@ -16,7 +16,7 @@ import {
 /** Common flags accepted by every current CLI command. */
 const commonFlags = {
   "anchor-root": Flags.string({
-    description: "Installation anchor containing the Bootstrap locator",
+    description: "安装根目录（包含 Bootstrap 定位文件）",
     required: true,
   }),
 };
@@ -57,7 +57,8 @@ function exitCodeFor(status: number | undefined): number {
   return 4;
 }
 
-function toCliFailure(error: unknown): CliFailure {
+/** Applies the shared HTTP/Problem exit classification without exposing raw provider errors. */
+export function toCliFailure(error: unknown): CliFailure {
   if (error instanceof CliFailure) return error;
   if (error instanceof ManagementClientError) {
     const code = error.problem?.problemCode ?? "management.host_unavailable";
@@ -84,7 +85,7 @@ export abstract class BaseCommand extends Command {
 
   protected async execute<T>(
     anchorRoot: string,
-    operation: (local: LocalManagementClient) => Promise<T>,
+    operation: (local: LocalManagementClient, signal: AbortSignal) => Promise<T>,
     authenticated = false,
   ): Promise<T | undefined> {
     let local: LocalManagementClient | undefined;
@@ -115,7 +116,7 @@ export abstract class BaseCommand extends Command {
           signal: controller.signal,
         });
       }
-      const value = await operation(local);
+      const value = await operation(local, controller.signal);
       return this.present(value);
     } catch (error) {
       if (controller.signal.aborted)

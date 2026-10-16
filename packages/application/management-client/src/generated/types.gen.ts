@@ -6517,3 +6517,1412 @@ export type FeedbackCognitionResponses = {
 };
 
 export type FeedbackCognitionResponse = FeedbackCognitionResponses[keyof FeedbackCognitionResponses];
+
+export type ReadActivityData = {
+    body: {
+        subjectId: string;
+        activityId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/life/read';
+};
+
+export type ReadActivityErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ReadActivityError = ReadActivityErrors[keyof ReadActivityErrors];
+
+export type ReadActivityResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        activity: {
+            activityId: string;
+            subjectId: string;
+            revision: number;
+            purpose: string;
+            mode: 'work' | 'rest' | 'wait';
+            window: {
+                notBefore: {
+                    timeDomainRef: string;
+                    at: string;
+                } | null;
+                notAfter: {
+                    timeDomainRef: string;
+                    at: string;
+                } | null;
+            };
+            sourceRefs: Array<string>;
+            workContextId: string | null;
+            state: 'planned' | 'active' | 'paused' | 'completed' | 'cancelled' | 'failed';
+            proposedBy: string;
+            adoptedBy: string | null;
+            adoptedAt: string | null;
+            lastTransitionReason: string;
+            scope: {
+                conversations: Array<{
+                    conversationRef: string;
+                    operations: Array<'observe' | 'send' | 'edit' | 'withdraw' | 'moderate'>;
+                }>;
+                tools: Array<string>;
+                sourceRefs: Array<string>;
+                maxRunMs: number;
+            } | null;
+            world: {
+                timeDomainRef: string;
+                at: string;
+            };
+            nextOpportunity: {
+                timeDomainRef: string;
+                at: string;
+            } | null;
+            progress: {
+                note: string;
+                sourceRefs: Array<string>;
+                artifactRefs: Array<string>;
+                resultRefs: Array<string>;
+            };
+            interruptOn: Array<'direct' | 'mention' | 'reply' | 'deadline' | 'correction' | 'manual'>;
+            continuationRequired: boolean;
+            createdAt: string;
+            updatedAt: string;
+        } | null;
+    };
+};
+
+export type ReadActivityResponse = ReadActivityResponses[keyof ReadActivityResponses];
+
+export type ListPursuitsData = {
+    body: {
+        subjectId: string;
+        afterId?: string;
+        limit: number;
+        states: Array<'active' | 'paused' | 'ended'>;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/pursuit/list';
+};
+
+export type ListPursuitsErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ListPursuitsError = ListPursuitsErrors[keyof ListPursuitsErrors];
+
+export type ListPursuitsResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        pursuits: Array<{
+            pursuitId: string;
+            subjectId: string;
+            activityId: string;
+            workContextId: string;
+            revision: number;
+            desireRevision: {
+                kind: string;
+                value: string;
+            };
+            conditionRevision: {
+                kind: string;
+                value: string;
+            };
+            desireEpoch: string;
+            conditionEpoch: string;
+            adoptedBy: string;
+            reason: string;
+            state: 'active' | 'paused' | 'ended';
+            reviewRequired: boolean;
+            reviewReason: string;
+            timeDomainRef: string;
+            lastEvaluation: {
+                evaluationId: string;
+                conditionRevision: {
+                    kind: string;
+                    value: string;
+                };
+                verdict: 'satisfied' | 'violated' | 'unknown';
+                finalConclusion: boolean;
+                coverage: 'complete' | 'limited' | 'gap';
+                applicable: boolean | null;
+                timeDomainRef: string;
+                evaluatedInterval: {
+                    kind: 'instant' | 'interval' | 'unknown';
+                    from: string | null;
+                    until: string | null;
+                };
+                evidenceRefs: Array<{
+                    kind: string;
+                    value: string;
+                }>;
+                recordedAt: string;
+            } | null;
+            createdAt: string;
+            updatedAt: string;
+        }>;
+        nextId: string | null;
+    };
+};
+
+export type ListPursuitsResponse = ListPursuitsResponses[keyof ListPursuitsResponses];
+
+export type PursuitHistoryData = {
+    body: {
+        subjectId: string;
+        pursuitId: string;
+        afterRevision?: number;
+        limit: number;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/pursuit/history';
+};
+
+export type PursuitHistoryErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type PursuitHistoryError = PursuitHistoryErrors[keyof PursuitHistoryErrors];
+
+export type PursuitHistoryResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        history: Array<{
+            pursuitId: string;
+            subjectId: string;
+            activityId: string;
+            workContextId: string;
+            revision: number;
+            desireRevision: {
+                kind: string;
+                value: string;
+            };
+            conditionRevision: {
+                kind: string;
+                value: string;
+            };
+            desireEpoch: string;
+            conditionEpoch: string;
+            adoptedBy: string;
+            reason: string;
+            state: 'active' | 'paused' | 'ended';
+            reviewRequired: boolean;
+            reviewReason: string;
+            timeDomainRef: string;
+            lastEvaluation: {
+                evaluationId: string;
+                conditionRevision: {
+                    kind: string;
+                    value: string;
+                };
+                verdict: 'satisfied' | 'violated' | 'unknown';
+                finalConclusion: boolean;
+                coverage: 'complete' | 'limited' | 'gap';
+                applicable: boolean | null;
+                timeDomainRef: string;
+                evaluatedInterval: {
+                    kind: 'instant' | 'interval' | 'unknown';
+                    from: string | null;
+                    until: string | null;
+                };
+                evidenceRefs: Array<{
+                    kind: string;
+                    value: string;
+                }>;
+                recordedAt: string;
+            } | null;
+            createdAt: string;
+            updatedAt: string;
+        }>;
+        nextRevision: number | null;
+    };
+};
+
+export type PursuitHistoryResponse = PursuitHistoryResponses[keyof PursuitHistoryResponses];
+
+export type AdoptPursuitData = {
+    body: {
+        operationId: string;
+        subjectId: string;
+        activityId: string;
+        desireRevision: {
+            kind: 'desire_revision';
+            value: string;
+        };
+        conditionRevision: {
+            kind: 'desired_condition_revision';
+            value: string;
+        };
+        adoptedBy: string;
+        reason: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/pursuit/adopt';
+};
+
+export type AdoptPursuitErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type AdoptPursuitError = AdoptPursuitErrors[keyof AdoptPursuitErrors];
+
+export type AdoptPursuitResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        pursuitId: string;
+        subjectId: string;
+        activityId: string;
+        workContextId: string;
+        revision: number;
+        desireRevision: {
+            kind: string;
+            value: string;
+        };
+        conditionRevision: {
+            kind: string;
+            value: string;
+        };
+        desireEpoch: string;
+        conditionEpoch: string;
+        adoptedBy: string;
+        reason: string;
+        state: 'active' | 'paused' | 'ended';
+        reviewRequired: boolean;
+        reviewReason: string;
+        timeDomainRef: string;
+        lastEvaluation: {
+            evaluationId: string;
+            conditionRevision: {
+                kind: string;
+                value: string;
+            };
+            verdict: 'satisfied' | 'violated' | 'unknown';
+            finalConclusion: boolean;
+            coverage: 'complete' | 'limited' | 'gap';
+            applicable: boolean | null;
+            timeDomainRef: string;
+            evaluatedInterval: {
+                kind: 'instant' | 'interval' | 'unknown';
+                from: string | null;
+                until: string | null;
+            };
+            evidenceRefs: Array<{
+                kind: string;
+                value: string;
+            }>;
+            recordedAt: string;
+        } | null;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type AdoptPursuitResponse = AdoptPursuitResponses[keyof AdoptPursuitResponses];
+
+export type ReadPursuitData = {
+    body: {
+        subjectId: string;
+        pursuitId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/pursuit/read';
+};
+
+export type ReadPursuitErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ReadPursuitError = ReadPursuitErrors[keyof ReadPursuitErrors];
+
+export type ReadPursuitResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        pursuit: {
+            pursuitId: string;
+            subjectId: string;
+            activityId: string;
+            workContextId: string;
+            revision: number;
+            desireRevision: {
+                kind: string;
+                value: string;
+            };
+            conditionRevision: {
+                kind: string;
+                value: string;
+            };
+            desireEpoch: string;
+            conditionEpoch: string;
+            adoptedBy: string;
+            reason: string;
+            state: 'active' | 'paused' | 'ended';
+            reviewRequired: boolean;
+            reviewReason: string;
+            timeDomainRef: string;
+            lastEvaluation: {
+                evaluationId: string;
+                conditionRevision: {
+                    kind: string;
+                    value: string;
+                };
+                verdict: 'satisfied' | 'violated' | 'unknown';
+                finalConclusion: boolean;
+                coverage: 'complete' | 'limited' | 'gap';
+                applicable: boolean | null;
+                timeDomainRef: string;
+                evaluatedInterval: {
+                    kind: 'instant' | 'interval' | 'unknown';
+                    from: string | null;
+                    until: string | null;
+                };
+                evidenceRefs: Array<{
+                    kind: string;
+                    value: string;
+                }>;
+                recordedAt: string;
+            } | null;
+            createdAt: string;
+            updatedAt: string;
+        } | null;
+    };
+};
+
+export type ReadPursuitResponse = ReadPursuitResponses[keyof ReadPursuitResponses];
+
+export type RecheckPursuitData = {
+    body: {
+        subjectId: string;
+        pursuitId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/pursuit/recheck';
+};
+
+export type RecheckPursuitErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type RecheckPursuitError = RecheckPursuitErrors[keyof RecheckPursuitErrors];
+
+export type RecheckPursuitResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        pursuitId: string;
+        subjectId: string;
+        activityId: string;
+        workContextId: string;
+        revision: number;
+        desireRevision: {
+            kind: string;
+            value: string;
+        };
+        conditionRevision: {
+            kind: string;
+            value: string;
+        };
+        desireEpoch: string;
+        conditionEpoch: string;
+        adoptedBy: string;
+        reason: string;
+        state: 'active' | 'paused' | 'ended';
+        reviewRequired: boolean;
+        reviewReason: string;
+        timeDomainRef: string;
+        lastEvaluation: {
+            evaluationId: string;
+            conditionRevision: {
+                kind: string;
+                value: string;
+            };
+            verdict: 'satisfied' | 'violated' | 'unknown';
+            finalConclusion: boolean;
+            coverage: 'complete' | 'limited' | 'gap';
+            applicable: boolean | null;
+            timeDomainRef: string;
+            evaluatedInterval: {
+                kind: 'instant' | 'interval' | 'unknown';
+                from: string | null;
+                until: string | null;
+            };
+            evidenceRefs: Array<{
+                kind: string;
+                value: string;
+            }>;
+            recordedAt: string;
+        } | null;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type RecheckPursuitResponse = RecheckPursuitResponses[keyof RecheckPursuitResponses];
+
+export type TransitionPursuitData = {
+    body: {
+        subjectId: string;
+        pursuitId: string;
+        expectedRevision: number;
+        action: 'pause' | 'resume' | 'end';
+        reason: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/pursuit/transition';
+};
+
+export type TransitionPursuitErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type TransitionPursuitError = TransitionPursuitErrors[keyof TransitionPursuitErrors];
+
+export type TransitionPursuitResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        pursuitId: string;
+        subjectId: string;
+        activityId: string;
+        workContextId: string;
+        revision: number;
+        desireRevision: {
+            kind: string;
+            value: string;
+        };
+        conditionRevision: {
+            kind: string;
+            value: string;
+        };
+        desireEpoch: string;
+        conditionEpoch: string;
+        adoptedBy: string;
+        reason: string;
+        state: 'active' | 'paused' | 'ended';
+        reviewRequired: boolean;
+        reviewReason: string;
+        timeDomainRef: string;
+        lastEvaluation: {
+            evaluationId: string;
+            conditionRevision: {
+                kind: string;
+                value: string;
+            };
+            verdict: 'satisfied' | 'violated' | 'unknown';
+            finalConclusion: boolean;
+            coverage: 'complete' | 'limited' | 'gap';
+            applicable: boolean | null;
+            timeDomainRef: string;
+            evaluatedInterval: {
+                kind: 'instant' | 'interval' | 'unknown';
+                from: string | null;
+                until: string | null;
+            };
+            evidenceRefs: Array<{
+                kind: string;
+                value: string;
+            }>;
+            recordedAt: string;
+        } | null;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type TransitionPursuitResponse = TransitionPursuitResponses[keyof TransitionPursuitResponses];
+
+export type ReconsiderPursuitData = {
+    body: {
+        subjectId: string;
+        pursuitId: string;
+        expectedRevision: number;
+        desireRevision: {
+            kind: 'desire_revision';
+            value: string;
+        };
+        conditionRevision: {
+            kind: 'desired_condition_revision';
+            value: string;
+        };
+        reason: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/pursuit/reconsider';
+};
+
+export type ReconsiderPursuitErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ReconsiderPursuitError = ReconsiderPursuitErrors[keyof ReconsiderPursuitErrors];
+
+export type ReconsiderPursuitResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        pursuitId: string;
+        subjectId: string;
+        activityId: string;
+        workContextId: string;
+        revision: number;
+        desireRevision: {
+            kind: string;
+            value: string;
+        };
+        conditionRevision: {
+            kind: string;
+            value: string;
+        };
+        desireEpoch: string;
+        conditionEpoch: string;
+        adoptedBy: string;
+        reason: string;
+        state: 'active' | 'paused' | 'ended';
+        reviewRequired: boolean;
+        reviewReason: string;
+        timeDomainRef: string;
+        lastEvaluation: {
+            evaluationId: string;
+            conditionRevision: {
+                kind: string;
+                value: string;
+            };
+            verdict: 'satisfied' | 'violated' | 'unknown';
+            finalConclusion: boolean;
+            coverage: 'complete' | 'limited' | 'gap';
+            applicable: boolean | null;
+            timeDomainRef: string;
+            evaluatedInterval: {
+                kind: 'instant' | 'interval' | 'unknown';
+                from: string | null;
+                until: string | null;
+            };
+            evidenceRefs: Array<{
+                kind: string;
+                value: string;
+            }>;
+            recordedAt: string;
+        } | null;
+        createdAt: string;
+        updatedAt: string;
+    };
+};
+
+export type ReconsiderPursuitResponse = ReconsiderPursuitResponses[keyof ReconsiderPursuitResponses];
+
+export type EvaluatePursuitData = {
+    body: {
+        subjectId: string;
+        pursuitId: string;
+        operationId: string;
+        expectedRevision: number;
+        evidenceRefs: Array<{
+            kind: string;
+            value: string;
+        }>;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/pursuit/evaluate';
+};
+
+export type EvaluatePursuitErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type EvaluatePursuitError = EvaluatePursuitErrors[keyof EvaluatePursuitErrors];
+
+export type EvaluatePursuitResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        evaluationId: string;
+        conditionRevision: {
+            kind: string;
+            value: string;
+        };
+        verdict: 'satisfied' | 'violated' | 'unknown';
+        finalConclusion: boolean;
+        coverage: 'complete' | 'limited' | 'gap';
+        applicable: boolean | null;
+        timeDomainRef: string;
+        evaluatedInterval: {
+            kind: 'instant' | 'interval' | 'unknown';
+            from: string | null;
+            until: string | null;
+        };
+        evidenceRefs: Array<{
+            kind: string;
+            value: string;
+        }>;
+        recordedAt: string;
+    };
+};
+
+export type EvaluatePursuitResponse = EvaluatePursuitResponses[keyof EvaluatePursuitResponses];

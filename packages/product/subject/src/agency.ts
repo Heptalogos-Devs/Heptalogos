@@ -12,6 +12,7 @@ import {
 import { compileSchema } from "@heptalogos/schema-runtime";
 import type { Static } from "@heptalogos/schema-runtime/typebox";
 import {
+  type PersistenceInternalTransaction,
   executeRepositorySql,
   readRepositorySql,
   useRepositoryMutationTransaction,
@@ -237,8 +238,13 @@ export function createAgencyService(options: AgencyOptions) {
     behavior: Behavior,
     input: Delivery,
     activity?: LifeActivity,
+    transaction?: PersistenceInternalTransaction,
   ) => {
-    const resolved = await options.authority(behavior.request.runId, input);
+    const resolved = await options.authority(
+      behavior.request.runId,
+      input,
+      transaction,
+    );
     const current = activity ? { ...resolved, activity } : resolved;
     active(current);
     if (
@@ -261,6 +267,24 @@ export function createAgencyService(options: AgencyOptions) {
       const digest = hash(input);
       return options.persistence.mutate((context) =>
         useRepositoryMutationTransaction(context, async (tx) => {
+          const activities = await executeRepositorySql<{ document: unknown }>(
+            tx,
+            "SELECT document FROM heptalogos.life_activity WHERE subject_id=$1 AND activity_id=$2 FOR UPDATE",
+            [current.activity.subjectId, current.activity.activityId],
+          );
+          if (!activities[0])
+            deny("agency.scope_denied", "The adopted Activity no longer exists");
+          const latest = await options.authority(input.runId, input, tx);
+          const finalAuthority = {
+            ...latest,
+            activity: checked<LifeActivity>(activitySchema, activities[0].document),
+          };
+          active(finalAuthority);
+          if (
+            finalAuthority.activity.activityId !== current.activity.activityId ||
+            finalAuthority.actorEntityRef !== current.actorEntityRef
+          )
+            deny("agency.scope_changed", "The actual Activity changed during adoption");
           const behaviorId = createUuidV7Id("BehaviorId");
           const document: Behavior = {
             behaviorId,
@@ -268,7 +292,7 @@ export function createAgencyService(options: AgencyOptions) {
             subjectId: current.activity.subjectId,
             activityId: current.activity.activityId,
             actorEntityRef: current.actorEntityRef,
-            sourceRefs: current.sourceRefs,
+            sourceRefs: finalAuthority.sourceRefs,
           };
           await executeRepositorySql(
             tx,
@@ -384,6 +408,7 @@ export function createAgencyService(options: AgencyOptions) {
             behavior,
             input,
             checked<LifeActivity>(activitySchema, activities[0].document),
+            tx,
           );
           const attemptId = createUuidV7Id("DeliveryAttemptId");
           const document = {

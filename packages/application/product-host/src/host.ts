@@ -320,6 +320,7 @@ export async function startProductHost(
       authentication,
       product,
       gateway: gateway.http,
+      pursuit: gateway.pursuitHttp,
       identity: {
         installationId: currentHost.installationId,
         bootId: currentHost.bootId,
