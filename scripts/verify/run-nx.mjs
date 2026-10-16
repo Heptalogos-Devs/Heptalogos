@@ -59,7 +59,10 @@ function boundedFailureDetail(stdout, stderr) {
       line,
     ),
   );
-  const selected = [...diagnosticLines.slice(-12), ...lines.slice(-20)];
+  const actionable = diagnosticLines.length
+    ? diagnosticLines
+    : lines.filter((line) => /\bwarning\b/iu.test(line));
+  const selected = [...actionable.slice(-12), ...lines.slice(-20)];
   const unique = [...new Set(selected)].slice(-24);
   return unique.map((line) => line.slice(0, 360)).join("\n");
 }
