@@ -72,6 +72,7 @@ function active(authority: AgencyRunAuthority) {
     authority.sourceRefs.some(
       (ref) =>
         !a.scope!.sourceRefs.includes(ref) &&
+        !authority.authorizedDerivedSourceRefs.includes(ref) &&
         !(
           ref.startsWith("message:") &&
           authority.messageSources.some(

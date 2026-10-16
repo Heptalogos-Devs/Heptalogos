@@ -188,6 +188,7 @@ real("Narrative adoption on real fenced PostgreSQL", () => {
       actorEntityRef: actor,
       conversationRef: "conversation:accepted",
       sourceRefs: scope.sourceRefs,
+      authorizedDerivedSourceRefs: [],
       messageSources: [],
     };
     const agency = createAgencyService({

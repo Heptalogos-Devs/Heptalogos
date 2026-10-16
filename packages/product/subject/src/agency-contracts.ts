@@ -105,6 +105,8 @@ export interface AgencyRunAuthority {
   readonly actorEntityRef: string;
   readonly conversationRef: string;
   readonly sourceRefs: readonly string[];
+  /** Derived world/result roots already resolved under the actual Activity by their trusted Host owners. */
+  readonly authorizedDerivedSourceRefs: readonly string[];
   /** Canonical selected messages verified by the Host's Messaging owner. */
   readonly messageSources: readonly {
     readonly sourceRef: string;

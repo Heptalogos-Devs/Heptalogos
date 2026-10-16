@@ -76,6 +76,7 @@ async function fixture(replyToMode: "first" | "all" = "all") {
   const control = {
     worker: false,
     sourceRefs: ["occurrence:shared"],
+    authorizedDerivedSourceRefs: [] as string[],
     messageSources: [] as { sourceRef: string; conversationRef: string }[],
     beforeAuthorityReturn: undefined as undefined | (() => Promise<void>),
   };
@@ -93,6 +94,7 @@ async function fixture(replyToMode: "first" | "all" = "all") {
         conversationRef: "qq:allowed",
         sourceRefs: control.sourceRefs,
         messageSources: control.messageSources,
+        authorizedDerivedSourceRefs: control.authorizedDerivedSourceRefs,
       };
     },
   });
@@ -439,6 +441,21 @@ real("canonical future message source transmission", () => {
       expect(await f.c.run(() => f.agency.adoptDelivery(f.request))).toHaveProperty(
         "reference",
       );
+      const released = "role-result-release:" + randomUUID();
+      f.control.sourceRefs = [released];
+      await expect(
+        f.c.run(() =>
+          f.agency.adoptDelivery({ ...f.request, nativeIntentId: randomUUID() }),
+        ),
+      ).rejects.toMatchObject({ problem: { problemCode: "agency.source_denied" } });
+      f.control.authorizedDerivedSourceRefs = [released];
+      expect(
+        await f.c.run(() =>
+          f.agency.adoptDelivery({ ...f.request, nativeIntentId: randomUUID() }),
+        ),
+      ).toHaveProperty("reference");
+      f.control.authorizedDerivedSourceRefs = [];
+      f.control.sourceRefs = [sourceRef];
       f.control.messageSources = [{ sourceRef, conversationRef: "qq:private" }];
       await expect(
         f.c.run(() =>

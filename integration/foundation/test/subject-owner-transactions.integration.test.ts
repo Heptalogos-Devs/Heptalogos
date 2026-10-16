@@ -328,10 +328,11 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
           expect(run?.registration.actorEntityRef).toBe(actor);
           return {
             activity: (await life.get(subjectId, activity.activityId, tx))!,
-            role: "main",
+            role: "subject.render",
             actorEntityRef: actor,
             conversationRef: scope.conversations[0]!.conversationRef,
             sourceRefs: [],
+            authorizedDerivedSourceRefs: [],
             messageSources: [],
           };
         },
