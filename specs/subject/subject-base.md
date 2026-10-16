@@ -37,3 +37,13 @@ Activity 必须已有同 Subject、active 的正式 Nous WorkContext。实际作
 Life/Agency 已有正式 owner 和 PostgreSQL 迁移；活动 CAS、重启进展、世界域拒绝及取消与发送点的真实锁交错有数据库测试。完整部署还必须接上原生调度、真实工具、QQ 和跨日恢复；内部测试不能替代这些完成条件。
 
 管理身份与进程服务见 [系统管理合同](../management/system-authority.md)，行为采纳与回执见 [行为合同](reaction-behavior.md)。旧 Subject Chat 的表和原数据由迁移保全，当前产品不再使用旧 mailbox/proposal-only/固定 Expression 执行链。
+
+## Pursuit 与正式条件评价
+
+`createPursuitService` 在现有执行 lineage/fence 中保存行为侧 Pursuit。显式采纳引用 exact Desire revision、DesiredCondition revision、采纳者与原因，关联已经采纳的同 Subject Activity 和 open WorkContext。认知期望不自动创建 Pursuit，Pursuit 不直接产生外部效果。
+
+每次继续由 `guardActivity` 检查真实 Motivation head/lifecycle；修订、撤回、生命周期 epoch、不可用或世界域变化会暂停 Pursuit 并要求 review，同时经 Life owner 暂停其活动。旧条件不能静默转成新修订；`reconsider` 明确采纳新的精确引用，历史与既有结果保留，执行保持暂停，恢复使用正常 Life 操作。不得比较未声明映射的时间域。
+
+评价只将已有实际 evidence refs 与 Activity 的显式 source scope/open WorkContext 提交给官方 `Motivation.evaluate`。接口不接收调用者 truth、complete 或自定义 evaluator。NoUS 根据实际 Material/owner timeline 决定 Achieve 正见证、Maintain 完整窗口、UNKNOWN、limited/gap 和 finalConclusion；H 只保存 evaluationId、exact revision、实际来源与结果投影，不实现第二个 evaluator 或 Observation recorder。Activity 完成或一次效果失败都不自动结束 Pursuit。
+
+服务 API `/gateway/v1/pursuit/{adopt,read,recheck,transition,reconsider,evaluate}` 从 subject owner schema 生成 OpenAPI/Client，要求独立 gateway service credential 与当前绑定 Subject；普通聊天或 administrator session 不能获得该服务身份。HTTP 注册 hook 与 Motivation adapter 独立于 gateway composition，部署组合需要注入 owner 并在既有 Activity/Agency 授权点调用 guard。迁移 0007 只新增 Pursuit/修订历史/评价引用表，不覆盖既有 Activity、消息、认知或效果历史。

@@ -5,6 +5,7 @@
  * Typed service-only client over schema-generated Host operations.
  * @module gateway-client
  */
+import { createPursuitOperations } from "./pursuit-operations.js";
 import * as api from "./generated/index.js";
 import type * as wire from "./generated/types.gen.js";
 import { createClient } from "./generated/client/index.js";
@@ -43,6 +44,7 @@ export function createGatewayHostClient(options: GatewayHostClientOptions) {
     return requestHostData(() => operation(baseFor(current.endpoint.origin)));
   };
   return Object.freeze({
+    ...createPursuitOperations(requestGateway),
     registerChannelRoute: (body: wire.RegisterChannelRouteData["body"]) =>
       requestGateway((base) => api.registerChannelRoute({ ...base, body })),
 
