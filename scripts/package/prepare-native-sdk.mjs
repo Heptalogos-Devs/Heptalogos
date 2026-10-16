@@ -8,7 +8,7 @@ import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { execFileSync } from "node:child_process";
+import { runProcessChecked } from "@heptalogos/repo-kit";
 import { verifySdkInputs, verifyNativeSdk } from "./sdk-inputs.mjs";
 import { linkPreparedSdk } from "../../packages/application/openclaw-host/scripts/prepare-sdk.mjs";
 const root = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -32,10 +32,11 @@ const runtime = join(
 try {
   await verifyNativeSdk(runtime, expected);
 } catch {
-  execFileSync(process.execPath, [join(installer, "bin/install.mjs"), runtime], {
-    stdio: "inherit",
-    windowsHide: true,
-  });
+  await runProcessChecked(
+    process.execPath,
+    [join(installer, "bin/install.mjs"), runtime],
+    { cwd: root },
+  );
 }
 await linkPreparedSdk(runtime, expected);
 console.log("Official native SDK prepared for this checkout");

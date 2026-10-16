@@ -23,14 +23,16 @@ describe("deterministic native world callback", () => {
     const token = "a".repeat(64);
     await writeFile(credentialFile, token, { mode: 0o600 });
     const received: { path?: string; auth?: string; body?: unknown } = {};
-    const server = createServer(async (req, res) => {
-      let body = "";
-      for await (const chunk of req) body += chunk;
-      received.path = req.url;
-      received.auth = req.headers.authorization;
-      received.body = JSON.parse(body);
-      res.setHeader("content-type", "application/json");
-      res.end('{"status":"processed"}');
+    const server = createServer((req, res) => {
+      void (async () => {
+        let body = "";
+        for await (const chunk of req) body += chunk;
+        received.path = req.url;
+        received.auth = req.headers.authorization;
+        received.body = JSON.parse(body);
+        res.setHeader("content-type", "application/json");
+        res.end('{"status":"processed"}');
+      })().catch(() => res.destroy());
     });
     await new Promise<void>((resolve) => server.listen(0, "127.0.0.1", resolve));
     const address = server.address();

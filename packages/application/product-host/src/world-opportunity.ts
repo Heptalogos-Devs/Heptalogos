@@ -86,7 +86,11 @@ export function createWorldOpportunity<TContact, TUsage>(
           "Use an active same-Subject Activity and its actual permissions",
           "conflict",
         );
-      await options.worlds.completeActions({subjectId:input.subjectId,worldId:input.worldId,limit:32});
+      await options.worlds.completeActions({
+        subjectId: input.subjectId,
+        worldId: input.worldId,
+        limit: 32,
+      });
       let frame = await options.worlds.prepareAdvance(input.subjectId, input.worldId);
       if (activity.world.timeDomainRef !== frame.world.timeDomainRef)
         throw managementProblem(
