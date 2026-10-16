@@ -414,6 +414,11 @@ export function createWorldActionService(options: {
                   "UPDATE heptalogos.world_action SET state='cancelled',document=$3::jsonb WHERE subject_id=$1 AND action_id=$2",
                   [input.subjectId, action.actionId, JSON.stringify(cancelled)],
                 );
+                await executeRepositorySql(
+                  tx,
+                  "UPDATE heptalogos.world_living SET document=jsonb_set(document,'{currentActivityRefs}',COALESCE((SELECT jsonb_agg(ref) FROM jsonb_array_elements(document->'currentActivityRefs') ref WHERE ref <> to_jsonb($3::text)),'[]'::jsonb)) WHERE subject_id=$1 AND world_id=$2",
+                  [input.subjectId, input.worldId, action.actionRef],
+                );
                 return cancelled;
               }
               const rule = plan?.ruleRef

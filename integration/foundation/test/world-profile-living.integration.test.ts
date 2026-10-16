@@ -410,6 +410,59 @@ real("WorldProfile and realized interval energy under real PostgreSQL", () => {
       expect(
         (await worlds.readLivingState({ subjectId, worldId }))!.energy,
       ).toBeCloseTo(energyBefore - 8 / 6 - 4 / 6);
+      const plan = {
+        scheduleId: randomUUID(),
+        interval: { ...range, start: worldAt, end: "2026-10-19T02:20:00.000Z" },
+        title: "Cancelable home activity",
+        description: "Explicit adopted plan",
+        actorRefs: [actor],
+        placeRef: "home",
+        activityId: null,
+        sourceRefs: [],
+        status: "planned" as const,
+        overlap: "exclusive" as const,
+      };
+      const beforePlan = (await worlds.read(subjectId, worldId))!;
+      const planned = await current.run(() =>
+        worlds.configure({
+          operationId: randomUUID(),
+          expectedRevision: beforePlan.revision,
+          definition: {
+            ...beforePlan.definition,
+            revision: beforePlan.definition.revision + 1,
+          },
+          schedule: [plan],
+        }),
+      );
+      const participation = await current.run(() =>
+        worlds.adoptAction({
+          operationId: randomUUID(),
+          subjectId,
+          worldId,
+          sourceReactionRef: "reaction:cancel-plan",
+          action: { kind: "participate", scheduleId: plan.scheduleId },
+        }),
+      );
+      expect(participation.status).toBe("pending");
+      await current.run(() =>
+        worlds.configure({
+          operationId: randomUUID(),
+          expectedRevision: planned.revision,
+          definition: {
+            ...planned.definition,
+            revision: planned.definition.revision + 1,
+          },
+          schedule: [{ ...plan, status: "cancelled" }],
+        }),
+      );
+      worldAt = "2026-10-19T02:01:00.000Z";
+      expect(
+        (await current.run(() => worlds.completeActions({ subjectId, worldId })))[0]
+          ?.status,
+      ).toBe("cancelled");
+      expect(
+        (await worlds.readLivingState({ subjectId, worldId }))?.currentActivityRefs,
+      ).toEqual([]);
     } finally {
       await current.close();
     }
