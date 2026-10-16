@@ -669,7 +669,9 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
         authorizedDerivedSourceRefs: run.registration.sourceRefs.filter(
           (ref) =>
             !ref.startsWith("message:") &&
-            (ref.startsWith("world-event:") || ref.startsWith("role-result-release:")),
+            (ref.startsWith("world-event:") ||
+              ref.startsWith("world-profile:") ||
+              ref.startsWith("role-result-release:")),
         ),
         messageSources: run.registration.messageRefs.map((ref) => ({
           sourceRef: "message:" + ref,

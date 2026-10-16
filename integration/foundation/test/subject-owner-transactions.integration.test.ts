@@ -10,6 +10,7 @@ import {
   createAgencyService,
   createWorldLifeService,
   createDeliberationService,
+  createNarrativeService,
 } from "@heptalogos/subject";
 import { createEvidenceService } from "@heptalogos/evidence";
 import { createConfigurationService } from "../../../packages/system/configuration/dist/index.js";
@@ -19,6 +20,10 @@ import {
 } from "../../../packages/system/management/dist/index.js";
 import type { PersistenceInternalTransaction } from "@heptalogos/persistence/repository";
 import { hasAuthorizedNativeSources } from "../../../packages/application/product-host/dist/native-source-selection.js";
+import {
+  createSubjectDecisionHandler,
+  decisionPhaseId,
+} from "../../../packages/application/product-host/dist/subject-decisions.js";
 import { createSubjectRoles } from "../../../packages/application/product-host/dist/subject-roles.js";
 import { authorizeAdoptedTaskSources } from "../../../packages/application/product-host/dist/adopted-task-sources.js";
 import { createNativeCognitionBridge } from "../../../packages/application/product-host/dist/native-cognition.js";
@@ -258,9 +263,16 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
         persistence: c.persistence,
         life,
         now,
-        captureObservedStamp: async () => {
-          throw new Error("Empty selected contacts must not read the Subject clock");
-        },
+        captureObservedStamp: async () =>
+          sdk.decodeObservationInput(
+            sdk.encodeObservationInput({
+              observedStamp: {
+                timeDomainRef: domain,
+                at: sdk.timestampFromDate(new Date(worldNow)),
+                recordedAt: sdk.timestampFromDate(new Date()),
+              },
+            }),
+          ).observedStamp!,
         authorizeInput: async (_registration, _activity, tx) => authorityReads(tx),
         recordContact: messaging.recordContact,
         nous: async () => {
@@ -481,6 +493,10 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
       await c.run(() =>
         worlds.selectContact({ subjectId, worldId, eventId, runId: roleRequestId }),
       );
+      const outputs = new Map<string, string>();
+      const dispatchedRoles: string[] = [];
+      let flowNarrative: ReturnType<typeof createNarrativeService> | undefined;
+      let flowReference: string | undefined;
       const roles = createSubjectRoles({
         life,
         native,
@@ -496,6 +512,22 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
             allowedTools: [],
             fallbackAgentRefs: [],
           },
+          ...(["subject.execution", "subject.render", "narrative.review"] as const).map(
+            (role) => ({
+              role,
+              nativeAgentRef: "main",
+              enabled: true,
+              outputContract:
+                role === "narrative.review"
+                  ? ("structured_json" as const)
+                  : ("natural_text" as const),
+              deadlineMs: 60000,
+              inputTokens: 8192,
+              outputTokens: 1024,
+              allowedTools: [],
+              fallbackAgentRefs: [],
+            }),
+          ),
         ],
         selectAgent: async () => "main",
         authorize: async () => authorityReads(),
@@ -523,8 +555,17 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
               historyGeneration: randomUUID(),
             },
           };
-          expect(params.message).not.toContain("CURRENT_EPHEMERAL_WORLD_FIXTURE");
-          expect(params.extraSystemPrompt).toContain("CURRENT_EPHEMERAL_WORLD_FIXTURE");
+          if (params.idempotencyKey === roleRequestId) {
+            expect(params.message).not.toContain("CURRENT_EPHEMERAL_WORLD_FIXTURE");
+            expect(params.extraSystemPrompt).toContain(
+              "CURRENT_EPHEMERAL_WORLD_FIXTURE",
+            );
+          }
+          const actualRole = (await native.readInputState(
+            subjectId,
+            params.idempotencyKey,
+          ))!.registration.roleScope.role;
+          dispatchedRoles.push(actualRole);
           await expect(
             native.prepare({ ...input, currentContextDigest: "0".repeat(64) }),
           ).rejects.toMatchObject({
@@ -543,6 +584,7 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
               consumerId: "consumer:world-role-fixture",
               subjectId,
               sessionId: input.nousSessionId,
+              epistemicView: { complete: true },
               usage: sdk.withAcceptedContactRoots(
                 sdk.decodeCognitionUsage(prepared.usage),
                 subjectId,
@@ -550,21 +592,57 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
               ),
             }),
           });
+          const text =
+            outputs.get(params.idempotencyKey) ??
+            JSON.stringify({
+              action: "inspect",
+              reason: "Actual registered RoleInvoker fixture",
+            });
+          if (actualRole === "subject.execution") {
+            expect(params.waitForFinal).toBe(false);
+            await native.feedback({
+              ...sdk.hostContactIdentitySchema.strip().parse(input),
+              stage: "pending",
+              observation: sdk.encodeObservationInput({
+                subjectId,
+                sessionId: input.nousSessionId,
+                requestId: randomUUID(),
+                sourceClass: "generated",
+                material: {
+                  case: "inlineText",
+                  value: {
+                    text: "Preserved professional result",
+                    mediaType: "text/plain",
+                  },
+                },
+              }),
+            });
+            await native.runTerminal({
+              ...sdk.hostContactIdentitySchema.strip().parse(input),
+              outcome: "completed",
+              endedAt: now(),
+            });
+            return { status: "accepted", result: { runId: params.idempotencyKey } };
+          }
+          if (actualRole === "subject.render" && flowNarrative) {
+            flowReference = (
+              await flowNarrative.adoptDelivery({
+                channel: "heptalogos-qq",
+                accountId: "100",
+                to: "group:200",
+                nativeIntentId: randomUUID(),
+                runId: params.idempotencyKey,
+                preparedBatch: {
+                  schemaVersion: 1,
+                  runId: params.idempotencyKey,
+                  entries: [{ sourceIndex: 0, status: "accepted", payload: { text } }],
+                },
+              })
+            ).reference;
+          }
           return {
             status: "terminal",
-            result: {
-              status: "ok",
-              result: {
-                payloads: [
-                  {
-                    text: JSON.stringify({
-                      action: "inspect",
-                      reason: "Actual registered RoleInvoker fixture",
-                    }),
-                  },
-                ],
-              },
-            },
+            result: { status: "ok", result: { payloads: [{ text }] } },
           };
         },
       });
@@ -622,8 +700,12 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
         now,
         worldNow: life.worldNow,
         validateSourceRun: async (input) => {
-          expect((await native.readRun(input.sourceRunId))?.consumerId).toBeTruthy();
-          return { sourceRefs: [eventRef], tools: [] };
+          const actualRun = (await native.readRun(input.sourceRunId))!;
+          expect(actualRun.consumerId).toBeTruthy();
+          return {
+            sourceRefs: [...new Set([eventRef, ...actualRun.registration.sourceRefs])],
+            tools: [],
+          };
         },
         assertSourceRunIn: async (tx, input) => {
           expect(
@@ -710,6 +792,244 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
       ).rejects.toMatchObject({
         problem: { problemCode: "gateway.native_adopted_task_denied" },
       });
+      // Cross the complete role-result/explicit-view/fresh-choice/narrative chain using
+      // actual owners and public SDK admission. Only the model transport is a local fixture.
+      const executionId = randomUUID();
+      const executionInput = {
+        requestId: executionId,
+        subjectId,
+        activityId: activity.activityId,
+        parentRunId: runId,
+        adoptedDecisionRef: selectedTask.decisionRef,
+        role: "subject.execution" as const,
+        taskTools: [],
+        context: { task: "Inspect this scene" },
+        contacts: [],
+        sourceRefs: [eventRef],
+        usage: sdk.encodeCognitionUsage(taskRegistration.usage),
+      };
+      const beforeFlow = dispatchedRoles.length;
+      const task = await c.run(() => roles.startExecution(executionInput));
+      expect(task.status).toBe("pending");
+      expect(await c.run(() => roles.startExecution(executionInput))).toEqual(task);
+      expect(dispatchedRoles.length).toBe(beforeFlow + 1);
+      const ready = (await native.readyResults({ subjectId, limit: 128 })).runs;
+      expect(ready.some((r) => r.runId === executionId)).toBe(true);
+      const results = await native.readRoleResults(subjectId, executionId);
+      expect(
+        results.results.some(
+          (r) => sdk.decodeObservationInput(r.observation).sourceClass === "generated",
+        ),
+      ).toBe(true);
+      const releaseId = randomUUID();
+      const release = await c.run(() =>
+        native.releaseResult({
+          version: 1,
+          requestId: releaseId,
+          subjectId,
+          parentRunId: runId,
+          childRunId: executionId,
+          resultIds: results.results
+            .filter(
+              (r) =>
+                sdk.decodeObservationInput(r.observation).sourceClass === "generated",
+            )
+            .map((r) => r.resultId),
+        }),
+      );
+      expect(
+        (await native.readyResults({ subjectId, limit: 128 })).runs.some(
+          (r) => r.runId === executionId,
+        ),
+      ).toBe(true);
+      expect(
+        await native.hasAcceptedSource(subjectId, release.contacts[0]!.contactRef),
+      ).toBe(false);
+      const freshId = randomUUID();
+      outputs.set(
+        freshId,
+        JSON.stringify({
+          action: "communicate",
+          reason: "Report an actually viewed result",
+          expressionIntent: {
+            intent: "Report that the result was viewed",
+            stance: "Plain",
+            qualifications: [],
+            deception: "none",
+            eventRefs: [],
+            cognitionRefs: [],
+            priorClaimRefs: [],
+          },
+        }),
+      );
+      const freshInput = {
+        requestId: freshId,
+        subjectId,
+        activityId: activity.activityId,
+        role: "subject.deliberation" as const,
+        context: { actualResultRelease: releaseId },
+        contacts: release.contacts,
+        sourceRefs: release.contacts.map((value) => value.contactRef),
+        usage: (await native.readAppliedContext(runId)).usage,
+      };
+      const fresh = await c.run(() => roles.invoke(freshInput));
+      expect(await c.run(() => roles.invoke(freshInput))).toEqual(fresh);
+      expect(
+        await native.hasAcceptedSource(subjectId, release.contacts[0]!.contactRef),
+      ).toBe(true);
+      expect(
+        (await native.readyResults({ subjectId, limit: 128 })).runs.some(
+          (r) => r.runId === executionId,
+        ),
+      ).toBe(false);
+      const flowAgency = createAgencyService({
+        persistence: c.persistence,
+        now,
+        checkSources: async () => {},
+        authority: async (id, _recipient, tx) => {
+          await authorityReads(tx);
+          const currentRun = (await native.readRun(id, tx))!;
+          return {
+            activity: (await life.get(subjectId, activity.activityId, tx))!,
+            role: currentRun.registration.roleScope.role,
+            actorEntityRef: actor,
+            conversationRef: scope.conversations[0]!.conversationRef,
+            sourceRefs: currentRun.registration.sourceRefs,
+            authorizedDerivedSourceRefs: currentRun.registration.sourceRefs.filter(
+              (ref) => ref.startsWith("role-result-release:"),
+            ),
+            messageSources: [],
+          };
+        },
+      });
+      let reviewCount = 0;
+      flowNarrative = createNarrativeService({
+        persistence: c.persistence,
+        life,
+        decisions: adoptedTaskDecisions,
+        worlds,
+        agency: flowAgency,
+        now,
+        worldNow: life.worldNow,
+        review: async (brief, prepared) => {
+          reviewCount++;
+          const reviewId = decisionPhaseId(prepared.runId, "review");
+          outputs.set(
+            reviewId,
+            JSON.stringify({
+              claims: [
+                {
+                  sourceIndex: 0,
+                  start: 0,
+                  end: 6,
+                  quote: "结果已经查阅",
+                  content: "The result was viewed",
+                  entityRefs: [actor],
+                  kind: "external_result",
+                  stance: "asserted",
+                  polarity: "affirm",
+                  about: null,
+                  basis: "report",
+                  sourceRefs: brief.sourceRefs,
+                  eventRefs: [],
+                  cognitionRefs: [],
+                  priorClaimRefs: [],
+                },
+              ],
+              conflicts: [],
+              commitments: [],
+              worldPatch: null,
+            }),
+          );
+          const review = await roles.invoke({
+            requestId: reviewId,
+            subjectId,
+            activityId: activity.activityId,
+            parentRunId: prepared.runId,
+            role: "narrative.review",
+            context: { brief, prepared },
+            contacts: [],
+            sourceRefs: brief.sourceRefs,
+            usage: (await native.readAppliedContext(prepared.runId)).usage,
+          });
+          return { reviewerRunId: review.runId, review: JSON.parse(review.text) };
+        },
+      });
+      const handler = createSubjectDecisionHandler({
+        life,
+        decisions: adoptedTaskDecisions,
+        narrative: flowNarrative,
+        worlds,
+        native,
+        roles,
+        now,
+        startActivity: async () => {
+          throw Error("No new Activity in role chain");
+        },
+        deliveryFor: async () => ({
+          conversationRef: scope.conversations[0]!.conversationRef,
+          channel: "heptalogos-qq",
+          accountId: "100",
+          to: "group:200",
+        }),
+      });
+      const freshChoice = await c.run(() =>
+        handler.adopt({
+          subjectId,
+          activityId: activity.activityId,
+          requestId: freshId,
+          run: fresh,
+        }),
+      );
+      outputs.set(decisionPhaseId(freshId, "render"), "结果已经查阅");
+      const expression = await c.run(() =>
+        handler.express({
+          subjectId,
+          activityId: activity.activityId,
+          adopted: freshChoice,
+          run: fresh,
+        }),
+      );
+      expect(expression.expression.state).toBe("rendered");
+      expect(reviewCount).toBe(1);
+      expect(dispatchedRoles.slice(beforeFlow)).toEqual([
+        "subject.execution",
+        "subject.deliberation",
+        "subject.render",
+        "narrative.review",
+      ]);
+      expect(flowReference).toBeTruthy();
+      const flowPart = {
+        reference: flowReference!,
+        channel: "heptalogos-qq",
+        accountId: "100",
+        to: "group:200",
+        deliveryQueueId: "native:one-custody",
+        payload: { sourceIndex: 0, kind: "text" as const, text: "结果已经查阅" },
+      };
+      const attempt = await c.run(() => flowAgency.beginDelivery(flowPart));
+      if (attempt.action !== "send")
+        throw Error("Expected the unique first send point");
+      await c.run(() =>
+        flowAgency.recordDelivery({
+          reference: flowReference!,
+          sourceIndex: 0,
+          partIndex: 0,
+          attemptId: attempt.attemptId,
+          outcome: {
+            state: "accepted",
+            platformMessageId: "fixture:role-flow",
+            acceptedAt: now(),
+          },
+        }),
+      );
+      expect(
+        (await flowNarrative.explainStatement(subjectId, "fixture:role-flow")).claims[0]
+          ?.status,
+      ).toBe("expressed");
+      expect((await c.run(() => flowAgency.beginDelivery(flowPart))).action).toBe(
+        "return",
+      );
       // Optional cross-owner proof uses the actual independently started Nous
       // installation, never a model provider or the user's live runtime.
       if (process.env.HEPTALOGOS_TEST_NOUS_RUN_ROOT) {
