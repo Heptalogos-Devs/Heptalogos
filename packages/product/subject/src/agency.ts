@@ -258,71 +258,87 @@ export function createAgencyService(options: AgencyOptions) {
         "The original actor, Activity or source scope changed",
       );
   };
+  const prepareAdoption = async (value: PreparedDelivery) => {
+    const input = checked<PreparedDelivery>(preparedDeliverySchema, value);
+    entries(input);
+    const current = await options.authority(input.runId, input);
+    active(current);
+    return { input, current };
+  };
+  const adoptDeliveryIn = async (
+    tx: PersistenceInternalTransaction,
+    input: PreparedDelivery,
+    current: AgencyRunAuthority,
+  ) => {
+    checked<PreparedDelivery>(preparedDeliverySchema, input);
+    entries(input);
+    active(current);
+    const digest = hash(input);
+    const activities = await executeRepositorySql<{ document: unknown }>(
+      tx,
+      "SELECT document FROM heptalogos.life_activity WHERE subject_id=$1 AND activity_id=$2 FOR UPDATE",
+      [current.activity.subjectId, current.activity.activityId],
+    );
+    if (!activities[0])
+      deny("agency.scope_denied", "The adopted Activity no longer exists");
+    const latest = await options.authority(input.runId, input, tx);
+    const finalAuthority = {
+      ...latest,
+      activity: checked<LifeActivity>(activitySchema, activities[0].document),
+    };
+    active(finalAuthority);
+    if (
+      finalAuthority.activity.activityId !== current.activity.activityId ||
+      finalAuthority.actorEntityRef !== current.actorEntityRef
+    )
+      deny("agency.scope_changed", "The actual Activity changed during adoption");
+    const behaviorId = createUuidV7Id("BehaviorId");
+    const document: Behavior = {
+      behaviorId,
+      request: input,
+      subjectId: current.activity.subjectId,
+      activityId: current.activity.activityId,
+      actorEntityRef: current.actorEntityRef,
+      sourceRefs: finalAuthority.sourceRefs,
+    };
+    await executeRepositorySql(
+      tx,
+      "INSERT INTO heptalogos.agency_behavior(behavior_id,subject_id,activity_id,run_id,native_intent_id,request_digest,document,recorded_at) VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8) ON CONFLICT(native_intent_id) DO NOTHING",
+      [
+        behaviorId,
+        document.subjectId,
+        document.activityId,
+        input.runId,
+        input.nativeIntentId,
+        digest,
+        JSON.stringify(document),
+        options.now(),
+      ],
+    );
+    const rows = await executeRepositorySql<{
+      behavior_id: string;
+      request_digest: string;
+    }>(
+      tx,
+      "SELECT behavior_id,request_digest FROM heptalogos.agency_behavior WHERE native_intent_id=$1",
+      [input.nativeIntentId],
+    );
+    if (!rows[0] || rows[0].request_digest !== digest)
+      deny(
+        "agency.intent_conflict",
+        "The native intent is already bound to another exact batch",
+      );
+    return { reference: rows[0].behavior_id };
+  };
   return {
+    prepareAdoption,
+    adoptDeliveryIn,
     async adoptDelivery(value: PreparedDelivery) {
-      const input = checked<PreparedDelivery>(preparedDeliverySchema, value);
-      entries(input);
-      const current = await options.authority(input.runId, input);
-      active(current);
-      const digest = hash(input);
+      const prepared = await prepareAdoption(value);
       return options.persistence.mutate((context) =>
-        useRepositoryMutationTransaction(context, async (tx) => {
-          const activities = await executeRepositorySql<{ document: unknown }>(
-            tx,
-            "SELECT document FROM heptalogos.life_activity WHERE subject_id=$1 AND activity_id=$2 FOR UPDATE",
-            [current.activity.subjectId, current.activity.activityId],
-          );
-          if (!activities[0])
-            deny("agency.scope_denied", "The adopted Activity no longer exists");
-          const latest = await options.authority(input.runId, input, tx);
-          const finalAuthority = {
-            ...latest,
-            activity: checked<LifeActivity>(activitySchema, activities[0].document),
-          };
-          active(finalAuthority);
-          if (
-            finalAuthority.activity.activityId !== current.activity.activityId ||
-            finalAuthority.actorEntityRef !== current.actorEntityRef
-          )
-            deny("agency.scope_changed", "The actual Activity changed during adoption");
-          const behaviorId = createUuidV7Id("BehaviorId");
-          const document: Behavior = {
-            behaviorId,
-            request: input,
-            subjectId: current.activity.subjectId,
-            activityId: current.activity.activityId,
-            actorEntityRef: current.actorEntityRef,
-            sourceRefs: finalAuthority.sourceRefs,
-          };
-          await executeRepositorySql(
-            tx,
-            "INSERT INTO heptalogos.agency_behavior(behavior_id,subject_id,activity_id,run_id,native_intent_id,request_digest,document,recorded_at) VALUES($1,$2,$3,$4,$5,$6,$7::jsonb,$8) ON CONFLICT(native_intent_id) DO NOTHING",
-            [
-              behaviorId,
-              document.subjectId,
-              document.activityId,
-              input.runId,
-              input.nativeIntentId,
-              digest,
-              JSON.stringify(document),
-              options.now(),
-            ],
-          );
-          const rows = await executeRepositorySql<{
-            behavior_id: string;
-            request_digest: string;
-          }>(
-            tx,
-            "SELECT behavior_id,request_digest FROM heptalogos.agency_behavior WHERE native_intent_id=$1",
-            [input.nativeIntentId],
-          );
-          if (!rows[0] || rows[0].request_digest !== digest)
-            deny(
-              "agency.intent_conflict",
-              "The native intent is already bound to another exact batch",
-            );
-          return { reference: rows[0].behavior_id };
-        }),
+        useRepositoryMutationTransaction(context, (tx) =>
+          adoptDeliveryIn(tx, prepared.input, prepared.current),
+        ),
       );
     },
     async authorizeDelivery(value: Static<typeof authorizeDeliverySchema>) {

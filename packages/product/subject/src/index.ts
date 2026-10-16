@@ -22,3 +22,6 @@ export { createPursuitService } from "./pursuit.js";
 
 export * from "./world-contracts.js";
 export { createWorldLifeService, lockSubjectNarrative } from "./world-life.js";
+
+export * from "./narrative-contracts.js";
+export { createNarrativeService, validateNarrativeCandidate } from "./narrative.js";
