@@ -51,6 +51,7 @@ export type NativeActivityParams = {
   readonly sessionKey: string;
   readonly message: string;
   readonly extraSystemPrompt?: string;
+  readonly promptMode?: "full" | "minimal";
   readonly idempotencyKey: string;
   readonly timeout: number;
   readonly toolBindings: {

@@ -1,6 +1,9 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** World definitions, bounded realization and role-visible life projections. @module world-contracts */
+/**
+ * World definitions, bounded realization and role-visible life projections.
+ * @module world-contracts
+ */
 import { Type, type Static } from "@heptalogos/schema-runtime/typebox";
 import type { PersistenceService } from "@heptalogos/persistence";
 import { worldPointSchema } from "./contracts.js";
@@ -122,6 +125,7 @@ export const worldEventInputSchema = Type.Object(
         kind: Type.Union([
           Type.Literal("rule"),
           Type.Literal("world_planner"),
+          Type.Literal("narrative"),
           Type.Literal("environment"),
         ]),
         producerRef: ref,

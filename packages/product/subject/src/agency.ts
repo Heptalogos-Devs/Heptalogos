@@ -49,7 +49,7 @@ function record(value: unknown): Record<string, unknown> {
 function active(authority: AgencyRunAuthority) {
   const a = authority.activity;
   if (
-    authority.role !== "main" ||
+    authority.role !== "subject.render" ||
     a.state !== "active" ||
     a.continuationRequired ||
     !a.scope ||
@@ -58,7 +58,7 @@ function active(authority: AgencyRunAuthority) {
   )
     deny(
       "agency.scope_denied",
-      "The original adopted main Activity must still allow this effect",
+      "The adopted rendered expression and original Activity must still allow this effect",
     );
   if (
     !a.scope.conversations.some(

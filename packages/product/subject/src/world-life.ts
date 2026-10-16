@@ -703,6 +703,28 @@ AND ($6::timestamptz IS NULL OR recorded_at<=$6::timestamptz) ORDER BY document-
         })),
       };
     },
+    /** Exact structural scene facts for an already authorized narrative consumer. */
+    async sceneEvents(
+      subjectId: string,
+      worldId: string,
+      selected: readonly { eventId: string; revision: number }[],
+    ) {
+      if (selected.length > 128)
+        conflict("Scene reads are bounded to 128 exact known events");
+      const rows = await readRepositorySql<{ document: RealizedWorldEvent }>(
+        options.persistence,
+        "SELECT document FROM heptalogos.world_event WHERE subject_id=$1 AND world_id=$2 AND event_id=ANY($3::uuid[])",
+        [subjectId, worldId, selected.map((event) => event.eventId)],
+      );
+      return rows
+        .map((row) => row.document)
+        .filter((event) =>
+          selected.some(
+            (known) =>
+              known.eventId === event.eventId && known.revision === event.revision,
+          ),
+        );
+    },
     /** Filters recent visible state against actual accepted releases in one owner read. */
     async releasedEventIds(
       subjectId: string,

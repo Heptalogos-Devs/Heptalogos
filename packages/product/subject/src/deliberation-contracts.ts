@@ -55,6 +55,9 @@ export const deliberationDecisionSchema = Type.Object(
   },
   object,
 );
+/** One structured subjective proposal before owner adoption. */
+export type DeliberationDecision = Static<typeof deliberationDecisionSchema>;
+
 /** Actual Host producer identity accompanies a model decision and is never supplied by the model itself. */
 export const adoptDeliberationSchema = Type.Object(
   {

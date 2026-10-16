@@ -1,6 +1,9 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Adopted expression, claim history and local narrative transaction contracts. @module narrative-contracts */
+/**
+ * Adopted expression, claim history and local narrative transaction contracts.
+ * @module narrative-contracts
+ */
 import { Type, type Static } from "@heptalogos/schema-runtime/typebox";
 import { worldIntervalSchema, realizeWorldSchema } from "./world-contracts.js";
 import { preparedDeliverySchema } from "./agency-contracts.js";
@@ -24,6 +27,7 @@ export const expressionAudienceSchema = Type.Object(
 export const expressionBriefSchema = Type.Object(
   {
     briefId: id,
+    decisionRef: ref,
     subjectId: id,
     activityId: id,
     expectedActivityRevision: Type.Integer({ minimum: 1 }),
@@ -153,6 +157,7 @@ export const claimsToSchema = Type.Object(
         Type.Literal("not_sent"),
       ]),
     ),
+    order: Type.Optional(Type.Union([Type.Literal("oldest"), Type.Literal("newest")])),
     afterClaimId: Type.Optional(id),
     limit: Type.Integer({ minimum: 1, maximum: 128 }),
   },

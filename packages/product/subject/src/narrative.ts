@@ -1,6 +1,9 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Atomic narrative adoption; model review and network dispatch remain outside its transaction. @module narrative */
+/**
+ * Atomic narrative adoption; model review and network dispatch remain outside its transaction.
+ * @module narrative
+ */
 import {
   createUuidV7Id,
   digestCanonicalJson,
@@ -20,12 +23,15 @@ import {
   type worldPointSchema,
 } from "./contracts.js";
 import type { PreparedDelivery } from "./agency-contracts.js";
+import type { createDeliberationService } from "./deliberation.js";
+import type { createLifeService } from "./life.js";
 import type { createAgencyService } from "./agency.js";
 import { createWorldLifeService, lockSubjectNarrative } from "./world-life.js";
 import {
   expressionBriefSchema,
   narrativeCommitSchema,
   claimsToSchema,
+  narrativeCommitmentSchema,
   type ExpressionBrief,
   type NarrativeReview,
   type AdoptedClaim,
@@ -145,6 +151,13 @@ export function validateNarrativeCandidate(
     if (
       patch.events.some(
         (event) =>
+          !event.parentEventId ||
+          !brief.eventRefs.some(
+            (ref) =>
+              ref === event.parentEventId ||
+              ref === "event:heptalogos:" + event.parentEventId ||
+              ref.startsWith(`world-event:${scope.worldId}:${event.parentEventId}:`),
+          ) ||
           event.actorRefs.some((ref) => !scope.actorRefs.includes(ref)) ||
           !scope.placeRefs.includes(event.placeRef),
       )
@@ -155,6 +168,8 @@ export function validateNarrativeCandidate(
 /** Dependencies are existing semantic owners, with one actual trusted review invocation. */
 export interface NarrativeOptions {
   readonly persistence: PersistenceService;
+  readonly life: Pick<ReturnType<typeof createLifeService>, "progressIn">;
+  readonly decisions: Pick<ReturnType<typeof createDeliberationService>, "read">;
   readonly now: () => string;
   readonly worldNow: (subjectId: string) => Promise<Static<typeof worldPointSchema>>;
   readonly worlds: ReturnType<typeof createWorldLifeService>;
@@ -203,6 +218,28 @@ export function createNarrativeService(options: NarrativeOptions) {
       const brief = checked<ExpressionBrief>(expressionBriefSchema, value);
       if (!rendererRunId || Date.parse(brief.validUntil) <= Date.parse(brief.createdAt))
         denied("A renderer binding and finite expression lifetime are required");
+      const adopted = await options.decisions.read(brief.subjectId, brief.decisionRef);
+      const intent = adopted?.decision.expressionIntent;
+      if (!adopted || adopted.activityId !== brief.activityId || !intent)
+        denied(
+          "The expression must reference an actually adopted same-Activity communication intention",
+        );
+      const actualIntent = {
+        intent: brief.intent,
+        stance: brief.stance,
+        qualifications: brief.qualifications,
+        deception: brief.deception,
+        eventRefs: brief.eventRefs,
+        cognitionRefs: brief.cognitionRefs,
+        priorClaimRefs: brief.priorClaimRefs,
+      };
+      if (
+        digest(intent) !== digest(actualIntent) ||
+        brief.sourceRefs.some((ref) => !adopted.sourceRefs.includes(ref))
+      )
+        denied(
+          "The expression cannot change the adopted intention, deliberate stance or source boundary",
+        );
       const hash = digest({ brief, rendererRunId });
       return options.persistence.mutate((context) =>
         useRepositoryMutationTransaction(context, async (tx) => {
@@ -244,6 +281,28 @@ export function createNarrativeService(options: NarrativeOptions) {
         briefId: brief.briefId,
         prepared,
         ...reviewed,
+        review: {
+          ...reviewed.review,
+          worldPatch: reviewed.review.worldPatch
+            ? {
+                ...reviewed.review.worldPatch,
+                events: reviewed.review.worldPatch.events.map((event) => ({
+                  ...event,
+                  source: {
+                    kind: "narrative",
+                    producerRef: prepared.runId,
+                    sourceRefs: [
+                      ...new Set([
+                        ...brief.sourceRefs,
+                        prepared.runId,
+                        reviewed.reviewerRunId,
+                      ]),
+                    ],
+                  },
+                })),
+              }
+            : null,
+        },
       });
       validateNarrativeCandidate(brief, prepared, input.review);
       const authority = await options.agency.prepareAdoption(prepared);
@@ -253,9 +312,10 @@ export function createNarrativeService(options: NarrativeOptions) {
         authority.current.actorEntityRef !== brief.actorEntityRef
       )
         denied("The actual renderer belongs to another adopted Subject or Activity");
-      const world = input.review.worldPatch
-        ? await options.worldNow(brief.subjectId)
-        : undefined;
+      const world =
+        input.review.worldPatch || input.review.commitments.length
+          ? await options.worldNow(brief.subjectId)
+          : undefined;
       return options.persistence.mutate((context) =>
         useRepositoryMutationTransaction(context, async (tx) => {
           await lockSubjectNarrative(tx, brief.subjectId);
@@ -299,6 +359,34 @@ export function createNarrativeService(options: NarrativeOptions) {
             prepared,
             authority.current,
           );
+          if (input.review.commitments.length) {
+            const due = input.review.commitments.map((commitment) => commitment.due);
+            if (
+              due.some(
+                (point) =>
+                  point.timeDomainRef !== world!.timeDomainRef ||
+                  Date.parse(point.at) <= Date.parse(world!.at),
+              )
+            )
+              denied(
+                "An adopted undertaking requires a future opportunity in the actual world domain",
+              );
+            if (activity.nextOpportunity?.timeDomainRef === world!.timeDomainRef)
+              due.push(activity.nextOpportunity);
+            const earliest = due.sort((a, b) => a.at.localeCompare(b.at))[0]!;
+            await options.life.progressIn(
+              tx,
+              {
+                subjectId: brief.subjectId,
+                activityId: brief.activityId,
+                expectedRevision: activity.revision,
+                progress: activity.progress,
+                mode: activity.mode,
+                nextOpportunity: earliest,
+              },
+              world!,
+            );
+          }
           const at = options.now();
           const claimIds: string[] = [];
           for (const claim of input.review.claims) {
@@ -362,6 +450,29 @@ export function createNarrativeService(options: NarrativeOptions) {
         }),
       );
     },
+    /** Actual adopted undertakings remain visible until their owning Activity resolves them. */
+    async pendingCommitments(subjectId: string, activityId: string) {
+      const rows = await readRepositorySql<{
+        commitment_id: string;
+        claim_id: string;
+        document: unknown;
+      }>(
+        options.persistence,
+        "SELECT commitment_id,claim_id,document FROM heptalogos.agency_commitment WHERE subject_id=$1 AND activity_id=$2 AND state='pending' ORDER BY due_at,commitment_id LIMIT 65",
+        [subjectId, activityId],
+      );
+      return {
+        commitments: rows.slice(0, 64).map((row) => ({
+          commitmentId: row.commitment_id,
+          claimId: row.claim_id,
+          ...checked<Static<typeof narrativeCommitmentSchema>>(
+            narrativeCommitmentSchema,
+            row.document,
+          ),
+        })),
+        more: rows.length > 64,
+      };
+    },
     async claimsTo(
       value: Static<typeof claimsToSchema>,
     ): Promise<{ claims: AdoptedClaim[]; more: boolean }> {
@@ -374,7 +485,9 @@ export function createNarrativeService(options: NarrativeOptions) {
         options.persistence,
         "SELECT * FROM (" +
           claimQuery +
-          " WHERE c.subject_id=$1 AND c.conversation_ref=$2 AND ($3::uuid IS NULL OR c.claim_id>$3) AND ($4::text IS NULL OR (c.about_domain=$4 AND c.about_start<$6::timestamptz AND c.about_end>$5::timestamptz))) q WHERE ($7::text IS NULL OR q.status=$7) ORDER BY q.claim_id LIMIT $8",
+          " WHERE c.subject_id=$1 AND c.conversation_ref=$2 AND ($3::uuid IS NULL OR (CASE WHEN $9::boolean THEN c.claim_id<$3 ELSE c.claim_id>$3 END)) AND ($4::text IS NULL OR (c.about_domain=$4 AND c.about_start<$6::timestamptz AND c.about_end>$5::timestamptz))) q WHERE ($7::text IS NULL OR q.status=$7) ORDER BY " +
+          (input.order === "newest" ? "q.claim_id DESC" : "q.claim_id ASC") +
+          " LIMIT $8",
         [
           input.subjectId,
           input.conversationRef,
@@ -384,6 +497,7 @@ export function createNarrativeService(options: NarrativeOptions) {
           input.about?.end ?? null,
           input.status ?? null,
           input.limit + 1,
+          input.order === "newest",
         ],
       );
       const selected = rows.map((row) => ({
