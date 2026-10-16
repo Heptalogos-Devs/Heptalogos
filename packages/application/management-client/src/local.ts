@@ -8,15 +8,12 @@
  * @module local
  */
 
-import { readFile } from "node:fs/promises";
-import { isAbsolute, join } from "node:path";
+import { objectValue, readJson } from "./json.js";
+import { join } from "node:path";
 import {
-  parseBootId,
-  parseInstallationId,
   parseInstant,
   parseUuidV7Id,
   ProblemError,
-  type BootId,
   type InstallationId,
   type Instant,
 } from "@heptalogos/foundation-contracts";
@@ -30,18 +27,14 @@ import {
   type ManagementClientOptions,
 } from "./client.js";
 
-const LOCATOR_FILENAME = "heptalogos.bootstrap.json";
-const ENDPOINT_FILENAME = "management-endpoint.json";
+import {
+  createLocalManagementEndpointReader,
+  type ManagementEndpointDescriptor,
+} from "./discovery.js";
+export type { ManagementEndpointDescriptor } from "./discovery.js";
+
 const CLAIM_FILENAME = "management-first-claim.json";
 const SESSION_ACCOUNT = "management/current-administrator-session";
-
-/** The Host-published endpoint descriptor consumed by local clients. */
-export interface ManagementEndpointDescriptor {
-  readonly schemaVersion: 1;
-  readonly installationId: InstallationId;
-  readonly bootId: BootId;
-  readonly origin: string;
-}
 
 /** The local first-claim material exposed to the first-administrator command. */
 export interface LocalFirstClaim {
@@ -65,75 +58,6 @@ export interface LocalManagementClient {
   saveSessionToken(token: string): Promise<void>;
   /** Deletes the local opaque session token. */
   deleteSessionToken(): Promise<void>;
-}
-
-function objectValue(value: unknown): Record<string, unknown> | undefined {
-  return typeof value === "object" && value !== null && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : undefined;
-}
-
-async function readJson(path: string): Promise<unknown> {
-  try {
-    return JSON.parse(await readFile(path, "utf8")) as unknown;
-  } catch {
-    return undefined;
-  }
-}
-
-async function installationFromAnchor(anchorRoot: string): Promise<{
-  installationId: InstallationId;
-  runRoot: string;
-}> {
-  const locator = objectValue(await readJson(join(anchorRoot, LOCATOR_FILENAME)));
-  const installationId = parseInstallationId(locator?.installationId);
-  const roots = objectValue(locator?.roots);
-  const runRoot = roots?.RUN;
-  if (
-    locator?.schemaVersion !== 1 ||
-    installationId === undefined ||
-    typeof runRoot !== "string" ||
-    !isAbsolute(runRoot)
-  ) {
-    throw new Error("The local Management locator is invalid");
-  }
-  return { installationId, runRoot };
-}
-
-async function readEndpoint(runRoot: string): Promise<ManagementEndpointDescriptor> {
-  const value = objectValue(await readJson(join(runRoot, ENDPOINT_FILENAME)));
-  const installationId =
-    value === undefined ? undefined : parseInstallationId(value.installationId);
-  const bootId = value === undefined ? undefined : parseBootId(value.bootId);
-  if (
-    value?.schemaVersion !== 1 ||
-    installationId === undefined ||
-    bootId === undefined ||
-    typeof value.origin !== "string"
-  ) {
-    throw new Error("The local Management endpoint descriptor is unavailable");
-  }
-  let origin: URL;
-  try {
-    origin = new URL(value.origin);
-  } catch {
-    throw new Error("The local Management endpoint descriptor is invalid");
-  }
-  if (
-    origin.protocol !== "http:" ||
-    origin.hostname !== "127.0.0.1" ||
-    origin.pathname !== "/" ||
-    origin.search !== "" ||
-    origin.hash !== ""
-  ) {
-    throw new Error("The local Management endpoint is not a loopback origin");
-  }
-  return Object.freeze({
-    schemaVersion: 1,
-    installationId,
-    bootId,
-    origin: origin.origin,
-  });
 }
 
 function canonicalToken(value: unknown): value is string {
@@ -180,11 +104,8 @@ export async function openLocalManagementClient(options: {
   readonly credentialStore?: OsCredentialStore;
   readonly signal?: AbortSignal;
 }): Promise<LocalManagementClient> {
-  const { installationId, runRoot } = await installationFromAnchor(options.anchorRoot);
-  const endpoint = await readEndpoint(runRoot);
-  if (endpoint.installationId !== installationId) {
-    throw new Error("The Management endpoint does not match the installation locator");
-  }
+  const { runRoot, endpoint } =
+    await createLocalManagementEndpointReader(options).read();
   const client = createManagementClient({
     origin: endpoint.origin,
     signal: options.signal,
@@ -193,17 +114,6 @@ export async function openLocalManagementClient(options: {
       : { sessionToken: options.sessionToken }),
     ...(options.fetch === undefined ? {} : { fetch: options.fetch }),
   });
-  const discovery = await client.getDiscovery();
-  if (
-    discovery.installationId !== endpoint.installationId ||
-    discovery.apiBasePath !== "/v1" ||
-    discovery.contractVersion !== "management.v1" ||
-    discovery.bootId !== endpoint.bootId
-  ) {
-    throw new Error(
-      "The live Management contract does not match the endpoint descriptor",
-    );
-  }
   const store = options.credentialStore ?? createOsCredentialStore();
   return Object.freeze({
     anchorRoot: options.anchorRoot,

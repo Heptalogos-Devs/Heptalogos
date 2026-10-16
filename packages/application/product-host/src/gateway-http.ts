@@ -23,6 +23,11 @@ import {
 } from "@nous-wave/client/host-bridge";
 import { managementProblem, managementProblemSchema } from "@heptalogos/management";
 import { tokenFromRequest } from "./http-auth.js";
+import {
+  activityDispatchInputSchema,
+  activityDispatchResultSchema,
+} from "./activity-dispatch-contracts.js";
+import type { createActivityDispatcher } from "./activity-dispatch.js";
 import * as contracts from "./gateway-contracts.js";
 import type { createArchiveStore } from "./archive-store.js";
 import { channelRouteSchema, type createChannelRouteStore } from "./channel-routes.js";
@@ -54,6 +59,7 @@ export interface GatewayHttpOptions {
   readonly archive: ReturnType<typeof createArchiveStore>;
   readonly routes: ReturnType<typeof createChannelRouteStore>;
   readonly cognition: GatewayCognitionBridge;
+  readonly activities: ReturnType<typeof createActivityDispatcher>;
 }
 /** Registers schema-owned service endpoints on the existing local Host listener. */
 export function registerGatewayHttp(
@@ -142,6 +148,14 @@ export function registerGatewayHttp(
     return { scope, conversationIds };
   };
   const p = "/gateway/v1/";
+  endpoint(
+    "dispatchActivity",
+    p + "activity/dispatch",
+    activityDispatchInputSchema,
+    activityDispatchResultSchema,
+    (v) => owners().activities.dispatch(v),
+    true,
+  );
   endpoint(
     "registerChannelRoute",
     p + "route",

@@ -12,7 +12,8 @@
     "openclaw.plugin.json",
     "README.md",
     "LICENSE",
-    "NOTICE"
+    "NOTICE",
+    "dist/prepare-gateway.js"
   ],
   "exports": {
     ".": {
@@ -53,5 +54,9 @@
   "nousNativeState": [
     "openChannelIngressQueue",
     "openKeyedStore"
-  ]
+  ],
+  "bin": {
+    "heptalogos-qq-prepare": "./dist/prepare-gateway.js",
+    "heptalogos-qq-dispatch": "./dist/dispatch.js"
+  }
 }

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 // Runs the packed artifact against its independently installed SDK and real native SQLite.
 import assert from "node:assert/strict";
-import { mkdtemp, writeFile, rm, readFile } from "node:fs/promises";
+import { mkdtemp, writeFile, rm, readFile, mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -64,6 +64,18 @@ wss.on("connection", (value) => {
 const host = createServer((request, response) => {
   void (async () => {
     try {
+      if (request.url === "/.well-known/heptalogos-management") {
+        response.setHeader("content-type", "application/json");
+        response.end(
+          JSON.stringify({
+            installationId: "0199e800-0000-7000-8000-000000000001",
+            bootId: "0199e800-0000-7000-8000-000000000003",
+            apiBasePath: "/v1",
+            contractVersion: "management.v1",
+          }),
+        );
+        return;
+      }
       assert.equal(request.headers.authorization, "Bearer isolated-artifact-service");
       let raw = "";
       for await (const chunk of request) raw += chunk;
@@ -132,7 +144,7 @@ const host = createServer((request, response) => {
 await new Promise((done) => host.listen(0, "127.0.0.1", done));
 const config = {
   connectionFile: join(root, "connection.json"),
-  hostOrigin: `http://127.0.0.1:${host.address().port}`,
+  hostAnchorRoot: join(root, "host"),
   serviceTokenFile: join(root, "service-token"),
   mediaTempRoot: join(root, "media"),
   napcatExportRoots: [],
@@ -150,6 +162,24 @@ const config = {
   historyPageSize: 10,
   historyMaxPages: 2,
 };
+await mkdir(join(root, "host/run"), { recursive: true });
+await writeFile(
+  join(root, "host/heptalogos.bootstrap.json"),
+  JSON.stringify({
+    schemaVersion: 1,
+    installationId: "0199e800-0000-7000-8000-000000000001",
+    roots: { RUN: join(root, "host/run") },
+  }),
+);
+await writeFile(
+  join(root, "host/run/management-endpoint.json"),
+  JSON.stringify({
+    schemaVersion: 1,
+    installationId: "0199e800-0000-7000-8000-000000000001",
+    bootId: "0199e800-0000-7000-8000-000000000003",
+    origin: `http://127.0.0.1:${host.address().port}`,
+  }),
+);
 await writeFile(
   config.connectionFile,
   JSON.stringify({

@@ -1,11 +1,12 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createHash } from "node:crypto";
 import { expect, it } from "vitest";
-import { createGatewayHostClient } from "@heptalogos/management-client";
+import { createInstallationId, createBootId } from "@heptalogos/foundation-contracts";
+import { createGatewayHostClient } from "@heptalogos/management-client/gateway";
 import { createProductHttpApp } from "../../../packages/application/product-host/src/product-http.js";
 import { createArchiveStore } from "../../../packages/application/product-host/src/archive-store.js";
 import type { GatewayHttpOptions } from "../../../packages/application/product-host/src/gateway-http.js";
@@ -16,6 +17,8 @@ import {
 } from "../../../packages/system/management/src/index.js";
 it("uses the generated service client for real bounded media and raw archives, and rejects unauthorized ingress before the owner", async () => {
   const root = await mkdtemp(join(tmpdir(), "heptalogos-gateway-transport-"));
+  const installationId = createInstallationId();
+  const bootId = createBootId();
   let receive = true;
   let acceptCalls = 0;
   const gateway = {
@@ -56,7 +59,7 @@ it("uses the generated service client for real bounded media and raw archives, a
     },
   } as unknown as GatewayHttpOptions;
   const app = await createProductHttpApp({
-    identity: { installationId: "fixture", bootId: "fixture" },
+    identity: { installationId, bootId },
     authentication: {} as ManagementAuthentication,
     product: {} as ProductManagement,
     onAdministratorClaimed: async () => {},
@@ -68,13 +71,21 @@ it("uses the generated service client for real bounded media and raw archives, a
     if (!address || typeof address === "string")
       throw Error("No actual loopback listener");
     const origin = "http://127.0.0.1:" + address.port;
+    await writeFile(
+      join(root, "heptalogos.bootstrap.json"),
+      JSON.stringify({ schemaVersion: 1, installationId, roots: { RUN: root } }),
+    );
+    await writeFile(
+      join(root, "management-endpoint.json"),
+      JSON.stringify({ schemaVersion: 1, installationId, bootId, origin }),
+    );
     const client = createGatewayHostClient({
-      origin,
+      hostAnchorRoot: root,
       serviceToken: "channel-service-fixture",
     });
     await expect(
       createGatewayHostClient({
-        origin,
+        hostAnchorRoot: root,
         serviceToken: "administrator-session-fixture",
       }).gatewayScope(),
     ).rejects.toMatchObject({ status: 401 });

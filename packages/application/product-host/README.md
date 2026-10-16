@@ -44,6 +44,14 @@ QQ 插件使用独立的 `SECRET/channel-service-token` 访问同一 Host 的服
 
 启动时仅恢复本地 Activity 与发送不确定状态，随后开放管理。实际原生模型输入由 Host 预登记的运行 ID、提示摘要、当前活动和 scope 绑定；相同提示可在 RESET 后的新运行重新登记，旧运行不能改绑。子 Agent 交接使用真实父运行 ID；实际结果先保全，再沿原 scope 提交 Nous。
 
+## 已采纳 Activity 的单次派发
+
+可信服务入口 `/gateway/v1/activity/dispatch` 选择已 active 的 Activity、一个 canonical 目标会话及最多 64 个实际消息引用。它只读当前目标的已授权材料，复用 Activity 现有 Nous WorkContext，并先保存原始输入，再调用安装提供的 `dispatchNativeActivity` 适配器。公开 schema 见 `activity-dispatch-contracts.ts`，精确语义见 [主体合同](../../../specs/subject/subject-base.md)。普通 QQ 消息不能调用此入口授予权限。
+
+Host 默认适配器读取本安装 `installation-services.json` 的 Subject 身份、根目录和显式 env 文件路径，调用同一独立原生包的 `heptalogos-qq-dispatch` SDK 入口。消息和调用参数走 stdin，Gateway 密码只进入子进程环境；Host 不另建模型循环。SDK 终态保留原始结果，`completed` 表示 RPC 已结束，实际发送以 Agency 和平台回执为准。
+
+当前要求 Activity 的工具为空，与原生生产 denyall 配合。原生服务未配置时返回明确状态；SDK 失败或无法确认时保留 uncertain，重复 requestId 不再次调用。Host 停止或进程超时时终止本地调用进程。实际安装仍须核对模型输入、最终 QQ 回执和结果回流。
+
 ## 验证
 
 运行 product-host 构建、聚焦测试、OpenAPI 生成检查，以及安装后的公开 CLI/API。实际安装检查包括认领、登录、配置冲突、管理在依赖离线时可用、正常 stop、重启保持身份与配置、端口释放。QQ、媒体、模型和主体活动必须各自经过真实使用，不能由这些管理检查推定。

@@ -5,7 +5,7 @@
  * Completes bounded business work on Host-persisted media and source references.
  * @module resources
  */
-import type { GatewayHostClient } from "@heptalogos/management-client";
+import type { GatewayHostClient } from "@heptalogos/management-client/gateway";
 import type { PluginRuntime } from "openclaw/plugin-sdk/channel-plugin-common";
 import { openAsBlob } from "node:fs";
 import { OneBotTransport } from "./transport.js";

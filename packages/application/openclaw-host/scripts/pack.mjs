@@ -37,7 +37,14 @@ try {
     JSON.stringify({ ...manifest, dependencies, peerDependencies }, null, 2) + "\n",
   );
   await mkdir(join(stage, "dist"));
-  for (const file of ["index.js", "index.d.ts", "routing.d.ts", "policy.d.ts"]) {
+  for (const file of [
+    "index.js",
+    "index.d.ts",
+    "routing.d.ts",
+    "policy.d.ts",
+    "prepare-gateway.js",
+    "dispatch.js",
+  ]) {
     const contents = await readFile(join(root, "dist", file), "utf8");
     await writeFile(
       join(stage, "dist", file),

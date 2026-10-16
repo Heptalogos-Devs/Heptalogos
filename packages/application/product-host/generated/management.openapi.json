@@ -8693,6 +8693,632 @@
         }
       }
     },
+    "/gateway/v1/activity/dispatch": {
+      "post": {
+        "operationId": "dispatchActivity",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "requestId",
+                  "subjectId",
+                  "activityId",
+                  "conversationRef",
+                  "messageRefs"
+                ],
+                "properties": {
+                  "requestId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+                  },
+                  "subjectId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+                  },
+                  "activityId": {
+                    "type": "string",
+                    "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+                  },
+                  "conversationRef": {
+                    "type": "string",
+                    "pattern": "^conversation:heptalogos:[0-9a-f-]{36}$"
+                  },
+                  "messageRefs": {
+                    "type": "array",
+                    "items": {
+                      "type": "string",
+                      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+                    },
+                    "minItems": 1,
+                    "maxItems": 64,
+                    "uniqueItems": true
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "gatewayService": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "requestId",
+                    "nativeRunId",
+                    "sessionKey",
+                    "promptDigest",
+                    "state",
+                    "replayed"
+                  ],
+                  "properties": {
+                    "requestId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+                    },
+                    "nativeRunId": {
+                      "type": "string",
+                      "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$"
+                    },
+                    "sessionKey": {
+                      "type": "string"
+                    },
+                    "promptDigest": {
+                      "type": "string"
+                    },
+                    "state": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "dispatching"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "completed"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "failed"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "uncertain"
+                          ]
+                        }
+                      ]
+                    },
+                    "replayed": {
+                      "type": "boolean"
+                    },
+                    "result": {},
+                    "code": {
+                      "type": "string"
+                    }
+                  },
+                  "additionalProperties": false
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "problemCode",
+                    "category",
+                    "retryClass",
+                    "schemaVersion"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "problemCode": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "type": "string"
+                    },
+                    "retryClass": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "immediate"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "backoff"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "after-change"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "manual"
+                          ]
+                        }
+                      ]
+                    },
+                    "schemaVersion": {
+                      "type": "number",
+                      "enum": [
+                        1
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "problemCode",
+                    "category",
+                    "retryClass",
+                    "schemaVersion"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "problemCode": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "type": "string"
+                    },
+                    "retryClass": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "immediate"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "backoff"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "after-change"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "manual"
+                          ]
+                        }
+                      ]
+                    },
+                    "schemaVersion": {
+                      "type": "number",
+                      "enum": [
+                        1
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "problemCode",
+                    "category",
+                    "retryClass",
+                    "schemaVersion"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "problemCode": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "type": "string"
+                    },
+                    "retryClass": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "immediate"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "backoff"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "after-change"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "manual"
+                          ]
+                        }
+                      ]
+                    },
+                    "schemaVersion": {
+                      "type": "number",
+                      "enum": [
+                        1
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "problemCode",
+                    "category",
+                    "retryClass",
+                    "schemaVersion"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "problemCode": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "type": "string"
+                    },
+                    "retryClass": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "immediate"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "backoff"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "after-change"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "manual"
+                          ]
+                        }
+                      ]
+                    },
+                    "schemaVersion": {
+                      "type": "number",
+                      "enum": [
+                        1
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "problemCode",
+                    "category",
+                    "retryClass",
+                    "schemaVersion"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "problemCode": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "type": "string"
+                    },
+                    "retryClass": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "immediate"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "backoff"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "after-change"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "manual"
+                          ]
+                        }
+                      ]
+                    },
+                    "schemaVersion": {
+                      "type": "number",
+                      "enum": [
+                        1
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "required": [
+                    "type",
+                    "title",
+                    "status",
+                    "detail",
+                    "problemCode",
+                    "category",
+                    "retryClass",
+                    "schemaVersion"
+                  ],
+                  "properties": {
+                    "type": {
+                      "type": "string"
+                    },
+                    "title": {
+                      "type": "string"
+                    },
+                    "status": {
+                      "type": "integer"
+                    },
+                    "detail": {
+                      "type": "string"
+                    },
+                    "instance": {
+                      "type": "string"
+                    },
+                    "problemCode": {
+                      "type": "string"
+                    },
+                    "category": {
+                      "type": "string"
+                    },
+                    "retryClass": {
+                      "anyOf": [
+                        {
+                          "type": "string",
+                          "enum": [
+                            "never"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "immediate"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "backoff"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "after-change"
+                          ]
+                        },
+                        {
+                          "type": "string",
+                          "enum": [
+                            "manual"
+                          ]
+                        }
+                      ]
+                    },
+                    "schemaVersion": {
+                      "type": "number",
+                      "enum": [
+                        1
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/gateway/v1/route": {
       "post": {
         "operationId": "registerChannelRoute",

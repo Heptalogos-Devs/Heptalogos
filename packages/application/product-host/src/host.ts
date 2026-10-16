@@ -52,6 +52,7 @@ import { getNousSubject, createNousSubject } from "./nous.js";
 import { inspectProductDependencies } from "./dependencies.js";
 import { createGatewayRuntime } from "./gateway-runtime.js";
 import { parseProductHostInputs, type ProductHostInputs } from "./inputs.js";
+import { createInstalledNativeDispatcher } from "./native-dispatch.js";
 
 /** Handle to the independently usable management process. */
 export interface ProductHostHandle {
@@ -65,7 +66,9 @@ export interface ProductHostHandle {
   close(): Promise<void>;
 }
 /** Installed lifecycle roots and private PostgreSQL location. */
-export type ProductHostStartOptions = ProductHostInputs;
+export type ProductHostStartOptions = ProductHostInputs & {
+  readonly dispatchNativeActivity?: import("./activity-dispatch-contracts.js").NativeActivityDispatch;
+};
 
 async function runRetainedManagementMutation<T>(
   runtime: ReturnType<typeof createExecutionContextRuntime>,
@@ -295,6 +298,14 @@ export async function startProductHost(
       dataRoot: locations.stateRoot,
       now: () => new Date().toISOString(),
       runMutation: runMutationActivity,
+      dispatchNativeActivity:
+        options.dispatchNativeActivity ??
+        createInstalledNativeDispatcher({
+          anchorRoot: options.anchorRoot,
+          configurationRoot: owned.paths.resolve("CONFIGURATION").canonicalPath,
+          installationId: owned.installationId,
+          signal: host.signal,
+        }),
     });
     const recoveryConfiguration = await product.configuration();
     const recoverySubjectId = recoveryConfiguration.settings?.subject?.id;

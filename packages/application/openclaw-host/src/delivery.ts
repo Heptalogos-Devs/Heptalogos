@@ -5,7 +5,7 @@
  * Routes every native QQ send through Host custody and records honest physical outcomes.
  * @module delivery
  */
-import type { GatewayHostClient } from "@heptalogos/management-client";
+import type { GatewayHostClient } from "@heptalogos/management-client/gateway";
 import {
   defineChannelMessageAdapter,
   type ChannelMessageAdapterShape,

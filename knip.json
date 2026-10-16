@@ -22,6 +22,8 @@
       "entry": [
         "src/index.ts",
         "src/node.ts",
+        "src/discovery.ts",
+        "src/gateway-client.ts",
         "src/generated/**/*.ts",
         "scripts/generate.mjs"
       ],
@@ -60,7 +62,13 @@
       "ignoreDependencies": ["^@dbos-inc/dbos-sdk$"]
     },
     "packages/application/openclaw-host": {
-      "entry": ["src/index.ts", "scripts/**/*.mjs", "test/support/*.mjs"],
+      "entry": [
+        "src/index.ts",
+        "src/dispatch.ts",
+        "src/prepare-gateway.ts",
+        "scripts/**/*.mjs",
+        "test/support/*.mjs"
+      ],
       "project": [
         "src/**/*.ts",
         "scripts/**/*.mjs",

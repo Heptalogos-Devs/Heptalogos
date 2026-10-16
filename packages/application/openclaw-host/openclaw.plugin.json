@@ -10,7 +10,7 @@
     "type": "object",
     "required": [
       "connectionFile",
-      "hostOrigin",
+      "hostAnchorRoot",
       "serviceTokenFile",
       "mediaTempRoot",
       "napcatExportRoots",
@@ -33,9 +33,9 @@
         "type": "string",
         "minLength": 1
       },
-      "hostOrigin": {
+      "hostAnchorRoot": {
         "type": "string",
-        "pattern": "^http://127\\.0\\.0\\.1:[0-9]+/?$"
+        "minLength": 1
       },
       "serviceTokenFile": {
         "type": "string",

@@ -1612,6 +1612,126 @@ export type CreateProductSubjectResponses = {
 
 export type CreateProductSubjectResponse = CreateProductSubjectResponses[keyof CreateProductSubjectResponses];
 
+export type DispatchActivityData = {
+    body: {
+        requestId: string;
+        subjectId: string;
+        activityId: string;
+        conversationRef: string;
+        messageRefs: Array<string>;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/activity/dispatch';
+};
+
+export type DispatchActivityErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type DispatchActivityError = DispatchActivityErrors[keyof DispatchActivityErrors];
+
+export type DispatchActivityResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        requestId: string;
+        nativeRunId: string;
+        sessionKey: string;
+        promptDigest: string;
+        state: 'dispatching' | 'completed' | 'failed' | 'uncertain';
+        replayed: boolean;
+        result?: unknown;
+        code?: string;
+    };
+};
+
+export type DispatchActivityResponse = DispatchActivityResponses[keyof DispatchActivityResponses];
+
 export type RegisterChannelRouteData = {
     body: {
         accountId: string;

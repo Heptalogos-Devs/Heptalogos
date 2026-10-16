@@ -5,7 +5,7 @@
  * Composes native durable ingress and Host owners without starting a cognitive runtime.
  * @module runtime
  */
-import { createGatewayHostClient } from "@heptalogos/management-client";
+import { createGatewayHostClient } from "@heptalogos/management-client/gateway";
 import type { OpenClawPluginApi } from "openclaw/plugin-sdk/channel-plugin-common";
 import { defineChannelPluginEntry } from "openclaw/plugin-sdk/core";
 import { createQqChannel } from "./channel.js";
@@ -25,7 +25,7 @@ export function registerQqChannel(api: OpenClawPluginApi): void {
   const config = parsePluginConfig(api.pluginConfig);
   const connection = readConnectionFile(config.connectionFile);
   const host = createGatewayHostClient({
-    origin: config.hostOrigin,
+    hostAnchorRoot: config.hostAnchorRoot,
     serviceToken: readServiceToken(config.serviceTokenFile),
   });
   const report = (code: string) => api.logger.warn(`QQ channel: ${code}`);

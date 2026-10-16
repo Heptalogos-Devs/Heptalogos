@@ -105,3 +105,60 @@ describe("local Management installation identity", () => {
     },
   );
 });
+
+it("reuses the bound installation while following a new verified Host boot for each Gateway request", async () => {
+  const { createGatewayHostClient } = await import("../../src/gateway-client.js");
+  const anchorRoot = await fixture();
+  let activeBoot = bootId;
+  const calls: Array<{ url: string; authenticated: boolean }> = [];
+  const gateway = createGatewayHostClient({
+    hostAnchorRoot: anchorRoot,
+    serviceToken: "fixture-service",
+    fetch: async (input, init) => {
+      const request = new Request(input, init);
+      calls.push({
+        url: request.url,
+        authenticated: request.headers.has("authorization"),
+      });
+      return new Response(
+        JSON.stringify(
+          new URL(request.url).pathname === "/.well-known/heptalogos-management"
+            ? {
+                installationId,
+                bootId: activeBoot,
+                apiBasePath: "/v1",
+                contractVersion: "management.v1",
+              }
+            : { accountId: "fixture-account" },
+        ),
+        { headers: { "content-type": "application/json" } },
+      );
+    },
+  });
+  await gateway.gatewayScope();
+  activeBoot = otherBootId;
+  await writeFile(
+    join(anchorRoot, "run/management-endpoint.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      installationId,
+      bootId: otherBootId,
+      origin: "http://127.0.0.1:33334",
+    }),
+  );
+  await gateway.gatewayScope();
+  expect(
+    calls.filter((call) => call.authenticated).map((call) => new URL(call.url).port),
+  ).toEqual(["33333", "33334"]);
+  expect(calls.filter((call) => !call.authenticated)).toHaveLength(2);
+  await writeFile(
+    join(anchorRoot, "heptalogos.bootstrap.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      installationId: otherInstallationId,
+      roots: { RUN: join(anchorRoot, "run") },
+    }),
+  );
+  await expect(gateway.gatewayScope()).rejects.toThrow("changed identity");
+  expect(calls).toHaveLength(4);
+});

@@ -22,6 +22,16 @@ Messaging 先接纳持久事实；收信不直接等于主体观察，也不自�
 
 实际选中的材料才进入正式 Nous Observation 与原生输入。普通聊天提出安排或说“记住/忘记”不能直接修改活动权限、认知管理权限或维护范围。
 
+## 可信原生输入派发
+
+服务凭据入口 `POST /gateway/v1/activity/dispatch` 接收 `requestId`、Subject、已采纳 Activity、canonical conversationRef 和最多 64 个实际 messageRefs，不接收 prompt、来源许可或工具授权。Host 重新检查 active/continuation、当前安装授权、Activity sourceRefs、已采纳 observe/send 范围及真实原生路由。材料读取只使用目标会话和选中的引用，最多 1 MiB；遗漏、撤回或跨会话选择必须拒绝，不扩大到完整 inbox。
+
+Activity 必须已有同 Subject、active 的正式 Nous WorkContext。实际作者通过 Identity 的真实协议账号解析，平台发生时间和 Host 接收时间分别保留；转述与媒体状态仍来自原材料。只有这些材料进入 contact Observation，工程 prompt 不成为新来源。CognitionUsage 的来源许可为显式目标 origin 和当前 exact WorkContext，不由 audience 字段推导，也不授权其他 anchors。
+
+当前入口只允许 Activity `tools=[]`，配合生产原生 denyall；没有正式逐 Activity 工具执行控制时不能扩大工具。Host 在原生 SDK 调用前保存 raw prompt、digest、UUID nativeRunId 及固定参数。`requestId` 唯一绑定该选择，首次 claim 才可调用已有 native adapter；并发或之后重试返回保存状态。RPC terminal 保存实际结果，不能确认的失败保持 uncertain，不自动重派，也不把调用结束当作 Activity 达成。重启留下的 dispatching 需要显式核对，不会取得第二次调用机会。
+
+迁移 `0006_native_dispatch` 只给既有 native input 添加请求唯一索引，保留原消息、活动与原生事实。适配器通过独立 OpenClaw 的公开 CLI 调用 agent/expectFinal；Host 不运行模型循环。
+
 ## 当前边界与验证
 
 Life/Agency 已有正式 owner 和 PostgreSQL 迁移；活动 CAS、重启进展、世界域拒绝及取消与发送点的真实锁交错有数据库测试。完整部署还必须接上原生调度、真实工具、QQ 和跨日恢复；内部测试不能替代这些完成条件。

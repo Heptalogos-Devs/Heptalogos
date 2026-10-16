@@ -7,8 +7,12 @@ import { fileURLToPath } from "node:url";
 import { resolve } from "node:path";
 const root = fileURLToPath(new URL("../", import.meta.url));
 const result = await build({
-  entryPoints: [resolve(root, "src/index.ts")],
-  outfile: resolve(root, "dist/index.js"),
+  entryPoints: [
+    resolve(root, "src/index.ts"),
+    resolve(root, "src/prepare-gateway.ts"),
+    resolve(root, "src/dispatch.ts"),
+  ],
+  outdir: resolve(root, "dist"),
   bundle: true,
   platform: "node",
   target: "node24",

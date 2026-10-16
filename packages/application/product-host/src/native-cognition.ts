@@ -46,6 +46,10 @@ import {
   type HostAdmittedRequest,
   type HostHandoffRequest,
 } from "@nous-wave/client/host-bridge";
+import type {
+  NativeActivityParams,
+  ActivityDispatchResult,
+} from "./activity-dispatch-contracts.js";
 import type { GatewayCognitionBridge } from "./gateway-http.js";
 
 /** Persisted exact native-run selection; only the trusted Host may construct it. */
@@ -64,8 +68,18 @@ export interface Registration {
   readonly messageRefs: readonly string[];
   readonly contacts: HostPrepareResponse["contacts"];
 }
+type NativeDispatchRecord = {
+  requestId: string;
+  requestDigest: string;
+  params: NativeActivityParams;
+  state: "dispatching" | "completed" | "failed" | "uncertain";
+  result?: unknown;
+  code?: string;
+};
 type StoredInput = {
   registration: Registration;
+  prompt?: string;
+  dispatch?: NativeDispatchRecord;
   firstContact?: {
     nousSessionId: string;
     contactRequestId: string;
@@ -81,6 +95,23 @@ export interface NativeRunSnapshot {
   readonly native: HostPrepareRequest["native"];
   readonly nousSessionId: string;
   readonly appliedUsage?: HostPrepareResponse["usage"];
+}
+function dispatchResult(
+  saved: StoredInput,
+  replayed: boolean,
+): ActivityDispatchResult & { requestDigest: string } {
+  const dispatch = saved.dispatch!;
+  return {
+    requestId: dispatch.requestId,
+    requestDigest: dispatch.requestDigest,
+    nativeRunId: saved.registration.nativeRunId,
+    sessionKey: saved.registration.sessionKey,
+    promptDigest: saved.registration.promptDigest,
+    state: dispatch.state,
+    replayed,
+    ...(dispatch.result === undefined ? {} : { result: dispatch.result }),
+    ...(dispatch.code ? { code: dispatch.code } : {}),
+  };
 }
 type Contact = {
   request: HostPrepareRequest;
@@ -244,7 +275,27 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         readonly prompt: string;
         readonly usage: Parameters<typeof encodeCognitionUsage>[0];
       },
-    ): Promise<{ sessionKey: string; nativeRunId: string; promptDigest: string }>;
+      dispatch?: Omit<NativeDispatchRecord, "state" | "result" | "code">,
+    ): Promise<{
+      sessionKey: string;
+      nativeRunId: string;
+      promptDigest: string;
+      dispatch?: NativeDispatchRecord;
+      claimed?: boolean;
+    }>;
+    readDispatch(
+      subjectId: string,
+      requestId: string,
+    ): Promise<(ActivityDispatchResult & { requestDigest: string }) | undefined>;
+    finishDispatch(
+      subjectId: string,
+      requestId: string,
+      outcome: {
+        state: "completed" | "failed" | "uncertain";
+        result?: unknown;
+        code?: string;
+      },
+    ): Promise<ActivityDispatchResult>;
     readRun: typeof readRun;
     finishRun(
       runId: string,
@@ -252,7 +303,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
     ): Promise<void>;
     flushPendingFeedback(limit: number): Promise<{ delivered: number }>;
   } = {
-    async registerInput(input) {
+    async registerInput(input, dispatch) {
       const { prompt, usage, ...selection } = input;
       if (
         typeof prompt !== "string" ||
@@ -299,7 +350,31 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         usage: canonicalUsage,
         promptDigest: createHash("sha256").update(prompt).digest("hex"),
       };
-      await mutate(async (tx) => {
+      const selected = await mutate(async (tx) => {
+        if (dispatch) {
+          await sessionLock(tx, `dispatch-native-run:${dispatch.requestId}`);
+          const previous = await sql<{ document: StoredInput }>(
+            tx,
+            "SELECT document FROM heptalogos.life_native_input WHERE native_run_id=$1 FOR UPDATE",
+            [input.nativeRunId],
+          );
+          if (previous[0]) {
+            if (
+              previous.length !== 1 ||
+              previous[0].document.registration.subjectId !== input.subjectId ||
+              previous[0].document.dispatch?.requestDigest !== dispatch.requestDigest
+            )
+              deny(
+                "native_dispatch_conflict",
+                "The request identity already names another exact Activity selection",
+              );
+            return {
+              registration: previous[0].document.registration,
+              dispatch: previous[0].document.dispatch,
+              claimed: false,
+            };
+          }
+        }
         await sessionLock(tx, input.sessionKey);
         const activity = await lockedActivity(tx, input.subjectId, input.activityId);
         current(activity, registration);
@@ -331,16 +406,63 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
             registration.promptDigest,
             input.subjectId,
             input.activityId,
-            JSON.stringify({ registration }),
+            JSON.stringify({
+              registration,
+              ...(dispatch ? { prompt } : {}),
+              ...(dispatch ? { dispatch: { ...dispatch, state: "dispatching" } } : {}),
+            }),
             options.now(),
           ],
         );
+        return {
+          registration,
+          dispatch: dispatch
+            ? { ...dispatch, state: "dispatching" as const }
+            : undefined,
+          claimed: !!dispatch,
+        };
       });
       return {
-        sessionKey: input.sessionKey,
-        nativeRunId: input.nativeRunId,
-        promptDigest: registration.promptDigest,
+        sessionKey: selected?.registration.sessionKey ?? input.sessionKey,
+        nativeRunId: selected?.registration.nativeRunId ?? input.nativeRunId,
+        promptDigest: selected?.registration.promptDigest ?? registration.promptDigest,
+        dispatch: selected?.dispatch,
+        claimed: selected?.claimed,
       };
+    },
+    async readDispatch(subjectId, requestId) {
+      const rows = await readRepositorySql<{ document: StoredInput }>(
+        options.persistence,
+        "SELECT document FROM heptalogos.life_native_input WHERE subject_id=$1 AND document#>>'{dispatch,requestId}'=$2",
+        [subjectId, requestId],
+      );
+      const saved = rows[0]?.document;
+      return saved?.dispatch ? dispatchResult(saved, true) : undefined;
+    },
+    async finishDispatch(subjectId, requestId, outcome) {
+      return mutate(async (tx) => {
+        const rows = await sql<{ document: StoredInput }>(
+          tx,
+          "SELECT document FROM heptalogos.life_native_input WHERE subject_id=$1 AND document#>>'{dispatch,requestId}'=$2 FOR UPDATE",
+          [subjectId, requestId],
+        );
+        const saved = rows[0]?.document;
+        if (!saved?.dispatch)
+          deny("native_dispatch_unknown", "No original dispatch input exists");
+        if (saved.dispatch.state !== "dispatching") return dispatchResult(saved, true);
+        const document = { ...saved, dispatch: { ...saved.dispatch, ...outcome } };
+        await sql(
+          tx,
+          "UPDATE heptalogos.life_native_input SET document=$3::jsonb WHERE subject_id=$1 AND document#>>'{dispatch,requestId}'=$2",
+          [subjectId, requestId, JSON.stringify(document)],
+        );
+        await sql(
+          tx,
+          "UPDATE heptalogos.life_native_run SET state=$3,updated_at=$4 WHERE run_id=$1 AND subject_id=$2 AND state IN ('admitted','running')",
+          [saved.registration.nativeRunId, subjectId, outcome.state, options.now()],
+        );
+        return dispatchResult(document, false);
+      });
     },
     async prepare(value) {
       const input = validated(() => hostPrepareRequestSchema.parse(value));
@@ -351,6 +473,14 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           "SELECT document FROM heptalogos.life_native_input WHERE session_key=$1 AND native_run_id=$2",
           [input.native.sessionKey, input.native.runId],
         );
+        if (
+          registered[0]?.document.dispatch &&
+          registered[0].document.dispatch.state !== "dispatching"
+        )
+          deny(
+            "native_dispatch_stopped",
+            "The saved native dispatch is terminal or requires explicit reconciliation; it cannot admit new model input",
+          );
         let registration = registered[0]?.document.registration;
         if (registration && registration.promptDigest !== input.promptDigest)
           deny(
@@ -514,6 +644,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
               input.native.sessionKey,
               input.native.runId,
               JSON.stringify({
+                ...registered[0]!.document,
                 registration,
                 firstContact: {
                   nousSessionId: input.nousSessionId,

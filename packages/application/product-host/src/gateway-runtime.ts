@@ -21,10 +21,13 @@ import { createArchiveStore } from "./archive-store.js";
 import { createChannelRouteStore } from "./channel-routes.js";
 import { createNativeCognitionBridge } from "./native-cognition.js";
 import { connectProductNous } from "./nous.js";
+import { createActivityDispatcher } from "./activity-dispatch.js";
+import type { NativeActivityDispatch } from "./activity-dispatch-contracts.js";
 import type { GatewayScope } from "./gateway-contracts.js";
 import type { GatewayHttpOptions } from "./gateway-http.js";
 /** Existing Host lifecycle and current authenticated settings remain the owners. */
 export interface GatewayRuntimeOptions {
+  readonly dispatchNativeActivity?: NativeActivityDispatch;
   readonly persistence: PersistenceService;
   readonly product: Pick<ProductManagement, "configuration">;
   readonly secretRoot: string;
@@ -323,6 +326,24 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
     scope,
     now: options.now,
   });
+  const activities = createActivityDispatcher({
+    life,
+    messaging,
+    identity,
+    native,
+    routes,
+    scope,
+    nous,
+    now: options.now,
+    dispatch: options.dispatchNativeActivity,
+    authorizeActivity: async (activity) => {
+      if (!activity.scope || !activity.adoptedBy) denied("The Activity is not adopted");
+      assertScopeWithin(
+        activity.scope,
+        await authority(activity.subjectId, activity.adoptedBy, activity.scope),
+      );
+    },
+  });
   const http: GatewayHttpOptions = {
     authenticate: await serviceCredential(options.secretRoot),
     runMutation: options.runMutation,
@@ -334,6 +355,7 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
     routes,
     archive: createArchiveStore(join(options.dataRoot, "messaging", "protected-cas")),
     cognition: native,
+    activities,
   };
-  return { http, life, native, routes, messaging, identity };
+  return { http, life, native, routes, messaging, identity, activities };
 }

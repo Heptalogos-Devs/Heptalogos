@@ -3,11 +3,11 @@
 
 import { expect, it } from "vitest";
 import { createServer } from "node:http";
-import { mkdtemp, rm } from "node:fs/promises";
+import { mkdtemp, rm, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { WebSocketServer } from "ws";
-import { createGatewayHostClient } from "@heptalogos/management-client";
+import { createGatewayHostClient } from "@heptalogos/management-client/gateway";
 import { sendDurableMessageBatch } from "openclaw/plugin-sdk/channel-message";
 import { createQqMessageAdapter } from "../../src/delivery.js";
 import { createQqChannel } from "../../src/channel.js";
@@ -34,6 +34,18 @@ it("uses public durable native send with real SQLite, generated Host HTTP and on
       let raw = "";
       for await (const chunk of request) raw += String(chunk);
       const body = raw ? JSON.parse(raw) : {};
+      if (request.url === "/.well-known/heptalogos-management") {
+        response.setHeader("content-type", "application/json");
+        response.end(
+          JSON.stringify({
+            installationId: "0199e800-0000-7000-8000-000000000001",
+            bootId: "0199e800-0000-7000-8000-000000000003",
+            apiBasePath: "/v1",
+            contractVersion: "management.v1",
+          }),
+        );
+        return;
+      }
       expect(request.headers.authorization).toBe("Bearer fixture-service-only");
       let result: unknown;
       if (request.url?.endsWith("/scope") && denyScope) {
@@ -161,8 +173,27 @@ it("uses public durable native send with real SQLite, generated Host HTTP and on
   });
   presence = new OneBotPresence(transport, accountId, localPolicy);
   transport.start();
+  const hostAnchorRoot = join(state, "host");
+  await mkdir(join(hostAnchorRoot, "run"), { recursive: true });
+  await writeFile(
+    join(hostAnchorRoot, "heptalogos.bootstrap.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      installationId: "0199e800-0000-7000-8000-000000000001",
+      roots: { RUN: join(hostAnchorRoot, "run") },
+    }),
+  );
+  await writeFile(
+    join(hostAnchorRoot, "run/management-endpoint.json"),
+    JSON.stringify({
+      schemaVersion: 1,
+      installationId: "0199e800-0000-7000-8000-000000000001",
+      bootId: "0199e800-0000-7000-8000-000000000003",
+      origin: `http://127.0.0.1:${hostAddress.port}`,
+    }),
+  );
   const host = createGatewayHostClient({
-    origin: `http://127.0.0.1:${hostAddress.port}`,
+    hostAnchorRoot,
     serviceToken: "fixture-service-only",
   });
   const message = createQqMessageAdapter({

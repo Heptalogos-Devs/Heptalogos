@@ -14,7 +14,7 @@ import { parseOneBotJson, record, nativeId } from "./lossless.js";
 export const qqPluginConfigSchema = Type.Object(
   {
     connectionFile: Type.String({ minLength: 1 }),
-    hostOrigin: Type.String({ pattern: "^http://127\\.0\\.0\\.1:[0-9]+/?$" }),
+    hostAnchorRoot: Type.String({ minLength: 1 }),
     serviceTokenFile: Type.String({ minLength: 1 }),
     mediaTempRoot: Type.String({ minLength: 1 }),
     napcatExportRoots: Type.Array(Type.String({ minLength: 1 }), { maxItems: 16 }),
@@ -45,6 +45,7 @@ export function parsePluginConfig(value: unknown): QqPluginConfig {
   const config = result.value;
   for (const path of [
     config.connectionFile,
+    config.hostAnchorRoot,
     config.serviceTokenFile,
     config.mediaTempRoot,
     ...config.napcatExportRoots,

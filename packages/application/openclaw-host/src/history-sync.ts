@@ -5,7 +5,7 @@
  * Reconciles limited native history after live receive starts, using the same Host accept operation.
  * @module history-sync
  */
-import type { GatewayHostClient } from "@heptalogos/management-client";
+import type { GatewayHostClient } from "@heptalogos/management-client/gateway";
 import type { NativeConversation } from "@heptalogos/messaging";
 import { OneBotTransport } from "./transport.js";
 import { QqScopePolicy } from "./policy.js";
