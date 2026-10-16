@@ -149,8 +149,15 @@ export function createMessagingService(
     options.persistence.mutate((context) =>
       useRepositoryMutationTransaction(context, (tx) => fn(tx, context)),
     );
-  const read = <T>(fn: (tx: PersistenceInternalTransaction) => Promise<T>) =>
-    options.persistence.read((context) => useRepositoryReadTransaction(context, fn));
+  const read = <T>(
+    fn: (tx: PersistenceInternalTransaction) => Promise<T>,
+    transaction?: PersistenceInternalTransaction,
+  ) =>
+    transaction
+      ? fn(transaction)
+      : options.persistence.read((context) =>
+          useRepositoryReadTransaction(context, fn),
+        );
 
   const accept: MessagingService["accept"] = async (input) => {
     check(validators.accept, input);
@@ -349,7 +356,7 @@ export function createMessagingService(
     });
   };
 
-  const prepareRead: MessagingService["prepareRead"] = async (input) => {
+  const prepareRead: MessagingService["prepareRead"] = async (input, transaction) => {
     check(validators.read, input);
     if ((input.messageRefs === undefined) === (input.window === undefined))
       invalid("Choose exactly one of messageRefs or window");
@@ -464,41 +471,47 @@ export function createMessagingService(
         omitted,
         ...(input.window ? { nextSequence } : {}),
       };
-    });
+    }, transaction);
   };
 
   return {
-    async messageSources(input) {
+    async messageSources(input, transaction) {
       check(validators.sources, input);
-      return read(async (tx) => ({
-        sources: (
-          await sql<{
-            message_id: string;
-            conversation_id: string;
-            lifecycle: "present" | "retracted";
-          }>(
-            tx,
-            `SELECT message_id,conversation_id,lifecycle FROM heptalogos.message_fact WHERE message_id=ANY($1::uuid[]) AND conversation_id=ANY($2::uuid[]) ORDER BY conversation_id,sequence`,
-            [input.messageRefs, input.conversationIds],
-          )
-        ).map((row) => ({
-          messageRef: row.message_id,
-          conversationId: row.conversation_id,
-          lifecycle: row.lifecycle,
-        })),
-      }));
+      return read(
+        async (tx) => ({
+          sources: (
+            await sql<{
+              message_id: string;
+              conversation_id: string;
+              lifecycle: "present" | "retracted";
+            }>(
+              tx,
+              `SELECT message_id,conversation_id,lifecycle FROM heptalogos.message_fact WHERE message_id=ANY($1::uuid[]) AND conversation_id=ANY($2::uuid[]) ORDER BY conversation_id,sequence`,
+              [input.messageRefs, input.conversationIds],
+            )
+          ).map((row) => ({
+            messageRef: row.message_id,
+            conversationId: row.conversation_id,
+            lifecycle: row.lifecycle,
+          })),
+        }),
+        transaction,
+      );
     },
-    async resolveConversations(input) {
+    async resolveConversations(input, transaction) {
       check(validators.conversations, input);
-      return read(async (tx) => ({
-        conversationIds: (
-          await sql<{ conversation_id: string }>(
-            tx,
-            `SELECT DISTINCT c.conversation_id FROM heptalogos.messaging_conversation c JOIN jsonb_to_recordset($1::jsonb) AS requested(platform text,"accountId" text,"conversationId" text,kind text) ON c.platform_id=requested.platform AND c.native_account_id=requested."accountId" AND c.native_conversation_id=requested."conversationId" AND c.conversation_kind=requested.kind ORDER BY c.conversation_id`,
-            [JSON.stringify(input.conversations)],
-          )
-        ).map((row) => row.conversation_id),
-      }));
+      return read(
+        async (tx) => ({
+          conversationIds: (
+            await sql<{ conversation_id: string }>(
+              tx,
+              `SELECT DISTINCT c.conversation_id FROM heptalogos.messaging_conversation c JOIN jsonb_to_recordset($1::jsonb) AS requested(platform text,"accountId" text,"conversationId" text,kind text) ON c.platform_id=requested.platform AND c.native_account_id=requested."accountId" AND c.native_conversation_id=requested."conversationId" AND c.conversation_kind=requested.kind ORDER BY c.conversation_id`,
+              [JSON.stringify(input.conversations)],
+            )
+          ).map((row) => row.conversation_id),
+        }),
+        transaction,
+      );
     },
     async readHistoryCoverage(input) {
       check(validators.historyRead, input);

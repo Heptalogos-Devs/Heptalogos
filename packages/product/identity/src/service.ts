@@ -261,18 +261,19 @@ export function createIdentityService(
         return subject(tx, c, input.subjectId);
       });
     },
-    async readSubjectEntity(input) {
+    async readSubjectEntity(input, transaction) {
       check(validators.subject, input);
-      return options.persistence.read((c) =>
-        useRepositoryReadTransaction(c, async (tx) => {
-          const [r] = await sql<{ entity_ref: string }>(
-            tx,
-            "SELECT entity_ref FROM heptalogos.identity_subject WHERE subject_id=$1",
-            [input.subjectId],
-          );
-          return { entity: r ? ((await entity(tx, r.entity_ref)) ?? null) : null };
-        }),
-      );
+      const read = async (tx: PersistenceInternalTransaction) => {
+        const [r] = await sql<{ entity_ref: string }>(
+          tx,
+          "SELECT entity_ref FROM heptalogos.identity_subject WHERE subject_id=$1",
+          [input.subjectId],
+        );
+        return { entity: r ? ((await entity(tx, r.entity_ref)) ?? null) : null };
+      };
+      return transaction
+        ? read(transaction)
+        : options.persistence.read((c) => useRepositoryReadTransaction(c, read));
     },
     async bindSubjectAccount(input) {
       check(validators.bind, input);

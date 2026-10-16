@@ -10,6 +10,7 @@ import {
 } from "@nous-wave/client/host-bridge";
 import type { MessagingService } from "@heptalogos/messaging";
 import type { LifeActivity } from "@heptalogos/subject";
+import type { PersistenceInternalTransaction } from "@heptalogos/persistence/repository";
 import type { Registration } from "./native-cognition.js";
 /** Future messages use the already adopted observe grant; other anchors remain explicitly scoped. */
 export function hasAuthorizedNativeSources(
@@ -109,6 +110,7 @@ export function hasAuthorizedNativeSources(
 export async function hasCanonicalNativeMessages(
   registration: Registration,
   messaging: Pick<MessagingService, "messageSources" | "prepareRead">,
+  transaction?: PersistenceInternalTransaction,
 ): Promise<boolean> {
   const usage = decodeCognitionUsage(registration.usage);
   const target = usage.audience?.conversationRef;
@@ -122,10 +124,13 @@ export async function hasCanonicalNativeMessages(
     ]),
   ];
   if (!messageRefs.length) return registration.contacts.length === 0;
-  const result = await messaging.messageSources({
-    messageRefs,
-    conversationIds: [conversationId],
-  });
+  const result = await messaging.messageSources(
+    {
+      messageRefs,
+      conversationIds: [conversationId],
+    },
+    transaction,
+  );
   const canonical =
     result.sources.length === messageRefs.length &&
     result.sources.every(
@@ -137,11 +142,17 @@ export async function hasCanonicalNativeMessages(
     c.contactRef.startsWith("attachment:"),
   );
   if (!media.length) return true;
-  const read = await messaging.prepareRead({
-    messageRefs: [...registration.messageRefs],
-    audience: { subjectId: registration.subjectId, conversationIds: [conversationId] },
-    budget: { maxMessages: 64, maxBytes: 1024 * 1024 },
-  });
+  const read = await messaging.prepareRead(
+    {
+      messageRefs: [...registration.messageRefs],
+      audience: {
+        subjectId: registration.subjectId,
+        conversationIds: [conversationId],
+      },
+      budget: { maxMessages: 64, maxBytes: 1024 * 1024 },
+    },
+    transaction,
+  );
   if (read.omitted.length) return false;
   return media.every((contact) => {
     const context = decodeObservationInput(contact.observation).context;

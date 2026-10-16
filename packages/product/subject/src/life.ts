@@ -417,12 +417,25 @@ export function createLifeService(options: LifeOptions) {
         useRepositoryMutationTransaction(context, (tx) => progressIn(tx, input, world)),
       );
     },
-    async get(subjectId: string, activityId: string) {
-      const rows = await readRepositorySql<{ document: unknown }>(
-        options.persistence,
-        'SELECT document FROM "heptalogos"."life_activity" WHERE subject_id=$1 AND activity_id=$2',
-        [subjectId, activityId],
-      );
+    async get(
+      subjectId: string,
+      activityId: string,
+      transaction?: PersistenceInternalTransaction,
+    ) {
+      const statement =
+        'SELECT document FROM "heptalogos"."life_activity" WHERE subject_id=$1 AND activity_id=$2';
+      const parameters = [subjectId, activityId];
+      const rows = transaction
+        ? await executeRepositorySql<{ document: unknown }>(
+            transaction,
+            statement,
+            parameters,
+          )
+        : await readRepositorySql<{ document: unknown }>(
+            options.persistence,
+            statement,
+            parameters,
+          );
       return rows[0] ? readDocument(rows[0]) : undefined;
     },
     async schedule(value: Static<typeof scheduleQuerySchema>) {

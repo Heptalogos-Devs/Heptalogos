@@ -9,3 +9,5 @@
 HTTP/OpenAPI 在 Product Host，生成客户端和 CLI 在 application 范围；OS 服务管理不在模型或该服务中运行。已被替换的 SystemAction 通用计划、运行图读模型和旧 AIRuntime 管理路径不再是本包接口。
 
 运行包测试、构建及 type-aware lint；涉及鉴权、配置事务或恢复的变更还需真实 PostgreSQL 和独立安装闭环。精确规则见 [管理合同](../../../specs/management/system-authority.md)。
+
+`ProductManagement.configuration(transaction?)` 在原生准入和发送检查中沿 Configuration owner 复用当前事务，使用同一份产品配置解析器。

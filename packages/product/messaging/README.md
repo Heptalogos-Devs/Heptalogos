@@ -79,3 +79,5 @@ HEPTALOGOS_TEST_PG_BIN=/absolute/postgresql/bin \
 This qualification does not claim actual QQ receipt, protocol history coverage,
 media decoding, model reading or message delivery; those belong to the Channel
 and Life integration.
+
+`resolveConversations`, `messageSources` and `prepareRead` accept the caller's optional transaction as their final argument. Admission and send guards reuse that transaction for actual canonical source checks; ordinary reads use the same SQL and material parser through the read pool.

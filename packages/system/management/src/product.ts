@@ -12,6 +12,7 @@ import type {
   ConfigurationScopeRef,
   ConfigurationService,
 } from "@heptalogos/configuration";
+import type { PersistenceInternalTransaction } from "@heptalogos/persistence/repository";
 import { isAbsolute } from "node:path";
 import { isDeepStrictEqual } from "node:util";
 import type { CanonicalJsonValue } from "@heptalogos/foundation-contracts";
@@ -313,11 +314,11 @@ export class ProductManagement {
     };
   }
   /** Returns current settings from their one canonical owner. */
-  async configuration(): Promise<{
+  async configuration(transaction?: PersistenceInternalTransaction): Promise<{
     revision: string | null;
     settings: ProductSettings | null;
   }> {
-    const current = await this.current();
+    const current = await this.current(transaction);
     if (!current) return { revision: null, settings: null };
     const checked = validator.validate(current.value);
     if (!checked.ok)
@@ -485,10 +486,13 @@ export class ProductManagement {
       );
     return this.options.subjects.create(settings, input, signal);
   }
-  private current(): Promise<ConfigurationRevision | undefined> {
+  private current(
+    transaction?: PersistenceInternalTransaction,
+  ): Promise<ConfigurationRevision | undefined> {
     return this.options.configuration.getEffectiveRevision(
       PRODUCT_SETTINGS_ID,
       this.scope,
+      transaction,
     );
   }
 }

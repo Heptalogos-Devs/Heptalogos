@@ -1,6 +1,9 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Owns world truth, finite realization and actor-visible projections. @module world-life */
+/**
+ * Owns world truth, finite realization and actor-visible projections.
+ * @module world-life
+ */
 import {
   digestCanonicalJson,
   type CanonicalJsonValue,
@@ -484,10 +487,13 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
       };
     },
     /** Resolves actual same-Subject world roots and actor-visible event references in two bounded owner reads. */
-    async resolveSourceRefs(input: {
-      subjectId: string;
-      sourceRefs: readonly string[];
-    }) {
+    async resolveSourceRefs(
+      input: {
+        subjectId: string;
+        sourceRefs: readonly string[];
+      },
+      transaction?: PersistenceInternalTransaction,
+    ) {
       if (input.sourceRefs.length > 128)
         conflict("World source resolution is bounded to 128 exact references");
       const uuid =
@@ -504,20 +510,22 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
           ? [{ ref, worldId: match[1]!, eventId: match[2]!, revision: match[3]! }]
           : [];
       });
+      const read = <T>(statement: string, parameters: readonly unknown[]) =>
+        transaction
+          ? executeRepositorySql<T>(transaction, statement, parameters)
+          : readRepositorySql<T>(options.persistence, statement, parameters);
       const actualRoots = roots.length
-        ? await readRepositorySql<{ world_id: string }>(
-            options.persistence,
+        ? await read<{ world_id: string }>(
             "SELECT world_id FROM heptalogos.world_life WHERE subject_id=$1 AND world_id=ANY($2::uuid[])",
             [input.subjectId, roots],
           )
         : [];
       const actualEvents = events.length
-        ? await readRepositorySql<{
+        ? await read<{
             world_id: string;
             event_id: string;
             revision: string;
           }>(
-            options.persistence,
             `SELECT e.world_id,e.event_id,e.document->>'revision' AS revision FROM heptalogos.world_event e JOIN heptalogos.world_life w USING(subject_id,world_id)
 WHERE e.subject_id=$1 AND e.event_id=ANY($2::uuid[]) AND (EXISTS(SELECT 1 FROM jsonb_array_elements(e.document->'perceptions') p WHERE p->>'actorRef'=w.document#>>'{definition,subjectActorRef}') OR EXISTS(SELECT 1 FROM heptalogos.world_contact_release r WHERE r.subject_id=e.subject_id AND r.world_id=e.world_id AND r.event_id=e.event_id))`,
             [input.subjectId, events.map((event) => event.eventId)],

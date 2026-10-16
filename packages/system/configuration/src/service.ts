@@ -379,6 +379,15 @@ export function createConfigurationService(
   const currentDefinition = (definitionId: ConfigurationDefinitionId | string) =>
     definitionFor(definitions, definitionId);
 
+  const read = <T>(
+    statement: string,
+    parameters: readonly unknown[],
+    transaction?: PersistenceInternalTransaction,
+  ) =>
+    transaction
+      ? executeRepositorySql<T>(transaction, statement, parameters)
+      : readRepositorySql<T>(persistence, statement, parameters);
+
   const service: ConfigurationService = {
     definitions,
     getDefinition(definitionId) {
@@ -406,35 +415,43 @@ export function createConfigurationService(
       );
       return Object.freeze(result.map(activationFromRow));
     },
-    async getRevision(revisionId) {
+    async getRevision(revisionId, transaction) {
       const parsed = revisionIdentity(revisionId);
-      const result = await readRepositorySql<RevisionRow>(
-        persistence,
+      const result = await read<RevisionRow>(
         "SELECT revision_id, definition_id, definition_version, scope_ref, " +
           "value, source, status, value_digest, created_at, lineage_context_ref " +
           'FROM "heptalogos"."configuration_revision" WHERE revision_id = $1',
         [parsed],
+        transaction,
       );
       const row = result[0];
       return row === undefined ? undefined : revisionFromRow(row);
     },
-    async getActivation(definitionId, ref) {
+    async getActivation(definitionId, ref, transaction) {
       const definition = currentDefinition(definitionId);
-      const result = await readRepositorySql<ActivationRow>(
-        persistence,
+      const result = await read<ActivationRow>(
         "SELECT activation_id, definition_id, scope_ref, active_revision_id, " +
           "previous_revision_id, impact, effective_at, lineage_context_ref, evidence_refs " +
-          'FROM "heptalogos"."configuration_activation" WHERE definition_id = $1 AND scope_key = $2',
+          'FROM "heptalogos"."configuration_activation" WHERE definition_id = $1 AND scope_key = $2' +
+          (transaction ? " FOR SHARE" : ""),
         [definition.definitionId, scopeKey(ref)],
+        transaction,
       );
       const row = result[0];
       return row === undefined ? undefined : activationFromRow(row);
     },
-    async getEffectiveRevision(definitionId, ref) {
+    async getEffectiveRevision(definitionId, ref, transaction) {
       const definition = currentDefinition(definitionId);
-      const activation = await service.getActivation(definition.definitionId, ref);
+      const activation = await service.getActivation(
+        definition.definitionId,
+        ref,
+        transaction,
+      );
       if (activation === undefined) return undefined;
-      const revision = await service.getRevision(activation.activeRevisionId);
+      const revision = await service.getRevision(
+        activation.activeRevisionId,
+        transaction,
+      );
       if (revision === undefined || revision.definitionId !== definition.definitionId) {
         throw configurationProblem(
           "configuration.activation_invalid",

@@ -7,6 +7,7 @@
  */
 import { Type, type Static } from "@heptalogos/schema-runtime/typebox";
 import type { PersistenceService } from "@heptalogos/persistence";
+import type { PersistenceInternalTransaction } from "@heptalogos/persistence/repository";
 const key = Type.String({ minLength: 1, maxLength: 2048 });
 const object = { additionalProperties: false } as const;
 /** Stable opaque Host identifier, independent of any cognitive Subject identifier. */
@@ -114,6 +115,7 @@ export interface IdentityService {
   /** Reads the Subject self Entity without creating identity state. */
   readSubjectEntity(
     input: Static<typeof subjectEntityInputSchema>,
+    transaction?: PersistenceInternalTransaction,
   ): Promise<Static<typeof subjectEntityResultSchema>>;
   /** Associates a self account with the same Subject Entity across account changes. */
   bindSubjectAccount(

@@ -16,6 +16,7 @@ import {
 
 export async function composeProductPersistence(
   fixture?: Awaited<ReturnType<typeof makeFixture>>,
+  maxConnections = 8,
 ) {
   fixture ??= await makeFixture();
   const started = await boot(fixture);
@@ -33,7 +34,7 @@ export async function composeProductPersistence(
   const persistence = createPersistenceService(
     started.host.persistence,
     {
-      maxConnections: 8,
+      maxConnections,
       idleTimeoutMs: 5000,
       connectionTimeoutMs: 10000,
       statementTimeoutMs: 10000,
@@ -59,6 +60,8 @@ export async function composeProductPersistence(
     );
   return {
     fixture,
+    time,
+    runtime,
     started,
     persistence,
     run,
