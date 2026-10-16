@@ -17,6 +17,8 @@ import {
   useRepositoryMutationTransaction,
 } from "@heptalogos/persistence/repository";
 import {
+  listPursuitsSchema,
+  pursuitHistorySchema,
   adoptPursuitSchema,
   transitionPursuitSchema,
   reconsiderPursuitSchema,
@@ -136,6 +138,45 @@ export function createPursuitService(options: PursuitServiceOptions) {
   return {
     /** Reads the behavior-side record, including preserved historical evaluation identity. */
     get,
+    /** Lists current records through the Pursuit owner, with stable identity pagination. */
+    async list(value: Static<typeof listPursuitsSchema>) {
+      const input = checked<Static<typeof listPursuitsSchema>>(
+        listPursuitsSchema,
+        value,
+      );
+      const rows = await readRepositorySql<{ document: unknown }>(
+        options.persistence,
+        "SELECT document FROM heptalogos.pursuit WHERE subject_id=$1 AND ($2::uuid IS NULL OR pursuit_id>$2) AND (cardinality($3::text[])=0 OR document->>'state'=ANY($3::text[])) ORDER BY pursuit_id LIMIT $4",
+        [input.subjectId, input.afterId ?? null, input.states, input.limit + 1],
+      );
+      const pursuits = rows
+        .slice(0, input.limit)
+        .map((row) => checked<Pursuit>(pursuitSchema, row.document));
+      return {
+        pursuits,
+        nextId: rows.length > input.limit ? pursuits.at(-1)!.pursuitId : null,
+      };
+    },
+    /** Reads preserved exact revisions without contacting or re-evaluating cognition. */
+    async history(value: Static<typeof pursuitHistorySchema>) {
+      const input = checked<Static<typeof pursuitHistorySchema>>(
+        pursuitHistorySchema,
+        value,
+      );
+      await required(input.subjectId, input.pursuitId);
+      const rows = await readRepositorySql<{ document: unknown }>(
+        options.persistence,
+        "SELECT document FROM heptalogos.pursuit_history WHERE pursuit_id=$1 AND revision>$2 ORDER BY revision LIMIT $3",
+        [input.pursuitId, input.afterRevision ?? 0, input.limit + 1],
+      );
+      const history = rows
+        .slice(0, input.limit)
+        .map((row) => checked<Pursuit>(pursuitSchema, row.document));
+      return {
+        history,
+        nextRevision: rows.length > input.limit ? history.at(-1)!.revision : null,
+      };
+    },
     /** Lists only this Subject's explicitly linked Pursuits; it schedules no work. */
     async forActivity(subjectId: string, activityId: string): Promise<Pursuit[]> {
       const rows = await readRepositorySql<{ document: unknown }>(

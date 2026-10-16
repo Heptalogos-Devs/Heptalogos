@@ -191,3 +191,39 @@ export interface PursuitServiceOptions {
     actor: string,
   ) => Promise<void>;
 }
+
+/** Bounded Product listing; source cognition remains outside this projection. */
+export const listPursuitsSchema = Type.Object(
+  {
+    subjectId: uuid,
+    afterId: Type.Optional(uuid),
+    limit: Type.Integer({ minimum: 1, maximum: 128 }),
+    states: Type.Array(pursuitSchema.properties.state, {
+      maxItems: 3,
+      uniqueItems: true,
+    }),
+  },
+  object,
+);
+/** Immutable adoption/review history for one exact same-Subject Pursuit. */
+export const pursuitHistorySchema = Type.Object(
+  {
+    ...readPursuitSchema.properties,
+    afterRevision: Type.Optional(Type.Integer({ minimum: 0 })),
+    limit: Type.Integer({ minimum: 1, maximum: 128 }),
+  },
+  object,
+);
+/** Paginated current Pursuit results. */
+export const listPursuitsResultSchema = Type.Object(
+  { pursuits: Type.Array(pursuitSchema), nextId: Type.Union([uuid, Type.Null()]) },
+  object,
+);
+/** Paginated immutable Product history; evaluating never rewrites these facts. */
+export const pursuitHistoryResultSchema = Type.Object(
+  {
+    history: Type.Array(pursuitSchema),
+    nextRevision: Type.Union([Type.Integer({ minimum: 1 }), Type.Null()]),
+  },
+  object,
+);

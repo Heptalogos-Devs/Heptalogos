@@ -240,3 +240,9 @@ export interface LifeOptions {
     requested: ActivityScope,
   ) => Promise<ActivityScope>;
 }
+
+/** Exact lookup for one same-Subject Activity; no inferred identifier or CAS. */
+export const readActivitySchema = Type.Object(
+  { subjectId: id, activityId: id },
+  object,
+);

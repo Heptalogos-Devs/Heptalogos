@@ -40,6 +40,7 @@ import {
 import { Type } from "@heptalogos/schema-runtime/typebox";
 import { tokenFromRequest } from "./http-auth.js";
 import { registerPursuitHttp, type PursuitHttpOptions } from "./pursuit-http.js";
+import { registerLifeReadHttp } from "./life-read-http.js";
 import { registerGatewayHttp, type GatewayHttpOptions } from "./gateway-http.js";
 
 async function withRequestSignal<T>(
@@ -327,6 +328,7 @@ export async function createProductHttpApp(options: ProductHttpOptions) {
         ),
   );
   registerGatewayHttp(app, options.gateway);
+  registerLifeReadHttp(app, options.gateway);
   registerPursuitHttp(app, options.pursuit);
   return app;
 }

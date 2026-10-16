@@ -8,6 +8,10 @@ import { managementProblem, managementProblemSchema } from "@heptalogos/manageme
 import type { FastifyInstance } from "fastify";
 import { Type, type Static, type TSchema } from "@heptalogos/schema-runtime/typebox";
 import {
+  listPursuitsSchema,
+  pursuitHistorySchema,
+  listPursuitsResultSchema,
+  pursuitHistoryResultSchema,
   adoptPursuitSchema,
   readPursuitSchema,
   transitionPursuitSchema,
@@ -85,6 +89,16 @@ export function registerPursuitHttp(
           return operation(request.body as Static<T>);
         }),
     );
+  route("listPursuits", "list", listPursuitsSchema, listPursuitsResultSchema, (input) =>
+    owners().pursuits.list(input),
+  );
+  route(
+    "pursuitHistory",
+    "history",
+    pursuitHistorySchema,
+    pursuitHistoryResultSchema,
+    (input) => owners().pursuits.history(input),
+  );
   route("adoptPursuit", "adopt", adoptPursuitSchema, pursuitSchema, (input) =>
     owners().pursuits.adopt(input),
   );
