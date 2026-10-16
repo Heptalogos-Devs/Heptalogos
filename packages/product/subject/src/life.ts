@@ -10,7 +10,8 @@ import {
   digestCanonicalJson,
   type CanonicalJsonValue,
 } from "@heptalogos/foundation-contracts";
-import { compileSchema } from "@heptalogos/schema-runtime";
+import { createSubjectSchemaReader } from "./checked-schema.js";
+import { readSubjectRows } from "./subject-read.js";
 import type { Static } from "@heptalogos/schema-runtime/typebox";
 import {
   executeRepositorySql,
@@ -34,17 +35,14 @@ import {
 import { subjectLineage } from "./subject-lineage.js";
 import { subjectProblem } from "./problems.js";
 
-function checked<T>(schema: Parameters<typeof compileSchema<T>>[0], value: unknown): T {
-  const result = compileSchema<T>(schema).validate(value);
-  if (!result.ok)
-    throw subjectProblem(
-      "life.invalid_input",
-      "Invalid Activity request",
-      "Inspect the Activity schema",
-      "validation",
-    );
-  return result.value;
-}
+const checked = createSubjectSchemaReader(() => {
+  throw subjectProblem(
+    "life.invalid_input",
+    "Invalid Activity request",
+    "Inspect the Activity schema",
+    "validation",
+  );
+});
 function conflict(detail: string): never {
   throw subjectProblem("life.conflict", "Activity changed", detail);
 }
@@ -285,16 +283,12 @@ export function createLifeService(options: LifeOptions) {
     ): Promise<LifeActivity | undefined> {
       const statement =
         "SELECT document FROM heptalogos.life_activity WHERE subject_id=$1 AND operation_id=$2";
-      const rows = transaction
-        ? await executeRepositorySql<{ document: unknown }>(transaction, statement, [
-            subjectId,
-            operationId,
-          ])
-        : await readRepositorySql<{ document: unknown }>(
-            options.persistence,
-            statement,
-            [subjectId, operationId],
-          );
+      const rows = await readSubjectRows<{ document: unknown }>(
+        options.persistence,
+        statement,
+        [subjectId, operationId],
+        transaction,
+      );
       return rows[0] ? readDocument(rows[0]) : undefined;
     },
     async propose(value: Static<typeof proposeActivitySchema>): Promise<LifeActivity> {
@@ -445,17 +439,12 @@ export function createLifeService(options: LifeOptions) {
       const statement =
         'SELECT document FROM "heptalogos"."life_activity" WHERE subject_id=$1 AND activity_id=$2';
       const parameters = [subjectId, activityId];
-      const rows = transaction
-        ? await executeRepositorySql<{ document: unknown }>(
-            transaction,
-            statement,
-            parameters,
-          )
-        : await readRepositorySql<{ document: unknown }>(
-            options.persistence,
-            statement,
-            parameters,
-          );
+      const rows = await readSubjectRows<{ document: unknown }>(
+        options.persistence,
+        statement,
+        parameters,
+        transaction,
+      );
       return rows[0] ? readDocument(rows[0]) : undefined;
     },
     async schedule(value: Static<typeof scheduleQuerySchema>) {

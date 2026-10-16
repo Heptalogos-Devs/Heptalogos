@@ -6,6 +6,15 @@
  */
 import { Type, type Static } from "@heptalogos/schema-runtime/typebox";
 const object = { additionalProperties: false } as const;
+/** Same adopted activity kinds classify planned routines and realized energy. */
+export const worldEnergyKindSchema = Type.Union([
+  Type.Literal("study"),
+  Type.Literal("social"),
+  Type.Literal("rest"),
+  Type.Literal("sleep"),
+  Type.Literal("ordinary"),
+  Type.Literal("entertainment"),
+]);
 /** Rates are signed energy points per realized world hour, distinct from real compute budgets. */
 export const worldEnergyProfileSchema = Type.Object(
   {
@@ -38,14 +47,7 @@ export const DEFAULT_WORLD_ENERGY: Static<typeof worldEnergyProfileSchema> = {
 /** Activity energy metadata is adopted with its actual world event and cannot count the same interval twice. */
 export const worldEventEnergySchema = Type.Object(
   {
-    kind: Type.Union([
-      Type.Literal("study"),
-      Type.Literal("social"),
-      Type.Literal("rest"),
-      Type.Literal("sleep"),
-      Type.Literal("ordinary"),
-      Type.Literal("entertainment"),
-    ]),
+    kind: worldEnergyKindSchema,
     participation: Type.Union([Type.Literal("primary"), Type.Literal("subsidiary")]),
     delta: Type.Number({ minimum: -10, maximum: 10 }),
     reason: Type.String({ maxLength: 16384 }),

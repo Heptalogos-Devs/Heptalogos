@@ -5,7 +5,8 @@
  * @module world-profile
  */
 import { v5 as uuidv5 } from "uuid";
-import { compileSchema } from "@heptalogos/schema-runtime";
+import { createSubjectSchemaReader } from "./checked-schema.js";
+import { readSubjectRows } from "./subject-read.js";
 import {
   digestCanonicalJson,
   type CanonicalJsonValue,
@@ -37,11 +38,9 @@ function conflict(detail: string): never {
     "conflict",
   );
 }
-function parse<T>(schema: Parameters<typeof compileSchema<T>>[0], value: unknown): T {
-  const result = compileSchema<T>(schema).validate(value);
-  if (!result.ok) conflict("Use the single canonical WorldProfile JSON contract");
-  return result.value;
-}
+const parse = createSubjectSchemaReader(() =>
+  conflict("Use the single canonical WorldProfile JSON contract"),
+);
 /** Identity and official Clock calls occur outside the local adoption transaction. */
 export function createWorldProfileService(options: {
   persistence: PersistenceService;
@@ -62,17 +61,12 @@ export function createWorldProfileService(options: {
     const statement =
       "SELECT document FROM heptalogos.world_profile WHERE subject_id=$1 AND world_id=$2";
     const parameters = [subjectId, worldId];
-    const rows = transaction
-      ? await executeRepositorySql<{ document: unknown }>(
-          transaction,
-          statement,
-          parameters,
-        )
-      : await readRepositorySql<{ document: unknown }>(
-          options.persistence,
-          statement,
-          parameters,
-        );
+    const rows = await readSubjectRows<{ document: unknown }>(
+      options.persistence,
+      statement,
+      parameters,
+      transaction,
+    );
     return rows[0]
       ? parse<AdoptedWorldProfile>(adoptedWorldProfileSchema, rows[0].document)
       : undefined;

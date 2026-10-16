@@ -11,7 +11,8 @@ import {
   useRepositoryMutationTransaction,
   type PersistenceInternalTransaction,
 } from "@heptalogos/persistence/repository";
-import { compileSchema } from "@heptalogos/schema-runtime";
+import { createSubjectSchemaReader } from "./checked-schema.js";
+import { createSubjectRowsReader } from "./subject-read.js";
 import type { Static } from "@heptalogos/schema-runtime/typebox";
 import {
   acknowledgeWorldContactSchema,
@@ -27,11 +28,9 @@ function conflict(detail: string): never {
     "conflict",
   );
 }
-function checked<T>(schema: Parameters<typeof compileSchema<T>>[0], value: unknown): T {
-  const result = compileSchema<T>(schema).validate(value);
-  if (!result.ok) conflict("Use the exact world contact contract");
-  return result.value;
-}
+const checked = createSubjectSchemaReader(() =>
+  conflict("Use the exact world contact contract"),
+);
 /** Existing WorldLife passes its canonical readers and shared Subject lock; no separate runtime exists. */
 export function createWorldContactService(options: {
   persistence: PersistenceService;
@@ -93,10 +92,7 @@ WHERE e.subject_id=$1 AND e.world_id=$2 AND (r.event_id IS NULL OR r.state='sele
     ) {
       if (eventIds.length > 128)
         conflict("Release lookups are bounded to the current 128-event view");
-      const read = <T>(statement: string, parameters: readonly unknown[]) =>
-        transaction
-          ? executeRepositorySql<T>(transaction, statement, parameters)
-          : readRepositorySql<T>(options.persistence, statement, parameters);
+      const read = createSubjectRowsReader(options.persistence, transaction);
       const rows = await read<{ event_id: string }>(
         "SELECT event_id FROM heptalogos.world_contact_release WHERE subject_id=$1 AND world_id=$2 AND event_id=ANY($3::uuid[]) AND state='released'",
         [subjectId, worldId, eventIds],

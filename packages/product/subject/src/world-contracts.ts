@@ -6,7 +6,10 @@
  */
 import { Type, type Static } from "@heptalogos/schema-runtime/typebox";
 import type { PersistenceService } from "@heptalogos/persistence";
-import { worldEventEnergySchema } from "./world-energy-contracts.js";
+import {
+  worldEventEnergySchema,
+  worldEnergyKindSchema,
+} from "./world-energy-contracts.js";
 import { worldPointSchema } from "./contracts.js";
 const object = { additionalProperties: false } as const;
 const ref = Type.String({ minLength: 1, maxLength: 2048 });
@@ -77,14 +80,7 @@ export const worldRoutineRuleSchema = Type.Object(
     actorRefs: refs,
     placeRef: ref,
     activityId: Type.Union([id, Type.Null()]),
-    kind: Type.Union([
-      Type.Literal("study"),
-      Type.Literal("social"),
-      Type.Literal("rest"),
-      Type.Literal("sleep"),
-      Type.Literal("ordinary"),
-      Type.Literal("entertainment"),
-    ]),
+    kind: worldEnergyKindSchema,
     visibility: Type.Union([
       Type.Literal("subject"),
       Type.Literal("world_author"),

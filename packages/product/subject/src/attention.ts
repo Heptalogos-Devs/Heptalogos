@@ -9,7 +9,8 @@ import {
   digestCanonicalJson,
   type CanonicalJsonValue,
 } from "@heptalogos/foundation-contracts";
-import { compileSchema } from "@heptalogos/schema-runtime";
+import { createSubjectSchemaReader } from "./checked-schema.js";
+import { readSubjectRows } from "./subject-read.js";
 import type { Static } from "@heptalogos/schema-runtime/typebox";
 import {
   readRepositorySql,
@@ -30,17 +31,14 @@ import {
 } from "./attention-contracts.js";
 const ns = "b55f25e7-55c8-4333-83b8-f0040c068dfe";
 const priority = { important: 0, direct: 1, background: 2 } as const;
-function checked<T>(schema: Parameters<typeof compileSchema<T>>[0], value: unknown): T {
-  const result = compileSchema<T>(schema).validate(value);
-  if (!result.ok)
-    throw subjectProblem(
-      "attention.invalid_input",
-      "Invalid attention request",
-      "Use the actual metadata-only owner contract",
-      "validation",
-    );
-  return result.value;
-}
+const checked = createSubjectSchemaReader(() => {
+  throw subjectProblem(
+    "attention.invalid_input",
+    "Invalid attention request",
+    "Use the actual metadata-only owner contract",
+    "validation",
+  );
+});
 /** Deterministic ranking never promotes old background above a more important class. */
 export function createSubjectAttentionService(options: SubjectAttentionOptions) {
   const positions = async (subjectId: string) =>
@@ -61,13 +59,12 @@ export function createSubjectAttentionService(options: SubjectAttentionOptions) 
     const statement =
       "SELECT document FROM heptalogos.attention_selection WHERE subject_id=$1 AND ($2::uuid IS NULL OR selection_id=$2) ORDER BY recorded_at DESC,selection_id DESC LIMIT 1";
     const parameters = [subjectId, key ?? null];
-    const rows = transaction
-      ? await sql<{ document: unknown }>(transaction, statement, parameters)
-      : await readRepositorySql<{ document: unknown }>(
-          options.persistence,
-          statement,
-          parameters,
-        );
+    const rows = await readSubjectRows<{ document: unknown }>(
+      options.persistence,
+      statement,
+      parameters,
+      transaction,
+    );
     return rows[0]
       ? checked<Static<typeof attentionSelectionSchema>>(
           attentionSelectionSchema,

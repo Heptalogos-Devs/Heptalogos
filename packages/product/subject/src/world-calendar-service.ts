@@ -5,7 +5,7 @@
  * @module world-calendar-service
  */
 import { Temporal } from "@js-temporal/polyfill";
-import { compileSchema } from "@heptalogos/schema-runtime";
+import { createSubjectSchemaReader } from "./checked-schema.js";
 import {
   digestCanonicalJson,
   type CanonicalJsonValue,
@@ -39,11 +39,9 @@ function invalid(detail: string): never {
     "conflict",
   );
 }
-function parse<T>(schema: Parameters<typeof compileSchema<T>>[0], value: unknown): T {
-  const result = compileSchema<T>(schema).validate(value);
-  if (!result.ok) invalid("Read the canonical calendar contract");
-  return result.value;
-}
+const parse = createSubjectSchemaReader(() =>
+  invalid("Read the canonical calendar contract"),
+);
 /** Reads a stable time/key page from any finite world interval without writing future instances. */
 export async function readWorldCalendar(
   options: { persistence: PersistenceService },

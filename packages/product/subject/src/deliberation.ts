@@ -9,7 +9,8 @@ import {
   digestCanonicalJson,
   type CanonicalJsonValue,
 } from "@heptalogos/foundation-contracts";
-import { compileSchema } from "@heptalogos/schema-runtime";
+import { createSubjectSchemaReader } from "./checked-schema.js";
+import { readSubjectRows } from "./subject-read.js";
 import {
   executeRepositorySql as sql,
   readRepositorySql,
@@ -34,17 +35,14 @@ function conflict(detail: string): never {
     detail,
   );
 }
-function checked<T>(schema: Parameters<typeof compileSchema<T>>[0], value: unknown): T {
-  const result = compileSchema<T>(schema).validate(value);
-  if (!result.ok)
-    throw subjectProblem(
-      "deliberation.invalid_input",
-      "Invalid Subject decision",
-      "Use the actual adopted decision schema",
-      "validation",
-    );
-  return result.value;
-}
+const checked = createSubjectSchemaReader(() => {
+  throw subjectProblem(
+    "deliberation.invalid_input",
+    "Invalid Subject decision",
+    "Use the actual adopted decision schema",
+    "validation",
+  );
+});
 /** No model loop or alternative Activity lifecycle is created by this owner. */
 export function createDeliberationService(options: DeliberationOptions) {
   const read = async (
@@ -60,13 +58,12 @@ export function createDeliberationService(options: DeliberationOptions) {
     const statement =
       "SELECT document FROM heptalogos.subject_decision WHERE subject_id=$1 AND decision_id=$2";
     const parameters = [subjectId, match[1]!];
-    const rows = transaction
-      ? await sql<{ document: unknown }>(transaction, statement, parameters)
-      : await readRepositorySql<{ document: unknown }>(
-          options.persistence,
-          statement,
-          parameters,
-        );
+    const rows = await readSubjectRows<{ document: unknown }>(
+      options.persistence,
+      statement,
+      parameters,
+      transaction,
+    );
     return rows[0]
       ? checked<DecisionCommit>(decisionCommitSchema, rows[0].document)
       : undefined;

@@ -6,7 +6,7 @@
  */
 import { v5 as uuidv5 } from "uuid";
 import { Temporal } from "@js-temporal/polyfill";
-import { compileSchema } from "@heptalogos/schema-runtime";
+import { createSubjectSchemaReader } from "./checked-schema.js";
 import {
   digestCanonicalJson,
   type CanonicalJsonValue,
@@ -43,11 +43,9 @@ function invalid(detail: string): never {
     "conflict",
   );
 }
-function parse<T>(schema: Parameters<typeof compileSchema<T>>[0], value: unknown): T {
-  const checked = compileSchema<T>(schema).validate(value);
-  if (!checked.ok) invalid("Use the canonical world action contract");
-  return checked.value;
-}
+const parse = createSubjectSchemaReader(() =>
+  invalid("Use the canonical world action contract"),
+);
 /** Actual external clock reads precede short Host transactions; no action can advance that clock. */
 export function createWorldActionService(options: {
   persistence: PersistenceService;
@@ -65,6 +63,18 @@ export function createWorldActionService(options: {
     world: LifeActivity["world"],
   ) => Promise<unknown>;
 }) {
+  const currentIn = async (
+    tx: PersistenceInternalTransaction,
+    subjectId: string,
+    worldId: string,
+    timeDomainRef: string,
+    missing: string,
+  ) => {
+    await options.lockSubject(tx, subjectId);
+    const state = await options.readIn(tx, subjectId, worldId);
+    if (!state || state.definition.timeDomainRef !== timeDomainRef) invalid(missing);
+    return state;
+  };
   const readPending = async (subjectId: string, worldId: string, limit = 64) => {
     const rows = await readRepositorySql<{ document: unknown }>(
       options.persistence,
@@ -106,10 +116,13 @@ export function createWorldActionService(options: {
       );
       return options.persistence.mutate((context) =>
         useRepositoryMutationTransaction(context, async (tx) => {
-          await options.lockSubject(tx, input.subjectId);
-          const state = await options.readIn(tx, input.subjectId, input.worldId);
-          if (!state || state.definition.timeDomainRef !== world.timeDomainRef)
-            invalid("Use this adopted world's actual current clock domain");
+          const state = await currentIn(
+            tx,
+            input.subjectId,
+            input.worldId,
+            world.timeDomainRef,
+            "Use this adopted world's actual current clock domain",
+          );
           const previous = await executeRepositorySql<{
             request_digest: string;
             document: unknown;
@@ -345,10 +358,13 @@ export function createWorldActionService(options: {
         result.push(
           await options.persistence.mutate((context) =>
             useRepositoryMutationTransaction(context, async (tx) => {
-              await options.lockSubject(tx, input.subjectId);
-              const state = await options.readIn(tx, input.subjectId, input.worldId);
-              if (!state || state.definition.timeDomainRef !== world.timeDomainRef)
-                invalid("The action belongs to another world clock domain");
+              const state = await currentIn(
+                tx,
+                input.subjectId,
+                input.worldId,
+                world.timeDomainRef,
+                "The action belongs to another world clock domain",
+              );
               const rows = await executeRepositorySql<{
                 document: unknown;
                 state: string;

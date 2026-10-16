@@ -8,7 +8,8 @@ import {
   digestCanonicalJson,
   type CanonicalJsonValue,
 } from "@heptalogos/foundation-contracts";
-import { compileSchema } from "@heptalogos/schema-runtime";
+import { createSubjectSchemaReader } from "./checked-schema.js";
+import { createSubjectRowsReader } from "./subject-read.js";
 import type { Static } from "@heptalogos/schema-runtime/typebox";
 import {
   executeRepositorySql,
@@ -53,17 +54,14 @@ import { readWorldCalendar, applyCalendarChange } from "./world-calendar-service
 function conflict(detail: string): never {
   throw subjectProblem("world.conflict", "World patch is not admissible", detail);
 }
-function checked<T>(schema: Parameters<typeof compileSchema<T>>[0], value: unknown): T {
-  const result = compileSchema<T>(schema).validate(value);
-  if (!result.ok)
-    throw subjectProblem(
-      "world.invalid_input",
-      "Invalid world request",
-      "Read the world operation schema",
-      "validation",
-    );
-  return result.value;
-}
+const checked = createSubjectSchemaReader(() => {
+  throw subjectProblem(
+    "world.invalid_input",
+    "Invalid world request",
+    "Read the world operation schema",
+    "validation",
+  );
+});
 function interval(
   value: { timeDomainRef: string; start: string; end: string },
   domain: string,
@@ -685,10 +683,7 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
           ? [{ ref, worldId: match[1]!, eventId: match[2]!, revision: match[3]! }]
           : [];
       });
-      const read = <T>(statement: string, parameters: readonly unknown[]) =>
-        transaction
-          ? executeRepositorySql<T>(transaction, statement, parameters)
-          : readRepositorySql<T>(options.persistence, statement, parameters);
+      const read = createSubjectRowsReader(options.persistence, transaction);
       const actualRoots = roots.length
         ? await read<{ world_id: string }>(
             "SELECT world_id FROM heptalogos.world_life WHERE subject_id=$1 AND world_id=ANY($2::uuid[])",

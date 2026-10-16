@@ -9,7 +9,7 @@ import {
   digestCanonicalJson,
   type CanonicalJsonValue,
 } from "@heptalogos/foundation-contracts";
-import { compileSchema } from "@heptalogos/schema-runtime";
+import { createSubjectSchemaReader } from "./checked-schema.js";
 import type { Static } from "@heptalogos/schema-runtime/typebox";
 import {
   type PersistenceInternalTransaction,
@@ -29,15 +29,12 @@ import { activitySchema, type LifeActivity } from "./contracts.js";
 import { subjectProblem } from "./problems.js";
 const hash = (value: unknown) =>
   digestCanonicalJson("agency.delivery.v1", value as CanonicalJsonValue).hex;
-function checked<T>(schema: Parameters<typeof compileSchema<T>>[0], value: unknown): T {
-  const result = compileSchema<T>(schema).validate(value);
-  if (!result.ok)
-    deny(
-      "agency.invalid_input",
-      "The native delivery does not match the owning contract",
-    );
-  return result.value;
-}
+const checked = createSubjectSchemaReader(() =>
+  deny(
+    "agency.invalid_input",
+    "The native delivery does not match the owning contract",
+  ),
+);
 function deny(code: string, detail: string): never {
   throw subjectProblem(code, "Delivery is not authorized", detail);
 }

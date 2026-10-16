@@ -10,7 +10,7 @@ import {
   type PersistenceInternalTransaction,
 } from "@heptalogos/persistence/repository";
 import type { PersistenceService } from "@heptalogos/persistence";
-import { compileSchema } from "@heptalogos/schema-runtime";
+import { createSubjectSchemaReader } from "./checked-schema.js";
 import {
   digestCanonicalJson,
   type CanonicalJsonValue,
@@ -37,11 +37,9 @@ function conflict(detail: string): never {
     "conflict",
   );
 }
-function parse<T>(schema: Parameters<typeof compileSchema<T>>[0], value: unknown): T {
-  const result = compileSchema<T>(schema).validate(value);
-  if (!result.ok) conflict("Use the canonical world living contract");
-  return result.value;
-}
+const parse = createSubjectSchemaReader(() =>
+  conflict("Use the canonical world living contract"),
+);
 const clamp = (value: number) => Math.max(0, Math.min(100, value));
 /** One primary rate plus the maximum subsidiary positive burden, never a per-worker charge. */
 export function integrateWorldEnergy(
