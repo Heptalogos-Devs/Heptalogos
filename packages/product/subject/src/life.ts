@@ -16,6 +16,7 @@ import {
   executeRepositorySql,
   readRepositorySql,
   useRepositoryMutationTransaction,
+  type PersistenceInternalTransaction,
 } from "@heptalogos/persistence/repository";
 import {
   activitySchema,
@@ -28,6 +29,7 @@ import {
   type LifeActivity,
   type LifeOptions,
   type ActivityScope,
+  type ActivityOpportunity,
 } from "./contracts.js";
 import { subjectLineage } from "./subject-lineage.js";
 import { subjectProblem } from "./problems.js";
@@ -104,6 +106,74 @@ function assertWindow(
     conflict("The Activity is outside its adopted time window");
 }
 
+/** A scheduled work opportunity is comparable only in its actual world domain. */
+export function captureActivityOpportunity(
+  activity: LifeActivity,
+  world: ActivityOpportunity["world"],
+): ActivityOpportunity | undefined {
+  const point = activity.nextOpportunity;
+  if (
+    activity.state !== "active" ||
+    activity.mode !== "work" ||
+    activity.continuationRequired ||
+    !activity.adoptedBy ||
+    !activity.scope ||
+    !activity.workContextId ||
+    !point ||
+    !Number.isFinite(Date.parse(point.at)) ||
+    !Number.isFinite(Date.parse(world.at)) ||
+    point.timeDomainRef !== world.timeDomainRef ||
+    activity.world.timeDomainRef !== world.timeDomainRef ||
+    Date.parse(point.at) > Date.parse(world.at)
+  )
+    return undefined;
+  for (const bound of [activity.window.notBefore, activity.window.notAfter])
+    if (bound && bound.timeDomainRef !== world.timeDomainRef) return undefined;
+  if (
+    (activity.window.notBefore &&
+      Date.parse(activity.window.notBefore.at) > Date.parse(world.at)) ||
+    (activity.window.notAfter &&
+      Date.parse(activity.window.notAfter.at) <= Date.parse(world.at))
+  )
+    return undefined;
+  assertWindow(activity, world);
+  return { expectedRevision: activity.revision, scheduledAt: point, world };
+}
+
+/** The due point and its durable native input commit together under the same Host fence. */
+export async function consumeActivityOpportunity(
+  transaction: PersistenceInternalTransaction,
+  activity: LifeActivity,
+  opportunity: ActivityOpportunity,
+  recordedAt: string,
+): Promise<void> {
+  const actual = captureActivityOpportunity(activity, opportunity.world);
+  if (
+    !actual ||
+    actual.expectedRevision !== opportunity.expectedRevision ||
+    actual.scheduledAt.timeDomainRef !== opportunity.scheduledAt.timeDomainRef ||
+    actual.scheduledAt.at !== opportunity.scheduledAt.at
+  )
+    conflict("The scheduled Activity opportunity has changed");
+  const next = {
+    ...activity,
+    revision: activity.revision + 1,
+    nextOpportunity: null,
+    updatedAt: recordedAt,
+  };
+  await executeRepositorySql(
+    transaction,
+    "UPDATE heptalogos.life_activity SET revision=$3,updated_at=$4,document=$5::jsonb WHERE subject_id=$1 AND activity_id=$2",
+    [
+      activity.subjectId,
+      activity.activityId,
+      next.revision,
+      recordedAt,
+      JSON.stringify(next),
+    ],
+  );
+}
+
 /** Creates Life operations; the caller supplies its current real execution Activity to Persistence. */
 export function createLifeService(options: LifeOptions) {
   const mutate = async (
@@ -143,6 +213,8 @@ export function createLifeService(options: LifeOptions) {
       }),
     );
   return {
+    /** Actual world time is read before entering any Host mutation. */
+    worldNow: options.worldNow,
     async propose(value: Static<typeof proposeActivitySchema>): Promise<LifeActivity> {
       const input = checked<Static<typeof proposeActivitySchema>>(
         proposeActivitySchema,

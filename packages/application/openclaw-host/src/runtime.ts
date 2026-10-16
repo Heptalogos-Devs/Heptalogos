@@ -287,6 +287,19 @@ export function registerQqChannel(api: OpenClawPluginApi): void {
       transport.start();
       const timer = setInterval(() => {
         if (connected) reconcile();
+        // Native account opportunities also advance adopted work when QQ is
+        // quiet or offline. Host decides whether a due Activity may run.
+        void host
+          .gatewayScope()
+          .then((latest) => {
+            for (const conversation of latest.conversations.filter(
+              (c) => c.receive && c.observe,
+            ))
+              wake(conversation);
+          })
+          .catch(() => {
+            if (!signal.aborted) report("activity_opportunity_unavailable");
+          });
       }, 60000);
       timer.unref();
       try {
