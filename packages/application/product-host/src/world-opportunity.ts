@@ -349,6 +349,7 @@ export function createWorldOpportunity<TContact, TUsage>(
           worldId: input.worldId,
           eventId: event.eventId,
           contactRef: receipt.contactRef,
+          runId: deliberation.runId,
         });
       }
       await options.adoptDeliberation({

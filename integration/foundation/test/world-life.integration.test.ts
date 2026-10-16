@@ -3,7 +3,11 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createIdentityService } from "@heptalogos/identity";
 import { randomUUID } from "node:crypto";
-import { createWorldLifeService, expandWorldRoutines } from "@heptalogos/subject";
+import {
+  createWorldLifeService,
+  createLifeService,
+  expandWorldRoutines,
+} from "@heptalogos/subject";
 import {
   qualifiedPgBin,
   cleanupCanonicalPostgresFixtures,
@@ -283,15 +287,127 @@ real("WorldLife canonical realization on real fenced PostgreSQL", () => {
         ).events,
       ).toHaveLength(1);
       expect(await life.pendingContacts(subjectId, worldId)).toHaveLength(2);
+      const activityScope = {
+        conversations: [],
+        sourceRefs: [`world:${worldId}`],
+        tools: [],
+        maxRunMs: 60000,
+      };
+      const activities = createLifeService({
+        persistence: current.persistence,
+        now: () => at,
+        worldNow: async () => ({
+          timeDomainRef: domain,
+          at: "2026-10-16T03:00:00.000Z",
+        }),
+        scopeAuthority: async () => activityScope,
+      });
+      const activityIds = await Promise.all(
+        [1, 2].map(async (number) => {
+          let activity = await current.run(() =>
+            activities.propose({
+              operationId: randomUUID(),
+              subjectId,
+              purpose: `Independent activity ${number}`,
+              mode: "work",
+              window: { notBefore: null, notAfter: null },
+              proposedBy: actor,
+              sourceRefs: activityScope.sourceRefs,
+              workContextId: null,
+              world: { timeDomainRef: domain, at: "2026-10-16T03:00:00.000Z" },
+              nextOpportunity: null,
+              interruptOn: [],
+            }),
+          );
+          activity = await current.run(() =>
+            activities.adopt({
+              subjectId,
+              activityId: activity.activityId,
+              expectedRevision: activity.revision,
+              adoptedBy: actor,
+              scope: activityScope,
+            }),
+          );
+          return activity.activityId;
+        }),
+      );
+      const runIds = activityIds.map((activityId) => "native:activity:" + activityId);
+      const selections = await Promise.all(
+        runIds.map((runId) =>
+          current.run(() =>
+            life.selectContact({ subjectId, worldId, eventId: event.eventId, runId }),
+          ),
+        ),
+      );
+      expect(selections.filter((value) => value.selected)).toHaveLength(1);
+      const winningRun = selections[0]!.selected ? runIds[0]! : runIds[1]!;
+      const losingRun = winningRun === runIds[0] ? runIds[1]! : runIds[0]!;
+      expect(
+        (await life.pendingContacts(subjectId, worldId)).find(
+          (value) => value.eventId === event.eventId,
+        )?.selectedRunId,
+      ).toBe(winningRun);
+      expect(await life.releasedEventIds(subjectId, worldId, [event.eventId])).toEqual(
+        [],
+      );
+      expect(
+        (
+          await current.run(() =>
+            life.selectContact({
+              subjectId,
+              worldId,
+              eventId: event.eventId,
+              runId: winningRun,
+            }),
+          )
+        ).selected,
+      ).toBe(true);
+      expect(
+        (
+          await current.run(() =>
+            life.selectContact({
+              subjectId,
+              worldId,
+              eventId: event.eventId,
+              runId: losingRun,
+            }),
+          )
+        ).selected,
+      ).toBe(false);
+      const contactRef = `world-event:${worldId}:${event.eventId}:1`;
+      await expect(
+        current.run(() =>
+          life.acknowledgeContact({
+            subjectId,
+            worldId,
+            eventId: event.eventId,
+            contactRef,
+            runId: losingRun,
+          }),
+        ),
+      ).rejects.toMatchObject({ problem: { problemCode: "world.conflict" } });
       await current.run(() =>
         life.acknowledgeContact({
           subjectId,
           worldId,
           eventId: event.eventId,
-          contactRef: "contact:actual",
+          contactRef,
+          runId: winningRun,
         }),
       );
       expect(await life.pendingContacts(subjectId, worldId)).toHaveLength(1);
+      expect(await life.releasedEventIds(subjectId, worldId, [event.eventId])).toEqual([
+        event.eventId,
+      ]);
+      await current.run(() =>
+        life.acknowledgeContact({
+          subjectId,
+          worldId,
+          eventId: event.eventId,
+          contactRef,
+          runId: winningRun,
+        }),
+      );
       await expect(
         current.run(() =>
           life.acknowledgeContact({
@@ -299,6 +415,7 @@ real("WorldLife canonical realization on real fenced PostgreSQL", () => {
             worldId,
             eventId: event.eventId,
             contactRef: "contact:different",
+            runId: winningRun,
           }),
         ),
       ).rejects.toMatchObject({ problem: { problemCode: "world.conflict" } });

@@ -123,6 +123,7 @@ describe("world opportunity provider admission boundary", () => {
       worldId,
       eventId,
       contactRef: "contact:accepted",
+      runId: expect.any(String),
     });
     expect(adoptDeliberation).toHaveBeenCalledOnce();
     expect(scheduleNext).toHaveBeenCalledOnce();

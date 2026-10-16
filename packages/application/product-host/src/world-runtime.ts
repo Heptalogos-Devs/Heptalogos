@@ -10,6 +10,8 @@ import {
   encodeCognitionUsage,
   encodeObservationInput,
   decodeObservationInput,
+  decodeProjection,
+  decodeAcceptedObservation,
   type HostPrepareResponse,
   timestampFromDate,
 } from "@nous-wave/client/host-bridge";
@@ -212,14 +214,51 @@ export function createWorldRuntime(options: {
         typeof plannerResult.deadlineAt === "string"
           ? plannerResult.deadlineAt
           : undefined;
-      const priorSubject = await options.native.readRun(
-        uuidv5("subject.deliberation", input.requestId),
-      );
+      const subjectRunId = uuidv5("subject.deliberation", input.requestId);
+      const priorSubject = await options.native.readRun(subjectRunId);
       const frozenContacts = priorSubject
         ? new Set(
             priorSubject.registration.contacts.map((contact) => contact.contactRef),
           )
         : undefined;
+      const acceptedContact = async (
+        runId: string,
+        event: Awaited<ReturnType<typeof options.worlds.pendingContacts>>[number],
+      ) => {
+        const run = await options.native.readRun(runId);
+        if (
+          !run?.consumerId ||
+          run.registration.subjectId !== input.subjectId ||
+          run.registration.roleScope.role !== "subject.deliberation" ||
+          !run.registration.sourceRefs.includes(event.sourceRef)
+        )
+          return undefined;
+        const exact = run.registration.contacts.find(
+          (contact) => contact.contactRef === event.sourceRef,
+        );
+        if (!exact) return undefined;
+        const observation = decodeObservationInput(exact.observation);
+        if (
+          observation.subjectId !== input.subjectId ||
+          observation.sourceClass !== "world_realized" ||
+          observation.worldRealized?.worldId !== event.worldId ||
+          observation.worldRealized.eventId !== event.eventId ||
+          observation.worldRealized.eventRevision !== String(event.eventRevision)
+        )
+          return undefined;
+        const applied = await options.native.readAppliedContext(runId);
+        if (
+          applied.roleScope.role !== "subject.deliberation" ||
+          decodeProjection(applied.projection).consumerId !== run.consumerId ||
+          !applied.occurrences.some(
+            (item) =>
+              item.contactRef === event.sourceRef &&
+              decodeAcceptedObservation(item.receipt).occurrenceId,
+          )
+        )
+          return undefined;
+        return { contactRef: event.sourceRef };
+      };
       const contacts = new Map<string, HostPrepareResponse["contacts"][number]>();
       const binding = await options.bindingFor("subject.deliberation");
       const maxBytes = Math.max(0, Math.floor(binding.inputTokens / 3));
@@ -267,6 +306,27 @@ export function createWorldRuntime(options: {
               .sort((a, b) => Date.parse(a.at.at) - Date.parse(b.at.at))
               .at(-1);
           if (!last) return { contactRef: event.sourceRef, selected: false };
+          const selection = await options.worlds.selectContact({
+            subjectId: input.subjectId,
+            worldId: input.worldId,
+            eventId: event.eventId,
+            runId: subjectRunId,
+          });
+          if (!selection.selected || selection.state === "released") {
+            if (
+              selection.state === "selected" &&
+              selection.selectedRunId &&
+              (await acceptedContact(selection.selectedRunId, event))
+            )
+              await options.worlds.acknowledgeContact({
+                subjectId: input.subjectId,
+                worldId: input.worldId,
+                eventId: event.eventId,
+                contactRef: selection.contactRef,
+                runId: selection.selectedRunId,
+              });
+            return { contactRef: event.sourceRef, selected: false };
+          }
           const observed = timestampFromDate(new Date(at));
           contacts.set(event.sourceRef, {
             contactRef: event.sourceRef,
@@ -357,22 +417,7 @@ export function createWorldRuntime(options: {
             }),
           };
         },
-        acceptedWorldContact: async ({ runId, event }) => {
-          const run = await options.native.readRun(runId),
-            applied = await options.native.readAppliedContext(runId);
-          if (!run?.consumerId || applied.roleScope.role !== "subject.deliberation")
-            return undefined;
-          const exact = run.registration.contacts.find(
-            (contact) => contact.contactRef === event.sourceRef,
-          );
-          if (
-            !exact ||
-            decodeObservationInput(exact.observation).worldRealized?.eventId !==
-              event.eventId
-          )
-            return undefined;
-          return { contactRef: event.sourceRef };
-        },
+        acceptedWorldContact: ({ runId, event }) => acceptedContact(runId, event),
         adoptDeliberation: async (decision) => {
           await options.handler.adopt(decision);
         },

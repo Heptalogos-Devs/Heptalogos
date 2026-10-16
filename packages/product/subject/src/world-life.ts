@@ -527,7 +527,7 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
             revision: string;
           }>(
             `SELECT e.world_id,e.event_id,e.document->>'revision' AS revision FROM heptalogos.world_event e JOIN heptalogos.world_life w USING(subject_id,world_id)
-WHERE e.subject_id=$1 AND e.event_id=ANY($2::uuid[]) AND (EXISTS(SELECT 1 FROM jsonb_array_elements(e.document->'perceptions') p WHERE p->>'actorRef'=w.document#>>'{definition,subjectActorRef}') OR EXISTS(SELECT 1 FROM heptalogos.world_contact_release r WHERE r.subject_id=e.subject_id AND r.world_id=e.world_id AND r.event_id=e.event_id))`,
+WHERE e.subject_id=$1 AND e.event_id=ANY($2::uuid[]) AND (EXISTS(SELECT 1 FROM jsonb_array_elements(e.document->'perceptions') p WHERE p->>'actorRef'=w.document#>>'{definition,subjectActorRef}') OR EXISTS(SELECT 1 FROM heptalogos.world_contact_release r WHERE r.subject_id=e.subject_id AND r.world_id=e.world_id AND r.event_id=e.event_id AND r.state='released'))`,
             [input.subjectId, events.map((event) => event.eventId)],
           )
         : [];
@@ -730,12 +730,16 @@ AND ($6::timestamptz IS NULL OR recorded_at<=$6::timestamptz) ORDER BY document-
       subjectId: string,
       worldId: string,
       eventIds: readonly string[],
+      transaction?: PersistenceInternalTransaction,
     ) {
       if (eventIds.length > 128)
         conflict("Release lookups are bounded to the current 128-event view");
-      const rows = await readRepositorySql<{ event_id: string }>(
-        options.persistence,
-        "SELECT event_id FROM heptalogos.world_contact_release WHERE subject_id=$1 AND world_id=$2 AND event_id=ANY($3::uuid[])",
+      const read = <T>(statement: string, parameters: readonly unknown[]) =>
+        transaction
+          ? executeRepositorySql<T>(transaction, statement, parameters)
+          : readRepositorySql<T>(options.persistence, statement, parameters);
+      const rows = await read<{ event_id: string }>(
+        "SELECT event_id FROM heptalogos.world_contact_release WHERE subject_id=$1 AND world_id=$2 AND event_id=ANY($3::uuid[]) AND state='released'",
         [subjectId, worldId, eventIds],
       );
       return rows.map((row) => row.event_id);
@@ -744,10 +748,13 @@ AND ($6::timestamptz IS NULL OR recorded_at<=$6::timestamptz) ORDER BY document-
     async pendingContacts(subjectId: string, worldId: string, limit = 64) {
       const state = await service.read(subjectId, worldId);
       if (!state) conflict("World does not exist");
-      const rows = await readRepositorySql<{ document: RealizedWorldEvent }>(
+      const rows = await readRepositorySql<{
+        document: RealizedWorldEvent;
+        selected_run_id: string | null;
+      }>(
         options.persistence,
-        `SELECT e.document FROM heptalogos.world_event e LEFT JOIN heptalogos.world_contact_release r USING(subject_id,world_id,event_id)
-WHERE e.subject_id=$1 AND e.world_id=$2 AND r.event_id IS NULL AND EXISTS(SELECT 1 FROM jsonb_array_elements(e.document->'perceptions') p WHERE p->>'actorRef'=$3) ORDER BY e.event_id LIMIT $4`,
+        `SELECT e.document,r.selected_run_id FROM heptalogos.world_event e LEFT JOIN heptalogos.world_contact_release r USING(subject_id,world_id,event_id)
+WHERE e.subject_id=$1 AND e.world_id=$2 AND (r.event_id IS NULL OR r.state='selected') AND EXISTS(SELECT 1 FROM jsonb_array_elements(e.document->'perceptions') p WHERE p->>'actorRef'=$3) ORDER BY e.event_id LIMIT $4`,
         [
           subjectId,
           worldId,
@@ -757,6 +764,7 @@ WHERE e.subject_id=$1 AND e.world_id=$2 AND r.event_id IS NULL AND EXISTS(SELECT
       );
       return rows.map((row) => ({
         sourceRef: `world-event:${worldId}:${row.document.eventId}:${row.document.revision}`,
+        selectedRunId: row.selected_run_id,
         eventId: row.document.eventId,
         eventRevision: row.document.revision,
         worldId,
@@ -768,12 +776,15 @@ WHERE e.subject_id=$1 AND e.world_id=$2 AND r.event_id IS NULL AND EXISTS(SELECT
         ),
       }));
     },
-    /** Records the actual official contact receipt, preserving one event identity on retry. */
-    async acknowledgeContact(value: Static<typeof acknowledgeWorldContactSchema>) {
-      const input = checked<Static<typeof acknowledgeWorldContactSchema>>(
-        acknowledgeWorldContactSchema,
-        value,
-      );
+    /** Atomically assigns one event occurrence to one stable subjective run, without claiming perception. */
+    async selectContact(input: {
+      subjectId: string;
+      worldId: string;
+      eventId: string;
+      runId: string;
+    }) {
+      if (!input.runId.trim())
+        conflict("Use the stable actual subjective run identity");
       return options.persistence.mutate((context) =>
         useRepositoryMutationTransaction(context, async (tx) => {
           await lockSubjectNarrative(tx, input.subjectId);
@@ -783,34 +794,82 @@ WHERE e.subject_id=$1 AND e.world_id=$2 AND r.event_id IS NULL AND EXISTS(SELECT
             "SELECT document FROM heptalogos.world_event WHERE subject_id=$1 AND world_id=$2 AND event_id=$3",
             [input.subjectId, input.worldId, input.eventId],
           );
+          const event = events[0]?.document;
           if (
             !state ||
-            !events[0]?.document.perceptions.some(
+            !event?.perceptions.some(
               (p) => p.actorRef === state.definition.subjectActorRef,
             )
           )
-            conflict(
-              "Only a realized Subject-visible event can become a Subject contact",
-            );
+            conflict("Only a realized Subject-visible event can be selected");
+          const contactRef = `world-event:${input.worldId}:${event.eventId}:${event.revision}`;
           await executeRepositorySql(
             tx,
-            "INSERT INTO heptalogos.world_contact_release(subject_id,world_id,event_id,contact_ref,recorded_at) VALUES($1,$2,$3,$4,$5) ON CONFLICT DO NOTHING",
+            `INSERT INTO heptalogos.world_contact_release(subject_id,world_id,event_id,contact_ref,recorded_at,state,selected_run_id)
+           VALUES($1,$2,$3,$4,$5,'selected',$6) ON CONFLICT DO NOTHING`,
             [
               input.subjectId,
               input.worldId,
               input.eventId,
-              input.contactRef,
+              contactRef,
               options.now(),
+              input.runId,
             ],
           );
-          const rows = await executeRepositorySql<{ contact_ref: string }>(
+          const rows = await executeRepositorySql<{
+            state: "selected" | "released";
+            selected_run_id: string | null;
+            contact_ref: string;
+          }>(
             tx,
-            "SELECT contact_ref FROM heptalogos.world_contact_release WHERE subject_id=$1 AND world_id=$2 AND event_id=$3",
+            "SELECT state,selected_run_id,contact_ref FROM heptalogos.world_contact_release WHERE subject_id=$1 AND world_id=$2 AND event_id=$3",
             [input.subjectId, input.worldId, input.eventId],
           );
-          if (rows[0]?.contact_ref !== input.contactRef)
+          const selected = rows[0]!;
+          return {
+            selected:
+              selected.selected_run_id === input.runId &&
+              selected.contact_ref === contactRef,
+            selectedRunId: selected.selected_run_id,
+            state: selected.state,
+            contactRef: selected.contact_ref,
+          };
+        }),
+      );
+    },
+    /** Adopts only the trusted actual admission receipt of the run that owns this selection. */
+    async acknowledgeContact(value: Static<typeof acknowledgeWorldContactSchema>) {
+      const input = checked<Static<typeof acknowledgeWorldContactSchema>>(
+        acknowledgeWorldContactSchema,
+        value,
+      );
+      return options.persistence.mutate((context) =>
+        useRepositoryMutationTransaction(context, async (tx) => {
+          await lockSubjectNarrative(tx, input.subjectId);
+          const rows = await executeRepositorySql<{
+            contact_ref: string;
+            selected_run_id: string | null;
+            state: string;
+          }>(
+            tx,
+            "SELECT contact_ref,selected_run_id,state FROM heptalogos.world_contact_release WHERE subject_id=$1 AND world_id=$2 AND event_id=$3 FOR UPDATE",
+            [input.subjectId, input.worldId, input.eventId],
+          );
+          const selected = rows[0];
+          if (
+            !selected ||
+            selected.contact_ref !== input.contactRef ||
+            (selected.selected_run_id !== input.runId &&
+              !(selected.state === "released" && selected.selected_run_id === null))
+          )
             conflict(
-              "This event is already released through another canonical contact",
+              "Only the selected actual run may acknowledge this exact canonical contact",
+            );
+          if (selected.state !== "released")
+            await executeRepositorySql(
+              tx,
+              "UPDATE heptalogos.world_contact_release SET state='released',recorded_at=$4 WHERE subject_id=$1 AND world_id=$2 AND event_id=$3",
+              [input.subjectId, input.worldId, input.eventId, options.now()],
             );
           return { contactRef: input.contactRef };
         }),

@@ -213,7 +213,7 @@ export const worldStateSchema = Type.Object(
 export const readWorldSchema = Type.Object({ subjectId: id, worldId: id }, object);
 /** A canonical event may be released once to its Subject through a stable Nous contact. */
 export const acknowledgeWorldContactSchema = Type.Object(
-  { subjectId: id, worldId: id, eventId: id, contactRef: ref },
+  { subjectId: id, worldId: id, eventId: id, contactRef: ref, runId: ref },
   object,
 );
 /** Typed realization receipt; coverage is adopted only by the world owner. */
