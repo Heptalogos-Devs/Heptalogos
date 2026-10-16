@@ -40,6 +40,9 @@ import {
 import { Type } from "@heptalogos/schema-runtime/typebox";
 import { tokenFromRequest } from "./http-auth.js";
 import { registerPursuitHttp, type PursuitHttpOptions } from "./pursuit-http.js";
+import { registerWorldHttp, type WorldHttpOptions } from "./world-http.js";
+import { registerNarrativeHttp, type NarrativeHttpOptions } from "./narrative-http.js";
+import { registerWorldOpportunityHttp } from "./world-opportunity-http.js";
 import { registerLifeReadHttp } from "./life-read-http.js";
 import { registerGatewayHttp, type GatewayHttpOptions } from "./gateway-http.js";
 
@@ -72,6 +75,9 @@ export interface ProductHttpOptions {
   readonly onAdministratorClaimed: () => Promise<void>;
   readonly gateway?: GatewayHttpOptions;
   readonly pursuit?: PursuitHttpOptions;
+  readonly world?: WorldHttpOptions;
+  readonly narrative?: NarrativeHttpOptions;
+  readonly worldOpportunity?: Parameters<typeof registerWorldOpportunityHttp>[1];
 }
 /** Builds a loopback-only, non-model-dependent Management API. */
 export async function createProductHttpApp(options: ProductHttpOptions) {
@@ -330,6 +336,25 @@ export async function createProductHttpApp(options: ProductHttpOptions) {
   registerGatewayHttp(app, options.gateway);
   registerLifeReadHttp(app, options.gateway);
   registerPursuitHttp(app, options.pursuit);
+  registerWorldHttp(app, options.world);
+  registerNarrativeHttp(app, options.narrative);
+  const unavailable = async (): Promise<never> => {
+    throw managementProblem(
+      "world.unconfigured",
+      "World opportunity is not configured",
+      "Use the actual current Product Host composition",
+      "unavailable",
+    );
+  };
+  registerWorldOpportunityHttp(
+    app,
+    options.worldOpportunity ?? {
+      authenticate: unavailable,
+      currentSubject: unavailable,
+      runMutation: unavailable,
+      advance: unavailable,
+    },
+  );
   return app;
 }
 

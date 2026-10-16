@@ -31,26 +31,6 @@ const app = await createProductHttpApp({
   identity: { installationId: "schema-only", bootId: "schema-only" },
   onAdministratorClaimed: unavailable,
 });
-const { registerWorldHttp } = await import(
-  new URL("../dist/world-http.js", import.meta.url).href
-);
-const { registerWorldOpportunityHttp } = await import(
-  new URL("../dist/world-opportunity-http.js", import.meta.url).href
-);
-if (!app.hasRoute({ method: "POST", url: "/gateway/v1/world/read" }))
-  registerWorldHttp(app);
-if (!app.hasRoute({ method: "POST", url: "/gateway/v1/world/advance" }))
-  registerWorldOpportunityHttp(app, {
-    authenticate: unavailable,
-    currentSubject: unavailable,
-    runMutation: unavailable,
-    advance: unavailable,
-  });
-const { registerNarrativeHttp } = await import(
-  new URL("../dist/narrative-http.js", import.meta.url).href
-);
-if (!app.hasRoute({ method: "POST", url: "/gateway/v1/narrative/claims" }))
-  registerNarrativeHttp(app);
 await app.ready();
 const expected = JSON.stringify(app.swagger(), null, 2) + "\n";
 await app.close();

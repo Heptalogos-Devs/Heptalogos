@@ -3,12 +3,14 @@
 import { describe, it, expect, vi } from "vitest";
 import { randomUUID } from "node:crypto";
 import { createProductHttpApp } from "../../src/product-http.js";
-import { registerNarrativeHttp } from "../../src/narrative-http.js";
 describe("read-only narrative operator HTTP", () => {
   it("queries the bound Subject only and exposes no caller-written review or commit route", async () => {
     const unavailable = async (): Promise<never> => {
       throw Error("not used");
     };
+    const subjectId = randomUUID();
+    const claimsTo = vi.fn(async () => ({ claims: [], more: false })),
+      explainStatement = vi.fn(async () => ({ claims: [] }));
     const app = await createProductHttpApp({
       authentication: {
         authenticate: unavailable,
@@ -24,17 +26,14 @@ describe("read-only narrative operator HTTP", () => {
       },
       identity: { installationId: "fixture", bootId: "fixture" },
       onAdministratorClaimed: unavailable,
-    });
-    const subjectId = randomUUID();
-    const claimsTo = vi.fn(async () => ({ claims: [], more: false })),
-      explainStatement = vi.fn(async () => ({ claims: [] }));
-    registerNarrativeHttp(app, {
-      authenticate: async (token) => {
-        if (token !== "service") throw Error("authentication denied");
+      narrative: {
+        authenticate: async (token) => {
+          if (token !== "service") throw Error("authentication denied");
+        },
+        currentSubject: async () => subjectId,
+        runMutation: async (_kind, operation) => operation(),
+        narrative: { claimsTo, explainStatement },
       },
-      currentSubject: async () => subjectId,
-      runMutation: async (_kind, operation) => operation(),
-      narrative: { claimsTo, explainStatement },
     });
     try {
       const headers = { authorization: "Bearer service" };
