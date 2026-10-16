@@ -5,6 +5,8 @@ packages:
 
 catalogMode: strict
 strictPeerDependencies: true
+# Native SDK peers are supplied by the selected official installer, not a second raw runtime.
+autoInstallPeers: false
 engineStrict: true
 minimumReleaseAge: 0
 

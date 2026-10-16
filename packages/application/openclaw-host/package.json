@@ -46,7 +46,6 @@
   "devDependencies": {
     "@types/ws": "catalog:",
     "vitest": "catalog:",
-    "openclaw": "link:../../../../Nous-Wave/packages/openclaw/node_modules/openclaw",
     "@heptalogos/management-client": "workspace:*",
     "@heptalogos/messaging": "workspace:*",
     "@heptalogos/schema-runtime": "workspace:*",

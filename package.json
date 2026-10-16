@@ -35,7 +35,9 @@
     "check:repo": "node scripts/verify/run-nx.mjs run repository:check:repo",
     "clean": "node scripts/maintenance/clean.mjs",
     "package:portable": "node scripts/package/assemble-portable-product.mjs",
-    "qualify:portable": "node scripts/verify/run-nx.mjs run product-host-integration:qualify-portable"
+    "qualify:portable": "node scripts/verify/run-nx.mjs run product-host-integration:qualify-portable",
+    "prepare:native-sdk": "node scripts/package/prepare-native-sdk.mjs",
+    "check:sdk-inputs": "node scripts/package/sdk-inputs.mjs"
   },
   "nx": {
     "includedScripts": []
@@ -58,6 +60,7 @@
     "typedoc-plugin-markdown": "catalog:",
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
-    "vitest": "catalog:"
+    "vitest": "catalog:",
+    "@nous-wave/openclaw": "file:vendor/nous-wave/nous-wave-openclaw-aacf7c80e20b.tgz"
   }
 }
