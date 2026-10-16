@@ -5865,6 +5865,11 @@ export type PrepareCognitionData = {
         nousSessionId: string;
         invocationId: string;
         promptDigest: string;
+        historyUsers?: Array<{
+            key: string;
+            nativeRunId: string;
+            promptDigest: string;
+        }>;
     };
     path?: never;
     query?: never;
@@ -5968,7 +5973,17 @@ export type PrepareCognitionResponses = {
         version: 1;
         contactRequestId: string;
         workContextId: string;
+        roleScope: {
+            role: 'world.planner' | 'subject.deliberation' | 'subject.execution' | 'subject.render' | 'narrative.review' | 'subject.reflection' | 'system.maintenance';
+            purpose: 'world_authoring' | 'subject_deliberation' | 'professional_execution' | 'subject_rendering' | 'narrative_review' | 'reflection' | 'maintenance';
+            view: 'world_author' | 'subject' | 'worker' | 'renderer' | 'review' | 'reflection' | 'maintenance';
+            contactNature: 'execution_only' | 'subject_experience';
+        };
         allowedToolNames: Array<string>;
+        currentSources: Array<{
+            [key: string]: unknown;
+        }>;
+        allowedHistoryUserKeys: Array<string>;
         usage: {
             [key: string]: unknown;
         };
@@ -6265,6 +6280,262 @@ export type NativeLifeResponses = {
 
 export type NativeLifeResponse = NativeLifeResponses[keyof NativeLifeResponses];
 
+export type ReleaseNativeResultData = {
+    body: {
+        version: 1;
+        requestId: string;
+        subjectId: string;
+        parentRunId: string;
+        childRunId: string;
+        resultIds: Array<string>;
+    };
+    path?: never;
+    query?: never;
+    url: '/nous/v1/result-release';
+};
+
+export type ReleaseNativeResultErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ReleaseNativeResultError = ReleaseNativeResultErrors[keyof ReleaseNativeResultErrors];
+
+export type ReleaseNativeResultResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        version: 1;
+        accepted: true;
+        activityRef: string;
+        contactNature: 'subject_experience';
+        contacts: Array<{
+            contactRef: string;
+            observation: {
+                [key: string]: unknown;
+            };
+        }>;
+        opportunity: {
+            kind: 'activity_result';
+            parentRunId: string;
+            childRunId: string;
+            releaseRef: string;
+        };
+    };
+};
+
+export type ReleaseNativeResultResponse = ReleaseNativeResultResponses[keyof ReleaseNativeResultResponses];
+
+export type CompleteNativeChildData = {
+    body: {
+        version: 1;
+        subjectId: string;
+        parentRunId?: string;
+        parentSessionKey: string;
+        parentSessionId?: string;
+        parentNousSessionId?: string;
+        childRunId: string;
+        childSessionKey: string;
+        childSessionId: string;
+        childNousSessionId: string;
+        outcome: 'completed' | 'failed' | 'cancelled';
+        endedAt: string;
+        recover?: boolean;
+    };
+    path?: never;
+    query?: never;
+    url: '/nous/v1/completion';
+};
+
+export type CompleteNativeChildErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type CompleteNativeChildError = CompleteNativeChildErrors[keyof CompleteNativeChildErrors];
+
+export type CompleteNativeChildResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        version: 1;
+        accepted: true;
+        activityRef: string;
+        parentRunId: string;
+        resultRetained: true;
+        resultIds: Array<string>;
+        resultsOmitted: boolean;
+    };
+};
+
+export type CompleteNativeChildResponse = CompleteNativeChildResponses[keyof CompleteNativeChildResponses];
+
 export type AuthorizeToolExecutionData = {
     body: {
         version: 1;
@@ -6405,6 +6676,7 @@ export type HandoffCognitionData = {
         parentSessionKey: string;
         parentSessionId: string;
         parentNousSessionId: string;
+        childNativeAgentId: string;
         childSessionKey: string;
         childSessionId: string;
         childNousSessionId: string;
@@ -6657,6 +6929,7 @@ export type FeedbackCognitionResponses = {
         version: 1;
         stage: 'pending';
         accepted: true;
+        retainedOnly?: boolean;
         observation: {
             [key: string]: unknown;
         };

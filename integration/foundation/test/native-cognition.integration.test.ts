@@ -156,6 +156,12 @@ async function fixture(tools = ["read"]) {
     nativeRunId: randomUUID(),
     prompt: "exact raw native prompt with private engineering envelope",
     role: "main" as const,
+    roleScope: {
+      role: "subject.deliberation" as const,
+      purpose: "subject_deliberation" as const,
+      view: "subject" as const,
+      contactNature: "subject_experience" as const,
+    },
     actorEntityRef: actor,
     workContextId,
     usage: sdk.decodeCognitionUsage({
@@ -536,6 +542,7 @@ real(
           parentSessionId: f.input.native.sessionId,
           parentRunId: f.input.native.runId,
           parentNousSessionId: f.input.nousSessionId,
+          childNativeAgentId: "main",
           childSessionKey: "native:child",
           childSessionId: "native-child",
           childNousSessionId: randomUUID(),
@@ -562,7 +569,9 @@ real(
         expect(sdk.decodeCognitionUsage(inherited.usage).sourceRead).toEqual(
           applied.sourceRead,
         );
-        expect(sdk.decodeCognitionUsage(inherited.usage).purpose).toBe("worker");
+        expect(sdk.decodeCognitionUsage(inherited.usage).purpose).toBe(
+          "professional_execution",
+        );
         expect((await f.bridge.readRun(child.native.runId))?.registration.role).toBe(
           "worker",
         );
@@ -583,6 +592,7 @@ real(
             f.bridge.handoff({
               ...handoff,
               parentRunId: randomUUID(),
+              childNativeAgentId: "main",
               childSessionKey: "wrong-parent-run-child",
               requestId: randomUUID(),
             }),
@@ -593,6 +603,7 @@ real(
         await f.c.run(() =>
           f.bridge.handoff({
             ...handoff,
+            childNativeAgentId: "main",
             childSessionKey: "same-session-exact-parent",
             requestId: randomUUID(),
           }),
@@ -926,6 +937,369 @@ real("native Life bound to the current admitted run", () => {
       expect(
         (await f.life.get(f.input.subjectId, f.activity.activityId))?.revision,
       ).toBe(result.revision);
+    } finally {
+      await f.c.close();
+    }
+  }, 120000);
+});
+
+real("native child completion causality", () => {
+  it("retains exact worker results outside cognition and releases only selected facts into a new Subject contact", async () => {
+    const f = await fixture(["read", "heptalogos_life"]);
+    try {
+      await admitSelected(f, await f.c.run(() => f.bridge.prepare(f.input)));
+      const childSessionKey = "agent:main:subagent:" + randomUUID(),
+        childSessionId = randomUUID(),
+        childNousSessionId = randomUUID(),
+        childRunId = randomUUID();
+      const handoff = {
+        version: 1 as const,
+        requestId: randomUUID(),
+        subjectId: f.input.subjectId,
+        parentRunId: f.input.native.runId,
+        parentSessionKey: f.input.native.sessionKey,
+        parentSessionId: f.input.native.sessionId,
+        parentNousSessionId: f.input.nousSessionId,
+        childNativeAgentId: "main",
+        childSessionKey,
+        childSessionId,
+        childNousSessionId,
+        contextMode: "isolated" as const,
+      };
+      await f.c.run(() => f.bridge.handoff(handoff));
+      const child = {
+        ...f.input,
+        nousSessionId: childNousSessionId,
+        contactRequestId: randomUUID(),
+        invocationId: "actual-child-final",
+        promptDigest: "7".repeat(64),
+        native: {
+          ...f.input.native,
+          parentSessionKey: f.input.native.sessionKey,
+          sessionKey: childSessionKey,
+          sessionId: childSessionId,
+          runId: childRunId,
+          historyGeneration: childSessionId,
+        },
+      };
+      const prepared = await f.c.run(() => f.bridge.prepare(child));
+      await admitSelected({ ...f, input: child }, prepared);
+      const bound = {
+        nativeRunId: childRunId,
+        activityRef: f.activity.activityId,
+        nativeAgentId: "main",
+        sessionKey: childSessionKey,
+        sessionId: childSessionId,
+        toolCallId: "actual-child-life",
+      };
+      const inspected = await f.c.run(() =>
+        f.bridge.life({ ...bound, request: { action: "inspect" } }),
+      );
+      await expect(
+        f.c.run(() =>
+          f.bridge.life({
+            ...bound,
+            request: {
+              action: "progress",
+              expectedRevision: inspected.revision,
+              note: "worker cannot change main Activity",
+              nextOpportunity: null,
+              mode: "rest",
+            },
+          }),
+        ),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_life_role_denied" },
+      });
+      const requestId = randomUUID(),
+        occurrenceId = randomUUID(),
+        artifactId = randomUUID();
+      const identity = sdk.hostContactIdentitySchema.strip().parse(child);
+      await f.c.run(() =>
+        f.bridge.feedback({
+          ...identity,
+          stage: "pending",
+          observation: sdk.encodeObservationInput({
+            requestId,
+            subjectId: f.input.subjectId,
+            sessionId: childNousSessionId,
+            sourceClass: "generated",
+            observedAt: sdk.timestampFromDate(new Date()),
+            material: {
+              case: "inlineText",
+              value: {
+                text: JSON.stringify({
+                  content: [{ type: "text", text: "SAVED ACTUAL CHILD RESULT" }],
+                  delivery: "model_output",
+                }),
+                mediaType: "application/json",
+              },
+            },
+          }),
+        }),
+      );
+      await expect(
+        f.c.run(() =>
+          f.bridge.feedback({
+            ...identity,
+            stage: "committed",
+            observationRequestId: requestId,
+            receipt: sdk.encodeAcceptedObservation({ occurrenceId, artifactId }),
+          }),
+        ),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_execution_result_only" },
+      });
+      expect(
+        await f.bridge.readRoleResults(f.input.subjectId, childRunId),
+      ).toMatchObject({ results: [{ resultId: requestId }] });
+      expect(
+        await readRepositorySql(
+          f.c.persistence,
+          "SELECT request_id FROM heptalogos.cognition_pending_feedback WHERE run_id=$1",
+          [childRunId],
+        ),
+      ).toEqual([]);
+      // Recovery of the pre-fix durable child uses only the exact existing handoff; no latest-run lookup.
+      const completion = {
+        version: 1 as const,
+        subjectId: f.input.subjectId,
+        parentSessionKey: f.input.native.sessionKey,
+        childRunId,
+        childSessionKey,
+        childSessionId,
+        childNousSessionId,
+        outcome: "completed" as const,
+        endedAt: new Date().toISOString(),
+      };
+      const ack = await f.c.run(() => f.bridge.completion(completion));
+      expect(ack.parentRunId).toBe(f.input.native.runId);
+      expect((await f.bridge.readRun(childRunId))?.state).toBe("completed");
+      await f.c.run(() => f.bridge.completion(completion));
+      await expect(
+        f.c.run(() =>
+          f.bridge.completion({ ...completion, parentRunId: randomUUID() }),
+        ),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_completion_changed" },
+      });
+      await f.c.run(() => f.bridge.finishRun(f.input.native.runId, "completed"));
+      const nativeRunId = `announce:v1:${childSessionKey}:${childRunId}:nous-completion-v1`;
+      const continuation = {
+        ...completion,
+        parentRunId: f.input.native.runId,
+        parentSessionId: f.input.native.sessionId,
+        parentNousSessionId: f.input.nousSessionId,
+        continuation: {
+          nativeRunId,
+          nativeAgentId: "main",
+          prompt: "Native durable child findings: SAVED ACTUAL CHILD RESULT",
+        },
+      };
+      await expect(
+        f.c.run(() => f.bridge.completion(continuation)),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.invalid_input" },
+      });
+      const releaseInput = {
+        version: 1 as const,
+        requestId: randomUUID(),
+        subjectId: f.input.subjectId,
+        parentRunId: f.input.native.runId,
+        childRunId,
+        resultIds: [requestId],
+      };
+      const released = await f.c.run(() => f.bridge.releaseResult(releaseInput));
+      expect(released.contactNature).toBe("subject_experience");
+      expect(released.opportunity.kind).toBe("activity_result");
+      expect(released.contacts).toHaveLength(1);
+      expect(JSON.stringify(released.contacts)).toContain("SAVED ACTUAL CHILD RESULT");
+      expect(await f.c.run(() => f.bridge.releaseResult(releaseInput))).toEqual(
+        released,
+      );
+      const releasedRunId = randomUUID(),
+        releasedSessionKey = "native:subject-result:" + randomUUID();
+      const subjectInput = {
+        ...f.registration,
+        nativeRunId: releasedRunId,
+        sessionKey: releasedSessionKey,
+        prompt: "Deliberate on the explicitly released result",
+        sourceRefs: [released.contacts[0]!.contactRef],
+        messageRefs: [],
+        contacts: released.contacts,
+      };
+      const selected = await f.c.run(() => f.bridge.registerInput(subjectInput));
+      const actual = {
+        ...f.input,
+        contactRequestId: randomUUID(),
+        invocationId: "subject-released-result",
+        promptDigest: selected.promptDigest,
+        native: {
+          ...f.input.native,
+          runId: releasedRunId,
+          sessionKey: releasedSessionKey,
+        },
+      };
+      const subjectPrepared = await f.c.run(() => f.bridge.prepare(actual));
+      expect(subjectPrepared.contacts).toHaveLength(1);
+      expect(subjectPrepared.currentSources).toEqual([]);
+      await admitSelected({ ...f, input: actual }, subjectPrepared);
+      await expect(
+        f.c.run(() =>
+          f.bridge.registerInput({
+            ...subjectInput,
+            nativeRunId: randomUUID(),
+            contacts: [
+              {
+                ...released.contacts[0]!,
+                observation: {
+                  ...released.contacts[0]!.observation,
+                  sourceClass: "tool",
+                },
+              },
+            ],
+          }),
+        ),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_result_release_changed" },
+      });
+
+      await expect(
+        f.c.run(() =>
+          f.bridge.releaseResult({ ...releaseInput, resultIds: [randomUUID()] }),
+        ),
+      ).rejects.toBeDefined();
+      await expect(
+        f.c.run(() =>
+          f.bridge.completion({
+            ...completion,
+            endedAt: new Date(Date.now() + 60000).toISOString(),
+          }),
+        ),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_completion_changed" },
+      });
+      f.revoke();
+      await expect(
+        f.c.run(() =>
+          f.bridge.completion({
+            ...continuation,
+            continuation: {
+              ...continuation.continuation,
+              nativeRunId: nativeRunId + ":forged",
+            },
+          }),
+        ),
+      ).rejects.toBeDefined();
+      // Recording the already-produced terminal fact is distinct from permitting new input/effects.
+      await f.c.run(() => f.bridge.completion(completion));
+    } finally {
+      await f.c.close();
+    }
+  }, 120000);
+});
+
+real("admitted native caller history", () => {
+  it("keeps same-Activity admitted turns and the exact current caller, excluding unadmitted, foreign Activity and altered native text", async () => {
+    const f = await fixture();
+    try {
+      await admitSelected(f, await f.c.run(() => f.bridge.prepare(f.input)));
+      let other = await f.c.run(() =>
+        f.life.propose({
+          operationId: randomUUID(),
+          subjectId: f.input.subjectId,
+          purpose: "Another adopted Activity",
+          mode: "work",
+          window: { notBefore: null, notAfter: null },
+          proposedBy: f.actor,
+          sourceRefs: [],
+          workContextId: f.activity.workContextId,
+          world: f.activity.world,
+          nextOpportunity: null,
+          interruptOn: ["manual"],
+        }),
+      );
+      other = await f.c.run(() =>
+        f.life.adopt({
+          subjectId: f.input.subjectId,
+          activityId: other.activityId,
+          expectedRevision: other.revision,
+          adoptedBy: f.actor,
+          scope: f.activity.scope!,
+        }),
+      );
+      other = await f.c.run(() =>
+        f.life.transition({
+          subjectId: f.input.subjectId,
+          activityId: other.activityId,
+          expectedRevision: other.revision,
+          action: "start",
+          reason: "Explicit other Activity",
+        }),
+      );
+      const otherRun = randomUUID();
+      await f.c.run(() =>
+        f.bridge.registerInput({
+          ...f.registration,
+          activityId: other.activityId,
+          nativeRunId: otherRun,
+        }),
+      );
+      const otherInput = {
+        ...f.input,
+        contactRequestId: randomUUID(),
+        invocationId: "other-activity",
+        native: { ...f.input.native, runId: otherRun },
+      };
+      await admitSelected(
+        { ...f, input: otherInput },
+        await f.c.run(() => f.bridge.prepare(otherInput)),
+      );
+      const currentRun = randomUUID();
+      await f.c.run(() =>
+        f.bridge.registerInput({ ...f.registration, nativeRunId: currentRun }),
+      );
+      const unknownRun = randomUUID();
+      const historyUsers = [
+        {
+          key: f.input.native.runId + ":user",
+          nativeRunId: f.input.native.runId,
+          promptDigest: f.input.promptDigest,
+        },
+        {
+          key: otherRun + ":user",
+          nativeRunId: otherRun,
+          promptDigest: f.input.promptDigest,
+        },
+        {
+          key: unknownRun + ":user",
+          nativeRunId: unknownRun,
+          promptDigest: f.input.promptDigest,
+        },
+        {
+          key: currentRun + ":user",
+          nativeRunId: currentRun,
+          promptDigest: f.input.promptDigest,
+        },
+        {
+          key: "forged-key",
+          nativeRunId: f.input.native.runId,
+          promptDigest: f.input.promptDigest,
+        },
+      ];
+      const response = await f.c.run(() =>
+        f.bridge.prepare({
+          ...f.input,
+          contactRequestId: randomUUID(),
+          invocationId: "current-caller",
+          native: { ...f.input.native, runId: currentRun },
+          historyUsers,
+        }),
+      );
+      expect(response.allowedHistoryUserKeys).toEqual([
+        f.input.native.runId + ":user",
+        currentRun + ":user",
+      ]);
     } finally {
       await f.c.close();
     }

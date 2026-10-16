@@ -13,7 +13,10 @@ const uuid = Type.String({
   pattern:
     "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
 });
-const bindingSchema = Type.Object({ nativeRunId: uuid, activityRef: uuid }, object);
+const bindingSchema = Type.Object(
+  { nativeRunId: Type.String({ minLength: 1, maxLength: 2048 }), activityRef: uuid },
+  object,
+);
 const actions =
   Type.Unsafe<
     Parameters<ReturnType<typeof createGatewayHostClient>["nativeLife"]>[0]["request"]

@@ -23,6 +23,7 @@ import { pursuitMigration } from "./migrations/0007-pursuit.js";
 import { worldLifeMigration } from "./migrations/0008-world-life.js";
 
 import { narrativeMigration } from "./migrations/0010-narrative.js";
+import { roleResultsMigration } from "./migrations/0009-role-results.js";
 
 const migrations: Readonly<Record<string, Migration>> = Object.freeze({
   "0001_foundation_baseline": foundationBaselineMigration,
@@ -33,6 +34,7 @@ const migrations: Readonly<Record<string, Migration>> = Object.freeze({
   "0006_native_dispatch": nativeDispatchMigration,
   "0007_pursuit": pursuitMigration,
   "0008_world_life": worldLifeMigration,
+  "0009_role_results": roleResultsMigration,
   "0010_narrative": narrativeMigration,
 });
 
@@ -53,5 +55,6 @@ export const canonicalMigrationNames = Object.freeze([
   "0006_native_dispatch",
   "0007_pursuit",
   "0008_world_life",
+  "0009_role_results",
   "0010_narrative",
 ] as const);

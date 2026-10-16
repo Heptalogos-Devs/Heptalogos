@@ -34,6 +34,12 @@ import {
   hostHandoffRequestSchema,
   hostFeedbackRequestSchema,
   hostToolExecutionRequestSchema,
+  hostCompletionRequestSchema,
+  type HostCompletionRequest,
+  type HostRoleScope,
+  hostRoleScopeSchema,
+  hostResultReleaseRequestSchema,
+  type HostResultReleaseResponse,
   hostContactIdentitySchema,
   decodeCognitionUsage,
   encodeCognitionUsage,
@@ -70,6 +76,7 @@ export interface Registration {
   readonly nativeRunId: string;
   readonly promptDigest: string;
   readonly role: "main" | "worker";
+  readonly roleScope: HostRoleScope;
   readonly actorEntityRef: string;
   readonly workContextId: string;
   readonly usage: HostPrepareResponse["usage"];
@@ -107,6 +114,15 @@ export interface NativeRunSnapshot {
   readonly nousSessionId: string;
   readonly consumerId?: string;
   readonly appliedUsage?: HostPrepareResponse["usage"];
+}
+/** Execution output for trusted Host orchestration, without Subject ingestion. */
+export interface NativeRoleResults {
+  readonly run: NativeRunSnapshot;
+  readonly results: {
+    resultId: string;
+    observation: Record<string, CanonicalJsonValue>;
+  }[];
+  readonly omitted: boolean;
 }
 function dispatchResult(
   saved: StoredInput,
@@ -193,6 +209,10 @@ function validated<T>(parse: () => T): T {
   }
 }
 const activityCodec = compileSchema<LifeActivity>(activitySchema);
+/** Product role is supplied only by the trusted caller, independently of native position. */
+function roleScope(registration: Registration): HostRoleScope {
+  return validated(() => hostRoleScopeSchema.parse(registration.roleScope));
+}
 function current(activity: LifeActivity, registration: Registration) {
   if (
     activity.subjectId !== registration.subjectId ||
@@ -213,12 +233,13 @@ function current(activity: LifeActivity, registration: Registration) {
     );
   const usage = validated(() => decodeCognitionUsage(registration.usage));
   if (
-    !usage.audience?.conversationRef ||
-    !activity.scope.conversations.some(
-      (scope) =>
-        scope.conversationRef === usage.audience!.conversationRef &&
-        scope.operations.includes("observe"),
-    )
+    (!usage.audience?.conversationRef && usage.audience?.visibility !== "internal") ||
+    (usage.audience?.conversationRef &&
+      !activity.scope.conversations.some(
+        (scope) =>
+          scope.conversationRef === usage.audience!.conversationRef &&
+          scope.operations.includes("observe"),
+      ))
   )
     deny(
       "native_audience_denied",
@@ -297,6 +318,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
     !!handoff &&
     input.native.parentSessionKey === handoff.request.parentSessionKey &&
     input.native.sessionId === handoff.request.childSessionId &&
+    input.native.agentId === handoff.request.childNativeAgentId &&
     input.nousSessionId === handoff.request.childNousSessionId;
   const delegatedRegistration = (
     source: Registration,
@@ -304,9 +326,16 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
   ): Registration => ({
     ...source,
     sessionKey: input.native.sessionKey,
+    nativeAgentId: input.native.agentId,
     nativeRunId: input.native.runId,
     promptDigest: input.promptDigest,
     role: "worker",
+    roleScope: {
+      role: "subject.execution",
+      purpose: "professional_execution",
+      view: "worker",
+      contactNature: "execution_only",
+    },
     messageRefs: [],
     contacts: [],
   });
@@ -348,15 +377,26 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
     await checkInput(registration);
     return registration;
   };
-  const readRun = async (runId: string): Promise<NativeRunSnapshot | undefined> => {
-    const rows = await readRepositorySql<{
-      state: string;
-      document: Omit<NativeRunSnapshot, "state">;
-    }>(
-      options.persistence,
-      "SELECT state,document FROM heptalogos.life_native_run WHERE run_id=$1",
-      [runId],
-    );
+  const readRun = async (
+    runId: string,
+    transaction?: PersistenceInternalTransaction,
+  ): Promise<NativeRunSnapshot | undefined> => {
+    const statement =
+      "SELECT state,document FROM heptalogos.life_native_run WHERE run_id=$1";
+    const rows = transaction
+      ? await sql<{ state: string; document: Omit<NativeRunSnapshot, "state"> }>(
+          transaction,
+          statement,
+          [runId],
+        )
+      : await readRepositorySql<{
+          state: string;
+          document: Omit<NativeRunSnapshot, "state">;
+        }>(
+          options.persistence,
+          "SELECT state,document FROM heptalogos.life_native_run WHERE run_id=$1",
+          [runId],
+        );
     return rows[0] ? { ...rows[0].document, state: rows[0].state } : undefined;
   };
   const service: GatewayCognitionBridge & {
@@ -386,6 +426,8 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         code?: string;
       },
     ): Promise<ActivityDispatchResult>;
+    /** Trusted Host reads execution output; this operation creates no Subject contact. */
+    readRoleResults(subjectId: string, runId: string): Promise<NativeRoleResults>;
     readRun: typeof readRun;
     recordDeliveryFact(fact: AgencyDeliveryFact): Promise<void>;
     finishRun(
@@ -407,6 +449,35 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         !Array.isArray(input.messageRefs)
       )
         invalid();
+      validated(() => hostRoleScopeSchema.parse(input.roleScope));
+      for (const contact of input.contacts) {
+        if (!contact.contactRef.startsWith("role-result-release:")) continue;
+        const releaseRef = contact.contactRef.slice("role-result-release:".length);
+        validated(() =>
+          hostContactIdentitySchema.shape.contactRequestId.parse(releaseRef),
+        );
+        const releases = await readRepositorySql<{
+          subject_id: string;
+          document: { response: HostResultReleaseResponse };
+        }>(
+          options.persistence,
+          "SELECT subject_id,document FROM heptalogos.role_result_release WHERE request_id=$1",
+          [releaseRef],
+        );
+        const canonical = releases[0];
+        if (
+          !canonical ||
+          canonical.subject_id !== input.subjectId ||
+          canonical.document.response.activityRef !== input.activityId ||
+          !canonical.document.response.contacts.some(
+            (saved) => digest(saved) === digest(contact),
+          )
+        )
+          deny(
+            "native_result_release_changed",
+            "A Subject contact must use the exact canonical release, not replacement result text",
+          );
+      }
       const canonicalUsage = validated(() =>
         encodeCognitionUsage(decodeCognitionUsage(encodeCognitionUsage(usage))),
       );
@@ -443,6 +514,9 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
       };
       await checkInput(registration);
       const selected = await mutate(async (tx) => {
+        await sql(tx, "SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
+          input.subjectId,
+        ]);
         if (dispatch) {
           await sessionLock(tx, `dispatch-native-run:${dispatch.requestId}`);
           const previous = await sql<{ document: StoredInput }>(
@@ -567,6 +641,9 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
       const input = validated(() => hostPrepareRequestSchema.parse(value));
       const preflight = await prepareRegistration(input);
       const prepared = await mutate(async (tx) => {
+        await sql(tx, "SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
+          input.subjectId,
+        ]);
         await sessionLock(tx, input.native.sessionKey);
         const registered = await sql<{ document: StoredInput }>(
           tx,
@@ -682,46 +759,91 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         }
         const usage = validated(() => decodeCognitionUsage(registration.usage));
         usage.agentInstanceId = `${input.native.sessionId}:${input.native.runId}`;
-        if (registration.role === "worker") usage.purpose = "worker";
+        usage.purpose = roleScope(registration).purpose;
+        usage.role = roleScope(registration).role;
+        usage.view = roleScope(registration).view;
+        usage.contactNature = roleScope(registration).contactNature;
+        // Worker results enter this scope only through an explicit bounded
+        // release contact. Terminal completion never imports child transcript.
+        const scopedUsage = usage;
+
         const at = options.now();
+        const users = input.historyUsers ?? [];
+        const history = users.length
+          ? await sql<{ run_id: string; prompt_digest: string }>(
+              tx,
+              `SELECT r.run_id,r.prompt_digest FROM heptalogos.life_native_run r WHERE r.subject_id=$1 AND r.activity_id=$2 AND r.session_key=$3 AND r.document#>>'{native,sessionId}'=$4 AND r.run_id=ANY($5::text[]) AND EXISTS(SELECT 1 FROM heptalogos.life_native_contact c WHERE c.run_id=r.run_id AND c.document ? 'admitted')`,
+              [
+                input.subjectId,
+                activity.activityId,
+                input.native.sessionKey,
+                input.native.sessionId,
+                users.map((user) => user.nativeRunId),
+              ],
+            )
+          : [];
+        const allowedHistoryUserKeys = users
+          .filter(
+            (user) =>
+              user.key === `${user.nativeRunId}:user` &&
+              (user.nativeRunId === input.native.runId
+                ? user.promptDigest === registration.promptDigest
+                : history.some(
+                    (row) =>
+                      row.run_id === user.nativeRunId &&
+                      row.prompt_digest === user.promptDigest,
+                  )),
+          )
+          .map((user) => user.key);
         const response: HostPrepareResponse = {
           version: 1,
           contactRequestId: input.contactRequestId,
           workContextId: activity.workContextId,
-          allowedToolNames: [...activity.scope!.tools],
-          usage: encodeCognitionUsage(usage),
+          roleScope: roleScope(registration),
+          allowedToolNames: ["subject.render", "narrative.review"].includes(
+            roleScope(registration).role,
+          )
+            ? []
+            : activity.scope!.tools.filter(
+                (name) => !["message", "sessions_send", "cron"].includes(name),
+              ),
+          allowedHistoryUserKeys,
+          currentSources: [],
+          usage: encodeCognitionUsage(scopedUsage),
           scope: {
             activityRef: registration.activityId,
             actorEntityRef: registration.actorEntityRef,
             context: { native_role: registration.role },
           },
           contacts:
-            registered[0]?.document.firstContact?.contacts ??
-            registration.contacts.map((contact) => {
-              const observation = validated(() =>
-                decodeObservationInput(contact.observation),
-              );
-              if (
-                observation.sessionId &&
-                observation.sessionId !== input.nousSessionId
-              )
-                deny(
-                  "native_session_changed",
-                  "A registered observation cannot be moved to another Nous Session",
-                );
-              observation.sessionId = input.nousSessionId;
-              observation.observedAt = timestampFromDate(new Date(at));
-              return {
-                contactRef: contact.contactRef,
-                observation: encodeObservationInput(
-                  withHostObservationScope(observation, {
-                    usage,
-                    contactRequestId: input.contactRequestId,
-                    activityRef: registration.activityId,
-                  }),
-                ),
-              };
-            }),
+            roleScope(registration).contactNature === "execution_only"
+              ? []
+              : (registered[0]?.document.firstContact?.contacts ??
+                registration.contacts.map((contact) => {
+                  const observation = validated(() =>
+                    decodeObservationInput(contact.observation),
+                  );
+                  if (
+                    observation.sessionId &&
+                    observation.sessionId !== input.nousSessionId
+                  )
+                    deny(
+                      "native_session_changed",
+                      "A registered observation cannot be moved to another Nous Session",
+                    );
+                  observation.sessionId = input.nousSessionId;
+                  observation.observedAt = timestampFromDate(new Date(at));
+                  return {
+                    contactRef: contact.contactRef,
+                    observation: encodeObservationInput(
+                      withHostObservationScope(observation, {
+                        usage,
+                        contactRequestId: input.contactRequestId,
+                        activityRef: registration.activityId,
+                      }),
+                    ),
+                  };
+                })),
         };
         const firstContact = registered[0]?.document.firstContact;
         if (firstContact && firstContact.nousSessionId !== input.nousSessionId)
@@ -891,6 +1013,247 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         });
       return { version: 1, accepted: true };
     },
+    async releaseResult(value) {
+      const input = validated(() => hostResultReleaseRequestSchema.parse(value));
+      if (new Set(input.resultIds).size !== input.resultIds.length) invalid();
+      const parent = await readRun(input.parentRunId),
+        child = await readRun(input.childRunId);
+      if (
+        !parent ||
+        !child ||
+        parent.registration.subjectId !== input.subjectId ||
+        child.registration.subjectId !== input.subjectId ||
+        child.registration.activityId !== parent.registration.activityId ||
+        !["completed", "failed", "cancelled"].includes(child.state) ||
+        roleScope(child.registration).contactNature !== "execution_only"
+      )
+        deny(
+          "native_result_release_denied",
+          "Release requires an exact terminal execution-only child of this Subject",
+        );
+      await checkInput(parent.registration);
+      return mutate(async (tx) => {
+        await sql(tx, "SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
+          input.subjectId,
+        ]);
+        await sessionLock(tx, parent.native.sessionKey);
+        const activity = await lockedActivity(
+          tx,
+          input.subjectId,
+          parent.registration.activityId,
+        );
+        current(activity, parent.registration);
+        await options.authorizeInput(parent.registration, activity, tx);
+        const links = await sql<{ parent_run_id: string }>(
+          tx,
+          "SELECT parent_run_id FROM heptalogos.life_handoff WHERE child_session_key=$1 FOR SHARE",
+          [child.native.sessionKey],
+        );
+        if (links[0]?.parent_run_id !== input.parentRunId)
+          deny(
+            "native_result_release_denied",
+            "The child belongs to another immutable parent binding",
+          );
+        const existing = await sql<{
+          document: { input: typeof input; response: HostResultReleaseResponse };
+        }>(
+          tx,
+          "SELECT document FROM heptalogos.role_result_release WHERE request_id=$1 FOR UPDATE",
+          [input.requestId],
+        );
+        if (existing[0]) {
+          if (digest(existing[0].document.input) !== digest(input))
+            deny(
+              "native_result_release_changed",
+              "Release identity already selects different results",
+            );
+          return existing[0].document.response;
+        }
+        const results = await sql<{ result_id: string; document: Pending }>(
+          tx,
+          "SELECT result_id,document FROM heptalogos.role_run_result WHERE run_id=$1 AND subject_id=$2 AND result_id=ANY($3::uuid[]) ORDER BY recorded_at,result_id FOR SHARE",
+          [input.childRunId, input.subjectId, input.resultIds],
+        );
+        if (
+          results.length !== input.resultIds.length ||
+          Buffer.byteLength(JSON.stringify(results)) > 1048576
+        )
+          deny(
+            "native_result_release_denied",
+            "Selected results are unavailable or exceed the bounded release budget",
+          );
+        const response: HostResultReleaseResponse = {
+          version: 1,
+          accepted: true,
+          activityRef: activity.activityId,
+          contactNature: "subject_experience",
+          contacts: [
+            {
+              contactRef: `role-result-release:${input.requestId}`,
+              observation: encodeObservationInput({
+                subjectId: input.subjectId,
+                requestId: input.requestId,
+                sourceClass: "host_event",
+                externalObjectRef: `object:heptalogos:role-result:${input.childRunId}:${digest([...input.resultIds].sort())}`,
+                observedAt: timestampFromDate(new Date(options.now())),
+                material: {
+                  case: "inlineText",
+                  value: {
+                    mediaType: "application/json",
+                    text: JSON.stringify({
+                      outcome: child.state,
+                      results: results.map((row) => ({
+                        resultId: row.result_id,
+                        observation: row.document.observation,
+                      })),
+                    }),
+                  },
+                },
+                admit: true,
+                actorEntityRef: parent.registration.actorEntityRef,
+                context: {
+                  contact_nature: "subject_experience",
+                  source_nature: "execution_result_release",
+                  parent_run_id: input.parentRunId,
+                  child_run_id: input.childRunId,
+                  release_ref: input.requestId,
+                  result_ids: input.resultIds,
+                },
+              }),
+            },
+          ],
+          opportunity: {
+            kind: "activity_result",
+            parentRunId: input.parentRunId,
+            childRunId: input.childRunId,
+            releaseRef: input.requestId,
+          },
+        };
+        await sql(
+          tx,
+          "INSERT INTO heptalogos.role_result_release(request_id,subject_id,child_run_id,document,recorded_at) VALUES($1,$2,$3,$4::jsonb,$5)",
+          [
+            input.requestId,
+            input.subjectId,
+            input.childRunId,
+            JSON.stringify({ input, response }),
+            options.now(),
+          ],
+        );
+        return response;
+      });
+    },
+    async completion(value: HostCompletionRequest) {
+      const input = validated(() => hostCompletionRequestSchema.parse(value));
+      const handoffs = await readRepositorySql<{ document: Handoff }>(
+        options.persistence,
+        "SELECT document FROM heptalogos.life_handoff WHERE child_session_key=$1",
+        [input.childSessionKey],
+      );
+      const prior = handoffs[0]?.document;
+      if (
+        !prior ||
+        prior.request.subjectId !== input.subjectId ||
+        prior.request.parentSessionKey !== input.parentSessionKey ||
+        (input.parentSessionId &&
+          prior.request.parentSessionId !== input.parentSessionId) ||
+        (input.parentNousSessionId &&
+          prior.request.parentNousSessionId !== input.parentNousSessionId) ||
+        prior.request.childSessionId !== input.childSessionId ||
+        prior.request.childNousSessionId !== input.childNousSessionId ||
+        (input.parentRunId && prior.request.parentRunId !== input.parentRunId)
+      )
+        deny(
+          "native_completion_changed",
+          "The actual completion does not match its exact durable isolated handoff",
+        );
+      const parentRunId = prior.request.parentRunId;
+      const parent = await readRun(parentRunId),
+        child = await readRun(input.childRunId);
+      if (
+        !parent ||
+        !child ||
+        child.registration.role !== "worker" ||
+        parent.registration.subjectId !== input.subjectId ||
+        child.registration.subjectId !== input.subjectId ||
+        child.registration.activityId !== parent.registration.activityId ||
+        child.native.sessionKey !== input.childSessionKey ||
+        child.native.sessionId !== input.childSessionId ||
+        child.nousSessionId !== input.childNousSessionId ||
+        parent.native.sessionKey !== input.parentSessionKey ||
+        (input.parentSessionId && parent.native.sessionId !== input.parentSessionId) ||
+        (input.parentNousSessionId &&
+          parent.nousSessionId !== input.parentNousSessionId)
+      )
+        deny(
+          "native_completion_changed",
+          "The exact parent and actual worker invocation are unavailable",
+        );
+      return mutate(async (tx) => {
+        await sessionLock(tx, input.parentSessionKey);
+        const locked = await sql<{
+          run_id: string;
+          state: string;
+          document: NativeRunSnapshot;
+        }>(
+          tx,
+          "SELECT run_id,state,document FROM heptalogos.life_native_run WHERE run_id=ANY($1::text[]) ORDER BY run_id FOR UPDATE",
+          [[parentRunId, input.childRunId]],
+        );
+        const p = locked.find((row) => row.run_id === parentRunId),
+          c = locked.find((row) => row.run_id === input.childRunId);
+        if (
+          !p ||
+          !c ||
+          digest(p.document.registration) !== digest(parent.registration) ||
+          digest(c.document.native) !== digest(child.native) ||
+          (c.state !== "running" && c.state !== input.outcome)
+        )
+          deny(
+            "native_completion_changed",
+            "The actual completion changed during external checks",
+          );
+        const links = await sql<{ document: Handoff }>(
+          tx,
+          "SELECT document FROM heptalogos.life_handoff WHERE child_session_key=$1 FOR SHARE",
+          [input.childSessionKey],
+        );
+        if (!links[0] || digest(links[0].document) !== digest(prior))
+          deny("native_completion_changed", "The isolated handoff changed");
+        const terminal = {
+          ...input,
+          recover: undefined,
+          parentRunId,
+        };
+        const priorTerminal = (
+          c.document as NativeRunSnapshot & { terminalCompletion?: unknown }
+        ).terminalCompletion;
+        if (priorTerminal && digest(priorTerminal) !== digest(terminal))
+          deny(
+            "native_completion_changed",
+            "The original terminal outcome and endedAt cannot be overwritten",
+          );
+        await sql(
+          tx,
+          "UPDATE heptalogos.life_native_run SET state=$2,updated_at=$3,document=document||jsonb_build_object('terminalCompletion',$4::jsonb) WHERE run_id=$1",
+          [input.childRunId, input.outcome, options.now(), JSON.stringify(terminal)],
+        );
+        const retained = await sql<{ result_id: string }>(
+          tx,
+          "SELECT result_id FROM heptalogos.role_run_result WHERE run_id=$1 ORDER BY recorded_at DESC,result_id LIMIT 65",
+          [input.childRunId],
+        );
+        return {
+          version: 1 as const,
+          accepted: true as const,
+          activityRef: parent.registration.activityId,
+          parentRunId,
+          resultIds: retained.slice(0, 64).map((row) => row.result_id),
+          resultsOmitted: retained.length > 64,
+          resultRetained: true as const,
+        };
+      });
+    },
     async life(value: NativeLifeRequest) {
       const parsed = compileSchema<NativeLifeRequest>(nativeLifeRequestSchema).validate(
         value,
@@ -953,6 +1316,14 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           deny(
             "native_life_unavailable",
             "Life requires the actual admitted controlled invocation",
+          );
+        if (
+          input.request.action === "progress" &&
+          run.document.registration.role !== "main"
+        )
+          deny(
+            "native_life_role_denied",
+            "A worker may inspect but cannot change the parent Activity",
           );
         // Only real committed feedback can support progress; the note remains a Subject statement.
         const feedback = await sql<{
@@ -1138,6 +1509,13 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
               ref.startsWith("message:"),
             ),
             role: "worker",
+            nativeAgentId: input.childNativeAgentId,
+            roleScope: {
+              role: "subject.execution",
+              purpose: "professional_execution",
+              view: "worker",
+              contactNature: "execution_only",
+            },
             contacts: [],
             messageRefs: [],
           },
@@ -1201,6 +1579,46 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
               contactRequestId: input.contactRequestId,
             }),
           );
+          if (contact.response.roleScope.contactNature === "execution_only") {
+            const document: Pending = {
+              identity: identity(input),
+              observation: normalized,
+              factsDigest: actualFeedback(normalized),
+            };
+            const saved = await sql<{ document: Pending }>(
+              tx,
+              "SELECT document FROM heptalogos.role_run_result WHERE result_id=$1 FOR UPDATE",
+              [observation.requestId],
+            );
+            if (
+              saved[0] &&
+              (digest(saved[0].document.identity) !== digest(document.identity) ||
+                saved[0].document.factsDigest !== document.factsDigest)
+            )
+              deny(
+                "native_feedback_changed",
+                "A retained RoleRun result cannot change identity or actual content",
+              );
+            if (!saved[0])
+              await sql(
+                tx,
+                "INSERT INTO heptalogos.role_run_result(result_id,subject_id,run_id,document,recorded_at) VALUES($1,$2,$3,$4::jsonb,$5)",
+                [
+                  observation.requestId,
+                  input.subjectId,
+                  input.native.runId,
+                  JSON.stringify(document),
+                  options.now(),
+                ],
+              );
+            return {
+              version: 1,
+              stage: "pending",
+              accepted: true,
+              retainedOnly: true,
+              observation: saved[0]?.document.observation ?? normalized,
+            };
+          }
           const rows = await sql<{ document: Pending }>(
             tx,
             "SELECT document FROM heptalogos.cognition_pending_feedback WHERE request_id=$1 FOR UPDATE",
@@ -1220,6 +1638,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
               stage: "pending",
               accepted: true,
               observation: rows[0].document.observation,
+              retainedOnly: false,
             };
           }
           const document: Pending = {
@@ -1227,6 +1646,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
             observation: normalized,
             factsDigest: actualFeedback(normalized),
           };
+          const retainedOnly = false;
           await sql(
             tx,
             "INSERT INTO heptalogos.cognition_pending_feedback(request_id,subject_id,run_id,document,recorded_at) VALUES($1,$2,$3,$4::jsonb,$5)",
@@ -1243,8 +1663,14 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
             stage: "pending",
             accepted: true,
             observation: normalized,
+            retainedOnly,
           };
         }
+        if (contact.response.roleScope.contactNature === "execution_only")
+          deny(
+            "native_execution_result_only",
+            "An execution-only RoleRun result cannot become a Subject observation receipt",
+          );
         const receipt = validated(() =>
           encodeAcceptedObservation(decodeAcceptedObservation(input.receipt)),
         );
@@ -1272,6 +1698,37 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         );
         return { version: 1, stage: "committed", accepted: true };
       });
+    },
+    async readRoleResults(subjectId, runId) {
+      const run = await readRun(runId);
+      if (
+        !run ||
+        run.registration.subjectId !== subjectId ||
+        roleScope(run.registration).contactNature !== "execution_only"
+      )
+        deny(
+          "native_role_result_denied",
+          "Execution results require their exact Subject and RoleRun",
+        );
+      const rows = await readRepositorySql<{ result_id: string; document: Pending }>(
+        options.persistence,
+        "SELECT result_id,document FROM heptalogos.role_run_result WHERE subject_id=$1 AND run_id=$2 ORDER BY recorded_at DESC,result_id LIMIT 65",
+        [subjectId, runId],
+      );
+      const selected = rows.slice(0, 64);
+      if (Buffer.byteLength(JSON.stringify(selected)) > 1048576)
+        deny(
+          "native_role_result_budget",
+          "Retained execution output exceeds the 1 MiB Host read budget",
+        );
+      return {
+        run,
+        results: selected.map((row) => ({
+          resultId: row.result_id,
+          observation: row.document.observation,
+        })),
+        omitted: rows.length > 64,
+      };
     },
     readRun,
     async recordDeliveryFact(fact) {

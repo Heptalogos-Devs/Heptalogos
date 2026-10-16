@@ -22,6 +22,10 @@ import {
   type HostFeedbackResponse,
   type HostToolExecutionRequest,
   type HostToolExecutionResponse,
+  type HostCompletionRequest,
+  type HostCompletionResponse,
+  type HostResultReleaseRequest,
+  type HostResultReleaseResponse,
 } from "@nous-wave/client/host-bridge";
 import { managementProblem, managementProblemSchema } from "@heptalogos/management";
 import { tokenFromRequest } from "./http-auth.js";
@@ -51,6 +55,10 @@ const ack = Type.Object(
 const empty = Type.Object({}, { additionalProperties: false });
 /** Managed cognition uses the official Client's public wire, with no parallel observation DTO. */
 export interface GatewayCognitionBridge {
+  /** Required terminal/completion admission from the actual native durable child owner. */
+  completion(input: HostCompletionRequest): Promise<HostCompletionResponse>;
+  /** Selects bounded retained results for a new Subject contact; no model text replacement. */
+  releaseResult(input: HostResultReleaseRequest): Promise<HostResultReleaseResponse>;
   /** Native-context-bound Life inspect/progress; never a management getter. */
   life(input: NativeLifeRequest): Promise<NativeLifeResponse>;
   /** Admits actual Host-selected material to one native invocation. */
@@ -562,6 +570,22 @@ export function registerGatewayHttp(
     nativeLifeRequestSchema,
     nativeLifeResponseSchema,
     (v) => owners().cognition.life(v),
+    true,
+  );
+  endpoint(
+    "releaseNativeResult",
+    HOST_BRIDGE_PATHS.releaseResult,
+    wire.resultReleaseRequest as TSchema,
+    wire.resultReleaseResponse as TSchema,
+    (v) => owners().cognition.releaseResult(v as HostResultReleaseRequest),
+    true,
+  );
+  endpoint(
+    "completeNativeChild",
+    HOST_BRIDGE_PATHS.completion,
+    wire.completionRequest as TSchema,
+    wire.completionResponse as TSchema,
+    (v) => owners().cognition.completion(v as HostCompletionRequest),
     true,
   );
   endpoint(

@@ -24,7 +24,7 @@ const nativeLifeActionSchema = Type.Union([
 /** These fields are constructed only by the actual plugin factory/execute context. */
 export const nativeLifeRequestSchema = Type.Object(
   {
-    nativeRunId: activitySchema.properties.activityId,
+    nativeRunId: text,
     activityRef: activitySchema.properties.activityId,
     nativeAgentId: text,
     sessionKey: text,

@@ -33,7 +33,7 @@
     "@heptalogos/persistence": "workspace:*",
     "@heptalogos/schema-runtime": "workspace:*",
     "@heptalogos/time-service": "workspace:*",
-    "@nous-wave/client": "file:../../../../Nous-Wave/data/releases/client/nous-wave-client-0.1.0-85c34a742d44fe0c.tgz",
+    "@nous-wave/client": "file:../../../../Nous-Wave/data/releases/client/nous-wave-client-0.1.0-e1d1cd14934a42f2.tgz",
     "fastify": "catalog:",
     "write-file-atomic": "catalog:",
     "@heptalogos/subject": "workspace:*",

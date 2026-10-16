@@ -21,10 +21,11 @@ export function hasAuthorizedNativeSources(
   const usage = decodeCognitionUsage(registration.usage);
   const target = usage.audience?.conversationRef;
   if (
-    !target ||
-    !scope.conversations.some(
-      (c) => c.conversationRef === target && c.operations.includes("observe"),
-    )
+    (!target && usage.audience?.visibility !== "internal") ||
+    (target &&
+      !scope.conversations.some(
+        (c) => c.conversationRef === target && c.operations.includes("observe"),
+      ))
   )
     return false;
   const selected = new Set(registration.messageRefs);
@@ -34,6 +35,32 @@ export function hasAuthorizedNativeSources(
     const ref = contact.contactRef;
     if (seen.has(ref)) return false;
     const observation = decodeObservationInput(contact.observation);
+    if (ref.startsWith("role-result-release:")) {
+      if (
+        observation.subjectId !== registration.subjectId ||
+        observation.sourceClass !== "host_event" ||
+        !observation.externalObjectRef?.startsWith(
+          "object:heptalogos:role-result:" +
+            String(observation.context?.child_run_id) +
+            ":",
+        ) ||
+        observation.requestId !== ref.slice("role-result-release:".length) ||
+        observation.context?.source_nature !== "execution_result_release"
+      )
+        return false;
+      seen.add(ref);
+      continue;
+    }
+    // World contacts are minted by the trusted WorldLife owner, never model arguments.
+    if (ref.startsWith("world-event:")) {
+      if (
+        observation.subjectId !== registration.subjectId ||
+        observation.sourceClass !== "host_event"
+      )
+        return false;
+      seen.add(ref);
+      continue;
+    }
     if (
       observation.subjectId !== registration.subjectId ||
       observation.externalObjectRef !== "object:heptalogos:" + ref ||
@@ -68,7 +95,9 @@ export function hasAuthorizedNativeSources(
     registration.sourceRefs.every((ref) =>
       ref.startsWith("message:")
         ? (selected.has(ref.slice(8)) && seen.has(ref)) || inherited.has(ref)
-        : scope.sourceRefs.includes(ref),
+        : scope.sourceRefs.includes(ref) ||
+          ((ref.startsWith("world-event:") || ref.startsWith("role-result-release:")) &&
+            seen.has(ref)),
     ) &&
     [...selected].every(
       (ref) =>
