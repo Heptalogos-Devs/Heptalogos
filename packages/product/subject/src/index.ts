@@ -19,3 +19,6 @@ export { createAgencyService } from "./agency.js";
 
 export * from "./pursuit-contracts.js";
 export { createPursuitService } from "./pursuit.js";
+
+export * from "./world-contracts.js";
+export { createWorldLifeService, lockSubjectNarrative } from "./world-life.js";

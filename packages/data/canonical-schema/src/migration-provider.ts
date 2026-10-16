@@ -20,6 +20,8 @@ import { nativeDispatchMigration } from "./migrations/0006-native-dispatch.js";
 
 import { pursuitMigration } from "./migrations/0007-pursuit.js";
 
+import { worldLifeMigration } from "./migrations/0008-world-life.js";
+
 const migrations: Readonly<Record<string, Migration>> = Object.freeze({
   "0001_foundation_baseline": foundationBaselineMigration,
   "0002_product_gateway_prerequisites": productGatewayPrerequisitesMigration,
@@ -28,6 +30,7 @@ const migrations: Readonly<Record<string, Migration>> = Object.freeze({
   "0005_life_agency": lifeAgencyMigration,
   "0006_native_dispatch": nativeDispatchMigration,
   "0007_pursuit": pursuitMigration,
+  "0008_world_life": worldLifeMigration,
 });
 
 /** Provides the current canonical migration set to Kysely's Migrator. */
@@ -46,4 +49,5 @@ export const canonicalMigrationNames = Object.freeze([
   "0005_life_agency",
   "0006_native_dispatch",
   "0007_pursuit",
+  "0008_world_life",
 ] as const);
