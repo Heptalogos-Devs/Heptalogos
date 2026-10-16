@@ -11,13 +11,16 @@ import type {
   createNarrativeService,
   createLifeService,
 } from "@heptalogos/subject";
-import { decodeCognitionUsage } from "@nous-wave/client/host-bridge";
+import {
+  decodeCognitionUsage,
+  type ObservationInput,
+} from "@nous-wave/client/host-bridge";
 import type { RoleInvocation } from "./subject-roles.js";
 /** Captures the public current stamp for one actual contact, never a virtual event's historical perception. */
 export async function readActualSubjectStamp(
   nous: () => Promise<Pick<NousClient, "clocks">>,
   subjectId: string,
-) {
+): Promise<NonNullable<ObservationInput["observedStamp"]>> {
   const clock = await (
     await nous()
   ).clocks.readClock({ subjectId }, { timeoutMs: 5000 });
