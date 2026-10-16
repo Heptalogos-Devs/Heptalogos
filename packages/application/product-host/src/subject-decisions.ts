@@ -310,6 +310,7 @@ export function createSubjectDecisionHandler(options: {
           role: "subject.execution",
           deadlineAt: input.run.deadlineAt,
           taskTools: decision.delegation.tools,
+          adoptedDecisionRef: adopted.decisionRef,
           context: {
             adoptedDecisionRef: adopted.decisionRef,
             task: decision.delegation.goal,

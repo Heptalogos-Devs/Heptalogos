@@ -9,6 +9,7 @@ import {
   createLifeService,
   createAgencyService,
   createWorldLifeService,
+  createDeliberationService,
 } from "@heptalogos/subject";
 import { createEvidenceService } from "@heptalogos/evidence";
 import { createConfigurationService } from "../../../packages/system/configuration/dist/index.js";
@@ -18,6 +19,8 @@ import {
 } from "../../../packages/system/management/dist/index.js";
 import type { PersistenceInternalTransaction } from "@heptalogos/persistence/repository";
 import { hasAuthorizedNativeSources } from "../../../packages/application/product-host/dist/native-source-selection.js";
+import { createSubjectRoles } from "../../../packages/application/product-host/dist/subject-roles.js";
+import { authorizeAdoptedTaskSources } from "../../../packages/application/product-host/dist/adopted-task-sources.js";
 import { createNativeCognitionBridge } from "../../../packages/application/product-host/dist/native-cognition.js";
 import {
   qualifiedPgBin,
@@ -243,7 +246,15 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
         );
         if (tx) txChecks++;
       };
+      let adoptedTaskDecisions: ReturnType<typeof createDeliberationService>;
       const native = createNativeCognitionBridge({
+        authorizeAdoptedTaskSources: (registration, parent, tx) =>
+          authorizeAdoptedTaskSources(
+            { decisions: adoptedTaskDecisions, life, worlds },
+            registration,
+            parent,
+            tx,
+          ),
         persistence: c.persistence,
         life,
         now,
@@ -375,6 +386,316 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
         action: "send",
       });
       expect(txChecks).toBeGreaterThanOrEqual(3);
+      // The real RoleInvoker must pass the decoded protobuf into the existing
+      // Native owner; a wire worldTime string used to fail before any provider.
+      const eventId = randomUUID(),
+        roleRequestId = randomUUID();
+      const interval = {
+        timeDomainRef: domain,
+        start: new Date(Date.parse(worldNow) - 60000).toISOString(),
+        end: worldNow,
+      };
+      await c.run(() =>
+        worlds.realize({
+          operationId: randomUUID(),
+          subjectId,
+          worldId,
+          expectedRevision: 1,
+          interval,
+          coverage: "complete",
+          events: [
+            {
+              eventId,
+              interval,
+              title: "Previously perceived scene",
+              content: "Canonical source for a bounded task",
+              actorRefs: [actor],
+              placeRef: "room",
+              scheduleId: null,
+              parentEventId: null,
+              causalEventRefs: [],
+              overlap: "concurrent",
+              source: {
+                kind: "rule",
+                producerRef: "fixture:task-world",
+                sourceRefs: [],
+              },
+              perceptions: [
+                {
+                  actorRef: actor,
+                  kind: "seen",
+                  at: { timeDomainRef: domain, at: worldNow },
+                  content: "A task-relevant world event",
+                },
+              ],
+            },
+          ],
+        }),
+      );
+      const worldEvent = (await worlds.pendingContacts(subjectId, worldId))[0]!;
+      const eventRef = worldEvent.sourceRef;
+      const worldContact = {
+        contactRef: eventRef,
+        observation: sdk.encodeObservationInput({
+          subjectId,
+          requestId: randomUUID(),
+          sourceClass: "world_realized",
+          externalObjectRef: "object:heptalogos:" + eventRef,
+          actorEntityRef: actor,
+          observedAt: sdk.timestampFromDate(new Date()),
+          occurredTime: {
+            timeDomainRef: domain,
+            extent: {
+              value: {
+                case: "interval",
+                value: {
+                  start: sdk.timestampFromDate(new Date(interval.start)),
+                  end: sdk.timestampFromDate(new Date(interval.end)),
+                },
+              },
+            },
+          },
+          worldRealized: {
+            worldId,
+            eventId,
+            eventRevision: String(worldEvent.eventRevision),
+            producerRef: worldEvent.source.producerRef,
+            generationMethod: worldEvent.source.kind,
+            realizedAt: sdk.timestampFromDate(new Date(worldEvent.recordedAt)),
+            worldObserved: {
+              timeDomainRef: domain,
+              at: sdk.timestampFromDate(new Date(worldNow)),
+              recordedAt: sdk.timestampFromDate(new Date()),
+            },
+            sharedOriginRefs: [worldEvent.source.producerRef],
+          },
+          material: {
+            case: "inlineText",
+            value: {
+              text: worldEvent.perceptions[0]!.content,
+              mediaType: "text/plain",
+            },
+          },
+        }),
+      };
+      await c.run(() =>
+        worlds.selectContact({ subjectId, worldId, eventId, runId: roleRequestId }),
+      );
+      const roles = createSubjectRoles({
+        life,
+        native,
+        bindings: async () => [
+          {
+            role: "subject.deliberation",
+            nativeAgentRef: "main",
+            enabled: true,
+            outputContract: "structured_json",
+            deadlineMs: 60000,
+            inputTokens: 4096,
+            outputTokens: 512,
+            allowedTools: [],
+            fallbackAgentRefs: [],
+          },
+        ],
+        selectAgent: async () => "main",
+        authorize: async () => authorityReads(),
+        dispatch: async (params) => {
+          const pending = (await native.readDispatch(
+            subjectId,
+            params.idempotencyKey,
+          ))!;
+          const input = {
+            version: 1 as const,
+            subjectId,
+            nousSessionId: randomUUID(),
+            contactRequestId: randomUUID(),
+            invocationId: "actual-role-fixture",
+            promptDigest: pending.promptDigest,
+            native: {
+              sessionKey: params.sessionKey,
+              sessionId: randomUUID(),
+              runId: params.idempotencyKey,
+              agentId: "main",
+              historyGeneration: randomUUID(),
+            },
+          };
+          const prepared = await native.prepare(input);
+          const occurrences = prepared.contacts.map((entry) => ({
+            contactRef: entry.contactRef,
+            receipt: sdk.encodeAcceptedObservation({ occurrenceId: randomUUID() }),
+          }));
+          await native.admitted({
+            ...sdk.hostContactIdentitySchema.strip().parse(input),
+            occurrences,
+            projection: sdk.encodeProjection({
+              projectionId: randomUUID(),
+              consumerId: "consumer:world-role-fixture",
+              subjectId,
+              sessionId: input.nousSessionId,
+              usage: sdk.withAcceptedContactRoots(
+                sdk.decodeCognitionUsage(prepared.usage),
+                subjectId,
+                occurrences.map((item) => sdk.decodeAcceptedObservation(item.receipt)),
+              ),
+            }),
+          });
+          return {
+            status: "terminal",
+            result: {
+              status: "ok",
+              result: {
+                payloads: [
+                  {
+                    text: JSON.stringify({
+                      action: "observe",
+                      reason: "Actual registered RoleInvoker fixture",
+                    }),
+                  },
+                ],
+              },
+            },
+          };
+        },
+      });
+      const invoked = await c.run(() =>
+        roles.invoke({
+          requestId: roleRequestId,
+          subjectId,
+          activityId: activity.activityId,
+          role: "subject.deliberation",
+          context: { worldSource: eventRef },
+          contacts: [worldContact],
+          sourceRefs: [eventRef],
+          usage: sdk.encodeCognitionUsage({
+            purpose: "subject_deliberation",
+            audience: {
+              visibility: "group",
+              conversationRef: scope.conversations[0]!.conversationRef,
+            },
+            worldId,
+            worldTime: {
+              timeDomainRef: domain,
+              at: sdk.timestampFromDate(new Date(worldNow)),
+              recordedAt: sdk.timestampFromDate(new Date()),
+            },
+            sourceRead: { subjectId, sourceRefs: [] },
+          }),
+        }),
+      );
+      expect(invoked.admitted).toBe(true);
+      const actualContext = await native.readAppliedContext(roleRequestId);
+      expect(actualContext.occurrences).toHaveLength(1);
+      expect(
+        sdk.decodeCognitionUsage(actualContext.usage).worldTime?.timeDomainRef,
+      ).toBe(domain);
+      await c.run(() =>
+        worlds.acknowledgeContact({
+          subjectId,
+          worldId,
+          eventId,
+          runId: roleRequestId,
+          contactRef: actualContext.occurrences[0]!.contactRef,
+        }),
+      );
+      expect(await worlds.releasedEventIds(subjectId, worldId, [eventId])).toEqual([
+        eventId,
+      ]);
+      // The source parent did not contain this old event; only an exact actual
+      // adopted task plus the canonical released world owner may add it.
+      adoptedTaskDecisions = createDeliberationService({
+        persistence: c.persistence,
+        life,
+        now,
+        worldNow: life.worldNow,
+        validateSourceRun: async (input) => {
+          expect((await native.readRun(input.sourceRunId))?.consumerId).toBeTruthy();
+          return { sourceRefs: [eventRef], tools: [] };
+        },
+        assertSourceRunIn: async (tx, input) => {
+          expect(
+            (await native.readRun(input.sourceRunId, tx))?.consumerId,
+          ).toBeTruthy();
+        },
+      });
+      const beforeDecision = (await life.get(subjectId, activity.activityId))!;
+      const selectedTask = await c.run(() =>
+        adoptedTaskDecisions.adopt({
+          operationId: randomUUID(),
+          subjectId,
+          activityId: activity.activityId,
+          sourceRunId: runId,
+          expectedActivityRevision: beforeDecision.revision,
+          decision: {
+            action: "delegate",
+            reason: "Use an actually released old scene",
+            delegation: {
+              goal: "Inspect this scene",
+              sourceRefs: [eventRef],
+              tools: [],
+            },
+          },
+        }),
+      );
+      const taskRegistration = {
+        subjectId,
+        activityId: activity.activityId,
+        parentRunId: runId,
+        adoptedDecisionRef: selectedTask.decisionRef,
+        sessionKey: "fixture:adopted-task",
+        nativeAgentId: "main",
+        nativeRunId: randomUUID(),
+        prompt: "Inspect the adopted old scene",
+        role: "main" as const,
+        roleScope: {
+          role: "subject.execution" as const,
+          purpose: "professional_execution" as const,
+          view: "worker" as const,
+          contactNature: "execution_only" as const,
+        },
+        tokenBudget: { inputTokens: 4096, outputTokens: 512 },
+        allowedToolNames: [],
+        actorEntityRef: actor,
+        workContextId: activity.workContextId!,
+        usage: sdk.decodeCognitionUsage({
+          purpose: "professional_execution",
+          audience: {
+            visibility: "group",
+            conversationRef: scope.conversations[0]!.conversationRef,
+          },
+          sourceRead: { subjectId, sourceRefs: [] },
+        }),
+        sourceRefs: [eventRef],
+        messageRefs: [],
+        contacts: [],
+      };
+      expect((await native.readRun(runId))!.registration.sourceRefs).not.toContain(
+        eventRef,
+      );
+      await c.run(() => native.registerInput(taskRegistration));
+      await expect(
+        c.run(() =>
+          native.registerInput({
+            ...taskRegistration,
+            nativeRunId: randomUUID(),
+            sessionKey: "fixture:no-decision",
+            adoptedDecisionRef: undefined,
+          }),
+        ),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_parent_sources_denied" },
+      });
+      await expect(
+        c.run(() =>
+          native.registerInput({
+            ...taskRegistration,
+            nativeRunId: randomUUID(),
+            sessionKey: "fixture:wrong-parent",
+            parentRunId: roleRequestId,
+          }),
+        ),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_adopted_task_denied" },
+      });
       // Optional cross-owner proof uses the actual independently started Nous
       // installation, never a model provider or the user's live runtime.
       if (process.env.HEPTALOGOS_TEST_NOUS_RUN_ROOT) {
@@ -413,12 +734,12 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
           end: worldAt,
         };
         const eventId = randomUUID();
-        await c.run(() =>
+        await c.run(async () =>
           worlds.realize({
             operationId: randomUUID(),
             subjectId,
             worldId,
-            expectedRevision: 1,
+            expectedRevision: (await worlds.read(subjectId, worldId))!.revision,
             interval,
             coverage: "complete",
             events: [

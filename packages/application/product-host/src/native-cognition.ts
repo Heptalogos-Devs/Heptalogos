@@ -97,6 +97,8 @@ export interface Registration {
   readonly sourceRefs: readonly string[];
   readonly messageRefs: readonly string[];
   readonly parentRunId?: string;
+  /** Exact immutable Subject choice authorizing this professional task. Host-only. */
+  readonly adoptedDecisionRef?: string;
   /** Owner-derived exact inherited roots; callers cannot grant these fields. */
   readonly inheritedSourceRefs?: readonly string[];
   readonly inheritedMessageSources?: readonly string[];
@@ -149,6 +151,7 @@ export interface NativeAppliedContext {
   readonly invocationId: string;
   readonly roleScope: HostRoleScope;
   readonly projection: HostAdmittedRequest["projection"];
+  readonly occurrences: HostAdmittedRequest["occurrences"];
   readonly usage: HostPrepareResponse["usage"];
 }
 function dispatchResult(
@@ -217,6 +220,12 @@ export interface NativeCognitionOptions {
     parent: NativeRunSnapshot,
     childNativeAgentId: string,
   ) => Promise<{ tokenBudget: HostTokenBudget; allowedToolNames: readonly string[] }>;
+  /** Canonical Decision/World owners authorize exact adopted task sources before and inside registration. */
+  readonly authorizeAdoptedTaskSources?: (
+    registration: Readonly<Registration>,
+    parent: NativeRunSnapshot,
+    transaction?: PersistenceInternalTransaction,
+  ) => Promise<void>;
   /** External cognition/Pursuit checks run before any fenced write transaction. */
   readonly checkInput?: (
     registration: Readonly<Registration>,
@@ -547,14 +556,27 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         (!sourceParent ||
           sourceParent.registration.subjectId !== input.subjectId ||
           sourceParent.registration.activityId !== input.activityId ||
-          !["running", "completed"].includes(sourceParent.state) ||
-          input.sourceRefs.some(
-            (ref) => !sourceParent.registration.sourceRefs.includes(ref),
-          ))
+          !["running", "completed"].includes(sourceParent.state))
       )
         deny(
           "native_parent_sources_denied",
-          "Role inheritance requires the exact same-Subject/Activity parent and a subset of its authorized roots",
+          "Role inheritance requires its exact same-Subject/Activity parent",
+        );
+      const expandedTaskSources =
+        !!sourceParent &&
+        input.sourceRefs.some(
+          (ref) => !sourceParent.registration.sourceRefs.includes(ref),
+        );
+      if (
+        (expandedTaskSources || input.adoptedDecisionRef) &&
+        (!sourceParent ||
+          input.roleScope.role !== "subject.execution" ||
+          !input.adoptedDecisionRef ||
+          !options.authorizeAdoptedTaskSources)
+      )
+        deny(
+          "native_parent_sources_denied",
+          "Additional professional sources require the exact adopted task and canonical owner authorization",
         );
       if (sourceParent) await checkInput(sourceParent.registration);
       if (
@@ -644,6 +666,8 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         usage: canonicalUsage,
         promptDigest: createHash("sha256").update(prompt).digest("hex"),
       };
+      if (registration.adoptedDecisionRef)
+        await options.authorizeAdoptedTaskSources!(registration, sourceParent!);
       await checkInput(registration);
       const selected = await mutate(async (tx) => {
         await sql(tx, "SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
@@ -665,6 +689,8 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
               "native_parent_sources_denied",
               "The exact source parent changed before role registration",
             );
+          if (registration.adoptedDecisionRef)
+            await options.authorizeAdoptedTaskSources!(registration, actualParent, tx);
         }
         if (dispatch) {
           await sessionLock(tx, `dispatch-native-run:${dispatch.requestId}`);
@@ -2187,6 +2213,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         invocationId: contact.request.invocationId,
         roleScope: contact.response.roleScope,
         projection: contact.admitted.projection,
+        occurrences: contact.admitted.occurrences,
         usage: contact.appliedUsage,
       };
     },

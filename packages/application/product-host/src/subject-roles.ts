@@ -17,7 +17,6 @@ import {
   type createLifeService,
 } from "@heptalogos/subject";
 import {
-  encodeCognitionUsage,
   decodeCognitionUsage,
   type HostPrepareResponse,
   type HostRoleScope,
@@ -38,6 +37,7 @@ export interface RoleInvocation {
   readonly subjectId: string;
   readonly activityId: string;
   readonly parentRunId?: string;
+  readonly adoptedDecisionRef?: string;
   readonly role: SubjectRoleBinding["role"];
   readonly context: Readonly<Record<string, unknown>>;
   readonly contacts: HostPrepareResponse["contacts"];
@@ -341,9 +341,12 @@ export function createSubjectRoles(options: {
           },
           allowedToolNames: allowedTools,
           ...(input.parentRunId ? { parentRunId: input.parentRunId } : {}),
+          ...(input.adoptedDecisionRef
+            ? { adoptedDecisionRef: input.adoptedDecisionRef }
+            : {}),
           actorEntityRef: activity.adoptedBy,
           workContextId: activity.workContextId,
-          usage: encodeCognitionUsage(usage),
+          usage,
           sourceRefs: input.sourceRefs,
           messageRefs: [...(input.messageRefs ?? [])],
           contacts: input.contacts,

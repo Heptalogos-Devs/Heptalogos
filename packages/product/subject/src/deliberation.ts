@@ -1,6 +1,9 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Adopts Subject choices in the existing Life owner and Host-fenced short transaction. @module deliberation */
+/**
+ * Adopts Subject choices in the existing Life owner and Host-fenced short transaction.
+ * @module deliberation
+ */
 import {
   createUuidV7Id,
   digestCanonicalJson,
@@ -11,6 +14,7 @@ import {
   executeRepositorySql as sql,
   readRepositorySql,
   useRepositoryMutationTransaction,
+  type PersistenceInternalTransaction,
 } from "@heptalogos/persistence/repository";
 import { activitySchema, type LifeActivity } from "./contracts.js";
 import {
@@ -46,17 +50,23 @@ export function createDeliberationService(options: DeliberationOptions) {
   const read = async (
     subjectId: string,
     decisionRef: string,
+    transaction?: PersistenceInternalTransaction,
   ): Promise<DecisionCommit | undefined> => {
     const match =
       /^subject-decision:([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$/i.exec(
         decisionRef,
       );
     if (!match) return undefined;
-    const rows = await readRepositorySql<{ document: unknown }>(
-      options.persistence,
-      "SELECT document FROM heptalogos.subject_decision WHERE subject_id=$1 AND decision_id=$2",
-      [subjectId, match[1]!],
-    );
+    const statement =
+      "SELECT document FROM heptalogos.subject_decision WHERE subject_id=$1 AND decision_id=$2";
+    const parameters = [subjectId, match[1]!];
+    const rows = transaction
+      ? await sql<{ document: unknown }>(transaction, statement, parameters)
+      : await readRepositorySql<{ document: unknown }>(
+          options.persistence,
+          statement,
+          parameters,
+        );
     return rows[0]
       ? checked<DecisionCommit>(decisionCommitSchema, rows[0].document)
       : undefined;

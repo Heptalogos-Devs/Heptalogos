@@ -33,6 +33,7 @@ import {
 } from "@heptalogos/management";
 import { createArchiveStore } from "./archive-store.js";
 import { createChannelRouteStore } from "./channel-routes.js";
+import { authorizeAdoptedTaskSources } from "./adopted-task-sources.js";
 import { createNativeCognitionBridge } from "./native-cognition.js";
 import { connectProductNous } from "./nous.js";
 import { createActivityOpportunity } from "./activity-opportunity.js";
@@ -347,6 +348,13 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
   });
   let readLife: ReturnType<typeof createBoundLifeReader>;
   const native = createNativeCognitionBridge({
+    authorizeAdoptedTaskSources: (registration, parent, transaction) =>
+      authorizeAdoptedTaskSources(
+        { decisions, life, worlds },
+        registration,
+        parent,
+        transaction,
+      ),
     readLife: (binding, request) => readLife(binding, request),
     captureObservedStamp: (subjectId) =>
       cognitionRead(() => readActualSubjectStamp(nous, subjectId)),
