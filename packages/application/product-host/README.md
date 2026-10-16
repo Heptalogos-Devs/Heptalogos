@@ -55,3 +55,7 @@ Host 默认适配器读取本安装 `installation-services.json` 的 Subject 身
 ## 验证
 
 运行 product-host 构建、聚焦测试、OpenAPI 生成检查，以及安装后的公开 CLI/API。实际安装检查包括认领、登录、配置冲突、管理在依赖离线时可用、正常 stop、重启保持身份与配置、端口释放。QQ、媒体、模型和主体活动必须各自经过真实使用，不能由这些管理检查推定。
+
+Native cognition requires `captureObservedStamp(subjectId)` from the official Subject clock. It captures outside the write transaction and freezes the first actual message, tool/result-release or delivery encounter; retries reuse the stored observation. Realized-world contacts instead retain their typed `worldRealized.worldObserved`, with exact world/event/revision and actor-visible event scope checks.
+
+The single-connection owner integration test can also cross the actual Nous boundary when `HEPTALOGOS_TEST_NOUS_RUN_ROOT` names an independently started temporary official Core installation. It checks canonical WorldLife events, first-contact clock capture, real Observation ingestion and replay after clock advancement; it makes no model or channel call.

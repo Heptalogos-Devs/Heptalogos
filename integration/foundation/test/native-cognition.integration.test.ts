@@ -144,6 +144,14 @@ async function fixture(
     persistence: c.persistence,
     life,
     now,
+    captureObservedStamp: async () => {
+      const at = sdk.timestampFromDate(new Date());
+      return sdk.decodeObservationInput(
+        sdk.encodeObservationInput({
+          observedStamp: { timeDomainRef: "time:real", at, recordedAt: at },
+        }),
+      ).observedStamp!;
+    },
     ...(readLife ? { readLife } : {}),
     resolveChildProviderPolicy: async () => ({
       tokenBudget: { inputTokens: 8192, outputTokens: 2048 },

@@ -214,6 +214,14 @@ real("trusted Activity native input dispatch", () => {
         persistence: c.persistence,
         life,
         now,
+        captureObservedStamp: async () => {
+          const at = sdk.timestampFromDate(new Date());
+          return sdk.decodeObservationInput(
+            sdk.encodeObservationInput({
+              observedStamp: { timeDomainRef: "time:real", at, recordedAt: at },
+            }),
+          ).observedStamp!;
+        },
         authorizeInput: async (registration) => {
           expect(await hasCanonicalNativeMessages(registration, messaging)).toBe(true);
         },

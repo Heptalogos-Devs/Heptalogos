@@ -17,6 +17,7 @@ import {
   productSettingsDefinition,
 } from "../../../packages/system/management/dist/index.js";
 import type { PersistenceInternalTransaction } from "@heptalogos/persistence/repository";
+import { hasAuthorizedNativeSources } from "../../../packages/application/product-host/dist/native-source-selection.js";
 import { createNativeCognitionBridge } from "../../../packages/application/product-host/dist/native-cognition.js";
 import {
   qualifiedPgBin,
@@ -38,6 +39,8 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
     const c = await composeProductPersistence(undefined, 1);
     try {
       const now = () => new Date().toISOString();
+      const domain = "time:owner-world";
+      let worldNow = now();
       const subjectId = randomUUID(),
         worldId = randomUUID();
       const identity = createIdentityService({ persistence: c.persistence });
@@ -80,7 +83,7 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
       const worlds = createWorldLifeService({
         persistence: c.persistence,
         now,
-        worldNow: async () => ({ timeDomainRef: "time:real", at: now() }),
+        worldNow: async () => ({ timeDomainRef: domain, at: worldNow }),
       });
       await c.run(() =>
         worlds.configure({
@@ -91,7 +94,7 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
             worldId,
             revision: 1,
             name: "Owner fixture",
-            timeDomainRef: "time:real",
+            timeDomainRef: domain,
             timezone: "UTC",
             offlinePolicy: "pause_with_host",
             places: [{ placeRef: "room", name: "Room", description: "Owner test" }],
@@ -160,7 +163,7 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
       const life = createLifeService({
         persistence: c.persistence,
         now,
-        worldNow: async () => ({ timeDomainRef: "time:real", at: now() }),
+        worldNow: async () => ({ timeDomainRef: domain, at: worldNow }),
         scopeAuthority: async () => scope,
       });
       let activity = await c.run(() =>
@@ -173,7 +176,7 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
           proposedBy: actor,
           sourceRefs: [],
           workContextId: randomUUID(),
-          world: { timeDomainRef: "time:real", at: now() },
+          world: { timeDomainRef: domain, at: now() },
           nextOpportunity: null,
           interruptOn: ["manual"],
         }),
@@ -244,6 +247,9 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
         persistence: c.persistence,
         life,
         now,
+        captureObservedStamp: async () => {
+          throw new Error("Empty selected contacts must not read the Subject clock");
+        },
         authorizeInput: async (_registration, _activity, tx) => authorityReads(tx),
         recordContact: messaging.recordContact,
         nous: async () => {
@@ -368,6 +374,355 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
         action: "send",
       });
       expect(txChecks).toBeGreaterThanOrEqual(3);
+      // Optional cross-owner proof uses the actual independently started Nous
+      // installation, never a model provider or the user's live runtime.
+      if (process.env.HEPTALOGOS_TEST_NOUS_RUN_ROOT) {
+        const node = await import(
+          new URL(metadata.exports["./node"].import, metadataUrl).href
+        );
+        const client = await node.connectNousInstance({
+          runRoot: process.env.HEPTALOGOS_TEST_NOUS_RUN_ROOT,
+        });
+        await client.subjects.createSubject({
+          subjectId,
+          operationId: randomUUID(),
+          capabilities: {
+            memory: false,
+            selfCognition: false,
+            socialCognition: false,
+            motivation: false,
+          },
+        });
+        await client.clocks.configureClock({
+          subjectId,
+          operationId: randomUUID(),
+          timeDomainRef: domain,
+          rate: 0,
+          worldTime: sdk.timestampFromDate(new Date("2080-01-01T09:00:00.000Z")),
+        });
+        const session = await client.runtime.openSession({ subjectId });
+        const clock = await client.clocks.readClock({ subjectId });
+        const worldAt = new Date(
+          Number(clock.now.at.seconds) * 1000 + clock.now.at.nanos / 1e6,
+        ).toISOString();
+        worldNow = worldAt;
+        const interval = {
+          timeDomainRef: domain,
+          start: new Date(Date.parse(worldAt) - 60000).toISOString(),
+          end: worldAt,
+        };
+        const eventId = randomUUID();
+        await c.run(() =>
+          worlds.realize({
+            operationId: randomUUID(),
+            subjectId,
+            worldId,
+            expectedRevision: 1,
+            interval,
+            coverage: "complete",
+            events: [
+              {
+                eventId,
+                interval,
+                title: "Actual world event",
+                content: "Hidden author details",
+                actorRefs: [actor],
+                placeRef: "room",
+                scheduleId: null,
+                parentEventId: null,
+                causalEventRefs: [],
+                overlap: "exclusive",
+                source: {
+                  kind: "rule",
+                  producerRef: "fixture:world-owner",
+                  sourceRefs: [],
+                },
+                perceptions: [
+                  {
+                    actorRef: actor,
+                    kind: "seen",
+                    at: { timeDomainRef: domain, at: worldAt },
+                    content: "I actually saw the event",
+                  },
+                ],
+              },
+            ],
+          }),
+        );
+        const event = (await worlds.pendingContacts(subjectId, worldId))[0]!;
+        const sourceRef = event.sourceRef;
+        let captures = 0;
+        const stampBridge = createNativeCognitionBridge({
+          persistence: c.persistence,
+          life,
+          now,
+          captureObservedStamp: async () => {
+            captures++;
+            return (await client.clocks.readClock({ subjectId })).now;
+          },
+          authorizeInput: async (registration, current, tx) => {
+            await authorityReads(tx);
+            expect(hasAuthorizedNativeSources(current, registration)).toBe(true);
+            expect(
+              await worlds.resolveSourceRefs(
+                { subjectId, sourceRefs: [sourceRef] },
+                tx,
+              ),
+            ).toEqual([sourceRef]);
+          },
+          recordContact: messaging.recordContact,
+          nous: async () => client,
+        });
+        const worldObservation = sdk.encodeObservationInput({
+          subjectId,
+          requestId: randomUUID(),
+          sourceClass: "world_realized",
+          externalObjectRef: "object:heptalogos:" + sourceRef,
+          actorEntityRef: actor,
+          observedAt: sdk.timestampFromDate(new Date()),
+          occurredTime: {
+            timeDomainRef: interval.timeDomainRef,
+            extent: {
+              value: {
+                case: "interval",
+                value: {
+                  start: sdk.timestampFromDate(new Date(interval.start)),
+                  end: sdk.timestampFromDate(new Date(interval.end)),
+                },
+              },
+            },
+          },
+          worldRealized: {
+            worldId,
+            eventId,
+            eventRevision: String(event.eventRevision),
+            producerRef: event.source.producerRef,
+            generationMethod: event.source.kind,
+            realizedAt: sdk.timestampFromDate(new Date(event.recordedAt)),
+            worldObserved: {
+              timeDomainRef: interval.timeDomainRef,
+              at: sdk.timestampFromDate(new Date(worldAt)),
+              recordedAt: sdk.timestampFromDate(new Date()),
+            },
+            sharedOriginRefs: [event.source.producerRef],
+          },
+          material: {
+            case: "inlineText",
+            value: { text: event.perceptions[0]!.content, mediaType: "text/plain" },
+          },
+        });
+        const sourceContacts = [
+          { contactRef: sourceRef + ":perception:0", observation: worldObservation },
+          {
+            contactRef: "message:" + messageRef,
+            observation: sdk.encodeObservationInput({
+              subjectId,
+              requestId: randomUUID(),
+              sourceClass: "message",
+              externalObjectRef: "object:heptalogos:message:" + messageRef,
+              conversationRef: scope.conversations[0]!.conversationRef,
+              actorEntityRef: actor,
+              occurredTime: {
+                timeDomainRef: "time:real",
+                extent: {
+                  value: {
+                    case: "instant",
+                    value: sdk.timestampFromDate(
+                      new Date(messages.materials[0]!.receivedAt),
+                    ),
+                  },
+                },
+              },
+              material: {
+                case: "inlineText",
+                value: {
+                  text: "Actual persisted QQ fixture message",
+                  mediaType: "text/plain",
+                },
+              },
+            }),
+          },
+        ];
+        const sourceRunId = randomUUID();
+        const registration = {
+          subjectId,
+          activityId: activity.activityId,
+          nativeRunId: sourceRunId,
+          nativeAgentId: "main",
+          sessionKey: "fixture:world-contact",
+          prompt: "Read the canonical world event and message",
+          role: "main" as const,
+          roleScope: {
+            role: "subject.deliberation" as const,
+            purpose: "subject_deliberation" as const,
+            view: "subject" as const,
+            contactNature: "subject_experience" as const,
+          },
+          tokenBudget: { inputTokens: 4096, outputTokens: 512 },
+          allowedToolNames: [],
+          actorEntityRef: actor,
+          workContextId: activity.workContextId!,
+          usage: sdk.decodeCognitionUsage({
+            purpose: "subject_deliberation",
+            audience: {
+              visibility: "group",
+              conversationRef: scope.conversations[0]!.conversationRef,
+            },
+            sourceRead: { subjectId, sourceRefs: [] },
+          }),
+          sourceRefs: [sourceRef, "message:" + messageRef],
+          messageRefs: [messageRef],
+          contacts: sourceContacts,
+        };
+        const saved = await c.run(() => stampBridge.registerInput(registration));
+        const input = {
+          version: 1 as const,
+          subjectId,
+          nousSessionId: session.sessionId,
+          contactRequestId: randomUUID(),
+          invocationId: "source:1",
+          promptDigest: saved.promptDigest,
+          native: {
+            sessionKey: registration.sessionKey,
+            sessionId: "fixture:world-session",
+            runId: sourceRunId,
+            agentId: "main",
+            historyGeneration: "world:1",
+          },
+        };
+        const first = await c.run(() => stampBridge.prepare(input));
+        const worldInput = sdk.decodeObservationInput(first.contacts[0]!.observation);
+        const messageInput = sdk.decodeObservationInput(first.contacts[1]!.observation);
+        expect(worldInput.worldRealized).toEqual(
+          sdk.decodeObservationInput(worldObservation).worldRealized,
+        );
+        expect(worldInput.observedStamp).toBeUndefined();
+        expect(messageInput.observedStamp?.recordedAt).toEqual(messageInput.observedAt);
+        expect(captures).toBe(1);
+        const worldReceipt = await client.runtime.recordObservation(worldInput);
+        const messageReceipt = await client.runtime.recordObservation(messageInput);
+        await client.clocks.advanceClock({
+          subjectId,
+          operationId: randomUUID(),
+          seconds: 60,
+        });
+        const replay = await c.run(() =>
+          stampBridge.prepare({
+            ...input,
+            contactRequestId: randomUUID(),
+            invocationId: "source:2",
+          }),
+        );
+        expect(replay.contacts).toEqual(first.contacts);
+        expect(captures).toBe(1);
+        expect(
+          await client.runtime.recordObservation(
+            sdk.decodeObservationInput(replay.contacts[0]!.observation),
+          ),
+        ).toEqual(worldReceipt);
+        expect(
+          await client.runtime.recordObservation(
+            sdk.decodeObservationInput(replay.contacts[1]!.observation),
+          ),
+        ).toEqual(messageReceipt);
+        const occurrences = first.contacts.map((entry, index) => ({
+          contactRef: entry.contactRef,
+          receipt: sdk.encodeAcceptedObservation(
+            index === 0 ? worldReceipt : messageReceipt,
+          ),
+        }));
+        await c.run(() =>
+          stampBridge.admitted({
+            ...sdk.hostContactIdentitySchema.strip().parse(input),
+            occurrences,
+            projection: sdk.encodeProjection({
+              projectionId: randomUUID(),
+              consumerId: "consumer:clock-proof",
+              subjectId,
+              sessionId: session.sessionId,
+              usage: sdk.withAcceptedContactRoots(
+                sdk.decodeCognitionUsage(first.usage),
+                subjectId,
+                [worldReceipt, messageReceipt],
+              ),
+            }),
+          }),
+        );
+        const toolInput = {
+          ...sdk.hostContactIdentitySchema.strip().parse(input),
+          stage: "pending" as const,
+          observation: sdk.encodeObservationInput({
+            subjectId,
+            sessionId: session.sessionId,
+            requestId: randomUUID(),
+            sourceClass: "tool",
+            observedAt: sdk.timestampFromDate(new Date()),
+            material: {
+              case: "inlineText",
+              value: {
+                text: "Actual local tool fixture output",
+                mediaType: "text/plain",
+              },
+            },
+            context: {
+              tool_name: "fixture-local-read",
+              tool_call_id: "actual-fixture-output",
+            },
+          }),
+        };
+        const firstFeedback = await c.run(() => stampBridge.feedback(toolInput));
+        if (firstFeedback.stage !== "pending")
+          throw new Error("Missing normalized actual feedback");
+        const feedbackObservation = sdk.decodeObservationInput(
+          firstFeedback.observation,
+        );
+        expect(feedbackObservation.observedAt).toEqual(
+          feedbackObservation.observedStamp?.recordedAt,
+        );
+        expect(captures).toBe(2);
+        const toolReceipt = await client.runtime.recordObservation(feedbackObservation);
+        await client.clocks.advanceClock({
+          subjectId,
+          operationId: randomUUID(),
+          seconds: 60,
+        });
+        const replayFeedback = await c.run(() => stampBridge.feedback(toolInput));
+        if (replayFeedback.stage !== "pending")
+          throw new Error("Missing replayed pending feedback");
+        expect(replayFeedback).toEqual(firstFeedback);
+        expect(captures).toBe(2);
+        expect(
+          await client.runtime.recordObservation(
+            sdk.decodeObservationInput(replayFeedback.observation!),
+          ),
+        ).toEqual(toolReceipt);
+        const actualRegistration = (await stampBridge.readRun(sourceRunId))!
+          .registration;
+        expect(
+          hasAuthorizedNativeSources(
+            { ...activity, scope: { ...scope, sourceRefs: [] } },
+            actualRegistration,
+          ),
+        ).toBe(false);
+        const wrong = {
+          ...actualRegistration,
+          contacts: actualRegistration.contacts.map((item) => ({ ...item })),
+        };
+        const body = sdk.decodeObservationInput(wrong.contacts[0]!.observation);
+        body.worldRealized!.eventRevision = "999";
+        wrong.contacts[0]!.observation = sdk.encodeObservationInput(body);
+        expect(hasAuthorizedNativeSources(activity, wrong)).toBe(false);
+        body.worldRealized!.eventRevision = String(event.eventRevision);
+        body.sourceClass = "host_event";
+        wrong.contacts[0]!.observation = sdk.encodeObservationInput(body);
+        expect(hasAuthorizedNativeSources(activity, wrong)).toBe(false);
+        body.sourceClass = "world_realized";
+        body.worldRealized!.worldObserved!.at = sdk.timestampFromDate(
+          new Date(Date.parse(worldAt) + 1),
+        );
+        wrong.contacts[0]!.observation = sdk.encodeObservationInput(body);
+        expect(hasAuthorizedNativeSources(activity, wrong)).toBe(false);
+      }
     } finally {
       await c.close();
     }

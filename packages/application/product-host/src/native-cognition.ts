@@ -57,6 +57,7 @@ import {
   type HostPrepareRequest,
   type HostPrepareResponse,
   type HostAdmittedRequest,
+  type ObservationInput,
   type HostHandoffRequest,
 } from "@nous-wave/client/host-bridge";
 import type {
@@ -206,6 +207,9 @@ export interface NativeCognitionOptions {
     binding: BoundLifeReadBinding,
     request: NativeLifeReadAction,
   ) => Promise<NativeLifeReadResponse>;
+  readonly captureObservedStamp: (
+    subjectId: string,
+  ) => Promise<NonNullable<ObservationInput["observedStamp"]>>;
   readonly now: () => string;
   /** Existing product role configuration supplies the actual execution profile policy. */
   readonly resolveChildProviderPolicy?: (
@@ -326,6 +330,15 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
     options.persistence.mutate((context) =>
       useRepositoryMutationTransaction(context, run),
     );
+  const captureObservedStamp = async (subjectId: string) => {
+    const stamp = await options.captureObservedStamp(subjectId);
+    if (!stamp?.at || !stamp.recordedAt || !stamp.timeDomainRef)
+      deny(
+        "native_clock_unavailable",
+        "Actual contact requires the official Subject clock capture",
+      );
+    return stamp;
+  };
   const sessionLock = (tx: PersistenceInternalTransaction, key: string) =>
     sql(tx, "SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
       `native-session:${key}`,
@@ -770,6 +783,19 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
     async prepare(value) {
       const input = validated(() => hostPrepareRequestSchema.parse(value));
       const preflight = await prepareRegistration(input);
+      const prior = await readRepositorySql<{ document: StoredInput }>(
+        options.persistence,
+        "SELECT document FROM heptalogos.life_native_input WHERE session_key=$1 AND native_run_id=$2",
+        [input.native.sessionKey, input.native.runId],
+      );
+      const observedStamp =
+        !prior[0]?.document.firstContact &&
+        roleScope(preflight).contactNature === "subject_experience" &&
+        preflight.contacts.some(
+          (contact) => !decodeObservationInput(contact.observation).worldRealized,
+        )
+          ? await captureObservedStamp(input.subjectId)
+          : undefined;
       const prepared = await mutate(async (tx) => {
         await sql(tx, "SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
           input.subjectId,
@@ -982,7 +1008,12 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
                       "A registered observation cannot be moved to another Nous Session",
                     );
                   observation.sessionId = input.nousSessionId;
-                  observation.observedAt = timestampFromDate(new Date(at));
+                  observation.observedAt =
+                    observation.worldRealized || !observedStamp?.recordedAt
+                      ? timestampFromDate(new Date(at))
+                      : observedStamp.recordedAt;
+                  if (!observation.worldRealized && observedStamp)
+                    observation.observedStamp = observedStamp;
                   return {
                     contactRef: contact.contactRef,
                     observation: encodeObservationInput(
@@ -1842,12 +1873,31 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
     },
     async feedback(value) {
       const input = validated(() => hostFeedbackRequestSchema.parse(value));
+      const incoming =
+        input.stage === "pending"
+          ? validated(() => decodeObservationInput(input.observation))
+          : undefined;
+      const savedFeedback = incoming
+        ? await readRepositorySql<{ document: Pending }>(
+            options.persistence,
+            "SELECT document FROM heptalogos.cognition_pending_feedback WHERE request_id=$1 UNION ALL SELECT document FROM heptalogos.role_run_result WHERE result_id=$1",
+            [incoming.requestId],
+          )
+        : [];
+      const observedStamp =
+        incoming && !savedFeedback.length && !incoming.worldRealized
+          ? await captureObservedStamp(input.subjectId)
+          : undefined;
       return mutate(async (tx) => {
         const contact = await contactIn(tx, input);
         if (input.stage === "pending") {
           const observation = validated(() =>
             decodeObservationInput(input.observation),
           );
+          if (observedStamp?.recordedAt) {
+            observation.observedAt = observedStamp.recordedAt;
+            observation.observedStamp = observedStamp;
+          }
           if (
             observation.subjectId !== input.subjectId ||
             observation.sessionId !== input.nousSessionId ||
@@ -2103,6 +2153,14 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
       hash[8] = (hash[8]! & 63) | 128;
       const hex = hash.subarray(0, 16).toString("hex");
       const requestId = `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+      const priorFeedback = await readRepositorySql<{ document: Pending }>(
+        options.persistence,
+        "SELECT document FROM heptalogos.cognition_pending_feedback WHERE request_id=$1",
+        [requestId],
+      );
+      const observedStamp = !priorFeedback.length
+        ? await captureObservedStamp(fact.subjectId)
+        : undefined;
       const usage = decodeCognitionUsage(
         contact.appliedUsage ?? contact.response.usage,
       );
@@ -2117,13 +2175,18 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
             externalObjectRef: "object:heptalogos:delivery:" + fact.attemptId,
             conversationRef: usage.audience!.conversationRef,
             actorEntityRef: run.registration.actorEntityRef,
-            observedAt: timestampFromDate(new Date(fact.recordedAt)),
+            observedAt:
+              observedStamp?.recordedAt ?? timestampFromDate(new Date(fact.recordedAt)),
+            ...(observedStamp ? { observedStamp } : {}),
             ...(fact.outcome.state === "accepted"
               ? {
                   occurredTime: {
-                    value: {
-                      case: "instant" as const,
-                      value: timestampFromDate(new Date(fact.outcome.acceptedAt)),
+                    timeDomainRef: "time:real",
+                    extent: {
+                      value: {
+                        case: "instant" as const,
+                        value: timestampFromDate(new Date(fact.outcome.acceptedAt)),
+                      },
                     },
                   },
                 }
