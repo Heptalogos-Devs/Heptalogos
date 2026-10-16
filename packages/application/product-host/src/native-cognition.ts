@@ -98,6 +98,7 @@ export interface NativeRunSnapshot {
   readonly registration: Registration;
   readonly native: HostPrepareRequest["native"];
   readonly nousSessionId: string;
+  readonly consumerId?: string;
   readonly appliedUsage?: HostPrepareResponse["usage"];
 }
 function dispatchResult(
@@ -723,6 +724,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           projection.subjectId !== input.subjectId ||
           projection.sessionId !== input.nousSessionId ||
           !projection.projectionId ||
+          !projection.consumerId ||
           projection.usage?.agentInstanceId !==
             `${input.native.sessionId}:${input.native.runId}`
         )
@@ -769,7 +771,14 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           await sql(
             tx,
             "UPDATE heptalogos.life_native_run SET document=$2::jsonb WHERE run_id=$1",
-            [input.native.runId, JSON.stringify({ ...runs[0].document, appliedUsage })],
+            [
+              input.native.runId,
+              JSON.stringify({
+                ...runs[0].document,
+                consumerId: projection.consumerId,
+                appliedUsage,
+              }),
+            ],
           );
         if (contact.admitted && digest(contact.admitted) !== digest(input))
           deny(

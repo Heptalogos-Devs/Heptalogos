@@ -259,13 +259,15 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
     checkSources: async (runId) => {
       const run = await native.readRun(runId);
       if (!run) denied("The producer run is not registered by the Host");
+      const consumerId = run.consumerId;
+      if (!consumerId) denied("The producer has no admitted cognition consumer");
       const current = await scope();
       const checked = await cognitionRead(async () =>
         (await nous()).runtime.reportUse(
           {
             subjectId: current.subjectId,
             sessionId: run.nousSessionId,
-            consumerRef: "consumer:heptalogos:qq-delivery",
+            consumerRef: consumerId,
             modelInput: true,
             events: [],
           },

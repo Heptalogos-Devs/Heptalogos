@@ -46,6 +46,7 @@ async function admitSelected(
       ...sdk.hostContactIdentitySchema.strip().parse(f.input),
       projection: sdk.encodeProjection({
         projectionId: randomUUID(),
+        consumerId: "consumer:fixture",
         subjectId: f.input.subjectId,
         sessionId: f.input.nousSessionId,
         usage,
@@ -328,6 +329,9 @@ real(
         });
         expect((await f.bridge.readRun(f.input.native.runId))?.appliedUsage).toEqual(
           sdk.encodeCognitionUsage(sdk.decodeProjection(admitted.projection).usage!),
+        );
+        expect((await f.bridge.readRun(f.input.native.runId))?.consumerId).toBe(
+          "consumer:fixture",
         );
         const rows = await readRepositorySql<{ document: unknown }>(
           f.c.persistence,
