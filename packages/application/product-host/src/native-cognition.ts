@@ -82,6 +82,9 @@ export interface Registration {
   readonly usage: HostPrepareResponse["usage"];
   readonly sourceRefs: readonly string[];
   readonly messageRefs: readonly string[];
+  readonly parentRunId?: string;
+  /** Owner-derived exact inherited roots; callers cannot grant these fields. */
+  readonly inheritedSourceRefs?: readonly string[];
   readonly inheritedMessageSources?: readonly string[];
   readonly contacts: HostPrepareResponse["contacts"];
   readonly opportunity?: ActivityOpportunity;
@@ -151,6 +154,7 @@ type Contact = {
   appliedUsage?: HostPrepareResponse["usage"];
 };
 type Pending = {
+  origin?: "agency_delivery";
   identity: Omit<HostPrepareRequest, "promptDigest">;
   observation: HostPrepareResponse["contacts"][number]["observation"];
   factsDigest: string;
@@ -401,7 +405,10 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
   };
   const service: GatewayCognitionBridge & {
     registerInput(
-      input: Omit<Registration, "promptDigest" | "usage"> & {
+      input: Omit<
+        Registration,
+        "promptDigest" | "usage" | "inheritedMessageSources" | "inheritedSourceRefs"
+      > & {
         readonly prompt: string;
         readonly usage: Parameters<typeof encodeCognitionUsage>[0];
       },
@@ -438,6 +445,26 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
   } = {
     async registerInput(input, dispatch) {
       const { prompt, usage, ...selection } = input;
+      if ("inheritedMessageSources" in input || "inheritedSourceRefs" in input)
+        invalid();
+      const sourceParent = input.parentRunId
+        ? await readRun(input.parentRunId)
+        : undefined;
+      if (
+        input.parentRunId &&
+        (!sourceParent ||
+          sourceParent.registration.subjectId !== input.subjectId ||
+          sourceParent.registration.activityId !== input.activityId ||
+          !["running", "completed"].includes(sourceParent.state) ||
+          input.sourceRefs.some(
+            (ref) => !sourceParent.registration.sourceRefs.includes(ref),
+          ))
+      )
+        deny(
+          "native_parent_sources_denied",
+          "Role inheritance requires the exact same-Subject/Activity parent and a subset of its authorized roots",
+        );
+      if (sourceParent) await checkInput(sourceParent.registration);
       if (
         typeof prompt !== "string" ||
         !input.sessionKey ||
@@ -508,6 +535,14 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
       });
       const registration: Registration = {
         ...selection,
+        ...(sourceParent
+          ? {
+              inheritedSourceRefs: [...input.sourceRefs],
+              inheritedMessageSources: input.sourceRefs.filter((ref) =>
+                ref.startsWith("message:"),
+              ),
+            }
+          : {}),
         contacts,
         usage: canonicalUsage,
         promptDigest: createHash("sha256").update(prompt).digest("hex"),
@@ -517,6 +552,23 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         await sql(tx, "SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
           input.subjectId,
         ]);
+        if (sourceParent) {
+          await sql(
+            tx,
+            "SELECT run_id FROM heptalogos.life_native_run WHERE run_id=$1 FOR SHARE",
+            [sourceParent.runId],
+          );
+          const actualParent = await readRun(sourceParent.runId, tx);
+          if (
+            !actualParent ||
+            !["running", "completed"].includes(actualParent.state) ||
+            digest(actualParent.registration) !== digest(sourceParent.registration)
+          )
+            deny(
+              "native_parent_sources_denied",
+              "The exact source parent changed before role registration",
+            );
+        }
         if (dispatch) {
           await sessionLock(tx, `dispatch-native-run:${dispatch.requestId}`);
           const previous = await sql<{ document: StoredInput }>(
@@ -1521,6 +1573,8 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           registration: {
             ...parent.registration,
             usage: runs[0]!.document.appliedUsage ?? parent.registration.usage,
+            parentRunId: parent.runId,
+            inheritedSourceRefs: [...parent.registration.sourceRefs],
             inheritedMessageSources: parent.registration.sourceRefs.filter((ref) =>
               ref.startsWith("message:"),
             ),
@@ -1682,11 +1736,6 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
             retainedOnly,
           };
         }
-        if (contact.response.roleScope.contactNature === "execution_only")
-          deny(
-            "native_execution_result_only",
-            "An execution-only RoleRun result cannot become a Subject observation receipt",
-          );
         const receipt = validated(() =>
           encodeAcceptedObservation(decodeAcceptedObservation(input.receipt)),
         );
@@ -1697,6 +1746,14 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           "SELECT document,receipt FROM heptalogos.cognition_pending_feedback WHERE request_id=$1 FOR UPDATE",
           [input.observationRequestId],
         );
+        if (
+          contact.response.roleScope.contactNature === "execution_only" &&
+          rows[0]?.document.origin !== "agency_delivery"
+        )
+          deny(
+            "native_execution_result_only",
+            "An execution-only RoleRun result cannot become a Subject observation receipt",
+          );
         if (!rows[0] || digest(rows[0].document.identity) !== digest(identity(input)))
           deny(
             "native_feedback_changed",
@@ -1787,42 +1844,85 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
       const usage = decodeCognitionUsage(
         contact.appliedUsage ?? contact.response.usage,
       );
-      await service.feedback({
-        ...identity(contact.request),
-        stage: "pending",
-        observation: encodeObservationInput({
-          subjectId: fact.subjectId,
-          sessionId: contact.request.nousSessionId,
-          requestId,
-          sourceClass: "host_event",
-          externalObjectRef: "object:heptalogos:delivery:" + fact.attemptId,
-          conversationRef: usage.audience!.conversationRef,
-          actorEntityRef: run.registration.actorEntityRef,
-          observedAt: timestampFromDate(new Date(fact.recordedAt)),
-          ...(fact.outcome.state === "accepted"
-            ? {
-                occurredTime: {
-                  value: {
-                    case: "instant" as const,
-                    value: timestampFromDate(new Date(fact.outcome.acceptedAt)),
+      usage.contactNature = "subject_experience";
+      const observation = encodeObservationInput(
+        withHostObservationScope(
+          {
+            subjectId: fact.subjectId,
+            sessionId: contact.request.nousSessionId,
+            requestId,
+            sourceClass: "host_event",
+            externalObjectRef: "object:heptalogos:delivery:" + fact.attemptId,
+            conversationRef: usage.audience!.conversationRef,
+            actorEntityRef: run.registration.actorEntityRef,
+            observedAt: timestampFromDate(new Date(fact.recordedAt)),
+            ...(fact.outcome.state === "accepted"
+              ? {
+                  occurredTime: {
+                    value: {
+                      case: "instant" as const,
+                      value: timestampFromDate(new Date(fact.outcome.acceptedAt)),
+                    },
                   },
-                },
-              }
-            : {}),
-          material: {
-            case: "inlineText",
-            value: { text: JSON.stringify(fact), mediaType: "application/json" },
+                }
+              : {}),
+            material: {
+              case: "inlineText",
+              value: { text: JSON.stringify(fact), mediaType: "application/json" },
+            },
+            context: {
+              actual_producer: "heptalogos.agency",
+              contact_nature: "subject_experience",
+              native_run_ref: fact.runId,
+              native_intent_ref: fact.nativeIntentId,
+              delivery_reference: fact.reference,
+              source_index: fact.sourceIndex,
+              part_index: fact.partIndex,
+              outcome_state: fact.outcome.state,
+            },
           },
-          context: {
-            actual_producer: "heptalogos.agency",
-            native_run_ref: fact.runId,
-            native_intent_ref: fact.nativeIntentId,
-            delivery_reference: fact.reference,
-            source_index: fact.sourceIndex,
-            part_index: fact.partIndex,
-            outcome_state: fact.outcome.state,
+          {
+            usage,
+            activityRef: fact.activityId,
+            contactRequestId: contact.request.contactRequestId,
           },
-        }),
+        ),
+      );
+      const document: Pending = {
+        origin: "agency_delivery",
+        identity: identity(contact.request),
+        observation,
+        factsDigest: actualFeedback(observation),
+      };
+      await mutate(async (tx) => {
+        const saved = await sql<{ document: Pending }>(
+          tx,
+          "SELECT document FROM heptalogos.cognition_pending_feedback WHERE request_id=$1 FOR UPDATE",
+          [requestId],
+        );
+        if (saved[0]) {
+          if (
+            saved[0].document.origin !== "agency_delivery" ||
+            saved[0].document.factsDigest !== document.factsDigest ||
+            digest(saved[0].document.identity) !== digest(document.identity)
+          )
+            deny(
+              "native_delivery_changed",
+              "The actual Agency delivery identity or outcome cannot change",
+            );
+          return;
+        }
+        await sql(
+          tx,
+          "INSERT INTO heptalogos.cognition_pending_feedback(request_id,subject_id,run_id,document,recorded_at) VALUES($1,$2,$3,$4::jsonb,$5)",
+          [
+            requestId,
+            fact.subjectId,
+            fact.runId,
+            JSON.stringify(document),
+            options.now(),
+          ],
+        );
       });
       // A platform acknowledgement waits for local durability, not cognition
       // networking. The dispatch completion or next preparation drains this outbox.

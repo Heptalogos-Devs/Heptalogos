@@ -694,10 +694,74 @@ real("physical delivery feedback", () => {
     try {
       const response = await f.c.run(() => f.bridge.prepare(f.input));
       await admitSelected(f, response);
+      const renderRunId = randomUUID(),
+        renderSessionKey = "native:render:" + randomUUID();
+      const renderer = {
+        ...f.registration,
+        parentRunId: f.input.native.runId,
+        nativeRunId: renderRunId,
+        sessionKey: renderSessionKey,
+        roleScope: {
+          role: "subject.render" as const,
+          purpose: "subject_rendering" as const,
+          view: "renderer" as const,
+          contactNature: "execution_only" as const,
+        },
+        contacts: [],
+        messageRefs: [],
+      };
+      await expect(
+        f.c.run(() =>
+          f.bridge.registerInput({
+            ...renderer,
+            nativeRunId: randomUUID(),
+            sourceRefs: [...renderer.sourceRefs, "message:unadopted"],
+          }),
+        ),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_parent_sources_denied" },
+      });
+      const selected = await f.c.run(() => f.bridge.registerInput(renderer));
+      const renderInput = {
+        ...f.input,
+        nousSessionId: randomUUID(),
+        contactRequestId: randomUUID(),
+        invocationId: "renderer-output",
+        promptDigest: selected.promptDigest,
+        native: {
+          ...f.input.native,
+          sessionKey: renderSessionKey,
+          sessionId: randomUUID(),
+          runId: renderRunId,
+        },
+      };
+      const renderPrepared = await f.c.run(() => f.bridge.prepare(renderInput));
+      expect(renderPrepared.contacts).toEqual([]);
+      expect(renderPrepared.allowedToolNames).toEqual([]);
+      await admitSelected({ ...f, input: renderInput }, renderPrepared);
+      const rawResultId = randomUUID();
+      const raw = await f.c.run(() =>
+        f.bridge.feedback({
+          ...sdk.hostContactIdentitySchema.strip().parse(renderInput),
+          stage: "pending",
+          observation: sdk.encodeObservationInput({
+            subjectId: f.input.subjectId,
+            sessionId: renderInput.nousSessionId,
+            requestId: rawResultId,
+            sourceClass: "generated",
+            observedAt: sdk.timestampFromDate(new Date()),
+            material: {
+              case: "inlineText",
+              value: { text: "RAW RENDERER DRAFT", mediaType: "text/plain" },
+            },
+          }),
+        }),
+      );
+      expect(raw).toMatchObject({ retainedOnly: true });
       const fact = {
         subjectId: f.input.subjectId,
         activityId: f.activity.activityId,
-        runId: f.input.native.runId,
+        runId: renderRunId,
         reference: randomUUID(),
         nativeIntentId: "actual-final-intent",
         channel: "heptalogos-qq",
@@ -734,6 +798,15 @@ real("physical delivery feedback", () => {
       expect(observed.actorEntityRef).toBe(f.actor);
       expect(observed.conversationRef).toBe("conversation:qq:registered");
       expect(observed.context!.outcome_state).toBe("accepted");
+      expect(observed.context!.contact_nature).toBe("subject_experience");
+      expect(
+        sdk.decodeCognitionUsage(observed.context!.cognition_usage).contactNature,
+      ).toBe("subject_experience");
+      expect(
+        (await f.bridge.readRoleResults(f.input.subjectId, renderRunId)).results.map(
+          (r) => r.resultId,
+        ),
+      ).toEqual([rawResultId]);
       f.setNousUnavailable(false);
       await f.c.run(() => f.bridge.finishRun(fact.runId, "completed"));
       expect(await f.c.run(() => f.bridge.flushPendingFeedback(32))).toEqual({

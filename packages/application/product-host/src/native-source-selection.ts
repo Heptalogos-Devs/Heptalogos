@@ -87,14 +87,13 @@ export function hasAuthorizedNativeSources(
     } else return false;
     seen.add(ref);
   }
-  const inherited = new Set(
-    registration.role === "worker" ? (registration.inheritedMessageSources ?? []) : [],
-  );
+  const inherited = new Set(registration.inheritedMessageSources ?? []);
   return (
     registration.sourceRefs.every((ref) =>
       ref.startsWith("message:")
         ? (selected.has(ref.slice(8)) && seen.has(ref)) || inherited.has(ref)
         : scope.sourceRefs.includes(ref) ||
+          (registration.inheritedSourceRefs ?? []).includes(ref) ||
           ((ref.startsWith("world-event:") || ref.startsWith("role-result-release:")) &&
             seen.has(ref)),
     ) &&
@@ -119,10 +118,7 @@ export async function hasCanonicalNativeMessages(
   const messageRefs = [
     ...new Set([
       ...registration.messageRefs,
-      ...(registration.role === "worker"
-        ? (registration.inheritedMessageSources ?? [])
-        : []
-      ).map((ref) => ref.slice(8)),
+      ...(registration.inheritedMessageSources ?? []).map((ref) => ref.slice(8)),
     ]),
   ];
   if (!messageRefs.length) return registration.contacts.length === 0;
