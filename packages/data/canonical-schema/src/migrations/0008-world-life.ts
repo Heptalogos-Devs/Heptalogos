@@ -10,6 +10,12 @@ export const worldLifeMigration: Migration = {
     await sql
       .raw(
         `
+CREATE TABLE heptalogos.identity_world_actor (
+ world_id uuid NOT NULL, actor_key text NOT NULL, entity_ref uuid NOT NULL UNIQUE REFERENCES heptalogos.identity_entity(entity_ref),
+ PRIMARY KEY(world_id,actor_key)
+);
+REVOKE ALL ON heptalogos.identity_world_actor FROM PUBLIC;
+GRANT SELECT,INSERT ON heptalogos.identity_world_actor TO heptalogos_runtime;
 CREATE TABLE heptalogos.world_life (
  subject_id uuid NOT NULL, world_id uuid NOT NULL, revision bigint NOT NULL CHECK(revision>=1),
  time_domain_ref text NOT NULL, document jsonb NOT NULL CHECK(jsonb_typeof(document)='object'),

@@ -51,3 +51,5 @@ HEPTALOGOS_TEST_PG_BIN=/absolute/postgresql/bin \
 
 This owner does not infer social relationships or authorize platform or Host
 management actions.
+
+`resolveWorldActor({worldId,actorKey})`以世界和稳定角色key解析虚拟人物，返回正式`entity:heptalogos:<UUID>`，重复调用保持同一Entity；另一世界相同key分别建立。`readWorldActor`只读。虚拟人物不能通过`linkAccount`绑定真实协议账号。世界中Subject本人仍使用`ensureSubjectEntity`/`readSubjectEntity`的canonical self，不创建第二个人格身份。

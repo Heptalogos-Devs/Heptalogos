@@ -58,12 +58,51 @@ export const linkAccountInputSchema = Type.Object(
   },
   object,
 );
+/** A stable actor key belongs only to one virtual world; no platform account is inferred. */
+export const resolveWorldActorInputSchema = Type.Object(
+  {
+    worldId: Type.String({
+      pattern:
+        "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+    }),
+    actorKey: key,
+  },
+  object,
+);
+/** Exact verification of an already adopted world actor identity. */
+export const readWorldActorInputSchema = Type.Object(
+  { ...resolveWorldActorInputSchema.properties },
+  object,
+);
+/** Verifies a bounded batch of virtual actors against their exact world scope. */
+export const readWorldActorsInputSchema = Type.Object(
+  {
+    worldId: resolveWorldActorInputSchema.properties.worldId,
+    entityRefs: Type.Array(entitySchema.properties.entityRef, {
+      maxItems: 128,
+      uniqueItems: true,
+    }),
+  },
+  object,
+);
 /** Current-Activity persistence is injected; identity does not call a network or cognition provider. */
 export interface IdentityServiceOptions {
   readonly persistence: PersistenceService;
 }
 /** One formal owner for external accounts, group entities and Subject self identity. */
 export interface IdentityService {
+  /** Resolves a virtual actor to a canonical world-scoped person Entity. */
+  resolveWorldActor(
+    input: Static<typeof resolveWorldActorInputSchema>,
+  ): Promise<HostEntity>;
+  /** Reads the same world actor without creating identity state. */
+  readWorldActor(
+    input: Static<typeof readWorldActorInputSchema>,
+  ): Promise<{ entity: HostEntity | null }>;
+  /** Returns only actual mappings in the requested world, for world-definition adoption. */
+  readWorldActors(
+    input: Static<typeof readWorldActorsInputSchema>,
+  ): Promise<{ actors: { actorKey: string; entity: HostEntity }[] }>;
   /** Resolves formally authenticated account and UID keys to one Host Entity. */
   resolveAccount(input: ResolveAccountInput): Promise<HostEntity>;
   /** Resolves a native group as an Entity independent of person accounts. */

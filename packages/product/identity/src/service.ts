@@ -15,6 +15,8 @@ import {
 } from "@heptalogos/persistence/repository";
 import type { PersistenceMutationTransactionContext } from "@heptalogos/persistence";
 import {
+  readWorldActorsInputSchema,
+  resolveWorldActorInputSchema,
   resolveAccountInputSchema,
   resolveGroupInputSchema,
   subjectEntityInputSchema,
@@ -33,6 +35,8 @@ function databaseEntityId(entityRef: string): string {
   return entityRef.slice(entityPrefix.length);
 }
 const validators = {
+  worldActors: compileSchema(readWorldActorsInputSchema),
+  worldActor: compileSchema(resolveWorldActorInputSchema),
   account: compileSchema(resolveAccountInputSchema),
   group: compileSchema(resolveGroupInputSchema),
   subject: compileSchema(subjectEntityInputSchema),
@@ -135,6 +139,12 @@ export function createIdentityService(
       target ??
       (refs.size ? await entity(tx, [...refs][0]!) : await create(tx, c, "person"));
     if (!current || current.kind === "group") conflict();
+    const virtual = await sql(
+      tx,
+      "SELECT entity_ref FROM heptalogos.identity_world_actor WHERE entity_ref=$1",
+      [databaseEntityId(current.entityRef)],
+    );
+    if (virtual.length) conflict();
     for (const [kind, native] of keys)
       await sql(
         tx,
@@ -188,6 +198,61 @@ export function createIdentityService(
         );
         return next;
       });
+    },
+    async resolveWorldActor(input) {
+      check(validators.worldActor, input);
+      return mutate(async (tx, c) => {
+        await lock(tx);
+        const rows = await sql<{ entity_ref: string }>(
+          tx,
+          "SELECT entity_ref FROM heptalogos.identity_world_actor WHERE world_id=$1 AND actor_key=$2",
+          [input.worldId, input.actorKey],
+        );
+        if (rows[0]) return (await entity(tx, rows[0].entity_ref))!;
+        const next = await create(tx, c, "person");
+        await sql(
+          tx,
+          "INSERT INTO heptalogos.identity_world_actor(world_id,actor_key,entity_ref) VALUES($1,$2,$3)",
+          [input.worldId, input.actorKey, databaseEntityId(next.entityRef)],
+        );
+        return next;
+      });
+    },
+    async readWorldActor(input) {
+      check(validators.worldActor, input);
+      return options.persistence.read((c) =>
+        useRepositoryReadTransaction(c, async (tx) => {
+          const rows = await sql<{ entity_ref: string }>(
+            tx,
+            "SELECT entity_ref FROM heptalogos.identity_world_actor WHERE world_id=$1 AND actor_key=$2",
+            [input.worldId, input.actorKey],
+          );
+          return {
+            entity: rows[0] ? ((await entity(tx, rows[0].entity_ref)) ?? null) : null,
+          };
+        }),
+      );
+    },
+    async readWorldActors(input) {
+      check(validators.worldActors, input);
+      return options.persistence.read((c) =>
+        useRepositoryReadTransaction(c, async (tx) => {
+          const rows = await sql<{ actor_key: string; entity_ref: string }>(
+            tx,
+            "SELECT actor_key,entity_ref FROM heptalogos.identity_world_actor WHERE world_id=$1 AND entity_ref=ANY($2::uuid[])",
+            [input.worldId, input.entityRefs.map(databaseEntityId)],
+          );
+          return {
+            actors: rows.map((row) => ({
+              actorKey: row.actor_key,
+              entity: {
+                entityRef: externalEntityRef(row.entity_ref),
+                kind: "person" as const,
+              },
+            })),
+          };
+        }),
+      );
     },
     async ensureSubjectEntity(input) {
       check(validators.subject, input);

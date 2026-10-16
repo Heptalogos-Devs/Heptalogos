@@ -1,6 +1,7 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
 import { afterEach, describe, expect, it } from "vitest";
+import { createIdentityService } from "@heptalogos/identity";
 import { randomUUID } from "node:crypto";
 import { createWorldLifeService, expandWorldRoutines } from "@heptalogos/subject";
 import {
@@ -17,9 +18,38 @@ real("WorldLife canonical realization on real fenced PostgreSQL", () => {
       worldId = randomUUID(),
       scheduleId = randomUUID();
     let at = "2026-10-16T00:50:00.000Z";
-    const domain = "domain:school",
-      actor = "entity:world:student",
-      teacher = "entity:world:teacher";
+    const domain = "domain:school";
+    const identity = createIdentityService({ persistence: current.persistence });
+    const actor = (await current.run(() => identity.ensureSubjectEntity({ subjectId })))
+      .entityRef;
+    const teacher = (
+      await current.run(() =>
+        identity.resolveWorldActor({ worldId, actorKey: "teacher" }),
+      )
+    ).entityRef;
+    expect(
+      (
+        await current.run(() =>
+          identity.resolveWorldActor({ worldId, actorKey: "teacher" }),
+        )
+      ).entityRef,
+    ).toBe(teacher);
+    expect(
+      (
+        await current.run(() =>
+          identity.resolveWorldActor({ worldId: randomUUID(), actorKey: "teacher" }),
+        )
+      ).entityRef,
+    ).not.toBe(teacher);
+    await expect(
+      current.run(() =>
+        identity.linkAccount({
+          platform: "qq",
+          accountId: "not-a-real-account",
+          entityRef: teacher,
+        }),
+      ),
+    ).rejects.toMatchObject({ problem: { problemCode: "identity.link_conflict" } });
     const life = createWorldLifeService({
       persistence: current.persistence,
       now: () => at,
