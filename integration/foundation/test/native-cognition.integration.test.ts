@@ -18,6 +18,11 @@ import {
   cleanupCanonicalPostgresFixtures,
 } from "../support/canonical-postgres.js";
 import { composeProductPersistence } from "../support/product-persistence.js";
+import type { NativeLifeResponse } from "../../../packages/application/product-host/src/native-life-contracts.js";
+function activityLife(value: NativeLifeResponse) {
+  if ("revision" in value) return value;
+  throw Error("Expected the actual Activity response for inspect/progress");
+}
 // Resolve the actual installed Client's public export from its consuming package.
 // Tests never import Nous source or its bundled private Protocol dependency.
 const metadataUrl = new URL(
@@ -1047,9 +1052,9 @@ real("native Life bound to the current admitted run", () => {
         sessionId: f.input.native.sessionId,
         toolCallId: "actual-sdk-life-call",
       };
-      const view = await f.c.run(() =>
-        f.bridge.life({ ...base, request: { action: "inspect" } }),
-      );
+      const view = await f.c
+        .run(() => f.bridge.life({ ...base, request: { action: "inspect" } }))
+        .then(activityLife);
       for (const bad of [
         { nativeRunId: randomUUID() },
         { activityRef: randomUUID() },
@@ -1130,7 +1135,9 @@ real("native Life bound to the current admitted run", () => {
           at: new Date(Date.now() + 60000).toISOString(),
         },
       };
-      const result = await f.c.run(() => f.bridge.life({ ...base, request: progress }));
+      const result = await f.c
+        .run(() => f.bridge.life({ ...base, request: progress }))
+        .then(activityLife);
       expect(result).toMatchObject({
         state: "active",
         mode: "rest",
@@ -1146,9 +1153,9 @@ real("native Life bound to the current admitted run", () => {
       ).rejects.toMatchObject({ problem: { problemCode: "life.conflict" } });
       expect(
         (
-          await f.c.run(() =>
-            f.bridge.life({ ...base, request: { action: "inspect" } }),
-          )
+          await f.c
+            .run(() => f.bridge.life({ ...base, request: { action: "inspect" } }))
+            .then(activityLife)
         ).revision,
       ).toBe(result.revision);
       // External checks finish outside the mutation fence; a revocation during them wins locally.
@@ -1548,9 +1555,9 @@ real("native child completion causality", () => {
         sessionId: childSessionId,
         toolCallId: "actual-child-life",
       };
-      const inspected = await f.c.run(() =>
-        f.bridge.life({ ...bound, request: { action: "inspect" } }),
-      );
+      const inspected = await f.c
+        .run(() => f.bridge.life({ ...bound, request: { action: "inspect" } }))
+        .then(activityLife);
       await expect(
         f.c.run(() =>
           f.bridge.life({
@@ -1794,7 +1801,7 @@ real("native child completion causality", () => {
               ...continuation.continuation,
               nativeRunId: nativeRunId + ":forged",
             },
-          }),
+          } as never),
         ),
       ).rejects.toBeDefined();
       // Recording the already-produced terminal fact is distinct from permitting new input/effects.
