@@ -129,7 +129,6 @@ export function createWorldOpportunity<TContact, TUsage>(
             ),
         );
       let plannerRunId: string | undefined;
-      let deadlineAt: string | undefined;
       const priorPatch = await options.worlds.readRealization(
         input.subjectId,
         uuidv5("world.patch", input.requestId),
@@ -170,7 +169,6 @@ export function createWorldOpportunity<TContact, TUsage>(
           ...context,
         });
         plannerRunId = result.runId;
-        deadlineAt = result.deadlineAt;
         if (result.status !== "terminal" && result.status !== "completed")
           return { status: "planner_pending" as const, plannerRunId };
         let candidate: unknown = result.result;

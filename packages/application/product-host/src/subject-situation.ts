@@ -31,9 +31,6 @@ import {
   decodeCognitionUsage,
   decodeObservationInput,
   encodeObservationInput,
-  timestampFromDate,
-  decodeAcceptedObservation,
-  type HostPrepareResponse,
 } from "@nous-wave/client/host-bridge";
 import type {
   NativeRoleResults,

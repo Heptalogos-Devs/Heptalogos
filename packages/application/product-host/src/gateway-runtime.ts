@@ -802,7 +802,7 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
   });
   let narrative: ReturnType<typeof createNarrativeService>;
   const roles: ReturnType<typeof createSubjectRoles> = {
-    startExecution: nativeRoles.startExecution,
+    startExecution: (input) => nativeRoles.startExecution(input),
     invoke: async (input) => {
       if (input.role !== "subject.deliberation") return nativeRoles.invoke(input);
       const activity = await life.get(input.subjectId, input.activityId);
@@ -1112,8 +1112,8 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
     resolveActivity,
     afterYield: (subjectId) => reprojectSubject(subjectId),
     prepare: situation.prepare,
-    act: situation.act,
-    saveContinuation: situation.saveContinuation,
+    act: (input) => situation.act(input),
+    saveContinuation: (input) => situation.saveContinuation(input),
   });
   const requestReactorOpportunity = async (input: {
     subjectId: string;
@@ -1257,7 +1257,8 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
       authenticate: http.authenticate,
       runMutation: options.runMutation,
       currentSubject,
-      advance: worldRuntime.advance,
+      advance: (input: Parameters<typeof worldRuntime.advance>[0]) =>
+        worldRuntime.advance(input),
     },
     narrativeHttp: {
       authenticate: http.authenticate,

@@ -9,10 +9,6 @@ import { v5 as uuidv5 } from "uuid";
 import { projectWorldDeadline, type NousClient } from "@nous-wave/client";
 import {
   encodeCognitionUsage,
-  encodeObservationInput,
-  decodeObservationInput,
-  decodeProjection,
-  decodeAcceptedObservation,
   type HostPrepareResponse,
   timestampFromDate,
 } from "@nous-wave/client/host-bridge";
@@ -29,7 +25,6 @@ import {
   type CanonicalJsonValue,
 } from "@heptalogos/foundation-contracts";
 import type { createSubjectRoles } from "./subject-roles.js";
-import type { createSubjectDecisionHandler } from "./subject-decisions.js";
 import { decisionPhaseId } from "./subject-decisions.js";
 import type { createNativeCognitionBridge } from "./native-cognition.js";
 import type { NativeWorldSchedule } from "./native-dispatch.js";
