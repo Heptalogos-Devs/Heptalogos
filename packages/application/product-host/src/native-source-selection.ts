@@ -39,10 +39,9 @@ export function hasAuthorizedNativeSources(
       if (
         observation.subjectId !== registration.subjectId ||
         observation.sourceClass !== "host_event" ||
+        typeof observation.context?.child_run_id !== "string" ||
         !observation.externalObjectRef?.startsWith(
-          "object:heptalogos:role-result:" +
-            String(observation.context?.child_run_id) +
-            ":",
+          "object:heptalogos:role-result:" + observation.context.child_run_id + ":",
         ) ||
         observation.requestId !== ref.slice("role-result-release:".length) ||
         observation.context?.source_nature !== "execution_result_release"

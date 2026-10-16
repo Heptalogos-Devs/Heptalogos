@@ -1179,6 +1179,32 @@ real("native child completion causality", () => {
       ).rejects.toMatchObject({
         problem: { problemCode: "gateway.native_completion_changed" },
       });
+      const switchedRun = randomUUID();
+      const switched = await f.c.run(() =>
+        f.bridge.registerInput({
+          ...f.registration,
+          nativeRunId: switchedRun,
+          roleScope: {
+            role: "subject.execution",
+            purpose: "professional_execution",
+            view: "worker",
+            contactNature: "execution_only",
+          },
+        }),
+      );
+      await expect(
+        f.c.run(() =>
+          f.bridge.prepare({
+            ...f.input,
+            contactRequestId: randomUUID(),
+            invocationId: "cross-role",
+            promptDigest: switched.promptDigest,
+            native: { ...f.input.native, runId: switchedRun },
+          }),
+        ),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_role_history_changed" },
+      });
       f.revoke();
       await expect(
         f.c.run(() =>

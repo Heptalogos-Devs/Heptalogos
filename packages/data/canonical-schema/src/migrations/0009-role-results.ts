@@ -38,6 +38,22 @@ export const roleResultsMigration: Migration = {
         `UPDATE heptalogos.life_native_contact c SET document=jsonb_set(c.document,'{response,roleScope}',${scope("r.role")}) FROM heptalogos.life_native_run r WHERE c.run_id=r.run_id AND c.document#>'{response,roleScope}' IS NULL`,
       )
       .execute(db);
+    // Normalize current wire usages once; historical raw transcript and actual
+    // source observations keep their original facts.
+    for (const table of ["life_native_input", "life_native_run", "life_handoff"]) {
+      await sql
+        .raw(
+          `UPDATE heptalogos.${table} SET document=jsonb_set(document,'{registration,usage}',(document#>'{registration,usage}')||(document#>'{registration,roleScope}')) WHERE document#>'{registration,usage}' IS NOT NULL`,
+        )
+        .execute(db);
+    }
+    await sql
+      .raw(
+        `UPDATE heptalogos.life_native_run SET document=jsonb_set(document,'{appliedUsage}',(document->'appliedUsage')||(document#>'{registration,roleScope}')) WHERE document ? 'appliedUsage';
+      UPDATE heptalogos.life_native_contact SET document=jsonb_set(document,'{response,usage}',(document#>'{response,usage}')||(document#>'{response,roleScope}'));
+      UPDATE heptalogos.life_native_contact SET document=jsonb_set(document,'{appliedUsage}',(document->'appliedUsage')||(document#>'{response,roleScope}')) WHERE document ? 'appliedUsage';`,
+      )
+      .execute(db);
     await sql
       .raw(
         `INSERT INTO heptalogos.role_run_result(result_id,subject_id,run_id,document,recorded_at) SELECT f.request_id,f.subject_id,f.run_id,f.document,f.recorded_at FROM heptalogos.cognition_pending_feedback f JOIN heptalogos.life_native_run r ON r.run_id=f.run_id WHERE r.role='worker' ON CONFLICT DO NOTHING;

@@ -645,6 +645,22 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           input.subjectId,
         ]);
         await sessionLock(tx, input.native.sessionKey);
+        const foreignRole = await sql<{ run_id: string }>(
+          tx,
+          "SELECT run_id FROM heptalogos.life_native_run WHERE subject_id=$1 AND session_key=$2 AND document#>>'{native,sessionId}'=$3 AND document#>>'{native,historyGeneration}'=$4 AND document#>'{registration,roleScope}'<>$5::jsonb LIMIT 1 FOR SHARE",
+          [
+            input.subjectId,
+            input.native.sessionKey,
+            input.native.sessionId,
+            input.native.historyGeneration,
+            JSON.stringify(preflight.roleScope),
+          ],
+        );
+        if (foreignRole[0])
+          deny(
+            "native_role_history_changed",
+            "This native history contains another execution view; create a clean role Session or explicitly reset its history",
+          );
         const registered = await sql<{ document: StoredInput }>(
           tx,
           "SELECT document FROM heptalogos.life_native_input WHERE session_key=$1 AND native_run_id=$2",
