@@ -1,0 +1,417 @@
+// Copyright 2026 Aravine Zhu
+// SPDX-License-Identifier: AGPL-3.0-only
+import { afterEach, describe, it, expect } from "vitest";
+import { randomUUID } from "node:crypto";
+import { createIdentityService } from "@heptalogos/identity";
+import {
+  createWorldLifeService,
+  createWorldProfileService,
+  DEFAULT_WORLD_ENERGY,
+  worldOccurrenceId,
+  subjectProblem,
+  type WorldProfile,
+} from "@heptalogos/subject";
+import {
+  qualifiedPgBin,
+  cleanupCanonicalPostgresFixtures,
+} from "../support/canonical-postgres.js";
+import { composeProductPersistence } from "../support/product-persistence.js";
+const real = qualifiedPgBin ? describe : describe.skip;
+afterEach(cleanupCanonicalPostgresFixtures);
+real("WorldProfile and realized interval energy under real PostgreSQL", () => {
+  it("adopts an independent entry, integrates one primary plus maximum subsidiary burden, and keeps device CAS independent", async () => {
+    const current = await composeProductPersistence(),
+      subjectId = randomUUID(),
+      worldId = randomUUID();
+    let worldAt = "2026-10-19T00:00:00.000Z";
+    const worldNow = async () => ({ timeDomainRef: "school", at: worldAt });
+    const worlds = createWorldLifeService({
+      persistence: current.persistence,
+      now: () => new Date().toISOString(),
+      worldNow,
+    });
+    const identity = createIdentityService({ persistence: current.persistence });
+    const profiles = createWorldProfileService({
+      persistence: current.persistence,
+      worlds,
+      now: () => new Date().toISOString(),
+      worldNow,
+      resolveActor: async (input) =>
+        input.actorKey === "self"
+          ? (await identity.ensureSubjectEntity({ subjectId: input.subjectId }))
+              .entityRef
+          : (
+              await identity.resolveWorldActor({
+                worldId: input.worldId,
+                actorKey: input.actorKey,
+              })
+            ).entityRef,
+    });
+    const profile: WorldProfile = {
+      name: "Explicit student entry",
+      timeDomainRef: "school",
+      timezone: "Asia/Shanghai",
+      offlinePolicy: "simulate_elapsed",
+      clock: { onlineRate: 1, offlineRate: 1 },
+      entry: {
+        role: "Student",
+        description: "Entered this school now; no earlier biography supplied",
+        placeRef: "class",
+        at: worldAt,
+      },
+      places: [
+        { placeRef: "class", name: "Classroom", description: "A classroom" },
+        { placeRef: "home", name: "Home", description: "A home" },
+      ],
+      actors: [],
+      rules: "Compatible daily school life",
+      creationScope: "Virtual events only",
+      informationSourceRefs: [],
+      routineRules: [],
+      calendarExceptions: [],
+      energy: DEFAULT_WORLD_ENERGY,
+      planning: { horizonHours: 24, detailHours: 2 },
+      travelEdges: [{ from: "class", to: "home", durationMinutes: 15 }],
+      publicCalendar: "none",
+    };
+    try {
+      const request = {
+        operationId: randomUUID(),
+        subjectId,
+        worldId,
+        expectedRevision: 0,
+        profile,
+      };
+      const adopted = await current.run(() => profiles.adopt(request));
+      expect(adopted.entrySourceRef).toBe(`world-profile:${worldId}:1`);
+      expect(
+        await worlds.resolveSourceRefs({
+          subjectId,
+          sourceRefs: [adopted.entrySourceRef, `world-profile:${worldId}:2`],
+        }),
+      ).toEqual([adopted.entrySourceRef]);
+      expect(
+        await worlds.resolveSourceRefs({
+          subjectId: randomUUID(),
+          sourceRefs: [adopted.entrySourceRef],
+        }),
+      ).toEqual([]);
+
+      expect(await current.run(() => profiles.adopt(request))).toEqual(adopted);
+      expect((await worlds.readLivingState({ subjectId, worldId }))?.energy).toBe(80);
+      const actor = adopted.subjectActorRef;
+      worldAt = "2026-10-19T01:00:00.000Z";
+      const range = {
+        timeDomainRef: "school",
+        start: "2026-10-19T00:00:00.000Z",
+        end: worldAt,
+      };
+      const study = {
+        eventId: randomUUID(),
+        interval: range,
+        title: "Study",
+        content: "Worked through the lesson",
+        actorRefs: [actor],
+        placeRef: "class",
+        scheduleId: null,
+        parentEventId: null,
+        causalEventRefs: [],
+        overlap: "concurrent" as const,
+        source: { kind: "rule" as const, producerRef: "adopted:study", sourceRefs: [] },
+        perceptions: [],
+        energy: {
+          kind: "study" as const,
+          participation: "primary" as const,
+          delta: 0,
+          reason: "",
+        },
+      };
+      const operation = {
+        operationId: randomUUID(),
+        subjectId,
+        worldId,
+        expectedRevision: 1,
+        interval: range,
+        events: [study],
+        coverage: "complete" as const,
+      };
+      await current.run(() => worlds.realize(operation));
+      expect((await worlds.readLivingState({ subjectId, worldId }))?.energy).toBe(72);
+      await current.run(() => worlds.realize(operation));
+      expect((await worlds.readLivingState({ subjectId, worldId }))?.energy).toBe(72);
+      const subsidiary = {
+        ...study,
+        eventId: randomUUID(),
+        parentEventId: study.eventId,
+        interval: { ...range, start: "2026-10-19T00:30:00.000Z" },
+        energy: {
+          kind: "social" as const,
+          participation: "subsidiary" as const,
+          delta: -1,
+          reason: "An adopted emotionally demanding interruption",
+        },
+      };
+      await current.run(() =>
+        worlds.realize({
+          ...operation,
+          operationId: randomUUID(),
+          expectedRevision: 2,
+          events: [subsidiary],
+        }),
+      );
+      expect((await worlds.readLivingState({ subjectId, worldId }))?.energy).toBe(70.5);
+      const secondSubsidiary = {
+        ...subsidiary,
+        eventId: randomUUID(),
+        energy: { ...subsidiary.energy, delta: 0, reason: "" },
+      };
+      await current.run(() =>
+        worlds.realize({
+          ...operation,
+          operationId: randomUUID(),
+          expectedRevision: 3,
+          events: [secondSubsidiary],
+        }),
+      );
+      expect((await worlds.readLivingState({ subjectId, worldId }))?.energy).toBe(70.5);
+      const deviceRequest = {
+        operationId: randomUUID(),
+        subjectId,
+        worldId,
+        expectedRevision: 1,
+        view: { kind: "notifications" as const },
+      };
+      expect(await current.run(() => worlds.adoptDeviceView(deviceRequest))).toEqual({
+        revision: 2,
+        view: { kind: "notifications" },
+      });
+      expect(await current.run(() => worlds.adoptDeviceView(deviceRequest))).toEqual({
+        revision: 2,
+        view: { kind: "notifications" },
+      });
+      const before = await worlds.readLivingState({ subjectId, worldId });
+      await worlds.readCalendar({
+        subjectId,
+        worldId,
+        interval: { ...range, end: "2026-10-20T00:00:00.000Z" },
+        view: "planned",
+        perspective: "subject",
+        displayTimezone: "Asia/Shanghai",
+        limit: 10,
+      });
+      expect(await worlds.readLivingState({ subjectId, worldId })).toEqual(before);
+      await expect(
+        current.run(() =>
+          worlds.realize({
+            ...operation,
+            operationId: randomUUID(),
+            expectedRevision: 4,
+            events: [{ ...study, eventId: randomUUID() }],
+          }),
+        ),
+      ).rejects.toMatchObject({ problem: { problemCode: "world.living_conflict" } });
+      expect(await worlds.readLivingState({ subjectId, worldId })).toEqual(before);
+      expect((await worlds.read(subjectId, worldId))?.revision).toBe(4);
+      const state = (await worlds.read(subjectId, worldId))!;
+      const classRule = {
+        ruleId: randomUUID(),
+        revision: 1,
+        title: "Current class",
+        content: "Current class continues",
+        subjectPerception: "I attended this portion of class",
+        startsAtLocal: "2026-10-19T09:00:00",
+        timezone: "Asia/Shanghai",
+        rrule: null,
+        rdates: [],
+        exdates: [],
+        validThrough: null,
+        effectiveFrom: null,
+        effectiveUntil: null,
+        startShiftSeconds: 0,
+        disambiguation: "compatible" as const,
+        durationMinutes: 60,
+        actorRefs: [actor],
+        placeRef: "class",
+        activityId: null,
+        kind: "study" as const,
+        visibility: "subject" as const,
+        adjustable: false,
+        mode: "fixed" as const,
+      };
+      await current.run(() =>
+        worlds.configure({
+          operationId: randomUUID(),
+          expectedRevision: 4,
+          definition: {
+            ...state.definition,
+            revision: state.definition.revision + 1,
+            routineRules: [classRule],
+          },
+          schedule: [],
+        }),
+      );
+      worldAt = "2026-10-19T01:10:00.000Z";
+      await current.run(() =>
+        worlds.advanceRules(subjectId, worldId, {
+          timeDomainRef: "school",
+          start: "2026-10-19T01:00:00.000Z",
+          end: worldAt,
+        }),
+      );
+      expect(
+        (await worlds.readLivingState({ subjectId, worldId }))?.energy,
+      ).toBeCloseTo(70.5 - 8 / 6);
+      const moveRequest = {
+        operationId: randomUUID(),
+        subjectId,
+        worldId,
+        sourceReactionRef: "reaction:actual",
+        action: { kind: "move" as const, placeRef: "home" },
+      };
+      const move = await current.run(() => worlds.adoptAction(moveRequest));
+      expect(move.status).toBe("pending");
+      expect(
+        (await worlds.readLivingState({ subjectId, worldId }))?.currentPlaceRef,
+      ).toBe("class");
+      worldAt = "2026-10-19T01:15:00.000Z";
+      const partial = await current.run(() =>
+        worlds.completeActions({ subjectId, worldId }),
+      );
+      expect(partial[0]?.status).toBe("pending");
+      expect(partial[0]?.eventRefs).toHaveLength(1);
+      expect(
+        (await worlds.readLivingState({ subjectId, worldId }))?.currentPlaceRef,
+      ).toBe("class");
+      await current.run(() =>
+        worlds.advanceRules(subjectId, worldId, {
+          timeDomainRef: "school",
+          start: "2026-10-19T01:10:00.000Z",
+          end: worldAt,
+        }),
+      );
+      worldAt = "2026-10-19T01:25:00.000Z";
+      await current.run(() =>
+        worlds.advanceRules(subjectId, worldId, {
+          timeDomainRef: "school",
+          start: "2026-10-19T01:15:00.000Z",
+          end: worldAt,
+        }),
+      );
+      expect(
+        (await worlds.readLivingState({ subjectId, worldId }))?.currentPlaceRef,
+      ).toBe("home");
+      expect(
+        (await worlds.readLivingState({ subjectId, worldId }))?.energy,
+      ).toBeCloseTo(70.5 - 8 / 6);
+      expect((await current.run(() => worlds.adoptAction(moveRequest))).status).toBe(
+        "completed",
+      );
+      const rest = await current.run(() =>
+        worlds.adoptAction({
+          operationId: randomUUID(),
+          subjectId,
+          worldId,
+          sourceReactionRef: "reaction:rest",
+          action: { kind: "rest" },
+        }),
+      );
+      expect(rest.status).toBe("pending");
+      worldAt = "2026-10-19T01:40:00.000Z";
+      const missed = await current.run(() =>
+        worlds.advanceRules(subjectId, worldId, {
+          timeDomainRef: "school",
+          start: "2026-10-19T01:25:00.000Z",
+          end: worldAt,
+        }),
+      );
+      expect(missed.events.every((event) => event.scheduleOutcome === "missed")).toBe(
+        true,
+      );
+      expect(
+        (await worlds.readLivingState({ subjectId, worldId }))?.currentPlaceRef,
+      ).toBe("home");
+      expect(
+        (await worlds.readLivingState({ subjectId, worldId }))?.energy,
+      ).toBeCloseTo(70.5 - 8 / 6 + 3);
+      expect(await worlds.readPendingActions(subjectId, worldId)).toHaveLength(0);
+      const rejected = await current.run(() =>
+        worlds.adoptAction({
+          operationId: randomUUID(),
+          subjectId,
+          worldId,
+          sourceReactionRef: "reaction:cannot-teleport",
+          action: {
+            kind: "participate",
+            scheduleId: worldOccurrenceId(
+              worldId,
+              classRule.ruleId,
+              "2026-10-19T09:00:00",
+            ),
+          },
+        }),
+      );
+      expect(rejected.status).toBe("rejected");
+      await expect(
+        current.run(() =>
+          worlds.adoptAction(
+            { ...moveRequest, operationId: randomUUID() },
+            async () => {
+              throw subjectProblem(
+                "world.action_revoked",
+                "Foreground revoked",
+                "Use the actual current Reaction",
+                "conflict",
+              );
+            },
+          ),
+        ),
+      ).rejects.toMatchObject({ problem: { problemCode: "world.action_revoked" } });
+      const energyBefore = (await worlds.readLivingState({ subjectId, worldId }))!
+        .energy;
+      worldAt = "2026-10-19T01:50:00.000Z";
+      const worldHead = (await worlds.read(subjectId, worldId))!;
+      const policy = await current.run(() =>
+        profiles.adopt({
+          ...request,
+          operationId: randomUUID(),
+          expectedRevision: worldHead.revision,
+          profile: {
+            ...profile,
+            energy: {
+              ...profile.energy,
+              rates: { ...profile.energy.rates, study: -4 },
+            },
+          },
+        }),
+      );
+      expect(policy.revision).toBe(2);
+      expect(policy.entrySourceRef).toBe(adopted.entrySourceRef);
+      expect(policy.entryRecordedAt).toBe(adopted.entryRecordedAt);
+      expect((await worlds.readLivingState({ subjectId, worldId }))!.energy).toBe(
+        energyBefore,
+      );
+      worldAt = "2026-10-19T02:00:00.000Z";
+      const policyHead = (await worlds.read(subjectId, worldId))!;
+      const afterPolicy = {
+        ...study,
+        eventId: randomUUID(),
+        placeRef: "home",
+        interval: { ...range, start: "2026-10-19T01:40:00.000Z", end: worldAt },
+      };
+      await current.run(() =>
+        worlds.realize({
+          ...operation,
+          operationId: randomUUID(),
+          expectedRevision: policyHead.revision,
+          interval: afterPolicy.interval,
+          events: [afterPolicy],
+        }),
+      );
+      expect(
+        (await worlds.readLivingState({ subjectId, worldId }))!.energy,
+      ).toBeCloseTo(energyBefore - 8 / 6 - 4 / 6);
+    } finally {
+      await current.close();
+    }
+  });
+});

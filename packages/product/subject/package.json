@@ -19,7 +19,8 @@
     "@heptalogos/persistence": "workspace:*",
     "@heptalogos/schema-runtime": "workspace:*",
     "@js-temporal/polyfill": "catalog:",
-    "uuid": "catalog:"
+    "uuid": "catalog:",
+    "rrule": "catalog:"
   },
   "devDependencies": {
     "vitest": "catalog:"

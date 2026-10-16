@@ -268,3 +268,5 @@ Extension/Domain 在其 owner-native boundary 内可以选择 TOML/YAML/SQLite/L
 ```
 
 例如未来 Memory subsystem 可以选择自己的数据库/索引库；这不改变 Core PostgreSQL、Kysely、DBOS 等 Foundation 路由。
+
+WorldLife 在 subject owner 内使用普通成熟库 `rrule` 处理 RFC 5545 重复集，复用 `@js-temporal/polyfill` 处理 IANA/DST 和本地时刻转换；精确版本由 catalog/lock 固定。这不是新的 Foundation 运行时或日历同步平台，采用/历史/实例身份仍由 WorldLife 决定。

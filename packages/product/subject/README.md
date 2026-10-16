@@ -23,3 +23,19 @@ Product Life 和 Agency 的语义所有者。Nous 拥有主体身份与长期认
 `Life.get(subjectId, activityId, transaction?)` 与 `WorldLife.resolveSourceRefs(input, transaction?)` 在授权/发送围栏中复用调用者事务，仍由原owner SQL和解析器读取；不会持有写连接再借读连接。
 
 `createNarrativeService`在实际DecisionCommit基础上保存ExpressionBrief，采用独立原生review后的完整renderer payload。兼容场景细节、Claim、承诺到期点与唯一Agency行为在同一Host事务提交，实际平台结果继续由Agency保存；`claimsTo`按听众及实际发送状态分页，`pendingCommitments`将尚未履约的采用记录供后续Life审议。模型、认知服务与网络始终在事务外。正式合同见[叙事与陈述](../../../specs/subject/narrative-claims.md)。
+
+## 世界 Profile、日历和生活状态
+
+`createWorldProfileService` 通过 `adopt/read` 保存独立 WorldProfile 及实际入场来源，Identity 的 `self` 和虚拟 actor key 由可信组合解析。可选 Seed 由原 Nous 操作单独采用。结构见 `worldProfileSchema`；[学生文件](examples/student-world-profile.json) 是同一 schema 可验证的输入示例。它不含生产 SubjectId；操作者须明确选择目标 Subject/world，并由初始化组合核对正式 Clock 的域与入场点。示例通勤路程由 `travelEdges` 定义，Subject 实际选择 `move` 才产生移动。
+
+Profile 的课表保存原采用输入来源；当前可写课表只有 WorldDefinition 中的规则/修订。`changeCalendar` 改当前日历，不能通过重新导入旧 Profile 覆盖它。再次采用同一入场资料时可明确修改运行参数；初始角色、初始精力及当前精力不重置，原入场 source/ref/recordedAt 保留。能量费率带 `policyEffectiveAt`，跨修订的实际区间分段使用当时参数。
+
+`readCalendar` 接受任意有限世界区间，按 planned/lived/combined、展示时区、角色/活动和 continuation 读取；查询不调用模型、不推进时钟、不创建多年实例。RRULE/RDATE/EXDATE 由 [rrule](https://github.com/jkbrzt/rrule) 处理，Temporal 将本地重复坐标按明确 IANA/DST policy 转为世界区间。`RECURRENCE-ID` 原始本地坐标决定实例 ID，单次移动和未来有效修订保留身份。已实现实例保留原安排，Subject 只能修改 adjustable 规则；缺席不能删除学校规则。
+
+`readLivingState` 返回已实现区间导出的精力、积分点、覆盖、地点、当前世界动作及独立 device revision。一个时段只计一个主活动速率；附属活动只计最大正负担的配置比例。休息/睡眠恢复必须已有实际 realized 区间，计划与 worker 数量不提供恢复或额外扣减。迟到细化从此前保留状态重算，重复 operation 不重复积分。`adoptDeviceViewIn` 复用 Reactor 的同一事务；设备 CAS 不因无关精力变化而失败。
+
+`adoptAction` 接受 move、participate、rest 和真实 Reaction 来源，可信前台校验在同一短事务内执行。动作时长由已采用 route、日程或 rest policy 决定，不能由模型调用改钟。`completeActions` 只实现当前正式时钟已经走过的部分；未到终点仍为 pending，移动不会提前到达目标。当前原生唤醒者读取 `nextOpportunity`；本包没有 timer。`advanceRules` 先处理已采用动作的实际进展，再分段实现规律；离开教室后的课程段记录 missed，不强制主体瞬移，也不把睡眠与主动学习同时计入精力。
+
+世界接触先由 `selectContact` 为一个稳定 native run 独占；selected 不是已感知。实际 admitted projection 与 exact official occurrence 回执成立后，原 run 才能 `acknowledgeContact` 置 released。未知发布状态不换随机 observation ID；只有可信 Reactor 已证明原 run 从未 prepare/publish 且已撤销时，才可同事务 CAS 转移 selection，并保留依据。`pendingContact` 精确读一个事件，分页按实际 recordedAt/eventId，而不是 UUID 大小或故事发生时间推进。
+
+以上是当前 owner 操作与本地 PostgreSQL 证据，正式安装、真实角色/QQ、跨日运行仍由整体活动计划完成；不能将本包测试当作已上线。

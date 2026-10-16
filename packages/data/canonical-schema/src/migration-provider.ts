@@ -31,6 +31,8 @@ import { worldHostLifecycleMigration } from "./migrations/0013-world-host-lifecy
 
 import { worldContactSelectionMigration } from "./migrations/0014-world-contact-selection.js";
 
+import { worldProfileLivingMigration } from "./migrations/0016-world-profile-living.js";
+
 const migrations: Readonly<Record<string, Migration>> = Object.freeze({
   "0001_foundation_baseline": foundationBaselineMigration,
   "0002_product_gateway_prerequisites": productGatewayPrerequisitesMigration,
@@ -46,6 +48,7 @@ const migrations: Readonly<Record<string, Migration>> = Object.freeze({
   "0012_subject_decisions": subjectDecisionsMigration,
   "0013_world_host_lifecycle": worldHostLifecycleMigration,
   "0014_world_contact_selection": worldContactSelectionMigration,
+  "0016_world_profile_living": worldProfileLivingMigration,
 });
 
 /** Provides the current canonical migration set to Kysely's Migrator. */
@@ -71,4 +74,5 @@ export const canonicalMigrationNames = Object.freeze([
   "0012_subject_decisions",
   "0013_world_host_lifecycle",
   "0014_world_contact_selection",
+  "0016_world_profile_living",
 ] as const);

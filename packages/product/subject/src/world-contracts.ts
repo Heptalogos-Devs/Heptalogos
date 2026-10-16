@@ -6,6 +6,7 @@
  */
 import { Type, type Static } from "@heptalogos/schema-runtime/typebox";
 import type { PersistenceService } from "@heptalogos/persistence";
+import { worldEventEnergySchema } from "./world-energy-contracts.js";
 import { worldPointSchema } from "./contracts.js";
 const object = { additionalProperties: false } as const;
 const ref = Type.String({ minLength: 1, maxLength: 2048 });
@@ -26,25 +27,72 @@ export const worldActorSchema = Type.Object(
   { entityRef: ref, name: ref, description: text },
   object,
 );
-/** Calendar routines retain local meaning and are expanded through the world's IANA zone. */
+/** RFC 5545 local recurrence identity; timezone conversion occurs through the explicit IANA policy. */
+export const calendarLocalSchema = Type.String({
+  pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}$",
+});
+/** Original recurrence identities survive moves and future-series revisions. */
+export const worldCalendarExceptionSchema = Type.Object(
+  {
+    exceptionId: id,
+    ruleId: id,
+    recurrenceId: calendarLocalSchema,
+    startLocal: Type.Optional(calendarLocalSchema),
+    preserveRuleRevision: Type.Optional(Type.Integer({ minimum: 1 })),
+    durationMinutes: Type.Optional(Type.Integer({ minimum: 1, maximum: 10080 })),
+    placeRef: Type.Optional(ref),
+    actorRefs: Type.Optional(refs),
+    status: Type.Union([Type.Literal("planned"), Type.Literal("cancelled")]),
+    reason: text,
+  },
+  object,
+);
+/** One effective revision of a stable local-time RFC 5545 series. */
 export const worldRoutineRuleSchema = Type.Object(
   {
     ruleId: id,
+    revision: Type.Integer({ minimum: 1 }),
     title: ref,
     content: text,
     subjectPerception: Type.Union([text, Type.Null()]),
-    localStart: Type.String({ pattern: "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$" }),
-    durationMinutes: Type.Integer({ minimum: 1, maximum: 1440 }),
-    weekdays: Type.Array(Type.Integer({ minimum: 1, maximum: 7 }), {
-      minItems: 1,
-      maxItems: 7,
-      uniqueItems: true,
-    }),
-    validFrom: Type.String({ pattern: "^\\d{4}-\\d{2}-\\d{2}$" }),
-    validUntil: Type.String({ pattern: "^\\d{4}-\\d{2}-\\d{2}$" }),
+    startsAtLocal: calendarLocalSchema,
+    timezone: ref,
+    rrule: Type.Union([Type.String({ minLength: 1, maxLength: 2048 }), Type.Null()]),
+    rdates: Type.Array(calendarLocalSchema, { maxItems: 256, uniqueItems: true }),
+    exdates: Type.Array(calendarLocalSchema, { maxItems: 256, uniqueItems: true }),
+    validThrough: Type.Union([
+      Type.String({ pattern: "^\\d{4}-\\d{2}-\\d{2}$" }),
+      Type.Null(),
+    ]),
+    effectiveFrom: Type.Union([calendarLocalSchema, Type.Null()]),
+    effectiveUntil: Type.Union([calendarLocalSchema, Type.Null()]),
+    startShiftSeconds: Type.Integer(),
+    disambiguation: Type.Union([
+      Type.Literal("compatible"),
+      Type.Literal("earlier"),
+      Type.Literal("later"),
+      Type.Literal("reject"),
+    ]),
+    durationMinutes: Type.Integer({ minimum: 1, maximum: 10080 }),
     actorRefs: refs,
     placeRef: ref,
     activityId: Type.Union([id, Type.Null()]),
+    kind: Type.Union([
+      Type.Literal("study"),
+      Type.Literal("social"),
+      Type.Literal("rest"),
+      Type.Literal("sleep"),
+      Type.Literal("ordinary"),
+      Type.Literal("entertainment"),
+    ]),
+    visibility: Type.Union([
+      Type.Literal("subject"),
+      Type.Literal("world_author"),
+      Type.Literal("public"),
+    ]),
+    adjustable: Type.Boolean(),
+    cancelled: Type.Optional(Type.Boolean()),
+    archived: Type.Optional(Type.Boolean()),
     mode: Type.Union([Type.Literal("fixed"), Type.Literal("choice")]),
   },
   object,
@@ -71,7 +119,10 @@ export const worldDefinitionSchema = Type.Object(
     rules: text,
     creationScope: text,
     informationSourceRefs: refs,
-    routineRules: Type.Optional(Type.Array(worldRoutineRuleSchema, { maxItems: 64 })),
+    routineRules: Type.Optional(Type.Array(worldRoutineRuleSchema, { maxItems: 256 })),
+    calendarExceptions: Type.Optional(
+      Type.Array(worldCalendarExceptionSchema, { maxItems: 1024 }),
+    ),
   },
   object,
 );
@@ -81,6 +132,19 @@ export type WorldDefinition = Static<typeof worldDefinitionSchema>;
 export const worldScheduleItemSchema = Type.Object(
   {
     scheduleId: id,
+    ruleRef: Type.Optional(
+      Type.Object(
+        {
+          ruleId: id,
+          revision: Type.Integer({ minimum: 1 }),
+          recurrenceId: calendarLocalSchema,
+          originalInterval: worldIntervalSchema,
+          timezoneAdjusted: Type.Boolean(),
+          exceptionId: Type.Union([id, Type.Null()]),
+        },
+        object,
+      ),
+    ),
     interval: worldIntervalSchema,
     title: ref,
     description: text,
@@ -111,12 +175,21 @@ export const worldPerceptionSchema = Type.Object(
 export const worldEventInputSchema = Type.Object(
   {
     eventId: id,
+    activityId: Type.Optional(id),
+    energy: Type.Optional(worldEventEnergySchema),
     interval: worldIntervalSchema,
     title: ref,
     content: text,
     actorRefs: refs,
     placeRef: ref,
     scheduleId: Type.Union([id, Type.Null()]),
+    scheduleOutcome: Type.Optional(
+      Type.Union([
+        Type.Literal("completed"),
+        Type.Literal("missed"),
+        Type.Literal("partial"),
+      ]),
+    ),
     parentEventId: Type.Union([id, Type.Null()]),
     causalEventRefs: refs,
     overlap: Type.Union([Type.Literal("exclusive"), Type.Literal("concurrent")]),

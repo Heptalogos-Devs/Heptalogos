@@ -38,15 +38,15 @@ knowledgeAtWorldTime读取已实现故事中角色截至该世界点的见闻；
 
 参见[主体活动](subject-base.md)、[叙事与陈述](narrative-claims.md)、[时间](../execution/time.md)。
 
-日历规律保留localStart、durationMinutes、weekdays、validFrom/validUntil、地点/人物和fixed/choice。IANA跳过时间向后平移、重复时间取较早项，均由Temporal处理；发生身份由world/rule/local-date经uuid库固定。prepareAdvance投影前2小时场景与后24小时日程，advanceRules每批最多128事件，未设定/未选择区间保留limited；重复机会读取既有event而不重复实现。
+日历规律采用成熟RFC5545重复集，原始本地RECURRENCE-ID固定实例身份；单次例外和未来有效修订保留旧安排/来源。rrule负责RRULE/RDATE/EXDATE，Temporal按明确IANA/DST policy转换，不手写weekday日期循环。prepareAdvance默认前2小时/后24小时并读取实际profile参数；advanceRules每批最多128事件，未实现部分保持limited。
 
-当前`createWorldOpportunity`串联固定规则实现、必要world.planner和Subject审议；世界作者frame与Subject可见材料分开。候选contact构造不代表主体感知；只有真实deliberation provider admission及accepted contact receipt成立才ack世界待接触事件，失败/uncertain保留pending。planner事件producer绑定实际RoleRun，不能由模型自报。后续选择交给Life/Agency的adoptDeliberation消费者。原生cron.command helper投影同Subject唯一声明job，wake按当前安装discovery调用service机会；正式安装组合与真实模型/跨日结果仍需按活动计划验收。
+世界机会由唯一Reactor组织，不为每个World或Activity另开一条主观链。World contact构造或select均不代表感知；同Subject事件只能由一个稳定run交接，只有真实provider admission及exact accepted occurrence回执成立才released。失败/uncertain保留selection。仅在正式证明原run未prepare/publish且其Reaction已撤销后允许CAS转移，保留原选择和撤销依据。
 
 虚拟人物由Identity `resolveWorldActor(worldId,actorKey)`取得稳定canonical EntityRef，跨世界同key不合并，`linkAccount`拒绝为虚拟人物绑定真实协议账号。Subject本人使用ensureSubjectEntity；世界采用adapter需分别核对本人self与其余actor的exact world scope。
 
 ## 独立WorldProfile、课表例外与范围日历
 
-当前规律展开基础继续使用；完整profile/例外/范围日历与LivingState是活动计划新增消费者，完成实际接口与运行前不将旧Life分页冒充完整日历。
+当前owner已提供WorldProfile采用、RFC重复规则与例外、范围日历、LivingState积分、设备CAS及到时实现的世界动作。对应PostgreSQL回归与真实安装行为分别记录，旧Life列表不代替范围日历。
 
 结构化WorldProfile与可选Seed分别采用。无Seed创建不调用模型、不补人格或旧传记；学校/角色仅是明确入场事实，可按实际启用领域形成认识。新profile不倒退既有世界或覆盖原Subject身份。跨owner步骤复用稳定operation及真实回执，失败续未完成，不建通用创建引擎。
 

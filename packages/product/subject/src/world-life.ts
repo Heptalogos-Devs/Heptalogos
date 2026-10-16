@@ -17,7 +17,6 @@ import {
   type PersistenceInternalTransaction,
 } from "@heptalogos/persistence/repository";
 import {
-  acknowledgeWorldContactSchema,
   worldHistoryQuerySchema,
   configureWorldSchema,
   queryWorldSchema,
@@ -27,9 +26,29 @@ import {
   type WorldState,
   type RealizedWorldEvent,
 } from "./world-contracts.js";
+import { createWorldActionService } from "./world-actions.js";
+import { createWorldContactService } from "./world-contact.js";
 import { subjectProblem } from "./problems.js";
+import {
+  realizeRuleSegments,
+  scheduleFullyRealized,
+} from "./world-rule-realization.js";
 import { expandWorldRoutines, validateWorldRoutines } from "./world-calendar.js";
+import {
+  readWorldLiving,
+  integrateWorldLivingIn,
+  adoptWorldDeviceIn,
+} from "./world-living.js";
+import type {
+  AdoptWorldDeviceView,
+  AdoptedWorldProfile,
+} from "./world-profile-contracts.js";
 import { v5 as uuidv5 } from "uuid";
+import {
+  changeCalendarSchema,
+  type ChangeCalendar,
+} from "./world-calendar-contracts.js";
+import { readWorldCalendar, applyCalendarChange } from "./world-calendar-service.js";
 
 function conflict(detail: string): never {
   throw subjectProblem("world.conflict", "World patch is not admissible", detail);
@@ -193,6 +212,20 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
     const related = rows.map((row) => row.document);
     const ids = new Set<string>();
     const at = options.now();
+    const policyRows = await executeRepositorySql<{ max_delta: number }>(
+      tx,
+      "SELECT (document#>>'{profile,energy,maxEventDelta}')::double precision AS max_delta FROM heptalogos.world_profile WHERE subject_id=$1 AND world_id=$2",
+      [input.subjectId, input.worldId],
+    );
+    for (const event of input.events)
+      if (
+        event.energy &&
+        event.actorRefs.includes(state.definition.subjectActorRef) &&
+        Math.abs(event.energy.delta) > (policyRows[0]?.max_delta ?? 0)
+      )
+        conflict(
+          "The event appraisal exceeds this world's currently adopted delta allowance",
+        );
     const events: RealizedWorldEvent[] = [];
     for (const event of input.events) {
       interval(event.interval, state.definition.timeDomainRef);
@@ -305,6 +338,13 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
       updatedAt: at,
     };
     await saveState(tx, next);
+    await integrateWorldLivingIn(tx, {
+      subjectId: input.subjectId,
+      worldId: input.worldId,
+      worldRevision: next.revision,
+      events,
+      now: at,
+    });
     const result = {
       revision: next.revision,
       events,
@@ -314,7 +354,115 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
     await saveOperation(tx, input, input, result, at);
     return result;
   };
+  const configureIn = async (
+    tx: PersistenceInternalTransaction,
+    value: Static<typeof configureWorldSchema>,
+  ): Promise<WorldState> => {
+    const input = checked<Static<typeof configureWorldSchema>>(
+      configureWorldSchema,
+      value,
+    );
+    try {
+      new Intl.DateTimeFormat("en", { timeZone: input.definition.timezone }).format();
+    } catch {
+      conflict("Use an actual IANA timezone");
+    }
+    validateWorldRoutines(input.definition);
+    const { subjectId, worldId } = input.definition;
+    if (
+      !input.definition.actors.some(
+        (actor) => actor.entityRef === input.definition.subjectActorRef,
+      ) ||
+      new Set(input.definition.actors.map((actor) => actor.entityRef)).size !==
+        input.definition.actors.length ||
+      new Set(input.definition.places.map((place) => place.placeRef)).size !==
+        input.definition.places.length ||
+      new Set(input.schedule.map((item) => item.scheduleId)).size !==
+        input.schedule.length
+    )
+      conflict(
+        "Adopt unique actor/place/schedule identities and one existing Subject actor",
+      );
+    for (const item of input.schedule) {
+      interval(item.interval, input.definition.timeDomainRef);
+      if (
+        !input.definition.places.some((place) => place.placeRef === item.placeRef) ||
+        item.actorRefs.some(
+          (actor) =>
+            !input.definition.actors.some((known) => known.entityRef === actor),
+        )
+      )
+        conflict("Schedule entries require known world entities");
+    }
+    await lockSubjectNarrative(tx, subjectId);
+    const previous = await replay(tx, subjectId, input.operationId, input);
+    if (previous) return previous as WorldState;
+    const current = await readIn(tx, subjectId, worldId);
+    if ((current?.revision ?? 0) !== input.expectedRevision)
+      conflict("World configuration revision changed");
+    if (
+      current &&
+      current.definition.subjectActorRef !== input.definition.subjectActorRef
+    )
+      conflict(
+        "A world's Subject actor identity is stable across configuration revisions",
+      );
+    if (current && current.definition.timeDomainRef !== input.definition.timeDomainRef)
+      conflict("Existing world history cannot be moved to another clock domain");
+    if (input.definition.revision !== (current?.definition.revision ?? 0) + 1)
+      conflict("Adopt the next explicit definition revision");
+    const next = {
+      definition: input.definition,
+      revision: input.expectedRevision + 1,
+      schedule: input.schedule,
+      updatedAt: options.now(),
+    };
+    await saveState(tx, next);
+    await saveOperation(
+      tx,
+      { subjectId, worldId, operationId: input.operationId },
+      input,
+      next,
+      next.updatedAt,
+    );
+    return next;
+  };
+  const contacts = createWorldContactService({
+    persistence: options.persistence,
+    now: options.now,
+    readIn,
+    lockSubject: lockSubjectNarrative,
+    readState: async (subjectId, worldId): Promise<WorldState | undefined> =>
+      service.read(subjectId, worldId),
+  });
+  const actions = createWorldActionService({
+    persistence: options.persistence,
+    now: options.now,
+    worldNow: options.worldNow,
+    readIn,
+    realizeIn,
+    lockSubject: lockSubjectNarrative,
+  });
   const service = {
+    ...contacts,
+    ...actions,
+    readLivingState: (input: { subjectId: string; worldId: string }) =>
+      readWorldLiving(options, input),
+    async adoptDeviceViewIn(
+      tx: PersistenceInternalTransaction,
+      input: AdoptWorldDeviceView,
+    ) {
+      await lockSubjectNarrative(tx, input.subjectId);
+      return adoptWorldDeviceIn(tx, input, options.now());
+    },
+    async adoptDeviceView(input: AdoptWorldDeviceView) {
+      return options.persistence.mutate((context) =>
+        useRepositoryMutationTransaction(context, async (tx) => {
+          await lockSubjectNarrative(tx, input.subjectId);
+          return adoptWorldDeviceIn(tx, input, options.now());
+        }),
+      );
+    },
     async readRealization(
       subjectId: string,
       operationId: string,
@@ -328,6 +476,88 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
     },
     /** Same transaction owner operation for atomic narrative adoption. */
     realizeIn,
+    /** Arbitrary finite calendar ranges are read-only owner projections. */
+    readCalendar: (input: Parameters<typeof readWorldCalendar>[1]) =>
+      readWorldCalendar(options, input),
+    /** Calendar changes share the Subject/world lock and operation replay with realization. */
+    async changeCalendar(
+      value: ChangeCalendar,
+      authority?: {
+        actorMode: "subject" | "operator";
+        assertCurrentIn?: (tx: PersistenceInternalTransaction) => Promise<void>;
+      },
+    ) {
+      const input = checked<ChangeCalendar>(changeCalendarSchema, value);
+      const saved = await readRepositorySql<{
+        request_digest: string;
+        document: unknown;
+      }>(
+        options.persistence,
+        "SELECT request_digest,document FROM heptalogos.world_realization WHERE subject_id=$1 AND operation_id=$2",
+        [input.subjectId, input.operationId],
+      );
+      if (saved[0]) {
+        if (saved[0].request_digest !== digest(input))
+          conflict("This calendar operation already binds different input");
+        return saved[0].document as WorldState;
+      }
+      const world = await options.worldNow(input.subjectId);
+      return options.persistence.mutate((context) =>
+        useRepositoryMutationTransaction(context, async (tx) => {
+          await lockSubjectNarrative(tx, input.subjectId);
+          const previous = await replay(tx, input.subjectId, input.operationId, input);
+          if (previous) return previous as WorldState;
+          const current = await readIn(tx, input.subjectId, input.worldId);
+          if (!current || current.revision !== input.expectedRevision)
+            conflict("Calendar world revision changed");
+          if (world.timeDomainRef !== current.definition.timeDomainRef)
+            conflict("The current world clock has another domain");
+          const rows = await executeRepositorySql<{ document: RealizedWorldEvent }>(
+            tx,
+            "SELECT document FROM heptalogos.world_event WHERE subject_id=$1 AND world_id=$2 AND document->>'scheduleId' IS NOT NULL",
+            [input.subjectId, input.worldId],
+          );
+          const realizedIds = new Set(rows.map((row) => row.document.scheduleId!));
+          if (authority?.assertCurrentIn) await authority.assertCurrentIn(tx);
+          if (authority?.actorMode === "subject") {
+            const affected = (current.definition.routineRules ?? []).filter(
+              (rule) =>
+                rule.ruleId === input.ruleId &&
+                !rule.archived &&
+                (!rule.effectiveUntil || rule.effectiveUntil > input.recurrenceId) &&
+                (input.scope !== "this" ||
+                  !rule.effectiveFrom ||
+                  rule.effectiveFrom <= input.recurrenceId),
+            );
+            if (!affected.length || affected.some((rule) => !rule.adjustable))
+              conflict(
+                "The Subject cannot rewrite a school's fixed rule; choose participation or absence instead",
+              );
+          }
+          const definition = applyCalendarChange(
+            current.definition,
+            input,
+            realizedIds,
+            rows.map((row) => row.document),
+          );
+          validateWorldRoutines(definition);
+          const next: WorldState = {
+            ...current,
+            definition,
+            revision: current.revision + 1,
+            updatedAt: options.now(),
+            schedule: current.schedule.filter(
+              (plan) =>
+                realizedIds.has(plan.scheduleId) ||
+                plan.ruleRef?.ruleId !== input.ruleId,
+            ),
+          };
+          await saveState(tx, next);
+          await saveOperation(tx, input, input, next, next.updatedAt);
+          return next;
+        }),
+      );
+    },
     /** Reads authoritative world state without interpreting private Nous storage. */
     async read(subjectId: string, worldId: string): Promise<WorldState | undefined> {
       const rows = await readRepositorySql<{ document: WorldState }>(
@@ -338,81 +568,10 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
       return rows[0]?.document;
     },
     /** Explicitly adopts environment and future schedule, retaining every revision. */
+    configureIn,
     async configure(value: Static<typeof configureWorldSchema>) {
-      const input = checked<Static<typeof configureWorldSchema>>(
-        configureWorldSchema,
-        value,
-      );
-      try {
-        new Intl.DateTimeFormat("en", { timeZone: input.definition.timezone }).format();
-      } catch {
-        conflict("Use an actual IANA timezone");
-      }
-      validateWorldRoutines(input.definition);
-      const { subjectId, worldId } = input.definition;
-      if (
-        !input.definition.actors.some(
-          (actor) => actor.entityRef === input.definition.subjectActorRef,
-        ) ||
-        new Set(input.definition.actors.map((actor) => actor.entityRef)).size !==
-          input.definition.actors.length ||
-        new Set(input.definition.places.map((place) => place.placeRef)).size !==
-          input.definition.places.length ||
-        new Set(input.schedule.map((item) => item.scheduleId)).size !==
-          input.schedule.length
-      )
-        conflict(
-          "Adopt unique actor/place/schedule identities and one existing Subject actor",
-        );
-      for (const item of input.schedule) {
-        interval(item.interval, input.definition.timeDomainRef);
-        if (
-          !input.definition.places.some((place) => place.placeRef === item.placeRef) ||
-          item.actorRefs.some(
-            (actor) =>
-              !input.definition.actors.some((known) => known.entityRef === actor),
-          )
-        )
-          conflict("Schedule entries require known world entities");
-      }
       return options.persistence.mutate((context) =>
-        useRepositoryMutationTransaction(context, async (tx) => {
-          await lockSubjectNarrative(tx, subjectId);
-          const previous = await replay(tx, subjectId, input.operationId, input);
-          if (previous) return previous as WorldState;
-          const current = await readIn(tx, subjectId, worldId);
-          if ((current?.revision ?? 0) !== input.expectedRevision)
-            conflict("World configuration revision changed");
-          if (
-            current &&
-            current.definition.subjectActorRef !== input.definition.subjectActorRef
-          )
-            conflict(
-              "A world's Subject actor identity is stable across configuration revisions",
-            );
-          if (
-            current &&
-            current.definition.timeDomainRef !== input.definition.timeDomainRef
-          )
-            conflict("Existing world history cannot be moved to another clock domain");
-          if (input.definition.revision !== (current?.definition.revision ?? 0) + 1)
-            conflict("Adopt the next explicit definition revision");
-          const next = {
-            definition: input.definition,
-            revision: input.expectedRevision + 1,
-            schedule: input.schedule,
-            updatedAt: options.now(),
-          };
-          await saveState(tx, next);
-          await saveOperation(
-            tx,
-            { subjectId, worldId, operationId: input.operationId },
-            input,
-            next,
-            next.updatedAt,
-          );
-          return next;
-        }),
+        useRepositoryMutationTransaction(context, (tx) => configureIn(tx, value)),
       );
     },
     /** Realization does not infer that planned events actually occurred. */
@@ -430,10 +589,23 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
       ]);
       if (!state || state.definition.timeDomainRef !== world.timeDomainRef)
         conflict("World and current clock must share a declared domain");
+      const adopted = await readRepositorySql<{ document: AdoptedWorldProfile }>(
+        options.persistence,
+        "SELECT document FROM heptalogos.world_profile WHERE subject_id=$1 AND world_id=$2",
+        [subjectId, worldId],
+      );
+      const planning = adopted[0]?.document.profile.planning ?? {
+        horizonHours: 24,
+        detailHours: 2,
+      };
       const upcoming = {
         timeDomainRef: world.timeDomainRef,
-        start: new Date(Date.parse(world.at) - 2 * 3600000).toISOString(),
-        end: new Date(Date.parse(world.at) + 24 * 3600000).toISOString(),
+        start: new Date(
+          Date.parse(world.at) - planning.detailHours * 3600000,
+        ).toISOString(),
+        end: new Date(
+          Date.parse(world.at) + planning.horizonHours * 3600000,
+        ).toISOString(),
       };
       const schedule = [
         ...state.schedule,
@@ -486,7 +658,7 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
         nextRevision: rows.length > input.limit ? history.at(-1)!.revision : null,
       };
     },
-    /** Resolves actual same-Subject world roots and actor-visible event references in two bounded owner reads. */
+    /** Resolves actual same-Subject world, adopted entry and actor-visible event references in bounded owner reads. */
     async resolveSourceRefs(
       input: {
         subjectId: string;
@@ -504,6 +676,9 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
         const match = rootPattern.exec(ref);
         return match ? [match[1]!] : [];
       });
+      const entries = input.sourceRefs.filter((ref) =>
+        new RegExp(`^world-profile:(${uuid}):1$`).test(ref),
+      );
       const events = input.sourceRefs.flatMap((ref) => {
         const match = eventPattern.exec(ref);
         return match
@@ -531,6 +706,13 @@ WHERE e.subject_id=$1 AND e.event_id=ANY($2::uuid[]) AND (EXISTS(SELECT 1 FROM j
             [input.subjectId, events.map((event) => event.eventId)],
           )
         : [];
+      const actualEntries = entries.length
+        ? await read<{ source_ref: string }>(
+            "SELECT document->>'entrySourceRef' AS source_ref FROM heptalogos.world_profile WHERE subject_id=$1 AND document->>'entrySourceRef'=ANY($2::text[])",
+            [input.subjectId, entries],
+          )
+        : [];
+      const validEntries = new Set(actualEntries.map((row) => row.source_ref));
       const validRoots = new Set(actualRoots.map((row) => row.world_id.toLowerCase()));
       const validEvents = new Set(
         actualEvents.map((row) =>
@@ -538,6 +720,7 @@ WHERE e.subject_id=$1 AND e.event_id=ANY($2::uuid[]) AND (EXISTS(SELECT 1 FROM j
         ),
       );
       return [...new Set(input.sourceRefs)].filter((ref) => {
+        if (validEntries.has(ref)) return true;
         const root = rootPattern.exec(ref);
         if (root) return validRoots.has(root[1]!.toLowerCase());
         const event = eventPattern.exec(ref);
@@ -562,6 +745,7 @@ WHERE subject_id=$1 AND world_id=$2 AND document->'interval' IS NOT NULL ORDER B
       worldId: string,
       range: { timeDomainRef: string; start: string; end: string },
     ) {
+      await service.completeActions({ subjectId, worldId });
       const { state, world } = await service.prepareAdvance(subjectId, worldId);
       interval(range, state.definition.timeDomainRef);
       if (Date.parse(range.end) > Date.parse(world.at))
@@ -570,74 +754,61 @@ WHERE subject_id=$1 AND world_id=$2 AND document->'interval' IS NOT NULL ORDER B
       const prior = await readRepositorySql<{ document: RealizedWorldEvent }>(
         options.persistence,
         "SELECT document FROM heptalogos.world_event WHERE subject_id=$1 AND world_id=$2 AND occurred_start<$4::timestamptz AND occurred_end>$3::timestamptz",
-        [subjectId, worldId, range.start, range.end],
-      );
-      const done = new Set(
-        prior.flatMap((row) =>
-          row.document.scheduleId ? [row.document.scheduleId] : [],
-        ),
+        [
+          subjectId,
+          worldId,
+          expanded.reduce(
+            (first, item) =>
+              Date.parse(item.schedule.interval.start) < Date.parse(first)
+                ? item.schedule.interval.start
+                : first,
+            range.start,
+          ),
+          range.end,
+        ],
       );
       const due = expanded.filter(
         (value) =>
           value.rule.mode === "fixed" &&
-          Date.parse(value.schedule.interval.start) >= Date.parse(range.start) &&
-          Date.parse(value.schedule.interval.end) <= Date.parse(range.end) &&
-          !done.has(value.schedule.scheduleId),
+          value.schedule.status === "planned" &&
+          Date.parse(value.schedule.interval.start) < Date.parse(range.end) &&
+          Date.parse(value.schedule.interval.end) > Date.parse(range.start) &&
+          !scheduleFullyRealized(
+            value.schedule,
+            prior.map((row) => row.document),
+          ),
       );
       const batch = due.slice(0, 128);
-      if (!batch.length)
+      const presence = await readRepositorySql<{ place_ref: string }>(
+        options.persistence,
+        "SELECT document#>>'{profile,entry,placeRef}' AS place_ref FROM heptalogos.world_profile WHERE subject_id=$1 AND world_id=$2",
+        [subjectId, worldId],
+      );
+      const events = realizeRuleSegments(
+        state.definition,
+        batch,
+        prior.map((row) => row.document),
+        range,
+        presence[0]?.place_ref,
+      );
+      if (!events.length)
         return {
           revision: state.revision,
           events: [],
           interval: range,
           coverage: "limited" as const,
         };
-      const events = batch.map(({ rule, schedule }) => ({
-        eventId: uuidv5(`event:${schedule.scheduleId}`, worldId),
-        interval: schedule.interval,
-        title: rule.title,
-        content: rule.content,
-        actorRefs: rule.actorRefs,
-        placeRef: rule.placeRef,
-        scheduleId: schedule.scheduleId,
-        parentEventId: null,
-        causalEventRefs: [],
-        overlap: "exclusive" as const,
-        source: {
-          kind: "rule" as const,
-          producerRef: `world-rule:${worldId}:${rule.ruleId}`,
-          sourceRefs: schedule.sourceRefs,
-        },
-        perceptions:
-          rule.subjectPerception &&
-          rule.actorRefs.includes(state.definition.subjectActorRef)
-            ? [
-                {
-                  actorRef: state.definition.subjectActorRef,
-                  kind: "seen" as const,
-                  at: {
-                    timeDomainRef: range.timeDomainRef,
-                    at: schedule.interval.start,
-                  },
-                  content: rule.subjectPerception,
-                },
-              ]
-            : [],
-      }));
       // Calendar rules define only their own slots. Unspecified intervals keep explicit limited coverage.
-      const batchRange =
-        due.length > 128
-          ? {
-              ...range,
-              end: batch.reduce(
-                (latest, item) =>
-                  Date.parse(item.schedule.interval.end) > Date.parse(latest)
-                    ? item.schedule.interval.end
-                    : latest,
-                range.start,
-              ),
-            }
-          : range;
+      const batchRange = {
+        ...range,
+        end: events.reduce(
+          (last, event) =>
+            Date.parse(event.interval.end) > Date.parse(last)
+              ? event.interval.end
+              : last,
+          range.start,
+        ),
+      };
       const patch = {
         operationId: uuidv5(
           `advance:${state.revision}:${range.start}:${range.end}`,
@@ -724,156 +895,6 @@ AND ($6::timestamptz IS NULL OR recorded_at<=$6::timestamptz) ORDER BY document-
               known.eventId === event.eventId && known.revision === event.revision,
           ),
         );
-    },
-    /** Filters recent visible state against actual accepted releases in one owner read. */
-    async releasedEventIds(
-      subjectId: string,
-      worldId: string,
-      eventIds: readonly string[],
-      transaction?: PersistenceInternalTransaction,
-    ) {
-      if (eventIds.length > 128)
-        conflict("Release lookups are bounded to the current 128-event view");
-      const read = <T>(statement: string, parameters: readonly unknown[]) =>
-        transaction
-          ? executeRepositorySql<T>(transaction, statement, parameters)
-          : readRepositorySql<T>(options.persistence, statement, parameters);
-      const rows = await read<{ event_id: string }>(
-        "SELECT event_id FROM heptalogos.world_contact_release WHERE subject_id=$1 AND world_id=$2 AND event_id=ANY($3::uuid[]) AND state='released'",
-        [subjectId, worldId, eventIds],
-      );
-      return rows.map((row) => row.event_id);
-    },
-    /** Retries only contact handoff, never realization or external effects. */
-    async pendingContacts(subjectId: string, worldId: string, limit = 64) {
-      const state = await service.read(subjectId, worldId);
-      if (!state) conflict("World does not exist");
-      const rows = await readRepositorySql<{
-        document: RealizedWorldEvent;
-        selected_run_id: string | null;
-      }>(
-        options.persistence,
-        `SELECT e.document,r.selected_run_id FROM heptalogos.world_event e LEFT JOIN heptalogos.world_contact_release r USING(subject_id,world_id,event_id)
-WHERE e.subject_id=$1 AND e.world_id=$2 AND (r.event_id IS NULL OR r.state='selected') AND EXISTS(SELECT 1 FROM jsonb_array_elements(e.document->'perceptions') p WHERE p->>'actorRef'=$3) ORDER BY e.event_id LIMIT $4`,
-        [
-          subjectId,
-          worldId,
-          state.definition.subjectActorRef,
-          Math.max(1, Math.min(limit, 128)),
-        ],
-      );
-      return rows.map((row) => ({
-        sourceRef: `world-event:${worldId}:${row.document.eventId}:${row.document.revision}`,
-        selectedRunId: row.selected_run_id,
-        eventId: row.document.eventId,
-        eventRevision: row.document.revision,
-        worldId,
-        interval: row.document.interval,
-        recordedAt: row.document.recordedAt,
-        source: row.document.source,
-        perceptions: row.document.perceptions.filter(
-          (p) => p.actorRef === state.definition.subjectActorRef,
-        ),
-      }));
-    },
-    /** Atomically assigns one event occurrence to one stable subjective run, without claiming perception. */
-    async selectContact(input: {
-      subjectId: string;
-      worldId: string;
-      eventId: string;
-      runId: string;
-    }) {
-      if (!input.runId.trim())
-        conflict("Use the stable actual subjective run identity");
-      return options.persistence.mutate((context) =>
-        useRepositoryMutationTransaction(context, async (tx) => {
-          await lockSubjectNarrative(tx, input.subjectId);
-          const state = await readIn(tx, input.subjectId, input.worldId);
-          const events = await executeRepositorySql<{ document: RealizedWorldEvent }>(
-            tx,
-            "SELECT document FROM heptalogos.world_event WHERE subject_id=$1 AND world_id=$2 AND event_id=$3",
-            [input.subjectId, input.worldId, input.eventId],
-          );
-          const event = events[0]?.document;
-          if (
-            !state ||
-            !event?.perceptions.some(
-              (p) => p.actorRef === state.definition.subjectActorRef,
-            )
-          )
-            conflict("Only a realized Subject-visible event can be selected");
-          const contactRef = `world-event:${input.worldId}:${event.eventId}:${event.revision}`;
-          await executeRepositorySql(
-            tx,
-            `INSERT INTO heptalogos.world_contact_release(subject_id,world_id,event_id,contact_ref,recorded_at,state,selected_run_id)
-           VALUES($1,$2,$3,$4,$5,'selected',$6) ON CONFLICT DO NOTHING`,
-            [
-              input.subjectId,
-              input.worldId,
-              input.eventId,
-              contactRef,
-              options.now(),
-              input.runId,
-            ],
-          );
-          const rows = await executeRepositorySql<{
-            state: "selected" | "released";
-            selected_run_id: string | null;
-            contact_ref: string;
-          }>(
-            tx,
-            "SELECT state,selected_run_id,contact_ref FROM heptalogos.world_contact_release WHERE subject_id=$1 AND world_id=$2 AND event_id=$3",
-            [input.subjectId, input.worldId, input.eventId],
-          );
-          const selected = rows[0]!;
-          return {
-            selected:
-              selected.selected_run_id === input.runId &&
-              selected.contact_ref === contactRef,
-            selectedRunId: selected.selected_run_id,
-            state: selected.state,
-            contactRef: selected.contact_ref,
-          };
-        }),
-      );
-    },
-    /** Adopts only the trusted actual admission receipt of the run that owns this selection. */
-    async acknowledgeContact(value: Static<typeof acknowledgeWorldContactSchema>) {
-      const input = checked<Static<typeof acknowledgeWorldContactSchema>>(
-        acknowledgeWorldContactSchema,
-        value,
-      );
-      return options.persistence.mutate((context) =>
-        useRepositoryMutationTransaction(context, async (tx) => {
-          await lockSubjectNarrative(tx, input.subjectId);
-          const rows = await executeRepositorySql<{
-            contact_ref: string;
-            selected_run_id: string | null;
-            state: string;
-          }>(
-            tx,
-            "SELECT contact_ref,selected_run_id,state FROM heptalogos.world_contact_release WHERE subject_id=$1 AND world_id=$2 AND event_id=$3 FOR UPDATE",
-            [input.subjectId, input.worldId, input.eventId],
-          );
-          const selected = rows[0];
-          if (
-            !selected ||
-            selected.contact_ref !== input.contactRef ||
-            (selected.selected_run_id !== input.runId &&
-              !(selected.state === "released" && selected.selected_run_id === null))
-          )
-            conflict(
-              "Only the selected actual run may acknowledge this exact canonical contact",
-            );
-          if (selected.state !== "released")
-            await executeRepositorySql(
-              tx,
-              "UPDATE heptalogos.world_contact_release SET state='released',recorded_at=$4 WHERE subject_id=$1 AND world_id=$2 AND event_id=$3",
-              [input.subjectId, input.worldId, input.eventId, options.now()],
-            );
-          return { contactRef: input.contactRef };
-        }),
-      );
     },
     /** Filters world-author truth before it can enter a Subject's context or retrieval. */
     async query(value: Static<typeof queryWorldSchema>) {

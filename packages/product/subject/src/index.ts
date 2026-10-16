@@ -35,3 +35,10 @@ export {
   type WorldHostClock,
   type WorldHostLifecycleReceipt,
 } from "./world-lifecycle.js";
+
+export * from "./world-calendar-contracts.js";
+export * from "./world-profile-contracts.js";
+export * from "./world-energy-contracts.js";
+export { createWorldProfileService } from "./world-profile.js";
+export { integrateWorldEnergy } from "./world-living.js";
+export * from "./world-action-contracts.js";
