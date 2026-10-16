@@ -1,80 +1,23 @@
-# External integrations
+# 外部集成
 
-This page defines the current product boundary for software that Heptalogos
-calls or depends on but does not own as Product Host state.
+Heptalogos 使用独立安装的 Nous 官方 Client 与正式 OpenClaw 插件。Nous 保存长期认知；OpenClaw 原生循环调用模型、工具、浏览器和子 Agent，持有渠道 durable ingress/send。Host 拥有身份、消息事实、活动、行为采纳与实际回执。架构见 [认知集成](../architecture/cognition-integration.md)。
 
-## Model gateway
+## 模型与维护
 
-Heptalogos uses a gateway-first AIRuntime boundary. A GatewayProfile stores
-one canonical gateway base URL, an enabled flag, and an optional SecretRef
-for the bearer token used by Heptalogos. A ModelProfile selects the gateway,
-model identifier, and one protocol: openai-chat or openai-responses.
-NetworkAccess derives and checks the exact POST endpoint from that selection.
+模型入口和发送语义以正式安装版本为准。当前产品不经过旧 AIRuntime/proposal-only 主体链或固定第二次 Expression；仓库中独立库的存在和测试不表示已被产品消费。外部模型网关仍独立运行，既有配置、渠道、上游凭据和历史应保留。
 
-NewAPI is the recommended external gateway for the current integration path.
-It is independently deployed and administered. Configure upstream accounts,
-provider channels, model mappings, routing, quotas, and provider credentials
-in NewAPI. Create a token for Heptalogos there, then store only that gateway
-token through Heptalogos SecretService. Heptalogos does not mirror upstream
-provider keys, NewAPI channels, or NewAPI administrator credentials.
+主体与机器维护使用不同 OpenClaw profile、工作目录、状态、端口、秘密和权限。主体工具不能读取管理目录或原始 OneBot 凭据，也不能直接控制已登录 QQ 页面绕过正式 Channel。普通聊天不授予维护权限。
 
-The boundary is intentionally small:
+## QQ 与媒体
 
-- Heptalogos owns GatewayProfile, ModelProfile, ModelBinding, readiness,
-  invocation metadata, and its own transport/secret controls.
-- The gateway owns upstream provider adaptation, channel selection, provider
-  credentials, gateway administration, and its own availability and data.
-- A gateway is not a Heptalogos Host MicroSystem and does not determine Host
-  process health.
-- Product Host does not install, spawn, configure, update, or supervise NewAPI.
+第一方 Channel 从 Host 获得当前账号及会话接收/观察/外部效果范围。入站先保全原始协议引用，再接纳去重的消息或平台事件；历史和实时使用同一个稳定身份。媒体和 forward 在有界工作中处理，原文接触与后续解释分别记录。
 
-Use the [external integration reference](../reference/external-integrations.md)
-for upstream links and the short setup sequence.
+Host 的服务 API 使用独立机器凭据，覆盖身份、Messaging、受保护原始资料、流式媒体上传和 Agency；它不能接受管理员登录会话代替服务凭据。普通消息材料读取剥离原始 envelope、下载凭据和受保护 sourceRef。发送前由 Host 与实际 adapter 核对当前权限。
 
-## Machine Operations runtime
+FFmpeg 和媒体类型识别由实际媒体适配使用；安装、资源限制和真实资源链路必须单独验证，不能仅凭检测到命令就宣称转录或视频理解可用。
 
-OpenClaw is the adopted external implementation route for the independent
-Machine Operations Plane. It remains a separate process/service and trust
-domain. Its privileged credentials, workspace, model configuration, process
-lifecycle, and upgrade/distribution lifecycle are not Product Host state.
-Heptalogos may expose Management/CLI/tool integration contracts. A Product
-distribution may carry this runtime alongside a separately configured Subject
-OpenClaw Runtime, but colocation does not imply shared Gateway, state,
-credentials, privilege, or lifecycle. Machine Operations remains operator-owned
-and is not a Product Host child.
+## 安装边界
 
-## FFmpeg
+OpenClaw 通过 Nous 正式 installer 安装固定版本并 prepare 所需原生入口。Heptalogos 消费同一个可独立安装的插件，不复制认知。Host 管理应在 Nous、模型或 QQ 不可用时仍能查询状态与停止服务；库构建、fixture 和 readyz 不证明真实 QQ 已上线。
 
-FFmpeg is an external executable dependency for future bounded audio/video
-capabilities. The operator or deployment environment installs and configures
-it according to the selected platform profile. Heptalogos does not download,
-vendor, or update FFmpeg in this current product slice. When an AV capability
-is implemented, its adapter must apply the existing process, path, budget,
-and evidence boundaries.
-
-## Lifecycle and credential rules
-
-Operator-owned external service/runtime follows this ownership sequence:
-
-operator deploys and administers external software
-→ operator grants only the credential needed by the Heptalogos boundary
-→ Heptalogos stores a scoped reference/material through its own Secret owner
-→ Heptalogos calls the selected endpoint through the owning transport
-→ external software remains independently upgraded, stopped, and recovered
-
-This class includes the model gateway, Machine Operations OpenClaw, and an
-FFmpeg prerequisite when a capability requires it. No member of this class is
-downloaded or started as a side effect of Product Host startup.
-
-Subject OpenClaw Runtime, when used by the Subject cognition path, is a
-Product-managed runtime dependency. Product composition owns its exact payload,
-dedicated profile/state/configuration roots, start/readiness/stop/replacement
-lifecycle, and bounded Product Configuration/SecretRef projection. It remains
-provider/runtime mechanics: it does not own Subject identity, canonical Subject
-state, CommunicationCommit, or Messaging Authority. The current bounded
-Subject Chat primary cognition uses this runtime; its deterministic Review,
-CommunicationCommit, independent Expression, and Messaging remain Heptalogos
-owned. Expression continues through AIRuntime.
-
-No upstream or machine-operator secret is accepted on an argv, ordinary log,
-generated artifact, or durable AIRuntime profile.
+操作入口见 [外部集成参考](../reference/external-integrations.md) 和 [宿主安装运行说明](../../packages/application/product-host/README.md)。运行命令以实际 CLI 和生成管理合同为准。

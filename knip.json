@@ -3,7 +3,7 @@
   "ignoreDependencies": ["@typescript/native"],
   "workspaces": {
     ".": {
-      "ignoreDependencies": ["@types/pg", "execa", "kysely"],
+      "ignoreDependencies": ["@types/pg", "execa", "kysely", "@nous-wave/client"],
       "entry": [
         "scripts/**/*.mjs",
         "integration/foundation/vitest.config.ts",
@@ -22,6 +22,8 @@
       "entry": [
         "src/index.ts",
         "src/node.ts",
+        "src/discovery.ts",
+        "src/gateway-client.ts",
         "src/generated/**/*.ts",
         "scripts/generate.mjs"
       ],
@@ -58,6 +60,22 @@
     "packages/execution/durable-execution": {
       "project": ["src/**/*.ts", "test/**/*.ts"],
       "ignoreDependencies": ["^@dbos-inc/dbos-sdk$"]
+    },
+    "packages/application/openclaw-host": {
+      "entry": [
+        "src/index.ts",
+        "src/dispatch.ts",
+        "src/prepare-gateway.ts",
+        "scripts/**/*.mjs",
+        "test/support/*.mjs"
+      ],
+      "project": [
+        "src/**/*.ts",
+        "scripts/**/*.mjs",
+        "test/**/*.ts",
+        "test/support/*.mjs"
+      ],
+      "ignoreDependencies": ["ajv", "typebox"]
     }
   }
 }

@@ -27,3 +27,7 @@ Node and pnpm baseline, `pnpm-workspace.yaml` owns exact npm catalog selections,
 machine-readable major/optional-minor compatibility lines, and each domain owns
 non-npm runtime selections. Verification reads these Authorities; qualification
 records only describe what was exercised.
+
+本地正式 SDK 发布包使用依赖清单中的相对 `file:...tgz` 与 pnpm lock integrity；npm registry 依赖继续由 catalog 统一选择。pnpm 11 不支持在 catalog 中声明 file 协议。更新本地包时使用内容固定的归档文件名，再运行正常安装、生成与独立产物验证，避免同版本路径缓存旧包。
+
+开发时可用相对 `link:` 消费独立安装的 SDK，前提是它在同包声明 catalog peer，且实际包名与版本匹配 catalog。该链接不进入生产发布包；QQ 包的构建需另外核验 Nous 正式安装补丁，打包时将 peer 与运行依赖物化为实际确切版本。

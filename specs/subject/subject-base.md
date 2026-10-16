@@ -1,261 +1,49 @@
-# Subject Base Contract
+# 主体绑定与 Product Activity
 
-## Scope
+## 所有权
 
-This Spec owns the minimal persistent Subject identity, lifecycle, readiness,
-and Subject authority revision required by the minimal Subject slice. It does not own
-Persona, Memory, Relationship, Attention, Living State, Diary, Dream, or
-advanced cognition.
+Nous 是 SubjectId、可选 Seed、Memory、Self、Social 和认知生命周期的唯一所有者。Heptalogos 管理配置只引用一个现有 SubjectId；创建主体经官方 Client 执行，允许无 Seed，创建不自动替换当前绑定。运行中的绑定及 Nous 来源必须先停用再替换。
 
-## Ownership
+Host 重启、模型变化、QQ 重新登录或新增账号不会产生另一个主体。Host Identity 另有稳定的 `entity:heptalogos:<UUID>`，真实协议账号绑定到该 Entity；昵称和群名片不建立身份关系。
 
-Subject Core owns SubjectId continuity, Subject Desired/Actual state,
-authorityRevision, hard minimal Subject-slice readiness interpretation, and lifecycle admission.
-System Authority owns the management action that requests DesiredState.
-Runtime supervision and reconciliation own process-local convergence and actual
-runtime observation. Configuration, Secret, NetworkAccess, and AIRuntime own
-their prerequisite semantics.
+## 活动
 
-A Subject record is canonical Product state. A process-local Subject object,
-model instance, conversation, Host process, login session, or OpenClaw runtime
-is not Subject identity.
+`packages/product/subject` 的 Life 拥有 Activity。正式字段与操作以 [contracts.ts](../../packages/product/subject/src/contracts.ts) 为准：目的、明确世界与时间窗、实际来源及 WorkContext、提出者、采纳者、采纳权限、状态、实际进展、下一机会和中断条件。
 
-## Identity and normative type
+状态为 planned、active、paused、completed、cancelled、failed。提案按 operationId 幂等；采纳保存实际 actor 与范围，必须是当前安装权限的子集。未采纳提案不能启动。生命周期和进展更新核对 expectedRevision，终态不能恢复。取消、完成或失败保留已经产生的成果和具体行动事实。
 
-The current Product model has one active logical Subject per logical
-Installation. SubjectId survives Host restart, provider/model changes,
-ModelBinding changes, Presentation disconnect, Reaction completion, and
-Product process restart.
+start/resume 必须核对活动世界与当前正式时钟、时间窗；域不同不能直接比较数值。世界时间由 Nous 的正式时钟提供，Host 持久记录时间与网络超时仍采用现实时间。
 
-```ts
-interface SubjectAuthorityRecord {
-  readonly schemaVersion: 1;
-  readonly subjectId: SubjectId;
-  readonly installationId: InstallationId;
-  readonly desiredState: "STOPPED" | "RUNNING";
-  readonly authorityRevision: number;
-  readonly createdAt: Instant;
-  readonly updatedAt: Instant;
-  readonly lineageContextRef: LineageContextRef;
-}
+进展只保存后续有用的实际来源、文件和结果引用。重启使 active 活动需要重新判断并继续，标记原生进行中运行和发送的不确定性；不会从旧工具步骤自动重放。
 
-interface SubjectStatus {
-  readonly schemaVersion: 1;
-  readonly subjectId: SubjectId;
-  readonly desiredState: "STOPPED" | "RUNNING";
-  readonly actualState:
-    | "STOPPED"
-    | "STARTING"
-    | "READY"
-    | "ACTIVE"
-    | "DEGRADED"
-    | "BLOCKED"
-    | "STOPPING"
-    | "FAILED";
-  readonly authorityRevision: number;
-  readonly blockers: readonly SubjectBlocker[];
-}
-```
+## 注意与消息
 
-SubjectId is a stable semantic identity. It is not derived from a ModelProfile,
-GatewayProfile, ModelBinding, SessionId, ReactionId, or Host generation.
-Host startup does not create a new Subject because an in-process object is
-absent.
+Messaging 先接纳持久事实；收信不直接等于主体观察，也不自动调用模型。Life 从可信会话信息、直接消息、提及、回复、当前活动、中断条件和等待时间中选择有界注意机会。休息时不选原始消息；等待超限的旧输入先于持续新消息，普通群聊可以在自然节点进入候选。
 
-DesiredState and authorityRevision are durable Subject Authority. ActualState
-is a Subject-owned current projection derived from durable intent and current
-runtime/dependency facts; it is not a second durable column. Host restart
-recomputes ActualState without resetting DesiredState. Presentation cannot
-infer or assign ActualState.
+实际选中的材料才进入正式 Nous Observation 与原生输入。普通聊天提出安排或说“记住/忘记”不能直接修改活动权限、认知管理权限或维护范围。
 
-## Desired State
+## 可信原生输入派发
 
-Exactly:
+服务凭据入口 `POST /gateway/v1/activity/dispatch` 接收 `requestId`、Subject、已采纳 Activity、canonical conversationRef 和最多 64 个实际 messageRefs，不接收 prompt、来源许可或工具授权。Host 重新检查 active/continuation、当前安装授权、已采纳 observe 范围与 canonical 消息来源及真实原生路由。材料读取只使用目标会话和选中的引用，最多 1 MiB；遗漏、撤回或跨会话选择必须拒绝，不扩大到完整 inbox。
 
-```text
-STOPPED
-RUNNING
-```
+Activity 必须已有同 Subject、open 的正式 Nous WorkContext。实际作者通过 Identity 的真实协议账号解析，平台发生时间和 Host 接收时间分别保留；转述与媒体状态仍来自原材料。只有这些材料进入 contact Observation，工程 prompt 不成为新来源。CognitionUsage 的来源许可为显式目标 origin 和当前 exact WorkContext，不由 audience 字段推导，也不授权其他 anchors。
 
-subject.start mutates DesiredState to RUNNING through System Authority.
-subject.stop mutates DesiredState to STOPPED through System Authority. The
-request records the current Subject authority revision and required
-Lineage/Evidence. Clients never assign arbitrary ActualState.
+Activity 的工具由正式 native boundary v4 控制：Host prepare 返回精确 allowedToolNames，模型工具集合先过滤，实际 prepare/execute 两阶段再经 `/nous/v1/tool-execution` 核对同一已 admitted contact、活动与当前 operator scope；撤权、取消或 Host 不可用均不执行。只读认知工具使用私有调用上下文中的 actual usage，不接受模型参数授予权限。Host 在原生 SDK 调用前保存 raw prompt、digest、UUID nativeRunId 及固定参数。`requestId` 唯一绑定该选择，首次 claim 才可调用已有 native adapter；并发或之后重试返回保存状态。RPC terminal 保存实际结果，不能确认的失败保持 uncertain，不自动重派，也不把调用结束当作 Activity 达成。重启留下的 dispatching 需要显式核对，不会取得第二次调用机会。
 
-## Actual State
+迁移 `0006_native_dispatch` 只给既有 native input 添加请求唯一索引，保留原消息、活动与原生事实。适配器通过独立 OpenClaw 的公开 CLI 调用 agent/expectFinal；Host 不运行模型循环。
 
-Exactly:
+## 当前边界与验证
 
-```text
-STOPPED
-STARTING
-READY
-ACTIVE
-DEGRADED
-BLOCKED
-STOPPING
-FAILED
-```
+Life/Agency 已有正式 owner 和 PostgreSQL 迁移；活动 CAS、重启进展、世界域拒绝及取消与发送点的真实锁交错有数据库测试。完整部署还必须接上原生调度、真实工具、QQ 和跨日恢复；内部测试不能替代这些完成条件。
 
-The canonical meanings are:
+管理身份与进程服务见 [系统管理合同](../management/system-authority.md)，行为采纳与回执见 [行为合同](reaction-behavior.md)。旧 Subject Chat 的表和原数据由迁移保全，当前产品不再使用旧 mailbox/proposal-only/固定 Expression 执行链。
 
-| ActualState | Meaning                                                                                                                                                   |
-| ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| STOPPED     | DesiredState is STOPPED; new Subject cognition is not admitted and no current activation is active.                                                       |
-| STARTING    | DesiredState is RUNNING; hard prerequisites are being resolved or activated and usable cognition readiness has not been reached.                          |
-| READY       | DesiredState is RUNNING; all hard Subject-slice prerequisites are ready and no current Reaction is executing.                                             |
-| ACTIVE      | DesiredState is RUNNING; hard prerequisites remain acceptable and at least one current Reaction is active.                                                |
-| DEGRADED    | DesiredState is RUNNING; the current bounded conversation communication path remains usable while an optional or non-hard current capability is degraded. |
-| BLOCKED     | DesiredState is RUNNING; a hard prerequisite is absent/unready and the Subject has not entered an intrinsic unrecoverable failure.                        |
-| STOPPING    | DesiredState is STOPPED; new cognition admission is closed and current process-memory work is quiescing or cancelling. Durable truth remains.             |
-| FAILED      | Subject-owned runtime/control logic itself cannot safely continue and the failure is not truthfully a dependency BLOCKED condition.                       |
+## 原生自然机会接续
 
-Missing dependency is not automatically FAILED. A runtime control defect may be
-FAILED even when dependencies are otherwise ready.
+服务凭据入口 `POST /gateway/v1/activity/opportunity` 仅接收实际 account/conversation。可信 QQ Channel 在正式事实接纳后及既有连接/历史自然机会调用；接纳完成不等待模型。Host 只选择已明确采纳、active、无需恢复且拥有该会话 observe 的 Activity，复用 Life attention 与现有原生 dispatcher，不自动采纳、不增加权限或运行后台重试 worker。休息、Subject disabled、无合格 Activity、无 observe 的会话均保持安静。
 
-## Lifecycle and readiness
+会话 observe 授权允许该会话未来的真实来信；Activity sourceRefs 是来源/认知 anchors，不是未来消息白名单。每次输入仍按真实 canonical conversation、精确 messageRefs/contactRef/externalObjectRef 校验；非 message anchors 仍需显式 scope.sourceRefs。受控 child handoff 继承实际父注册的消息来源，不复制 contact Observation。
 
-The normal reconciliation path is:
+每次自然机会最多选择一条持久 pending message；持久 pendingRef+conversation+message 生成稳定 UUID request/nativeRunId，重复机会复用原生持久 claim。进入该 owner 的 completed/uncertain/dispatching 结果后原 pending 完成，由原 native owner 保留回执/不确定性；不重新发送。撤回内容通过 metadata 跳过，不产生 Observation。真实 PostgreSQL 回归覆盖两条在采纳之后的新来信、并发机会、重复机会与撤销 send 后的静默。
 
-```text
-DesiredState = STOPPED
-→ STOPPED
-
-DesiredState = RUNNING
-→ STARTING
-→ hard readiness evaluation
-→ READY
-→ ACTIVE while a Reaction is active
-→ READY after current Reaction completion
-```
-
-Optional capability degradation may project READY or ACTIVE to DEGRADED while
-the current conversation cognition/communication slice remains usable. A missing hard prerequisite projects
-the running desired state to BLOCKED. Setting DesiredState to STOPPED closes new
-cognition admission and converges through:
-
-```text
-READY / ACTIVE / DEGRADED / BLOCKED
-→ STOPPING
-→ STOPPED
-```
-
-A Subject-owned unrecoverable control failure may converge to FAILED. Recovery
-re-evaluates dependencies and owner control; it does not fabricate READY or
-silently rewrite DesiredState.
-
-Hard prerequisites for the minimal Subject slice are:
-
-```text
-current Host Authority
-required Persistence, Work, and Lineage foundations
-subject.primary usable
-subject.expression usable
-required provider Secret resolution
-required provider NetworkAccess
-usable AIRuntime route
-```
-
-The same ModelProfile may serve both binding roles. The current AIRuntime-based
-Subject path remains a bounded implementation slice; a future Product-supervised
-Subject OpenClaw Runtime is a separate integration and is not silently merged
-with the independent Machine Operations OpenClaw role. OpenClaw, System
-Assistant, GUI, external IM, MCP, and advanced cognition are not hard readiness
-dependencies for this current Subject Base contract.
-
-authorityRevision is monotonic. DesiredState changes and other later-authorized
-Subject governance mutations increment it. Incoming messages advance
-ConversationMailbox revision instead and do not need to increment
-authorityRevision. Reaction review binds the observed authorityRevision.
-
-## Admission and Management projection
-
-Built-in Subject Chat cognition admission is allowed only in:
-
-```text
-READY
-ACTIVE
-DEGRADED
-```
-
-It is rejected in STOPPED, STARTING, BLOCKED, STOPPING, and FAILED. Messaging
-and Reaction own the exact MessageFact and WorkItem result.
-
-Management projects SubjectId, DesiredState, ActualState, authorityRevision,
-readiness reasons, and lifecycle impact. A projection cannot assign ActualState
-or claim READY from SDK object existence.
-
-## Transactions and failure semantics
-
-DesiredState mutation is one Host-fenced canonical transaction owned by Subject
-Core through System Authority, including the expected authorityRevision and
-required Lineage/Evidence. Runtime reconciliation and process/resource changes
-occur after commit. ActualState changes are owner observations/reconciliation,
-not client writes.
-
-If a hard provider, Secret, NetworkAccess, Persistence, Work, Lineage, or
-binding prerequisite is missing, the state is BLOCKED and the canonical
-Problem identifies the dependency. A Subject-owned control failure is FAILED.
-Host fence loss prevents stale lifecycle mutation. A Host restart preserves
-SubjectId and desired intent; it does not silently reset DesiredState.
-
-The canonical Problem projection distinguishes at least:
-
-```text
-subject.not_accepting_chat
-subject.blocked
-subject.not_ready
-subject.invalid_desired_state
-subject.stale_authority_revision
-subject.lifecycle_control_failed
-subject.host_fence_lost
-```
-
-## Invariants
-
-- SUBJ-001 SubjectId is persistent identity, not model, provider, session, process, or Host identity.
-- SUBJ-002 Desired and Actual state are distinct canonical facts.
-- SUBJ-003 Missing hard readiness while DesiredState is RUNNING yields BLOCKED, not fabricated READY or automatic FAILED.
-- SUBJ-004 Login or unlock does not imply Subject RUNNING.
-- SUBJ-005 Host restart does not silently rewrite DesiredState.
-- SUBJ-006 Start and stop mutate DesiredState through System Authority; ActualState reconciles.
-- SUBJ-007 Readiness derives from explicit prerequisites, not SDK object existence.
-- SUBJ-008 authorityRevision fences pre-commit decisions and later Subject governance.
-- SUBJ-009 OpenClaw/System Assistant availability is not Subject readiness.
-- SUBJ-010 Advanced cognition is not a minimal Subject-slice prerequisite.
-- SUBJ-011 STOPPED, STARTING, BLOCKED, STOPPING, and FAILED reject new built-in Subject Chat cognition admission.
-- SUBJ-012 READY, ACTIVE, and DEGRADED are canonical states, not local UI inference.
-
-## Current-slice exclusions
-
-This Spec does not define:
-
-```text
-multiple logical Subjects or tenants
-Persona
-Memory
-Relationship
-Attention
-Living State
-Diary or Dream
-advanced Observation Window
-external IM admission
-MCP
-OpenClaw dependency
-GUI lifecycle
-Subject-owned model/provider implementation
-physical SQL schema or migrations
-```
-
-## References
-
-- [Subject architecture](../../docs/architecture/subject.md)
-- [Authority and core concepts](../../docs/architecture/authority-and-core-concepts.md)
-- [System Authority Spec](../management/system-authority.md)
-- [AI Runtime Spec](../system/ai-runtime.md)
-- [Messaging and Subject Chat](../messaging/messaging-subject-chat.md)
-- [Reaction and Communication Authority](./reaction-behavior.md)
-- [Service, Capability, and Readiness](../core/service-capability-readiness.md)
-- [Host Ownership](../runtime/host-ownership.md)
-- [Persistence Transactions](../data/persistence-transactions.md)
-- [Execution Lineage](../execution/execution-lineage.md)
+观察和发送分别检查：仅 observe 的目标（包括群 1072706649）仍可派发学习/处理，参数固定 `deliver=false`，不附带 channel/accountId/to，不产生外发；结果保留于 Host/Nous。仅 Activity 与当前 operator 都允许该目标 send 时，才使用 `deliver=true` 和准确渠道/账号/目标。同一 Activity 同时包含观察群和测试群时，每次 sourceRead origin 与材料仍仅属于本次目标。底层 Agency/QQ adapter 的发送拒绝保持不变。

@@ -19,9 +19,51 @@ import { compileSchema } from "@heptalogos/schema-runtime";
 import { Type, type Static } from "@heptalogos/schema-runtime/typebox";
 import { invalidInputProblem, managementProblem } from "./problems.js";
 
+/** Operator-adopted QQ and native tool grants; ordinary chat cannot modify this configuration. */
+export const qqAuthorizationSchema = Type.Object(
+  {
+    accountId: Type.String({ minLength: 1, maxLength: 128 }),
+    nativeAgentId: Type.String({ pattern: "^[a-z0-9][a-z0-9_-]{0,63}$" }),
+    conversations: Type.Array(
+      Type.Object(
+        {
+          kind: Type.Union([Type.Literal("group"), Type.Literal("direct")]),
+          conversationId: Type.String({ minLength: 1, maxLength: 128 }),
+          receive: Type.Boolean(),
+          observe: Type.Boolean(),
+          effects: Type.Array(
+            Type.Union([
+              Type.Literal("send"),
+              Type.Literal("edit"),
+              Type.Literal("withdraw"),
+              Type.Literal("react"),
+              Type.Literal("moderate"),
+              Type.Literal("accept_request"),
+            ]),
+            { uniqueItems: true, maxItems: 6 },
+          ),
+        },
+        { additionalProperties: false },
+      ),
+      { maxItems: 128 },
+    ),
+    tools: Type.Array(Type.String({ minLength: 1, maxLength: 128 }), {
+      maxItems: 128,
+      uniqueItems: true,
+    }),
+    sourceRefs: Type.Array(Type.String({ minLength: 1, maxLength: 2048 }), {
+      maxItems: 128,
+      uniqueItems: true,
+    }),
+    maxRunMs: Type.Integer({ minimum: 1000, maximum: 3600000 }),
+  },
+  { additionalProperties: false },
+);
+
 /** Settings owned and consumed by the product host; credentials remain secret references. */
 export const productSettingsSchema = Type.Object(
   {
+    qq: Type.Optional(qqAuthorizationSchema),
     nous: Type.Object(
       {
         runRoot: Type.String({ minLength: 1 }),
@@ -286,6 +328,23 @@ export class ProductManagement {
         throw invalidInputProblem("A dependency endpoint has an invalid port");
       }
     }
+    if (checked.value.qq) {
+      const keys = checked.value.qq.conversations.map(
+        (c) => c.kind + ":" + c.conversationId,
+      );
+      if (new Set(keys).size !== keys.length)
+        throw invalidInputProblem(
+          "Each QQ conversation must have one explicit current grant",
+        );
+      if (
+        checked.value.qq.conversations.some(
+          (c) => !c.receive && (c.observe || c.effects.length > 0),
+        )
+      )
+        throw invalidInputProblem(
+          "Observation and effects require an adopted receive conversation",
+        );
+    }
     if (!isAbsolute(checked.value.nous.runRoot))
       throw invalidInputProblem("Nous runRoot must be absolute");
     if (checked.value.subject.enabled && checked.value.subject.id === null)
@@ -311,12 +370,14 @@ export class ProductManagement {
     if (
       previous?.subject.enabled &&
       (previous.subject.id !== value.subject.id ||
-        !isDeepStrictEqual(previous.nous, value.nous))
+        !isDeepStrictEqual(previous.nous, value.nous) ||
+        previous.qq?.accountId !== value.qq?.accountId ||
+        previous.qq?.nativeAgentId !== value.qq?.nativeAgentId)
     )
       throw managementProblem(
         "management.subject_active",
         "Pause the current Subject first",
-        "A running Subject or its owning Nous instance cannot be silently replaced through configuration",
+        "A running Subject, Nous instance or QQ account binding cannot be silently replaced through configuration",
         "conflict",
       );
     if (

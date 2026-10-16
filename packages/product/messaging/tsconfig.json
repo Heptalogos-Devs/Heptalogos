@@ -11,10 +11,14 @@
   },
   "include": ["src/**/*.ts", "test/**/*.ts"],
   "references": [
-    { "path": "../../foundation/foundation-contracts" },
-    { "path": "../../execution/execution-lineage" },
-    { "path": "../../execution/evidence" },
-    { "path": "../../data/persistence" },
-    { "path": "../../foundation/time-service" }
+    {
+      "path": "../../foundation/foundation-contracts"
+    },
+    {
+      "path": "../../data/persistence"
+    },
+    {
+      "path": "../../foundation/schema-runtime"
+    }
   ]
 }

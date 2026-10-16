@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { BindProductSubjectData, BindProductSubjectErrors, BindProductSubjectResponses, CheckProductConfigurationData, CheckProductConfigurationErrors, CheckProductConfigurationResponses, ClaimFirstAdministratorData, ClaimFirstAdministratorErrors, ClaimFirstAdministratorResponses, ConfigureProductData, ConfigureProductErrors, ConfigureProductResponses, CreateManagementSessionData, CreateManagementSessionErrors, CreateManagementSessionResponses, CreateProductSubjectData, CreateProductSubjectErrors, CreateProductSubjectResponses, DescribeProductConfigurationData, DescribeProductConfigurationErrors, DescribeProductConfigurationResponses, GetBoundSubjectData, GetBoundSubjectErrors, GetBoundSubjectResponses, GetManagementDiscoveryData, GetManagementDiscoveryResponses, GetProductConfigurationData, GetProductConfigurationErrors, GetProductConfigurationResponses, GetProductStatusData, GetProductStatusErrors, GetProductStatusResponses, RevokeCurrentManagementSessionData, RevokeCurrentManagementSessionErrors, RevokeCurrentManagementSessionResponses } from './types.gen.js';
+import type { AcceptFactsData, AcceptFactsErrors, AcceptFactsResponses, AdmitCognitionData, AdmitCognitionErrors, AdmitCognitionResponses, AdoptActivityData, AdoptActivityErrors, AdoptActivityResponses, AdoptDeliveryData, AdoptDeliveryErrors, AdoptDeliveryResponses, ArchiveEnvelopeData, ArchiveEnvelopeErrors, ArchiveEnvelopeResponses, AuthorizeDeliveryData, AuthorizeDeliveryErrors, AuthorizeDeliveryResponses, AuthorizeToolExecutionData, AuthorizeToolExecutionErrors, AuthorizeToolExecutionResponses, BeginDeliveryData, BeginDeliveryErrors, BeginDeliveryResponses, BindProductSubjectData, BindProductSubjectErrors, BindProductSubjectResponses, BindSubjectAccountData, BindSubjectAccountErrors, BindSubjectAccountResponses, CheckProductConfigurationData, CheckProductConfigurationErrors, CheckProductConfigurationResponses, ClaimFirstAdministratorData, ClaimFirstAdministratorErrors, ClaimFirstAdministratorResponses, CompletePendingData, CompletePendingErrors, CompletePendingResponses, ConfigureProductData, ConfigureProductErrors, ConfigureProductResponses, CreateManagementSessionData, CreateManagementSessionErrors, CreateManagementSessionResponses, CreateProductSubjectData, CreateProductSubjectErrors, CreateProductSubjectResponses, DescribeProductConfigurationData, DescribeProductConfigurationErrors, DescribeProductConfigurationResponses, DispatchActivityData, DispatchActivityErrors, DispatchActivityResponses, FeedbackCognitionData, FeedbackCognitionErrors, FeedbackCognitionResponses, GatewayScopeData, GatewayScopeErrors, GatewayScopeResponses, GetBoundSubjectData, GetBoundSubjectErrors, GetBoundSubjectResponses, GetManagementDiscoveryData, GetManagementDiscoveryResponses, GetProductConfigurationData, GetProductConfigurationErrors, GetProductConfigurationResponses, GetProductStatusData, GetProductStatusErrors, GetProductStatusResponses, HandoffCognitionData, HandoffCognitionErrors, HandoffCognitionResponses, PendingAttachmentsData, PendingAttachmentsErrors, PendingAttachmentsResponses, PendingFactsData, PendingFactsErrors, PendingFactsResponses, PendingReferencesData, PendingReferencesErrors, PendingReferencesResponses, PrepareCognitionData, PrepareCognitionErrors, PrepareCognitionResponses, PrepareReadData, PrepareReadErrors, PrepareReadResponses, ProgressActivityData, ProgressActivityErrors, ProgressActivityResponses, ProposeActivityData, ProposeActivityErrors, ProposeActivityResponses, ReadArchiveData, ReadArchiveErrors, ReadArchiveResponses, ReadEventsData, ReadEventsErrors, ReadEventsResponses, ReadHistoryCoverageData, ReadHistoryCoverageErrors, ReadHistoryCoverageResponses, RecordDeliveryData, RecordDeliveryErrors, RecordDeliveryResponses, RegisterChannelRouteData, RegisterChannelRouteErrors, RegisterChannelRouteResponses, ResolveAccountData, ResolveAccountErrors, ResolveAccountResponses, ResolveGroupData, ResolveGroupErrors, ResolveGroupResponses, RevokeCurrentManagementSessionData, RevokeCurrentManagementSessionErrors, RevokeCurrentManagementSessionResponses, ScheduleActivitiesData, ScheduleActivitiesErrors, ScheduleActivitiesResponses, TakeActivityOpportunityData, TakeActivityOpportunityErrors, TakeActivityOpportunityResponses, TakeAttentionData, TakeAttentionErrors, TakeAttentionResponses, TransitionActivityData, TransitionActivityErrors, TransitionActivityResponses, UpdateAttachmentData, UpdateAttachmentErrors, UpdateAttachmentResponses, UpdateHistoryCoverageData, UpdateHistoryCoverageErrors, UpdateHistoryCoverageResponses, UpdateReferenceData, UpdateReferenceErrors, UpdateReferenceResponses, UploadAttachmentData, UploadAttachmentErrors, UploadAttachmentResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -21,7 +21,11 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
 export const getManagementDiscovery = <ThrowOnError extends boolean = false>(options?: Options<GetManagementDiscoveryData, ThrowOnError>): RequestResult<GetManagementDiscoveryResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetManagementDiscoveryResponses, unknown, ThrowOnError>({ url: '/.well-known/heptalogos-management', ...options });
 
 export const getProductStatus = <ThrowOnError extends boolean = false>(options?: Options<GetProductStatusData, ThrowOnError>): RequestResult<GetProductStatusResponses, GetProductStatusErrors, ThrowOnError> => (options?.client ?? client).get<GetProductStatusResponses, GetProductStatusErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
+    security: [{
+            key: 'bearerAuth',
+            scheme: 'bearer',
+            type: 'http'
+        }],
     url: '/v1/status',
     ...options
 });
@@ -45,25 +49,41 @@ export const createManagementSession = <ThrowOnError extends boolean = false>(op
 });
 
 export const revokeCurrentManagementSession = <ThrowOnError extends boolean = false>(options?: Options<RevokeCurrentManagementSessionData, ThrowOnError>): RequestResult<RevokeCurrentManagementSessionResponses, RevokeCurrentManagementSessionErrors, ThrowOnError> => (options?.client ?? client).delete<RevokeCurrentManagementSessionResponses, RevokeCurrentManagementSessionErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
+    security: [{
+            key: 'bearerAuth',
+            scheme: 'bearer',
+            type: 'http'
+        }],
     url: '/v1/session/current',
     ...options
 });
 
 export const describeProductConfiguration = <ThrowOnError extends boolean = false>(options?: Options<DescribeProductConfigurationData, ThrowOnError>): RequestResult<DescribeProductConfigurationResponses, DescribeProductConfigurationErrors, ThrowOnError> => (options?.client ?? client).get<DescribeProductConfigurationResponses, DescribeProductConfigurationErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
+    security: [{
+            key: 'bearerAuth',
+            scheme: 'bearer',
+            type: 'http'
+        }],
     url: '/v1/config/describe',
     ...options
 });
 
 export const getProductConfiguration = <ThrowOnError extends boolean = false>(options?: Options<GetProductConfigurationData, ThrowOnError>): RequestResult<GetProductConfigurationResponses, GetProductConfigurationErrors, ThrowOnError> => (options?.client ?? client).get<GetProductConfigurationResponses, GetProductConfigurationErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
+    security: [{
+            key: 'bearerAuth',
+            scheme: 'bearer',
+            type: 'http'
+        }],
     url: '/v1/config',
     ...options
 });
 
 export const configureProduct = <ThrowOnError extends boolean = false>(options: Options<ConfigureProductData, ThrowOnError>): RequestResult<ConfigureProductResponses, ConfigureProductErrors, ThrowOnError> => (options.client ?? client).put<ConfigureProductResponses, ConfigureProductErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
+    security: [{
+            key: 'bearerAuth',
+            scheme: 'bearer',
+            type: 'http'
+        }],
     url: '/v1/config',
     ...options,
     headers: {
@@ -73,7 +93,11 @@ export const configureProduct = <ThrowOnError extends boolean = false>(options: 
 });
 
 export const checkProductConfiguration = <ThrowOnError extends boolean = false>(options: Options<CheckProductConfigurationData, ThrowOnError>): RequestResult<CheckProductConfigurationResponses, CheckProductConfigurationErrors, ThrowOnError> => (options.client ?? client).post<CheckProductConfigurationResponses, CheckProductConfigurationErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
+    security: [{
+            key: 'bearerAuth',
+            scheme: 'bearer',
+            type: 'http'
+        }],
     url: '/v1/config/check',
     ...options,
     headers: {
@@ -83,13 +107,21 @@ export const checkProductConfiguration = <ThrowOnError extends boolean = false>(
 });
 
 export const getBoundSubject = <ThrowOnError extends boolean = false>(options?: Options<GetBoundSubjectData, ThrowOnError>): RequestResult<GetBoundSubjectResponses, GetBoundSubjectErrors, ThrowOnError> => (options?.client ?? client).get<GetBoundSubjectResponses, GetBoundSubjectErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
+    security: [{
+            key: 'bearerAuth',
+            scheme: 'bearer',
+            type: 'http'
+        }],
     url: '/v1/subject',
     ...options
 });
 
 export const bindProductSubject = <ThrowOnError extends boolean = false>(options: Options<BindProductSubjectData, ThrowOnError>): RequestResult<BindProductSubjectResponses, BindProductSubjectErrors, ThrowOnError> => (options.client ?? client).put<BindProductSubjectResponses, BindProductSubjectErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
+    security: [{
+            key: 'bearerAuth',
+            scheme: 'bearer',
+            type: 'http'
+        }],
     url: '/v1/subject',
     ...options,
     headers: {
@@ -99,8 +131,517 @@ export const bindProductSubject = <ThrowOnError extends boolean = false>(options
 });
 
 export const createProductSubject = <ThrowOnError extends boolean = false>(options: Options<CreateProductSubjectData, ThrowOnError>): RequestResult<CreateProductSubjectResponses, CreateProductSubjectErrors, ThrowOnError> => (options.client ?? client).post<CreateProductSubjectResponses, CreateProductSubjectErrors, ThrowOnError>({
-    security: [{ scheme: 'bearer', type: 'http' }],
+    security: [{
+            key: 'bearerAuth',
+            scheme: 'bearer',
+            type: 'http'
+        }],
     url: '/v1/subjects',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const takeActivityOpportunity = <ThrowOnError extends boolean = false>(options: Options<TakeActivityOpportunityData, ThrowOnError>): RequestResult<TakeActivityOpportunityResponses, TakeActivityOpportunityErrors, ThrowOnError> => (options.client ?? client).post<TakeActivityOpportunityResponses, TakeActivityOpportunityErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/activity/opportunity',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const dispatchActivity = <ThrowOnError extends boolean = false>(options: Options<DispatchActivityData, ThrowOnError>): RequestResult<DispatchActivityResponses, DispatchActivityErrors, ThrowOnError> => (options.client ?? client).post<DispatchActivityResponses, DispatchActivityErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/activity/dispatch',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const registerChannelRoute = <ThrowOnError extends boolean = false>(options: Options<RegisterChannelRouteData, ThrowOnError>): RequestResult<RegisterChannelRouteResponses, RegisterChannelRouteErrors, ThrowOnError> => (options.client ?? client).post<RegisterChannelRouteResponses, RegisterChannelRouteErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/route',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const uploadAttachment = <ThrowOnError extends boolean = false>(options: Options<UploadAttachmentData, ThrowOnError>): RequestResult<UploadAttachmentResponses, UploadAttachmentErrors, ThrowOnError> => (options.client ?? client).post<UploadAttachmentResponses, UploadAttachmentErrors, ThrowOnError>({
+    bodySerializer: null,
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/media',
+    ...options,
+    headers: {
+        'Content-Type': 'application/octet-stream',
+        ...options.headers
+    }
+});
+
+export const gatewayScope = <ThrowOnError extends boolean = false>(options: Options<GatewayScopeData, ThrowOnError>): RequestResult<GatewayScopeResponses, GatewayScopeErrors, ThrowOnError> => (options.client ?? client).post<GatewayScopeResponses, GatewayScopeErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/scope',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const archiveEnvelope = <ThrowOnError extends boolean = false>(options: Options<ArchiveEnvelopeData, ThrowOnError>): RequestResult<ArchiveEnvelopeResponses, ArchiveEnvelopeErrors, ThrowOnError> => (options.client ?? client).post<ArchiveEnvelopeResponses, ArchiveEnvelopeErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/archive',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const readArchive = <ThrowOnError extends boolean = false>(options: Options<ReadArchiveData, ThrowOnError>): RequestResult<ReadArchiveResponses, ReadArchiveErrors, ThrowOnError> => (options.client ?? client).post<ReadArchiveResponses, ReadArchiveErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/archive/read',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const acceptFacts = <ThrowOnError extends boolean = false>(options: Options<AcceptFactsData, ThrowOnError>): RequestResult<AcceptFactsResponses, AcceptFactsErrors, ThrowOnError> => (options.client ?? client).post<AcceptFactsResponses, AcceptFactsErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/messaging/accept',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const prepareRead = <ThrowOnError extends boolean = false>(options: Options<PrepareReadData, ThrowOnError>): RequestResult<PrepareReadResponses, PrepareReadErrors, ThrowOnError> => (options.client ?? client).post<PrepareReadResponses, PrepareReadErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/messaging/read',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const pendingFacts = <ThrowOnError extends boolean = false>(options: Options<PendingFactsData, ThrowOnError>): RequestResult<PendingFactsResponses, PendingFactsErrors, ThrowOnError> => (options.client ?? client).post<PendingFactsResponses, PendingFactsErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/messaging/pending',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const completePending = <ThrowOnError extends boolean = false>(options: Options<CompletePendingData, ThrowOnError>): RequestResult<CompletePendingResponses, CompletePendingErrors, ThrowOnError> => (options.client ?? client).post<CompletePendingResponses, CompletePendingErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/messaging/complete',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const pendingAttachments = <ThrowOnError extends boolean = false>(options: Options<PendingAttachmentsData, ThrowOnError>): RequestResult<PendingAttachmentsResponses, PendingAttachmentsErrors, ThrowOnError> => (options.client ?? client).post<PendingAttachmentsResponses, PendingAttachmentsErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/messaging/attachments',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const updateAttachment = <ThrowOnError extends boolean = false>(options: Options<UpdateAttachmentData, ThrowOnError>): RequestResult<UpdateAttachmentResponses, UpdateAttachmentErrors, ThrowOnError> => (options.client ?? client).post<UpdateAttachmentResponses, UpdateAttachmentErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/messaging/attachment',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const pendingReferences = <ThrowOnError extends boolean = false>(options: Options<PendingReferencesData, ThrowOnError>): RequestResult<PendingReferencesResponses, PendingReferencesErrors, ThrowOnError> => (options.client ?? client).post<PendingReferencesResponses, PendingReferencesErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/messaging/references',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const updateReference = <ThrowOnError extends boolean = false>(options: Options<UpdateReferenceData, ThrowOnError>): RequestResult<UpdateReferenceResponses, UpdateReferenceErrors, ThrowOnError> => (options.client ?? client).post<UpdateReferenceResponses, UpdateReferenceErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/messaging/reference',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const readEvents = <ThrowOnError extends boolean = false>(options: Options<ReadEventsData, ThrowOnError>): RequestResult<ReadEventsResponses, ReadEventsErrors, ThrowOnError> => (options.client ?? client).post<ReadEventsResponses, ReadEventsErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/messaging/events',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const readHistoryCoverage = <ThrowOnError extends boolean = false>(options: Options<ReadHistoryCoverageData, ThrowOnError>): RequestResult<ReadHistoryCoverageResponses, ReadHistoryCoverageErrors, ThrowOnError> => (options.client ?? client).post<ReadHistoryCoverageResponses, ReadHistoryCoverageErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/messaging/history/read',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const updateHistoryCoverage = <ThrowOnError extends boolean = false>(options: Options<UpdateHistoryCoverageData, ThrowOnError>): RequestResult<UpdateHistoryCoverageResponses, UpdateHistoryCoverageErrors, ThrowOnError> => (options.client ?? client).post<UpdateHistoryCoverageResponses, UpdateHistoryCoverageErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/messaging/history/update',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const resolveAccount = <ThrowOnError extends boolean = false>(options: Options<ResolveAccountData, ThrowOnError>): RequestResult<ResolveAccountResponses, ResolveAccountErrors, ThrowOnError> => (options.client ?? client).post<ResolveAccountResponses, ResolveAccountErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/identity/account',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const resolveGroup = <ThrowOnError extends boolean = false>(options: Options<ResolveGroupData, ThrowOnError>): RequestResult<ResolveGroupResponses, ResolveGroupErrors, ThrowOnError> => (options.client ?? client).post<ResolveGroupResponses, ResolveGroupErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/identity/group',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const bindSubjectAccount = <ThrowOnError extends boolean = false>(options: Options<BindSubjectAccountData, ThrowOnError>): RequestResult<BindSubjectAccountResponses, BindSubjectAccountErrors, ThrowOnError> => (options.client ?? client).post<BindSubjectAccountResponses, BindSubjectAccountErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/identity/subject-account',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const adoptDelivery = <ThrowOnError extends boolean = false>(options: Options<AdoptDeliveryData, ThrowOnError>): RequestResult<AdoptDeliveryResponses, AdoptDeliveryErrors, ThrowOnError> => (options.client ?? client).post<AdoptDeliveryResponses, AdoptDeliveryErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/agency/adopt',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const authorizeDelivery = <ThrowOnError extends boolean = false>(options: Options<AuthorizeDeliveryData, ThrowOnError>): RequestResult<AuthorizeDeliveryResponses, AuthorizeDeliveryErrors, ThrowOnError> => (options.client ?? client).post<AuthorizeDeliveryResponses, AuthorizeDeliveryErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/agency/authorize',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const beginDelivery = <ThrowOnError extends boolean = false>(options: Options<BeginDeliveryData, ThrowOnError>): RequestResult<BeginDeliveryResponses, BeginDeliveryErrors, ThrowOnError> => (options.client ?? client).post<BeginDeliveryResponses, BeginDeliveryErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/agency/begin',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const recordDelivery = <ThrowOnError extends boolean = false>(options: Options<RecordDeliveryData, ThrowOnError>): RequestResult<RecordDeliveryResponses, RecordDeliveryErrors, ThrowOnError> => (options.client ?? client).post<RecordDeliveryResponses, RecordDeliveryErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/agency/record',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const proposeActivity = <ThrowOnError extends boolean = false>(options: Options<ProposeActivityData, ThrowOnError>): RequestResult<ProposeActivityResponses, ProposeActivityErrors, ThrowOnError> => (options.client ?? client).post<ProposeActivityResponses, ProposeActivityErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/life/propose',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const adoptActivity = <ThrowOnError extends boolean = false>(options: Options<AdoptActivityData, ThrowOnError>): RequestResult<AdoptActivityResponses, AdoptActivityErrors, ThrowOnError> => (options.client ?? client).post<AdoptActivityResponses, AdoptActivityErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/life/adopt',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const transitionActivity = <ThrowOnError extends boolean = false>(options: Options<TransitionActivityData, ThrowOnError>): RequestResult<TransitionActivityResponses, TransitionActivityErrors, ThrowOnError> => (options.client ?? client).post<TransitionActivityResponses, TransitionActivityErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/life/transition',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const progressActivity = <ThrowOnError extends boolean = false>(options: Options<ProgressActivityData, ThrowOnError>): RequestResult<ProgressActivityResponses, ProgressActivityErrors, ThrowOnError> => (options.client ?? client).post<ProgressActivityResponses, ProgressActivityErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/life/progress',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const scheduleActivities = <ThrowOnError extends boolean = false>(options: Options<ScheduleActivitiesData, ThrowOnError>): RequestResult<ScheduleActivitiesResponses, ScheduleActivitiesErrors, ThrowOnError> => (options.client ?? client).post<ScheduleActivitiesResponses, ScheduleActivitiesErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/life/schedule',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const takeAttention = <ThrowOnError extends boolean = false>(options: Options<TakeAttentionData, ThrowOnError>): RequestResult<TakeAttentionResponses, TakeAttentionErrors, ThrowOnError> => (options.client ?? client).post<TakeAttentionResponses, TakeAttentionErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/life/attention',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const prepareCognition = <ThrowOnError extends boolean = false>(options: Options<PrepareCognitionData, ThrowOnError>): RequestResult<PrepareCognitionResponses, PrepareCognitionErrors, ThrowOnError> => (options.client ?? client).post<PrepareCognitionResponses, PrepareCognitionErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/nous/v1/prepare',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const admitCognition = <ThrowOnError extends boolean = false>(options: Options<AdmitCognitionData, ThrowOnError>): RequestResult<AdmitCognitionResponses, AdmitCognitionErrors, ThrowOnError> => (options.client ?? client).post<AdmitCognitionResponses, AdmitCognitionErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/nous/v1/admitted',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const authorizeToolExecution = <ThrowOnError extends boolean = false>(options: Options<AuthorizeToolExecutionData, ThrowOnError>): RequestResult<AuthorizeToolExecutionResponses, AuthorizeToolExecutionErrors, ThrowOnError> => (options.client ?? client).post<AuthorizeToolExecutionResponses, AuthorizeToolExecutionErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/nous/v1/tool-execution',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const handoffCognition = <ThrowOnError extends boolean = false>(options: Options<HandoffCognitionData, ThrowOnError>): RequestResult<HandoffCognitionResponses, HandoffCognitionErrors, ThrowOnError> => (options.client ?? client).post<HandoffCognitionResponses, HandoffCognitionErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/nous/v1/handoff',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const feedbackCognition = <ThrowOnError extends boolean = false>(options: Options<FeedbackCognitionData, ThrowOnError>): RequestResult<FeedbackCognitionResponses, FeedbackCognitionErrors, ThrowOnError> => (options.client ?? client).post<FeedbackCognitionResponses, FeedbackCognitionErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/nous/v1/feedback',
     ...options,
     headers: {
         'Content-Type': 'application/json',

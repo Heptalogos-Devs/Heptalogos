@@ -62,7 +62,9 @@ describe("DBOS process adapter", () => {
       problem: { problemCode: "durable.execution.process.invalid_executable" },
     });
 
-    const cliPath = await script("await new Promise(() => {});\n");
+    const cliPath = await script(
+      "setInterval(() => {}, 1000); await new Promise(() => {});\n",
+    );
     await expect(
       runDbosCli({ cliPath, args: [], timeoutMs: 20 }),
     ).rejects.toMatchObject({

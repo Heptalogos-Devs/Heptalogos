@@ -68,3 +68,5 @@ export {
   boundSubjectSchema,
 } from "./product.js";
 export type { ManagedSubject, CreateProductSubject, BoundSubject } from "./product.js";
+
+export { qqAuthorizationSchema } from "./product.js";

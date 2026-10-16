@@ -15,34 +15,10 @@
       "path": "../../foundation/schema-runtime"
     },
     {
-      "path": "../../execution/work-queue"
-    },
-    {
-      "path": "../../foundation/time-service"
-    },
-    {
-      "path": "../../runtime/runtime-kernel"
-    },
-    {
       "path": "../../data/persistence"
     },
     {
-      "path": "../messaging"
-    },
-    {
       "path": "../../foundation/foundation-contracts"
-    },
-    {
-      "path": "../../execution/execution-lineage"
-    },
-    {
-      "path": "../../execution/evidence"
-    },
-    {
-      "path": "../../system/configuration"
-    },
-    {
-      "path": "../../system/ai-runtime"
     }
   ]
 }

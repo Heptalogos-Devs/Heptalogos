@@ -14,12 +14,22 @@ export default defineConfig({
     alias: {
       "@heptalogos/foundation-contracts": dist("foundation", "foundation-contracts"),
       "@heptalogos/os-credential": dist("system", "os-credential"),
-      "@heptalogos/management-client": dist("application", "management-client"),
+      "@heptalogos/management-client/gateway": dist(
+        "application",
+        "management-client",
+        "gateway-client.js",
+      ),
+      "@heptalogos/management-client/discovery": dist(
+        "application",
+        "management-client",
+        "discovery.js",
+      ),
       "@heptalogos/management-client/node": dist(
         "application",
         "management-client",
         "node.js",
       ),
+      "@heptalogos/management-client": dist("application", "management-client"),
       pg: resolve(repositoryRoot, "packages/data/persistence/node_modules/pg"),
     },
   },

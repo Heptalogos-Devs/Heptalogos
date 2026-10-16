@@ -16,34 +16,10 @@
       "path": "../../foundation/schema-runtime/tsconfig.build.json"
     },
     {
-      "path": "../../execution/work-queue/tsconfig.build.json"
-    },
-    {
-      "path": "../../foundation/time-service/tsconfig.build.json"
-    },
-    {
-      "path": "../../runtime/runtime-kernel/tsconfig.build.json"
-    },
-    {
       "path": "../../data/persistence/tsconfig.build.json"
     },
     {
-      "path": "../messaging/tsconfig.build.json"
-    },
-    {
       "path": "../../foundation/foundation-contracts/tsconfig.build.json"
-    },
-    {
-      "path": "../../execution/execution-lineage/tsconfig.build.json"
-    },
-    {
-      "path": "../../execution/evidence/tsconfig.build.json"
-    },
-    {
-      "path": "../../system/configuration/tsconfig.build.json"
-    },
-    {
-      "path": "../../system/ai-runtime/tsconfig.build.json"
     }
   ]
 }

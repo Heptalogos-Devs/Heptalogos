@@ -1,64 +1,30 @@
-# External integration reference
+# 外部集成参考
 
-This is a short operator reference. The linked upstream sites are the
-authority for installation, release, administration, licensing, and API
-details; Heptalogos does not copy those procedures into the repository.
+当前产品边界见 [外部集成说明](../product/external-integrations.md)。安装和管理命令以各实际软件版本为准；下列链接提供上游资料。
 
-## NewAPI model gateway
+## 模型网关
 
-NewAPI is the recommended gateway for the current real integration proof.
-Its official project and documentation are:
+已有模型网关由操作者独立部署和维护。当前产品调用模型由正式 OpenClaw 实例或 Nous 模型角色执行，其凭据和路由分别留在该软件的私有配置中；Heptalogos 管理配置绑定官方 Nous discovery 与两个独立 Gateway。
 
-- [NewAPI project repository](https://github.com/QuantumNous/new-api)
-- [NewAPI API reference](https://docs.newapi.pro/en/docs/api)
-- [OpenAI-compatible Chat Completions API](https://docs.newapi.pro/en/docs/api/ai-model/chat/openai/createchatcompletion)
-- [OpenAI Responses API](https://docs.newapi.pro/en/docs/api/ai-model/chat/openai/createresponse)
+现有 NewAPI 的渠道、上游密钥、映射、配额和历史保持原有管理方式。Heptalogos 不复制上游配置，也不使用旧 AIRuntime 配置冒充当前主体模型入口。
 
-The supported operator sequence is:
+- [NewAPI 项目](https://github.com/QuantumNous/new-api)
+- [NewAPI API 参考](https://docs.newapi.pro/en/docs/api)
 
-1. Deploy NewAPI independently using its current upstream instructions.
-2. Configure a legally authorized upstream account/channel and model mapping
-   in NewAPI, including the desired DeepSeek model when that is the target.
-3. Create a NewAPI access token for the Heptalogos caller.
-4. In Heptalogos create a GatewayProfile with the NewAPI /v1 base URL.
-5. Store the NewAPI token through protected SecretService input, then create
-   ModelProfile and ModelBinding entries for the chosen protocol and roles.
-6. Verify readiness and invoke through the Management/AIRuntime boundary.
+## OpenClaw
 
-The DeepSeek or other upstream key belongs in NewAPI when NewAPI is the
-gateway. Heptalogos receives only the NewAPI bearer token. Do not add a
-NewAPI administrator API client, channel-management action, process
-supervisor, downloader, or updater to Heptalogos under the current Plan.
+使用 Nous 正式 installer 安装和 prepare 固定原生版本；插件合同见 Nous 包说明。主体与维护实例分别管理进程、profile、状态、秘密与工具权限。Heptalogos Host 不在自己的进程中启动另一个 Agent 循环。
 
-## OpenClaw Machine Operations
+- [OpenClaw 项目](https://github.com/openclaw/openclaw)
+- [OpenClaw 上游文档](https://github.com/openclaw/openclaw/tree/main/docs)
+- [Heptalogos Host 安装与服务](../../packages/application/product-host/README.md)
 
-OpenClaw remains independently operated for Machine Operations. Use the
-[OpenClaw project](https://github.com/openclaw/openclaw) and its
-[upstream documentation](https://github.com/openclaw/openclaw/tree/main/docs)
-for deployment and administration. The Heptalogos boundary does not require
-this privileged runtime to boot Product Host and does not store its credentials
-by default. A Product distribution may carry an independent Subject OpenClaw
-Runtime and this Machine Operations runtime together, but they must remain
-separate processes/profiles/state roots, credentials, ports, and trust domains.
+## 媒体与 QQ
 
-The Subject OpenClaw Runtime is a Product-managed low-privilege runtime when
-that cognition route is enabled; its lifecycle and generated configuration are
-owned by Product composition, while its provider-private state is not Subject
-canonical state. The current bounded Subject Chat primary cognition route uses
-it; deterministic Review, CommunicationCommit, independent Expression, and
-Messaging remain Heptalogos-owned.
+QQ 协议和登录由独立 NapCat 提供，第一方 Channel 只消费明确授权的账号与会话。不要将登录页面、原始 OneBot endpoint 或凭据暴露为普通模型工具。
 
-## FFmpeg
+[FFmpeg](https://ffmpeg.org/) 是实际音视频处理的外部前提；媒体适配须核对当前安装、受控路径、格式与预算。只有实际转录、视频结果及其回流才能证明对应能力可用。
 
-Install [FFmpeg](https://ffmpeg.org/) as an operator/deployment prerequisite only when an implemented
-Heptalogos AV capability requires it. Use the platform's approved package or
-distribution process. There is no Heptalogos downloader or bundled FFmpeg
-payload in this current slice.
+## 验证范围
 
-## Evidence boundary
-
-A local HTTP fixture proves installed protocol mechanics and NetworkAccess
-control. A single live gateway run proves only the exact gateway, model,
-protocol, platform, package versions, and configuration used in that run. It
-does not prove upstream provider-wide behavior, another protocol, another
-platform, or NewAPI administration.
+本机 HTTP/数据库/原生 SQLite fixture 只证明实际触及的合同。真实上线还须使用独立安装的软件、QQ 客户端、实际模型和工具，核对发送、媒体、取消、恢复与同一 Subject 的连续工作。缺登录或缺模型角色时保留准确状态，不能用通用健康检查替代。

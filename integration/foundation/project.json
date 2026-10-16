@@ -20,7 +20,11 @@
     "signal",
     "work-queue",
     "durable-execution",
-    "effect-operation"
+    "effect-operation",
+    "messaging",
+    "identity",
+    "subject",
+    "product-host"
   ],
   "targets": {
     "lint": {

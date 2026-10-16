@@ -223,8 +223,10 @@ export default [
                 "area:service",
                 "area:work-queue",
                 "area:messaging",
+                "area:identity",
                 "area:subject",
                 "area:application",
+                "area:client",
               ],
             },
             {

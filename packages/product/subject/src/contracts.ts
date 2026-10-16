@@ -1,427 +1,242 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
 
-/** Defines the current persistent Subject authority, reaction, and handler contracts.
+/**
+ * Product Activity and behavior contracts, independent of the native agent loop.
  * @module contracts
  */
+import { Type, type Static } from "@heptalogos/schema-runtime/typebox";
+import type { PersistenceService } from "@heptalogos/persistence";
 
-import {
-  createContributionId,
-  createMicroSystemId,
-  createMessagingPlatformId,
-  type CanonicalConversationId,
-  type CanonicalMessageId,
-  type CommunicationCommitId,
-  type CanonicalJsonValue,
-  type InstallationId,
-  type Instant,
-  type PackageGenerationId,
-  type ProductGenerationId,
-  type ReactionId,
-  type SubjectId,
-  type WorkItemId,
-} from "@heptalogos/foundation-contracts";
-import type {
-  ExecutionContextRuntime,
-  ExecutionLineageService,
-  LineageContextRef,
-} from "@heptalogos/execution-lineage";
-import type { AIRuntimeService } from "@heptalogos/ai-runtime";
-import type { EvidenceService } from "@heptalogos/evidence";
-import type { MessagingService, MessageFact } from "@heptalogos/messaging";
-import type {
-  PersistenceMutationTransactionContext,
-  PersistenceService,
-} from "@heptalogos/persistence";
-import type {
-  RuntimeWorkHandler,
-  WorkHandlerProvisionDescriptor,
-  WorkHandlerTarget,
-} from "@heptalogos/runtime-kernel";
-import type { TimeService } from "@heptalogos/time-service";
-import type {
-  ConfigurationDefinition,
-  ConfigurationDefinitionId,
-  ConfigurationRevisionId,
-  ConfigurationService,
-} from "@heptalogos/configuration";
-import type {
-  GatewayProfileId,
-  ModelInvocationProtocol,
-  ModelBindingId,
-  ModelProfileId,
-} from "@heptalogos/ai-runtime";
-import { Type } from "@heptalogos/schema-runtime/typebox";
-import type {
-  PreparedWorkCreation,
-  WorkErrorClassifier,
-  WorkQueueService,
-} from "@heptalogos/work-queue";
+const object = { additionalProperties: false } as const;
+const ref = Type.String({ minLength: 1, maxLength: 2048 });
+const id = Type.String({
+  pattern:
+    "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+});
+const instant = Type.String({
+  pattern: "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(?:\\.\\d{1,9})?Z$",
+});
+const refs = Type.Array(ref, { maxItems: 128, uniqueItems: true });
+const optionalRef = Type.Union([ref, Type.Null()]);
 
-/** The current logical platform identifier retained for Subject Chat context. */
-export const SUBJECT_CHAT_PLATFORM = createMessagingPlatformId(
-  "heptalogos-subject-chat",
-);
-/** The Subject MicroSystem identity. */
-export const SUBJECT_SYSTEM_ID = createMicroSystemId("product.subject");
-/** The one current Subject Reaction WorkHandler contribution. */
-export const SUBJECT_REACTION_CONTRIBUTION_ID = createContributionId(
-  "subject.reaction.execute",
-);
-/** The one current Subject Reaction WorkQueue profile. */
-export const SUBJECT_REACTION_QUEUE_PROFILE_ID = createMicroSystemId(
-  "work.subject-reaction",
-) as never;
-/** The one current Subject Reaction resource admission class. */
-export const SUBJECT_REACTION_RESOURCE_CLASS = createMicroSystemId(
-  "resource.subject-reaction",
-) as never;
-
-/** Stable current Subject Expression configuration-definition identity. */
-export const SUBJECT_EXPRESSION_CONFIGURATION_DEFINITION_ID =
-  "subject.expression.v1" as ConfigurationDefinitionId;
-
-/** Product-owned budget used by the independent Expression invocation. */
-export interface SubjectExpressionConfigV1 {
-  readonly schemaVersion: 1;
-  readonly maxOutputTokens: number;
-}
-
-/** JSON Schema for the current Subject Expression configuration. */
-export const subjectExpressionConfigSchema = Type.Object(
+/** One explicit audience and the external effects adopted for it. */
+export const conversationScopeSchema = Type.Object(
   {
-    schemaVersion: Type.Literal(1),
-    maxOutputTokens: Type.Integer({ minimum: 1, maximum: 4_096 }),
+    conversationRef: ref,
+    operations: Type.Array(
+      Type.Union([
+        Type.Literal("observe"),
+        Type.Literal("send"),
+        Type.Literal("edit"),
+        Type.Literal("withdraw"),
+        Type.Literal("moderate"),
+      ]),
+      { maxItems: 5, uniqueItems: true },
+    ),
   },
-  { additionalProperties: false },
+  object,
 );
-
-/** Product Subject owner-provided Expression configuration definition. */
-export const subjectExpressionConfigurationDefinition: ConfigurationDefinition =
-  Object.freeze({
-    schemaVersion: 1 as const,
-    definitionId: SUBJECT_EXPRESSION_CONFIGURATION_DEFINITION_ID,
-    owner: "product.subject",
-    version: 1,
-    scopeKind: "SUBJECT" as const,
-    valueSchema: subjectExpressionConfigSchema as unknown as CanonicalJsonValue,
-    classification: "SUBJECT_CONFIG" as const,
-    visibility: "ADVANCED" as const,
-    manageability: "EDITABLE" as const,
-    activation: "LIVE" as const,
-    sensitivity: "INTERNAL" as const,
-    defaultAuthority: "PRODUCT_DEFAULT" as const,
-    consumerRefs: Object.freeze(["product.subject.expression"]),
-  });
-
-/** Explicit Product default pinned on first Subject materialization. */
-export const DEFAULT_SUBJECT_EXPRESSION_CONFIG: SubjectExpressionConfigV1 =
-  Object.freeze({ schemaVersion: 1, maxOutputTokens: 256 });
-
-/** Stable current Subject cognition runtime configuration-definition identity. */
-export const SUBJECT_COGNITION_CONFIGURATION_DEFINITION_ID =
-  "subject.cognition.runtime.v1" as ConfigurationDefinitionId;
-
-/** Product-owned bounds that constrain one OpenClaw cognition run. */
-export interface SubjectCognitionConfigV1 {
-  readonly schemaVersion: 1;
-  readonly enabled: boolean;
-  readonly maxOutputTokens: number;
-  readonly runTimeoutMs: number;
-  readonly maxContextBytes: number;
-}
-
-/** JSON Schema for the current Subject cognition runtime configuration. */
-export const subjectCognitionConfigSchema = Type.Object(
+/** Adopted scope is a subset of the trusted installation and parent Activity grants. */
+export const activityScopeSchema = Type.Object(
   {
-    schemaVersion: Type.Literal(1),
-    enabled: Type.Boolean(),
-    maxOutputTokens: Type.Integer({ minimum: 1, maximum: 4_096 }),
-    runTimeoutMs: Type.Integer({ minimum: 1_000, maximum: 120_000 }),
-    maxContextBytes: Type.Integer({ minimum: 4_096, maximum: 262_144 }),
+    conversations: Type.Array(conversationScopeSchema, { maxItems: 128 }),
+    tools: refs,
+    sourceRefs: refs,
+    maxRunMs: Type.Integer({ minimum: 1000, maximum: 3_600_000 }),
   },
-  { additionalProperties: false },
+  object,
 );
-
-/** Product Subject owner-provided cognition runtime configuration definition. */
-export const subjectCognitionConfigurationDefinition: ConfigurationDefinition =
-  Object.freeze({
-    schemaVersion: 1 as const,
-    definitionId: SUBJECT_COGNITION_CONFIGURATION_DEFINITION_ID,
-    owner: "product.subject",
-    version: 1,
-    scopeKind: "SUBJECT" as const,
-    valueSchema: subjectCognitionConfigSchema as unknown as CanonicalJsonValue,
-    classification: "SUBJECT_CONFIG" as const,
-    visibility: "ADVANCED" as const,
-    manageability: "EDITABLE" as const,
-    activation: "LIVE" as const,
-    sensitivity: "INTERNAL" as const,
-    defaultAuthority: "PRODUCT_DEFAULT" as const,
-    consumerRefs: Object.freeze([
-      "product.subject.cognition",
-      "product-host.subject-openclaw",
+/** Product scope never authorizes access by itself; Host adoption validates actual grants. */
+export type ActivityScope = Static<typeof activityScopeSchema>;
+/** One point in the Subject's declared world, distinct from real recorded time. */
+export const worldPointSchema = Type.Object(
+  { timeDomainRef: ref, at: instant },
+  object,
+);
+/** State and useful continuation facts for one long-lived Product Activity. */
+export const activitySchema = Type.Object(
+  {
+    activityId: id,
+    subjectId: id,
+    revision: Type.Integer({ minimum: 1 }),
+    purpose: Type.String({ minLength: 1, maxLength: 4096 }),
+    mode: Type.Union([
+      Type.Literal("work"),
+      Type.Literal("rest"),
+      Type.Literal("wait"),
     ]),
-  });
-
-/** Explicit Product default pinned on first Subject cognition materialization. */
-export const DEFAULT_SUBJECT_COGNITION_CONFIG: SubjectCognitionConfigV1 = Object.freeze(
-  {
-    schemaVersion: 1,
-    enabled: true,
-    maxOutputTokens: 256,
-    runTimeoutMs: 60_000,
-    maxContextBytes: 65_536,
+    window: Type.Object(
+      {
+        notBefore: Type.Union([worldPointSchema, Type.Null()]),
+        notAfter: Type.Union([worldPointSchema, Type.Null()]),
+      },
+      object,
+    ),
+    sourceRefs: refs,
+    workContextId: Type.Union([id, Type.Null()]),
+    state: Type.Union([
+      Type.Literal("planned"),
+      Type.Literal("active"),
+      Type.Literal("paused"),
+      Type.Literal("completed"),
+      Type.Literal("cancelled"),
+      Type.Literal("failed"),
+    ]),
+    proposedBy: ref,
+    adoptedBy: optionalRef,
+    adoptedAt: Type.Union([instant, Type.Null()]),
+    lastTransitionReason: Type.String({ maxLength: 4096 }),
+    scope: Type.Union([activityScopeSchema, Type.Null()]),
+    world: worldPointSchema,
+    nextOpportunity: Type.Union([worldPointSchema, Type.Null()]),
+    progress: Type.Object(
+      {
+        note: Type.String({ maxLength: 8192 }),
+        sourceRefs: refs,
+        artifactRefs: refs,
+        resultRefs: refs,
+      },
+      object,
+    ),
+    interruptOn: Type.Array(
+      Type.Union([
+        Type.Literal("direct"),
+        Type.Literal("mention"),
+        Type.Literal("reply"),
+        Type.Literal("deadline"),
+        Type.Literal("correction"),
+        Type.Literal("manual"),
+      ]),
+      { maxItems: 6, uniqueItems: true },
+    ),
+    continuationRequired: Type.Boolean(),
+    createdAt: instant,
+    updatedAt: instant,
   },
+  object,
 );
-
-/** Durable Subject authority; desired state is the only persistent lifecycle intent. */
-export interface SubjectAuthorityRecord {
-  readonly schemaVersion: 1;
-  readonly subjectId: SubjectId;
-  readonly installationId: InstallationId;
-  readonly desiredState: "STOPPED" | "RUNNING";
-  readonly authorityRevision: number;
-  readonly createdAt: Instant;
-  readonly updatedAt: Instant;
-  readonly lineageContextRef: LineageContextRef;
-}
-
-/** A bounded current dependency blocker in the Subject status projection. */
-export interface SubjectBlocker {
-  readonly code: string;
-  readonly detail: string;
-}
-
-/** Subject-owned current status projection derived from intent and live facts. */
-export interface SubjectStatus {
-  readonly schemaVersion: 1;
-  readonly subjectId: SubjectId;
-  readonly desiredState: "STOPPED" | "RUNNING";
-  readonly actualState:
-    | "STOPPED"
-    | "STARTING"
-    | "READY"
-    | "ACTIVE"
-    | "DEGRADED"
-    | "BLOCKED"
-    | "STOPPING"
-    | "FAILED";
-  readonly authorityRevision: number;
-  readonly blockers: readonly SubjectBlocker[];
-}
-
-/** Semantic content accepted for a bounded conversation communication. */
-export interface ConversationSemanticContent {
-  readonly schemaVersion: 1;
-  readonly content: string;
-}
-
-/** Bounded current-slice cognition proposal; not the total Subject behavior contract. */
-export type ConversationReactionProposal =
-  | {
-      readonly schemaVersion: 1;
-      readonly kind: "COMMUNICATE";
-      readonly semanticContent: ConversationSemanticContent;
-    }
-  | {
-      readonly schemaVersion: 1;
-      readonly kind: "NO_COMMUNICATION";
-    };
-
-/** Bounded context supplied from the canonical Subject owner to its runtime. */
-export interface ConversationCognitionInput {
-  readonly subjectId: SubjectId;
-  readonly reactionId: ReactionId;
-  readonly contextProjection: CanonicalJsonValue;
-}
-
-/** Public terminal status returned by the OpenClaw agent.wait contract. */
-export type SubjectCognitionTerminalStatus = "ok" | "error" | "timeout";
-
-/** Stable provider provenance captured from one accepted cognition proposal. */
-export interface SubjectCognitionProvenance {
-  readonly schemaVersion: 1;
-  readonly provider: "openclaw";
-  readonly runtimeGeneration: string;
-  readonly openclawVersion: string;
-  readonly profile: "subject";
-  readonly agentId: string;
-  readonly sessionKey: string;
-  readonly runId: string;
-  readonly modelProvider: string;
-  readonly modelIdentifier: string;
-  readonly modelBindingId: ModelBindingId;
-  readonly bindingRevision: number;
-  readonly modelProfileId: ModelProfileId;
-  readonly modelProfileGeneration: number;
-  readonly gatewayProfileId: GatewayProfileId;
-  readonly configurationRevisionId: ConfigurationRevisionId;
-  readonly gatewayConfigurationRevisionId: ConfigurationRevisionId;
-  readonly protocol: ModelInvocationProtocol;
-  readonly terminalToolName:
-    "heptalogos_propose_communication" | "heptalogos_complete_without_communication";
-  readonly terminalStatus: SubjectCognitionTerminalStatus;
-}
-
-/** One bounded proposal plus the provider evidence needed by deterministic Review. */
-export interface SubjectCognitionProposal {
-  readonly proposal: ConversationReactionProposal;
-  readonly provenance: SubjectCognitionProvenance;
-}
-
-/** Current Subject-side cognition runtime readiness projection. */
-export interface SubjectCognitionRuntimeReadiness {
-  readonly schemaVersion: 1;
-  readonly state: "READY" | "BLOCKED";
-  readonly blockers: readonly SubjectBlocker[];
-}
-
-/** Narrow mechanics port between Subject semantics and its cognition harness. */
-export interface SubjectCognitionRuntime {
-  /** Runs one terminal cognition reaction and returns its typed proposal. */
-  runConversationReaction(
-    input: ConversationCognitionInput,
-  ): Promise<SubjectCognitionProposal>;
-  /** Reports readiness for the current effective runtime projection. */
-  readiness(): Promise<SubjectCognitionRuntimeReadiness>;
-}
-
-/** One current durable Reaction workspace owned by Subject. */
-export interface Reaction {
-  readonly schemaVersion: 1;
-  readonly reactionId: ReactionId;
-  readonly conversationId: CanonicalConversationId;
-  readonly observedMailboxRevision: number;
-  readonly observedThroughSequence: number;
-  readonly observedSubjectAuthorityRevision: number;
-  readonly state:
-    | "OPEN"
-    | "SUPERSEDED"
-    | "NO_COMMUNICATION"
-    | "COMMUNICATION_COMMITTED"
-    | "REPLIED"
-    | "FAILED";
-  readonly ownerWorkItemId: WorkItemId;
-  readonly ownerActivityRef: { readonly schemaVersion: 1; readonly activityId: string };
-  readonly createdAt: Instant;
-  readonly updatedAt: Instant;
-  readonly lineageContextRef: LineageContextRef;
-}
-
-/** Immutable accepted communication Authority and primary generation provenance. */
-export interface CommunicationCommit {
-  readonly schemaVersion: 1;
-  readonly communicationCommitId: CommunicationCommitId;
-  readonly reactionId: ReactionId;
-  readonly subjectId: SubjectId;
-  readonly subjectAuthorityRevision: number;
-  readonly mailboxRevision: number;
-  readonly conversationId: CanonicalConversationId;
-  readonly purpose: "reply";
-  readonly semanticContent: ConversationSemanticContent;
-  readonly semanticContentDigest: string;
-  readonly primaryCognitionProvenance: SubjectCognitionProvenance;
-  readonly committedAt: Instant;
-  readonly lineageContextRef: LineageContextRef;
-}
-
-/** Ephemeral prepared Subject work attached atomically to one accepted message. */
-export interface PreparedSubjectInbound {
-  readonly subjectId: SubjectId;
-  readonly authorityRevision: number;
-  readonly work: PreparedWorkCreation;
-}
-
-/** Readiness facts supplied by ProductHost's current system owners. */
-export interface SubjectDependencyReadiness {
-  readonly usable: boolean;
-  readonly blockers: readonly SubjectBlocker[];
-}
-
-/** Input for normal Management Subject desired-state actions. */
-export interface SubjectStateActionInput {
-  readonly subjectId: SubjectId | string;
-  readonly expectedAuthorityRevision: number;
-}
-
-/** Bounded result returned by the Reaction WorkHandler. */
-export interface SubjectReactionOutcome {
-  readonly accepted: true;
-  readonly status: "NOOP" | "SUPERSEDED" | "NO_COMMUNICATION" | "REPLIED";
-}
-
-/** Current Subject service surface consumed by ProductHost and Management. */
-export interface SubjectService {
-  /** Ensures the one persistent Subject authority exists. */
-  ensureCurrent(): Promise<SubjectAuthorityRecord>;
-  /** Reads the durable Subject authority record. */
-  getAuthority(): Promise<SubjectAuthorityRecord>;
-  /** Reads the current Subject status projection. */
-  getStatus(): Promise<SubjectStatus>;
-  /** Commits desired RUNNING state under an authority revision fence. */
-  start(input: SubjectStateActionInput): Promise<SubjectStatus>;
-  /** Commits desired STOPPED state under an authority revision fence. */
-  stop(input: SubjectStateActionInput): Promise<SubjectStatus>;
-  /** Prepares a Reaction WorkItem for one accepted inbound fact. */
-  prepareAcceptedInbound(input: {
-    readonly conversationId: CanonicalConversationId;
-    readonly acceptedMessageId: CanonicalMessageId;
-  }): Promise<PreparedSubjectInbound>;
-  /** Commits mailbox advancement and the prepared Reaction WorkItem atomically. */
-  commitAcceptedInbound(
-    transaction: PersistenceMutationTransactionContext,
-    input: {
-      readonly message: MessageFact;
-      readonly preparation: PreparedSubjectInbound;
-    },
-  ): Promise<void>;
-  /** Executes one generation-pinned Reaction work item. */
-  executeReaction(input: {
-    readonly workItemId: WorkItemId;
-    readonly payload: unknown;
-  }): Promise<SubjectReactionOutcome>;
-  /** Creates the Subject-specific WorkItem failure classifier. */
-  createWorkErrorClassifier(): WorkErrorClassifier;
-  /** Describes the current Subject Reaction contribution. */
-  readonly reactionDescriptor: WorkHandlerProvisionDescriptor;
-  /** Exposes the current Subject Reaction handler implementation. */
-  readonly reactionHandler: RuntimeWorkHandler;
-}
-
-/** Composition dependencies for the Subject owner. */
-export interface SubjectServiceOptions {
-  /** Current Installation identity. */
-  readonly installationId: InstallationId;
-  /** Host-fenced canonical persistence owner. */
+/** Canonical Activity projection. */
+export type LifeActivity = Static<typeof activitySchema>;
+/** An unadopted proposal, including idempotent creation identity. */
+export const proposeActivitySchema = Type.Object(
+  {
+    operationId: id,
+    subjectId: id,
+    purpose: activitySchema.properties.purpose,
+    mode: activitySchema.properties.mode,
+    window: activitySchema.properties.window,
+    proposedBy: ref,
+    sourceRefs: refs,
+    workContextId: Type.Union([id, Type.Null()]),
+    world: worldPointSchema,
+    nextOpportunity: Type.Union([worldPointSchema, Type.Null()]),
+    interruptOn: activitySchema.properties.interruptOn,
+  },
+  object,
+);
+/** Explicit proposal input used by both API generation and the owning operation. */
+export type ProposeActivity = Static<typeof proposeActivitySchema>;
+/** CAS adoption after the Host has resolved the actual actor and permission scope. */
+export const adoptActivitySchema = Type.Object(
+  {
+    subjectId: id,
+    activityId: id,
+    expectedRevision: Type.Integer({ minimum: 1 }),
+    adoptedBy: ref,
+    scope: activityScopeSchema,
+  },
+  object,
+);
+/** One lifecycle operation, without fictional execution recovery. */
+export const transitionActivitySchema = Type.Object(
+  {
+    subjectId: id,
+    activityId: id,
+    expectedRevision: Type.Integer({ minimum: 1 }),
+    action: Type.Union([
+      Type.Literal("start"),
+      Type.Literal("pause"),
+      Type.Literal("resume"),
+      Type.Literal("finish"),
+      Type.Literal("cancel"),
+      Type.Literal("fail"),
+    ]),
+    reason: Type.String({ minLength: 1, maxLength: 4096 }),
+  },
+  object,
+);
+/** Trusted tool/host results update useful progress; model claims alone do not prove a result. */
+export const progressActivitySchema = Type.Object(
+  {
+    subjectId: id,
+    activityId: id,
+    expectedRevision: Type.Integer({ minimum: 1 }),
+    progress: activitySchema.properties.progress,
+    nextOpportunity: Type.Union([worldPointSchema, Type.Null()]),
+  },
+  object,
+);
+/** Bounded schedule query; a different time domain is explicitly not comparable. */
+export const scheduleQuerySchema = Type.Object(
+  {
+    subjectId: id,
+    afterId: Type.Optional(id),
+    limit: Type.Integer({ minimum: 1, maximum: 128 }),
+    states: Type.Array(activitySchema.properties.state, {
+      maxItems: 6,
+      uniqueItems: true,
+    }),
+  },
+  object,
+);
+/** Metadata supplied by Messaging before any actual reading or model invocation. */
+export const attentionCandidateSchema = Type.Object(
+  {
+    messageRef: ref,
+    conversationRef: ref,
+    receivedAt: instant,
+    direct: Type.Boolean(),
+    mention: Type.Boolean(),
+    reply: Type.Boolean(),
+  },
+  object,
+);
+/** Fair bounded attention selection at a real natural opportunity. */
+export const takeAttentionSchema = Type.Object(
+  {
+    subjectId: id,
+    activityId: Type.Union([id, Type.Null()]),
+    resting: Type.Boolean(),
+    naturalOpportunity: Type.Boolean(),
+    candidates: Type.Array(attentionCandidateSchema, { maxItems: 128 }),
+    maxItems: Type.Integer({ minimum: 1, maximum: 64 }),
+    maxWaitMs: Type.Integer({ minimum: 1000, maximum: 86_400_000 }),
+  },
+  object,
+);
+/** Actual read selection does not itself record a Nous Observation. */
+export const attentionResultSchema = Type.Object(
+  {
+    decision: Type.Union([
+      Type.Literal("read"),
+      Type.Literal("defer"),
+      Type.Literal("continue"),
+      Type.Literal("rest"),
+    ]),
+    messageRefs: refs,
+    reason: ref,
+  },
+  object,
+);
+/** Product Life composes on the existing Host-fenced transaction owner. */
+export interface LifeOptions {
   readonly persistence: PersistenceService;
-  /** Current Activity and lineage context owner. */
-  readonly execution: ExecutionContextRuntime;
-  /** Retained Activity and causation owner. */
-  readonly lineage: ExecutionLineageService;
-  /** Required retained evidence owner. */
-  readonly evidence: EvidenceService;
-  /** Current time owner. */
-  readonly time: TimeService;
-  /** Canonical Messaging semantic owner. */
-  readonly messaging: MessagingService;
-  /** Narrow WorkQueue creation seam. */
-  readonly workQueue: Pick<WorkQueueService, "prepareCreate" | "commitPrepared">;
-  /** AIRuntime Expression invocation and commit-fence owner. */
-  readonly aiRuntime: AIRuntimeService;
-  /** Subject cognition mechanics port; the Product Host supplies OpenClaw. */
-  readonly cognitionRuntime: SubjectCognitionRuntime;
-  /** Current managed Product configuration owner. */
-  readonly configuration: ConfigurationService;
-  /** Current hard prerequisite projection supplied by ProductHost. */
-  readonly getHardPrerequisites: () => Promise<SubjectDependencyReadiness>;
-  /** Generation-pinned target for the Subject Reaction handler. */
-  readonly reactionTarget: WorkHandlerTarget;
-}
-
-/** Options for registering the Subject-owned Reaction handler in RuntimeKernel. */
-export interface SubjectReactionDefinitionOptions {
-  readonly productGenerationId: ProductGenerationId;
-  readonly packageGenerationId: PackageGenerationId;
-  readonly service: SubjectService;
+  readonly now: () => string;
+  readonly worldNow: (subjectId: string) => Promise<Static<typeof worldPointSchema>>;
+  readonly scopeAuthority: (
+    subjectId: string,
+    actorRef: string,
+    requested: ActivityScope,
+  ) => Promise<ActivityScope>;
 }

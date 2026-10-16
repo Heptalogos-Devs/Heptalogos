@@ -14,10 +14,13 @@
   "exclude": ["test/**/*.ts"],
   "references": [
     {
-      "path": "../../system/configuration/tsconfig.build.json"
+      "path": "../../product/identity/tsconfig.build.json"
     },
     {
-      "path": "../../bootstrap/bootstrap-state/tsconfig.build.json"
+      "path": "../../product/messaging/tsconfig.build.json"
+    },
+    {
+      "path": "../../product/subject/tsconfig.build.json"
     },
     {
       "path": "../../foundation/time-service/tsconfig.build.json"
@@ -44,7 +47,13 @@
       "path": "../../execution/evidence/tsconfig.build.json"
     },
     {
+      "path": "../../system/configuration/tsconfig.build.json"
+    },
+    {
       "path": "../../data/canonical-schema/tsconfig.build.json"
+    },
+    {
+      "path": "../../bootstrap/bootstrap-state/tsconfig.build.json"
     },
     {
       "path": "../../bootstrap/bootstrap-runtime/tsconfig.build.json"

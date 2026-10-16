@@ -8,6 +8,8 @@
 import { createCanonicalSchemaInitializer } from "@heptalogos/canonical-schema";
 import {
   prepareBootstrapPrelude,
+  loadBootstrapLocator,
+  resolveBootstrapPathProfile,
   resolveRuntimeLocations,
   type BootstrapManagedHostContext,
 } from "@heptalogos/bootstrap-runtime";
@@ -48,7 +50,9 @@ import {
 import { createProductHttpApp, closeProductHttpApp } from "./product-http.js";
 import { getNousSubject, createNousSubject } from "./nous.js";
 import { inspectProductDependencies } from "./dependencies.js";
+import { createGatewayRuntime } from "./gateway-runtime.js";
 import { parseProductHostInputs, type ProductHostInputs } from "./inputs.js";
+import { createInstalledNativeDispatcher } from "./native-dispatch.js";
 
 /** Handle to the independently usable management process. */
 export interface ProductHostHandle {
@@ -62,7 +66,9 @@ export interface ProductHostHandle {
   close(): Promise<void>;
 }
 /** Installed lifecycle roots and private PostgreSQL location. */
-export type ProductHostStartOptions = ProductHostInputs;
+export type ProductHostStartOptions = ProductHostInputs & {
+  readonly dispatchNativeActivity?: import("./activity-dispatch-contracts.js").NativeActivityDispatch;
+};
 
 async function runRetainedManagementMutation<T>(
   runtime: ReturnType<typeof createExecutionContextRuntime>,
@@ -140,9 +146,11 @@ export async function startProductHost(
   let claim: Awaited<ReturnType<typeof startFirstClaimMaintenance>> | undefined;
   let runRoot: string | undefined;
   let closing: Promise<void> | undefined;
+  const dispatchController = new AbortController();
   const close = (): Promise<void> => {
     if (closing) return closing;
     closing = (async () => {
+      dispatchController.abort();
       const failures: unknown[] = [];
       const settle = async (operation: () => Promise<unknown>) => {
         try {
@@ -276,10 +284,42 @@ export async function startProductHost(
       runMutation: runMutationActivity,
       subjects: { get: getNousSubject, create: createNousSubject },
     });
+    const secretPaths = await resolveBootstrapPathProfile(
+      await loadBootstrapLocator(options.anchorRoot),
+      ["SECRET"],
+    );
+    if (
+      secretPaths.installationId !== owned.installationId ||
+      secretPaths.instanceId !== owned.instanceId
+    )
+      throw new Error("Installation identity changed while resolving channel secrets");
+    const gateway = await createGatewayRuntime({
+      persistence: currentPersistence,
+      product,
+      secretRoot: secretPaths.resolve("SECRET").canonicalPath,
+      dataRoot: locations.stateRoot,
+      now: () => new Date().toISOString(),
+      runMutation: runMutationActivity,
+      dispatchNativeActivity:
+        options.dispatchNativeActivity ??
+        createInstalledNativeDispatcher({
+          anchorRoot: options.anchorRoot,
+          configurationRoot: owned.paths.resolve("CONFIGURATION").canonicalPath,
+          installationId: owned.installationId,
+          signal: AbortSignal.any([host.signal, dispatchController.signal]),
+        }),
+    });
+    const recoveryConfiguration = await product.configuration();
+    const recoverySubjectId = recoveryConfiguration.settings?.subject?.id;
+    if (recoverySubjectId)
+      await runMutationActivity("subject.life.recover", () =>
+        gateway.life.recover(recoverySubjectId),
+      );
     const currentRunRoot = runRoot;
     app = await createProductHttpApp({
       authentication,
       product,
+      gateway: gateway.http,
       identity: {
         installationId: currentHost.installationId,
         bootId: currentHost.bootId,

@@ -21,8 +21,20 @@
   },
   "include": ["test/**/*.ts", "support/**/*.ts", "qualification/**/*.ts"],
   "references": [
-    { "path": "../../packages/foundation/foundation-contracts" },
-    { "path": "../../packages/system/os-credential" },
-    { "path": "../../packages/application/management-client" }
+    {
+      "path": "../../packages/system/management"
+    },
+    {
+      "path": "../../packages/application/product-host"
+    },
+    {
+      "path": "../../packages/application/management-client"
+    },
+    {
+      "path": "../../packages/foundation/foundation-contracts"
+    },
+    {
+      "path": "../../packages/system/os-credential"
+    }
   ]
 }

@@ -13,8 +13,12 @@ const require = createRequire(import.meta.url);
 /** Signature of the adopted atomic file writer. */
 export type AtomicWrite = (
   path: string,
-  data: string,
-  options?: { readonly encoding?: "utf8"; readonly mode?: number },
+  data: string | Uint8Array,
+  options?: {
+    readonly encoding?: "utf8";
+    readonly mode?: number;
+    readonly fsync?: boolean;
+  },
 ) => Promise<void>;
 
 /** Writes one Product Host publication file through the adopted atomic writer. */

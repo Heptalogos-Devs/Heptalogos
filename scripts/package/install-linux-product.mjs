@@ -5,10 +5,10 @@
  * @module install-linux-product
  */
 import { runProcessSyncChecked } from "@heptalogos/repo-kit";
-import { cp, mkdir, readFile, lstat, writeFile, chmod } from "node:fs/promises";
+import { cp, mkdir, readFile, lstat, writeFile, chmod, rename } from "node:fs/promises";
 import { homedir } from "node:os";
 import { createServer } from "node:net";
-import { dirname, join, resolve, sep } from "node:path";
+import { dirname, join, resolve, sep, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   ensureArtifactDependencies,
@@ -242,13 +242,140 @@ async function install(options) {
     }),
   );
 }
+/** Renders the descriptor-owned native Subject service without a second profile or lifecycle owner. */
+export function subjectGatewayServiceUnit({
+  node,
+  anchorRoot,
+  hostUnit,
+  nativeEntry,
+  prepareEntry,
+  profilePath,
+  stateRoot,
+  passwordFile,
+  environmentFile,
+  logPath,
+}) {
+  return `[Unit]\nDescription=Heptalogos Subject Gateway\nRequires=${hostUnit}\nAfter=${hostUnit} network-online.target\nPartOf=${hostUnit}\n\n[Service]\nType=exec\nWorkingDirectory=${anchorRoot.replaceAll("%", "%%")}\nEnvironment=${quoteUnit("OPENCLAW_STATE_DIR=" + stateRoot)}\nEnvironment=${quoteUnit("OPENCLAW_CONFIG_PATH=" + profilePath)}\nExecStartPre=${[node, ...(environmentFile ? ["--env-file=" + environmentFile] : []), prepareEntry, profilePath].map((value) => quoteUnit(value, true)).join(" ")}\nExecStart=${[node, ...(environmentFile ? ["--env-file=" + environmentFile] : []), nativeEntry, "gateway", "run", "--password-file", passwordFile, "--ws-log", "compact"].map((value) => quoteUnit(value, true)).join(" ")}\nUMask=0077\nRestart=on-failure\nRestartSec=5s\nKillSignal=SIGINT\nTimeoutStopSec=45s\nStandardOutput=append:${logPath.replaceAll("%", "%%")}\nStandardError=inherit\n\n[Install]\nWantedBy=default.target ${hostUnit}\n`;
+}
+
+/** Configures the one existing Subject slot through its authoritative installation descriptor. */
+export async function configureSubjectGateway({ target, environmentFile }) {
+  if (environmentFile) {
+    const metadata = await lstat(environmentFile);
+    if (
+      !isAbsolute(environmentFile) ||
+      !metadata.isFile() ||
+      metadata.isSymbolicLink() ||
+      (metadata.mode & 0o077) !== 0
+    )
+      throw Error(
+        "Subject environment file must be an absolute protected regular file",
+      );
+  }
+  const locator = JSON.parse(
+    await readFile(join(target, "heptalogos.bootstrap.json"), "utf8"),
+  );
+  const descriptorPath = join(
+    locator.roots.CONFIGURATION,
+    "installation-services.json",
+  );
+  const descriptor = JSON.parse(await readFile(descriptorPath, "utf8"));
+  const subject = descriptor.services?.subject;
+  if (
+    descriptor.schemaVersion !== 1 ||
+    descriptor.installationId !== locator.installationId ||
+    subject?.identity !== `${locator.installationId}/subject` ||
+    !subject.roots
+  )
+    throw Error("The installed Subject service descriptor is invalid");
+  const hostUnit = descriptor.services?.host?.unit;
+  for (const name of [subject.unit, hostUnit])
+    if (typeof name !== "string" || !/^[A-Za-z0-9@_.-]+\.service$/u.test(name))
+      throw Error("The installed service unit identity is invalid");
+  for (const root of Object.values(subject.roots))
+    if (typeof root !== "string" || !isAbsolute(root))
+      throw Error("The installed Subject roots are invalid");
+  const state = run(
+    "systemctl",
+    ["--user", "show", subject.unit, "--property=ActiveState", "--value"],
+    10000,
+  );
+  if (!["inactive", "failed"].includes(state))
+    throw Error("Stop the Subject Gateway before configuring its installed service");
+  const node = join(target, "runtime/node/bin/node");
+  const nativeRoot = join(target, "runtime/openclaw-subject");
+  const nativeEntry = join(nativeRoot, "node_modules/openclaw/openclaw.mjs");
+  const prepareEntry = join(
+    nativeRoot,
+    "node_modules/@heptalogos/openclaw-host/dist/prepare-gateway.js",
+  );
+  const profilePath = join(subject.roots.CONFIGURATION, "openclaw.json");
+  const passwordFile = join(subject.roots.SECRET, "gateway-password");
+  for (const path of [node, nativeEntry, prepareEntry, profilePath, passwordFile])
+    if (!(await lstat(path)).isFile())
+      throw Error("The installed Subject Gateway payload is incomplete");
+  const prepared = JSON.parse(run(node, [prepareEntry, profilePath], 30000));
+  if (prepared.installationId !== descriptor.installationId)
+    throw Error("The native profile belongs to another Host installation");
+  const unitDirectory = join(locator.roots.CONFIGURATION, "systemd");
+  await mkdir(unitDirectory, { recursive: true, mode: 0o700 });
+  const unitPath = join(unitDirectory, subject.unit);
+  await writeFile(
+    unitPath,
+    subjectGatewayServiceUnit({
+      node,
+      anchorRoot: target,
+      hostUnit,
+      nativeEntry,
+      prepareEntry,
+      profilePath,
+      stateRoot: subject.roots.DATA,
+      passwordFile,
+      environmentFile,
+      logPath: join(subject.roots.RUN, "gateway.log"),
+    }),
+    { mode: 0o600 },
+  );
+  run("systemctl", ["--user", "enable", unitPath], 10000);
+  run("systemctl", ["--user", "daemon-reload"], 10000);
+  subject.configured = true;
+  if (environmentFile) subject.environmentFile = environmentFile;
+  else delete subject.environmentFile;
+  const temporary = descriptorPath + ".configured";
+  await writeFile(temporary, JSON.stringify(descriptor, null, 2) + "\n", {
+    mode: 0o600,
+  });
+  await rename(temporary, descriptorPath);
+  console.log(
+    JSON.stringify({
+      configured: true,
+      installationId: descriptor.installationId,
+      unit: subject.unit,
+      profilePath,
+    }),
+  );
+}
+
 function shellQuote(value) {
   return "'" + value.replaceAll("'", "'\\''") + "'";
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   try {
-    await install(argumentsFrom(process.argv.slice(2)));
+    if (process.argv[2] === "configure-subject-gateway") {
+      if (
+        ![5, 7].includes(process.argv.length) ||
+        process.argv[3] !== "--target" ||
+        (process.argv.length === 7 && process.argv[5] !== "--environment-file")
+      )
+        throw Error(
+          "Usage: install-linux-product.mjs configure-subject-gateway --target <installation-anchor> [--environment-file <private-env-file>]",
+        );
+      await configureSubjectGateway({
+        target: resolve(process.argv[4]),
+        environmentFile: process.argv[6] ? resolve(process.argv[6]) : undefined,
+      });
+    } else await install(argumentsFrom(process.argv.slice(2)));
   } catch (error) {
     process.stderr.write(
       `Linux installation failed: ${error instanceof Error ? error.message : String(error)}\n`,
