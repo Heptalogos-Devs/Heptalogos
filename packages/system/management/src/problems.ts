@@ -117,7 +117,8 @@ export function managementHttpStatus(problemCode: string): number {
     problemCode === "agency.source_denied" ||
     problemCode === "life.scope_denied" ||
     problemCode === "world.scope_denied" ||
-    problemCode === "narrative.scope_denied"
+    problemCode === "narrative.scope_denied" ||
+    problemCode === "deliberation.scope_denied"
   )
     return 403;
   if (
@@ -129,6 +130,7 @@ export function managementHttpStatus(problemCode: string): number {
       "identity.",
       "world.",
       "narrative.",
+      "deliberation.",
     ].some((prefix) => problemCode.startsWith(prefix))
   ) {
     if (problemCode.endsWith("not_found")) return 404;

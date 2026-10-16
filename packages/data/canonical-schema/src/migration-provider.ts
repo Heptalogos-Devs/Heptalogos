@@ -24,6 +24,7 @@ import { worldLifeMigration } from "./migrations/0008-world-life.js";
 
 import { narrativeMigration } from "./migrations/0010-narrative.js";
 import { roleResultsMigration } from "./migrations/0009-role-results.js";
+import { subjectDecisionsMigration } from "./migrations/0012-subject-decisions.js";
 
 const migrations: Readonly<Record<string, Migration>> = Object.freeze({
   "0001_foundation_baseline": foundationBaselineMigration,
@@ -36,6 +37,7 @@ const migrations: Readonly<Record<string, Migration>> = Object.freeze({
   "0008_world_life": worldLifeMigration,
   "0009_role_results": roleResultsMigration,
   "0010_narrative": narrativeMigration,
+  "0012_subject_decisions": subjectDecisionsMigration,
 });
 
 /** Provides the current canonical migration set to Kysely's Migrator. */
@@ -57,4 +59,5 @@ export const canonicalMigrationNames = Object.freeze([
   "0008_world_life",
   "0009_role_results",
   "0010_narrative",
+  "0012_subject_decisions",
 ] as const);

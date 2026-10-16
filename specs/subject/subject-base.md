@@ -77,3 +77,15 @@ Life.progress 可显式改变 work/wait/rest，保持当前 active 状态，并�
 Nous EpistemicView是唯一主体知识投影，包含相关熟悉范围、接受事实/报告、亲历/听说/学习区分、未知与freshness/coverage限制、刚获得的执行辅助和学习机会。Host只传purpose/视角/真实来源和世界时间，不读取三个域拼第二份知识库。陌生主题仍可在本人愿意且权限允许时学习；后台懂得不等于主体已有专业经验。
 
 世界/worker/review使用execution_only，成果经显式有界handoff才形成subject_experience。观察、学习、reflection与后续表达保留各自来源；未读正文不能进入主体认知。短期情境心境由实际生活/评价延续，不每次随机重置或改写长期Self。
+
+## 正式主观决定采用
+
+`createDeliberationService` 在同Subject短叙事锁与Activity CAS内保存不可变DecisionCommit，引用实际sourceRunId、操作身份、确切选择及实际来源。模型JSON仍是提案；Host在事务外核对真实subject.deliberation角色、provider admission和输入范围，再在同一事务内通过受信assertion复核当前权限。模型不填写actor、渠道授权或受众。
+
+`adopt`接受明确operationId、Subject/Activity、sourceRunId、expectedActivityRevision和decision；同操作同内容返回原采用，不重做Life变化，同操作改内容拒绝。`read(subjectId,decisionRef)`和`readOperation(subjectId,operationId)`读取已有采用，调用者重入应先读receipt，不以新revision重建原请求。采用返回新的activityRevision，后续ExpressionBrief据此使用当前Activity CAS。
+
+choice保存continue_activity、observe、defer、decline、ask、communicate、learn、delegate、initiate_activity或rest，以及短原因、可选下一机会和明确任务/表达分量。ask/communicate需要expressionIntent；任意action都可以明确带伴随交流。没有expressionIntent就不自动生成客套回复。表达意图保存原intent/stance/限定、deception及event/cognition/priorClaim refs，后续brief必须从这个已采用来源派生，不能在renderer矛盾后补一个谎言动机。
+
+rest采用rest，defer采用wait；其他choice保留当前mode，交流不会顺便取消休息。显式下一点必须是同域未来；未给下一点时保留尚在未来的既有节点，已经到期的节点被本次采用消费。Life.progressIn在同一事务更新模式/下一点，progress.note与实际成果原样保留，决定本身不伪装为进展说明。
+
+delegation的goal、工具和来源是已采用任务约束，其来源/工具须在实际run范围，工具同时在当前Activity范围；源权限由可信Host复核，不能把message/conversation/world的读取规则简化为字符串前缀。newActivity只保存本次已采用方向和模式，实际Activity/WorkContext创建与worker执行由原Life/Host消费者继续，不能以DecisionCommit冒充任务已运行或已完成。该操作不改写Pursuit、认知或外发结果。
