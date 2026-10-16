@@ -11,3 +11,6 @@ export { subjectProblem } from "./problems.js";
 
 export * from "./agency-contracts.js";
 export { createAgencyService } from "./agency.js";
+
+export * from "./pursuit-contracts.js";
+export { createPursuitService } from "./pursuit.js";

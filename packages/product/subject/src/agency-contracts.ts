@@ -5,6 +5,7 @@
  * @module agency-contracts
  */
 import { Type, type Static } from "@heptalogos/schema-runtime/typebox";
+import type { PersistenceInternalTransaction } from "@heptalogos/persistence/repository";
 import type { PersistenceService } from "@heptalogos/persistence";
 import type { LifeActivity } from "./contracts.js";
 const object = { additionalProperties: false } as const;
@@ -121,6 +122,7 @@ export interface AgencyOptions {
   readonly authority: (
     runId: string,
     recipient: { channel: string; accountId: string; to: string },
+    transaction?: PersistenceInternalTransaction,
   ) => Promise<AgencyRunAuthority>;
 }
 /** A physical attempt fact; an accepted platform receipt does not imply human reading. */

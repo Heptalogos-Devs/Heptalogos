@@ -12,6 +12,7 @@ import { createMessagingService } from "@heptalogos/messaging";
 import { createIdentityService } from "@heptalogos/identity";
 import {
   createLifeService,
+  createPursuitService,
   createAgencyService,
   assertScopeWithin,
   type ActivityScope,
@@ -28,6 +29,7 @@ import {
   hasCanonicalNativeMessages,
   hasAuthorizedNativeSources,
 } from "./native-source-selection.js";
+import { createPursuitMotivation } from "./pursuit-motivation.js";
 import { createActivityDispatcher } from "./activity-dispatch.js";
 import type { NativeActivityDispatch } from "./activity-dispatch-contracts.js";
 import type { GatewayScope } from "./gateway-contracts.js";
@@ -221,13 +223,33 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
       };
     },
   });
+  const pursuits = createPursuitService({
+    persistence: options.persistence,
+    life,
+    now: options.now,
+    motivation: createPursuitMotivation({ nous, now: options.now }),
+    authorize: async (activity, actor) => {
+      if (!activity.scope) denied("The Activity is not adopted");
+      assertScopeWithin(
+        activity.scope,
+        await authority(activity.subjectId, actor, activity.scope),
+      );
+    },
+  });
   const native = createNativeCognitionBridge({
     persistence: options.persistence,
     life,
     now: options.now,
     recordContact: (input) => messaging.recordContact(input),
     nous,
-    authorizeInput: async (registration, activity) => {
+    checkInput: async (registration) =>
+      pursuits.guardActivity(registration.subjectId, registration.activityId),
+    authorizeInput: async (registration, activity, transaction) => {
+      await pursuits.assertActivityCurrent(
+        registration.subjectId,
+        registration.activityId,
+        transaction,
+      );
       const current = await self(registration.subjectId, registration.actorEntityRef);
       const configured = await options.product.configuration();
       if (
@@ -259,6 +281,10 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
     checkSources: async (runId) => {
       const run = await native.readRun(runId);
       if (!run) denied("The producer run is not registered by the Host");
+      await pursuits.guardActivity(
+        run.registration.subjectId,
+        run.registration.activityId,
+      );
       const consumerId = run.consumerId;
       if (!consumerId) denied("The producer has no admitted cognition consumer");
       const current = await scope();
@@ -277,9 +303,14 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
       if (!checked.modelInputChecked)
         denied("The actual cognition source propagation barrier was not checked");
     },
-    authority: async (runId, recipient) => {
+    authority: async (runId, recipient, transaction) => {
       const run = await native.readRun(runId);
       if (!run) denied("The producer run is not registered by the Host");
+      await pursuits.assertActivityCurrent(
+        run.registration.subjectId,
+        run.registration.activityId,
+        transaction,
+      );
       const current = await scope();
       if (
         recipient.channel !== "heptalogos-qq" ||
@@ -370,6 +401,7 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
     now: options.now,
     dispatch: options.dispatchNativeActivity,
     authorizeActivity: async (activity) => {
+      await pursuits.guardActivity(activity.subjectId, activity.activityId);
       if (!activity.scope || !activity.adoptedBy) denied("The Activity is not adopted");
       assertScopeWithin(
         activity.scope,
@@ -399,5 +431,20 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
     cognition: native,
     activities,
   };
-  return { http, life, native, routes, messaging, identity, activities };
+  return {
+    http,
+    life,
+    native,
+    routes,
+    messaging,
+    identity,
+    activities,
+    pursuits,
+    pursuitHttp: {
+      authenticate: http.authenticate,
+      runMutation: options.runMutation,
+      pursuits,
+      currentSubject: async () => (await scope()).subjectId,
+    },
+  };
 }

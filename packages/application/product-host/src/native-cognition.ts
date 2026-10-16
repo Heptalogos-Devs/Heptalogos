@@ -138,9 +138,16 @@ export interface NativeCognitionOptions {
   readonly persistence: PersistenceService;
   readonly life: Pick<ReturnType<typeof createLifeService>, "get">;
   readonly now: () => string;
+  /** External cognition/Pursuit checks run before any fenced write transaction. */
+  readonly checkInput?: (
+    registration: Readonly<Registration>,
+    activity: LifeActivity,
+  ) => Promise<void>;
+  /** Rechecks only current local authority while holding the actual Activity/send-point fence. */
   readonly authorizeInput: (
     registration: Readonly<Registration>,
     activity: LifeActivity,
+    transaction?: PersistenceInternalTransaction,
   ) => Promise<void>;
   readonly recordContact: MessagingService["recordContact"];
   readonly nous: () => Promise<Pick<NousClient, "runtime">>;
@@ -263,6 +270,74 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
       );
     return rows[0].document;
   };
+  const checkInput = async (registration: Registration) => {
+    const activity = await options.life.get(
+      registration.subjectId,
+      registration.activityId,
+    );
+    if (!activity)
+      deny("native_activity_unavailable", "The registered Activity no longer exists");
+    current(activity, registration);
+    await options.checkInput?.(registration, activity);
+  };
+  const matchesHandoff = (
+    handoff: Handoff | undefined,
+    input: HostPrepareRequest,
+  ): handoff is Handoff =>
+    !!handoff &&
+    input.native.parentSessionKey === handoff.request.parentSessionKey &&
+    input.native.sessionId === handoff.request.childSessionId &&
+    input.nousSessionId === handoff.request.childNousSessionId;
+  const delegatedRegistration = (
+    source: Registration,
+    input: HostPrepareRequest,
+  ): Registration => ({
+    ...source,
+    sessionKey: input.native.sessionKey,
+    nativeRunId: input.native.runId,
+    promptDigest: input.promptDigest,
+    role: "worker",
+    messageRefs: [],
+    contacts: [],
+  });
+  const prepareRegistration = async (
+    input: HostPrepareRequest,
+  ): Promise<Registration> => {
+    const rows = await readRepositorySql<{ document: StoredInput }>(
+      options.persistence,
+      "SELECT document FROM heptalogos.life_native_input WHERE session_key=$1 AND native_run_id=$2",
+      [input.native.sessionKey, input.native.runId],
+    );
+    let registration = rows[0]?.document.registration;
+    if (!registration) {
+      const handoffs = await readRepositorySql<{ document: Handoff }>(
+        options.persistence,
+        "SELECT document FROM heptalogos.life_handoff WHERE child_session_key=$1",
+        [input.native.sessionKey],
+      );
+      const handoff = handoffs[0]?.document;
+      if (!matchesHandoff(handoff, input))
+        deny(
+          "native_input_unregistered",
+          "The exact native input has no trusted registration or isolated handoff",
+        );
+      registration = delegatedRegistration(handoff.registration, input);
+    }
+    if (registration.subjectId !== input.subjectId)
+      deny(
+        "native_subject_changed",
+        "Native input cannot change the registered Subject",
+      );
+    if (registration.nativeAgentId !== input.native.agentId)
+      deny(
+        "native_agent_changed",
+        "The real native agent must match the trusted account binding, including delegated workers",
+      );
+    if (registration.promptDigest !== input.promptDigest)
+      deny("native_input_unregistered", "The exact native prompt was not registered");
+    await checkInput(registration);
+    return registration;
+  };
   const readRun = async (runId: string): Promise<NativeRunSnapshot | undefined> => {
     const rows = await readRepositorySql<{
       state: string;
@@ -356,6 +431,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         usage: canonicalUsage,
         promptDigest: createHash("sha256").update(prompt).digest("hex"),
       };
+      await checkInput(registration);
       const selected = await mutate(async (tx) => {
         if (dispatch) {
           await sessionLock(tx, `dispatch-native-run:${dispatch.requestId}`);
@@ -384,7 +460,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         await sessionLock(tx, input.sessionKey);
         const activity = await lockedActivity(tx, input.subjectId, input.activityId);
         current(activity, registration);
-        await options.authorizeInput(registration, activity);
+        await options.authorizeInput(registration, activity, tx);
         if (!activity.workContextId || activity.workContextId !== input.workContextId)
           deny(
             "native_work_context_changed",
@@ -472,6 +548,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
     },
     async prepare(value) {
       const input = validated(() => hostPrepareRequestSchema.parse(value));
+      const preflight = await prepareRegistration(input);
       const prepared = await mutate(async (tx) => {
         await sessionLock(tx, input.native.sessionKey);
         const registered = await sql<{ document: StoredInput }>(
@@ -501,27 +578,19 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
             [input.native.sessionKey],
           );
           const handoff = handoffs[0]?.document;
-          if (
-            !handoff ||
-            input.native.parentSessionKey !== handoff.request.parentSessionKey ||
-            input.native.sessionId !== handoff.request.childSessionId ||
-            input.nousSessionId !== handoff.request.childNousSessionId
-          )
+          if (!matchesHandoff(handoff, input))
             deny(
               "native_input_unregistered",
               "The exact prompt needs trusted Host registration or an exact isolated handoff",
             );
           inheritedParent = handoffs[0]!.parent_run_id;
-          registration = {
-            ...handoff.registration,
-            sessionKey: input.native.sessionKey,
-            nativeRunId: input.native.runId,
-            promptDigest: input.promptDigest,
-            role: "worker",
-            messageRefs: [],
-            contacts: [],
-          };
+          registration = delegatedRegistration(handoff.registration, input);
         }
+        if (digest(registration) !== digest(preflight))
+          deny(
+            "native_input_changed",
+            "The trusted input changed during external checks",
+          );
         if (input.native.agentId !== registration.nativeAgentId)
           deny(
             "native_agent_changed",
@@ -538,7 +607,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           registration.activityId,
         );
         current(activity, registration);
-        await options.authorizeInput(registration, activity);
+        await options.authorizeInput(registration, activity, tx);
         if (registration.role === "main" && input.native.parentSessionKey)
           deny(
             "native_role_changed",
@@ -807,6 +876,17 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
     },
     async toolExecution(value) {
       const input = validated(() => hostToolExecutionRequestSchema.parse(value));
+      const preflight = await readRun(input.native.runId);
+      if (
+        !preflight ||
+        preflight.registration.subjectId !== input.subjectId ||
+        preflight.state !== "running"
+      )
+        deny(
+          "native_tool_unavailable",
+          "The actual admitted running invocation is unavailable",
+        );
+      await checkInput(preflight.registration);
       return mutate(async (tx) => {
         await sessionLock(tx, input.native.sessionKey);
         const contact = await contactIn(tx, input);
@@ -831,8 +911,10 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           input.subjectId,
           run.document.registration.activityId,
         );
+        if (digest(preflight.registration) !== digest(run.document.registration))
+          deny("native_input_changed", "The actual run changed during external checks");
         current(activity, run.document.registration);
-        await options.authorizeInput(run.document.registration, activity);
+        await options.authorizeInput(run.document.registration, activity, tx);
         if (
           !contact.response.allowedToolNames.includes(input.toolName) ||
           !activity.scope!.tools.includes(input.toolName)
@@ -853,6 +935,18 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
     },
     async handoff(value) {
       const input = validated(() => hostHandoffRequestSchema.parse(value));
+      const preflight = await readRun(input.parentRunId);
+      if (
+        !preflight ||
+        preflight.state !== "running" ||
+        preflight.registration.subjectId !== input.subjectId ||
+        preflight.native.sessionKey !== input.parentSessionKey ||
+        preflight.native.sessionId !== input.parentSessionId ||
+        preflight.nousSessionId !== input.parentNousSessionId
+      )
+        deny("native_parent_changed", "The exact running parent is unavailable");
+      await checkInput(preflight.registration);
+
       await mutate(async (tx) => {
         await sessionLock(tx, input.parentSessionKey);
         const matches = await sql<{ document: NativeRunSnapshot }>(
@@ -876,7 +970,10 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           input.subjectId,
           parent.registration.activityId,
         );
+        if (digest(parent.registration) !== digest(preflight.registration))
+          deny("native_parent_changed", "The parent changed during external checks");
         current(activity, parent.registration);
+        await options.authorizeInput(parent.registration, activity, tx);
         const runs = await sql<{ state: string; document: NativeRunSnapshot }>(
           tx,
           "SELECT state, document FROM heptalogos.life_native_run WHERE run_id=$1 FOR UPDATE",

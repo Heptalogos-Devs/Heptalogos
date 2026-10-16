@@ -29,6 +29,7 @@ import {
   type LifeOptions,
   type ActivityScope,
 } from "./contracts.js";
+import { subjectLineage } from "./subject-lineage.js";
 import { subjectProblem } from "./problems.js";
 
 function checked<T>(schema: Parameters<typeof compileSchema<T>>[0], value: unknown): T {
@@ -187,12 +188,7 @@ export function createLifeService(options: LifeOptions) {
               digest,
               JSON.stringify(document),
               at,
-              JSON.stringify({
-                schemaVersion: 1,
-                sourceActivityId: context.execution.activityId,
-                sourceInstanceId: context.execution.instanceId,
-                sourceContinuityEpochId: context.execution.continuityEpochId,
-              }),
+              JSON.stringify(subjectLineage(context.execution)),
             ],
           );
           const rows = await executeRepositorySql<{

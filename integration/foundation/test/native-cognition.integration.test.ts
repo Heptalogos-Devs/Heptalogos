@@ -131,11 +131,13 @@ async function fixture() {
       receipts.set(id, sdk.decodeAcceptedObservation({ occurrenceId: randomUUID() }));
     return receipts.get(id);
   });
+  let externalCheck: () => Promise<void> = async () => {};
   let revoked = false;
   const bridge = createNativeCognitionBridge({
     persistence: c.persistence,
     life,
     now,
+    checkInput: async () => externalCheck(),
     authorizeInput: async () => {
       if (revoked) throw new Error("Current input permission revoked");
     },
@@ -224,6 +226,9 @@ async function fixture() {
     recordContact,
     recordObservation,
     submissions,
+    setExternalCheck: (check: () => Promise<void>) => {
+      externalCheck = check;
+    },
     revoke: () => {
       revoked = true;
     },
@@ -732,6 +737,57 @@ real("physical delivery feedback", () => {
           .outcome.platformMessageId,
       ).toBe(fact.outcome.platformMessageId);
     } finally {
+      await f.c.close();
+    }
+  }, 120000);
+});
+
+real("native external checks do not occupy the fenced input transaction", () => {
+  it("allows a real Life pause while NoUS checking is blocked and rejects stale final model admission", async () => {
+    const f = await fixture();
+    let release!: () => void;
+    let entered!: () => void;
+    const waiting = new Promise<void>((resolve) => {
+      entered = resolve;
+    });
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    try {
+      f.setExternalCheck(async () => {
+        entered();
+        await gate;
+      });
+      const admission = f.c.run(() => f.bridge.prepare(f.input));
+      await waiting;
+      const paused = await Promise.race([
+        f.c.run(() =>
+          f.life.transition({
+            subjectId: f.activity.subjectId,
+            activityId: f.activity.activityId,
+            expectedRevision: f.activity.revision,
+            action: "pause",
+            reason: "Actual cancellation while NoUS preflight is pending",
+          }),
+        ),
+        new Promise<never>((_, reject) =>
+          setTimeout(
+            () => reject(Error("External check retained the Activity write lock")),
+            2000,
+          ),
+        ),
+      ]);
+      expect(paused.state).toBe("paused");
+      release();
+      await expect(admission).rejects.toBeDefined();
+      const rows = await readRepositorySql<{ count: number }>(
+        f.c.persistence,
+        "SELECT count(*)::integer AS count FROM heptalogos.life_native_contact WHERE run_id=$1",
+        [f.input.native.runId],
+      );
+      expect(rows[0]!.count).toBe(0);
+    } finally {
+      release?.();
       await f.c.close();
     }
   }, 120000);

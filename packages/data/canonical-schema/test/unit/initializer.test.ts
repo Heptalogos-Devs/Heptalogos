@@ -85,6 +85,7 @@ describe("canonical schema adapter", () => {
       "0004_messaging_identity",
       "0005_life_agency",
       "0006_native_dispatch",
+      "0007_pursuit",
     ]);
     await expect(canonicalMigrationProvider.getMigrations()).resolves.toEqual(
       expect.objectContaining({
