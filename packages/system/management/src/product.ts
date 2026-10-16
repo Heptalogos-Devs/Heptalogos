@@ -94,10 +94,55 @@ export const subjectRoleBindingSchema = Type.Object(
 /** Duties have independently configurable native execution and bounded resources. */
 export type SubjectRoleBinding = Static<typeof subjectRoleBindingSchema>;
 
+/** Product policy has one schema and explicit engineering defaults, independently of model settings. */
+export const reactorPolicySchema = Type.Object(
+  {
+    maxInteractionSteps: Type.Integer({
+      minimum: 1,
+      maximum: 64,
+      default: 8,
+      description: "Maximum short interactions in one foreground Reaction.",
+    }),
+    reactionDeadlineMs: Type.Integer({
+      minimum: 1000,
+      maximum: 3_600_000,
+      default: 180_000,
+      description:
+        "Real milliseconds for the foreground Reaction, excluding a yielded long worker.",
+    }),
+    workerConcurrency: Type.Integer({
+      minimum: 1,
+      maximum: 16,
+      default: 2,
+      description:
+        "Concurrent adopted professional runs within the actual native capacity.",
+    }),
+    candidateLimit: Type.Integer({ minimum: 1, maximum: 128, default: 32 }),
+    perSourceLimit: Type.Integer({ minimum: 1, maximum: 32, default: 4 }),
+    messageBatchLimit: Type.Integer({ minimum: 1, maximum: 64, default: 8 }),
+    coalesceMs: Type.Integer({
+      minimum: 0,
+      maximum: 60_000,
+      default: 5000,
+      description: "Real milliseconds for ordinary background message aggregation.",
+    }),
+    reconsiderMs: Type.Integer({
+      minimum: 1000,
+      maximum: 86_400_000,
+      default: 120_000,
+      description:
+        "Real milliseconds before reconsidering unchanged metadata; never a paid model polling interval.",
+    }),
+  },
+  { additionalProperties: false },
+);
+/** Effective adopted/initial policy, preserving explicit values. */
+export type ReactorPolicy = Static<typeof reactorPolicySchema>;
 /** Settings owned and consumed by the product host; credentials remain secret references. */
 export const productSettingsSchema = Type.Object(
   {
     qq: Type.Optional(qqAuthorizationSchema),
+    reactor: Type.Optional(Type.Partial(reactorPolicySchema)),
     roles: Type.Optional(Type.Array(subjectRoleBindingSchema, { maxItems: 5 })),
     nous: Type.Object(
       {
@@ -115,6 +160,12 @@ export const productSettingsSchema = Type.Object(
           }),
           Type.Null(),
         ]),
+        worldId: Type.Optional(
+          Type.String({
+            pattern:
+              "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$",
+          }),
+        ),
         enabled: Type.Boolean(),
       },
       { additionalProperties: false },
@@ -136,6 +187,26 @@ export const productSettingsSchema = Type.Object(
 );
 /** Effective host configuration, independent of native model/tool and Nous algorithm settings. */
 export type ProductSettings = Static<typeof productSettingsSchema>;
+/** Reads defaults from their schema instead of maintaining a second table of values. */
+export function effectiveReactorPolicy(
+  settings: Pick<ProductSettings, "reactor">,
+): ReactorPolicy {
+  const defaults = Object.fromEntries(
+    Object.entries(reactorPolicySchema.properties).map(([key, schema]) => [
+      key,
+      Reflect.get(schema, "default"),
+    ]),
+  );
+  const checked = compileSchema<ReactorPolicy>(reactorPolicySchema).validate({
+    ...defaults,
+    ...settings.reactor,
+  });
+  if (!checked.ok || checked.value.perSourceLimit > checked.value.candidateLimit)
+    throw invalidInputProblem(
+      "Use a valid Reactor policy with per-source limit within its complete candidate budget",
+    );
+  return checked.value;
+}
 /** Configuration namespace consumed by the headless host. */
 export const PRODUCT_SETTINGS_ID = "product.host.v1" as ConfigurationDefinitionId;
 /** Sole product-settings definition, including validation and activation semantics. */
@@ -353,6 +424,7 @@ export class ProductManagement {
     const checked = validator.validate(settings);
     if (!checked.ok)
       throw invalidInputProblem("Product configuration does not match its schema");
+    effectiveReactorPolicy(checked.value);
     for (const endpoint of [
       checked.value.subjectGateway.origin,
       checked.value.maintenanceGateway.origin,

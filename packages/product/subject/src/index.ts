@@ -37,6 +37,9 @@ export {
 } from "./world-lifecycle.js";
 
 export * from "./world-calendar-contracts.js";
+
+export * from "./attention-contracts.js";
+export { createSubjectAttentionService } from "./attention.js";
 export * from "./world-profile-contracts.js";
 export * from "./world-energy-contracts.js";
 export { createWorldProfileService } from "./world-profile.js";

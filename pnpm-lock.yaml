@@ -733,6 +733,9 @@ importers:
       '@heptalogos/foundation-contracts':
         specifier: workspace:*
         version: link:../../foundation/foundation-contracts
+      '@heptalogos/management':
+        specifier: workspace:*
+        version: link:../../system/management
       '@heptalogos/persistence':
         specifier: workspace:*
         version: link:../../data/persistence
