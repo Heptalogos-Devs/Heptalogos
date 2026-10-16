@@ -2,7 +2,7 @@
 
 ## 实施合同与边界
 
-WorldLife 是 subject 产品包内的独立 owner，沿现有 Activity、Host fence 与 PostgreSQL短事务实现。当前 Activity/进展并不等于完整生活史；本合同所列操作在代码与正式API接通前为待实施。认知时钟与长期认识仍由Nous拥有。
+WorldLife 是 subject 产品包内的独立 owner，沿现有 Activity、Host fence 与 PostgreSQL短事务实现。当前 `createWorldLifeService` 已提供定义/日程配置、prepareAdvance、realize/同事务realizeIn、world/subject视角与双cutoff查询、coverage及待接触交接。固定日历规律经Temporal按IANA/DST展开、确定性实现并给出下一自然节点；choice规律留给planner/主体选择。真实Pg回归覆盖并发幂等、冲突、视角、历史截点、兼容细化与重复规则推进。正式HTTP hook已定义；安装组合、原生scheduler、多角色消费者与Nous接触还须完整贯通后报告完成。Activity/进展仍分别保存技术投入。认知时钟与长期认识仍由Nous拥有。
 
 WorldDefinition 保存 worldId、Subject、timeDomainRef、IANA时区、稳定地点/world-scoped actor、生活规律、创作范围、现实信息来源与offline policy。worldId不等于时间域；无Seed不自动生成童年、性格、价值或专业履历。既有Subject采用学校角色/回溯背景须显式来源采用。
 
@@ -37,3 +37,5 @@ knowledgeAtWorldTime读取已实现故事中角色截至该世界点的见闻；
 下一自然节点投影到已有OpenClaw scheduler，只有一个实际唤醒者，无第二运行循环。QQ完全关闭时仍应推进课程、休息、娱乐和内部审议；QQ接入后只有实际查看才接触正文。
 
 参见[主体活动](subject-base.md)、[叙事与陈述](narrative-claims.md)、[时间](../execution/time.md)。
+
+日历规律保留localStart、durationMinutes、weekdays、validFrom/validUntil、地点/人物和fixed/choice。IANA跳过时间向后平移、重复时间取较早项，均由Temporal处理；发生身份由world/rule/local-date经uuid库固定。prepareAdvance投影前2小时场景与后24小时日程，advanceRules每批最多128事件，未设定/未选择区间保留limited；重复机会读取既有event而不重复实现。

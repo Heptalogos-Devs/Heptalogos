@@ -36,7 +36,7 @@ requirement IDs.
 | [Configuration](./system/configuration.md)  | Changing Product configuration definitions, revisions, activation, or effective-value resolution.                  | MANAGED_REVISION configuration, definition metadata, immutable revisions, and activation.                  | ConfigurationService and owning consumers | `CFG`  |
 | [Secret](./system/secret.md)                | Changing SecretRef, secret metadata, resolution, replacement, or revocation.                                       | Normal Product secret lifecycle, backend boundary, and no-plaintext handling.                              | SecretService                             | `SEC`  |
 | [NetworkAccess](./system/network-access.md) | Changing Host-originated outbound transport, destination policy, redirect handling, or body budgets.               | Managed network request policy, cancellation, streaming limits, and opaque-external boundary.              | NetworkAccessService                      | `NET`  |
-| [AI Runtime](./system/ai-runtime.md)        | Changing provider/model profiles, Subject bindings, InvocationSpec, structured generation, or provider provenance. | AIRuntime semantic state, subject.primary/subject.expression, schema validation, and invocation readiness. | AIRuntimeService                          | `AIR`  |
+| [原生多角色执行](./system/ai-runtime.md) | 修改职责绑定、用途/视角、独立renderer或原生调用边界。 | 原生role/purpose、可信输入、execution_only/subject_experience、表达与失败语义。 | Product Host / OpenClaw / Nous official SDK | `AIR` |
 
 ## Management and System Authority
 

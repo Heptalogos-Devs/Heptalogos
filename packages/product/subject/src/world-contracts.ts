@@ -23,6 +23,29 @@ export const worldActorSchema = Type.Object(
   { entityRef: ref, name: ref, description: text },
   object,
 );
+/** Calendar routines retain local meaning and are expanded through the world's IANA zone. */
+export const worldRoutineRuleSchema = Type.Object(
+  {
+    ruleId: id,
+    title: ref,
+    content: text,
+    subjectPerception: Type.Union([text, Type.Null()]),
+    localStart: Type.String({ pattern: "^(?:[01][0-9]|2[0-3]):[0-5][0-9]$" }),
+    durationMinutes: Type.Integer({ minimum: 1, maximum: 1440 }),
+    weekdays: Type.Array(Type.Integer({ minimum: 1, maximum: 7 }), {
+      minItems: 1,
+      maxItems: 7,
+      uniqueItems: true,
+    }),
+    validFrom: Type.String({ pattern: "^\\d{4}-\\d{2}-\\d{2}$" }),
+    validUntil: Type.String({ pattern: "^\\d{4}-\\d{2}-\\d{2}$" }),
+    actorRefs: refs,
+    placeRef: ref,
+    activityId: Type.Union([id, Type.Null()]),
+    mode: Type.Union([Type.Literal("fixed"), Type.Literal("choice")]),
+  },
+  object,
+);
 /** Adopted environment; personal biography and Seed remain outside this owner. */
 export const worldDefinitionSchema = Type.Object(
   {
@@ -45,6 +68,7 @@ export const worldDefinitionSchema = Type.Object(
     rules: text,
     creationScope: text,
     informationSourceRefs: refs,
+    routineRules: Type.Optional(Type.Array(worldRoutineRuleSchema, { maxItems: 64 })),
   },
   object,
 );
@@ -230,3 +254,21 @@ export const worldQueryResultSchema = Type.Union([
     object,
   ),
 ]);
+/** The world planner frame is an execution-only view and must never enter Subject history. */
+export const worldFrameSchema = Type.Object(
+  {
+    state: worldStateSchema,
+    world: worldPointSchema,
+    schedule: Type.Array(worldScheduleItemSchema, { maxItems: 256 }),
+    recentEvents: Type.Array(realizedWorldEventSchema, { maxItems: 128 }),
+    nextOpportunity: Type.Union([worldPointSchema, Type.Null()]),
+    role: Type.Literal("world.planner"),
+    contactNature: Type.Literal("execution_only"),
+  },
+  object,
+);
+/** Bounded deterministic realization never creates future physical effects. */
+export const advanceWorldRulesSchema = Type.Object(
+  { subjectId: id, worldId: id, interval: worldIntervalSchema },
+  object,
+);

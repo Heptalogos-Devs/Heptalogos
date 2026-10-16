@@ -17,7 +17,9 @@
   "dependencies": {
     "@heptalogos/foundation-contracts": "workspace:*",
     "@heptalogos/persistence": "workspace:*",
-    "@heptalogos/schema-runtime": "workspace:*"
+    "@heptalogos/schema-runtime": "workspace:*",
+    "@js-temporal/polyfill": "catalog:",
+    "uuid": "catalog:"
   },
   "devDependencies": {
     "vitest": "catalog:"

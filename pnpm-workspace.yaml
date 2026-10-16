@@ -17,6 +17,7 @@ overrides:
   source-map-js@>=1.0.0 <1.2.2: 1.2.2
 
 catalog:
+  "@js-temporal/polyfill": 0.5.1
   "@fastify/rate-limit": 11.2.0
   "@fastify/swagger": 9.8.1
   "@nx/js": 23.2.1

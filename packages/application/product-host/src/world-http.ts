@@ -5,6 +5,8 @@ import { managementProblem, managementProblemSchema } from "@heptalogos/manageme
 import type { FastifyInstance } from "fastify";
 import { Type, type Static, type TSchema } from "@heptalogos/schema-runtime/typebox";
 import {
+  advanceWorldRulesSchema,
+  worldFrameSchema,
   configureWorldSchema,
   queryWorldSchema,
   readWorldSchema,
@@ -95,16 +97,15 @@ export function registerWorldHttp(app: FastifyInstance, options?: WorldHttpOptio
       world: (await owners().worlds.read(input.subjectId, input.worldId)) ?? null,
     }),
   );
+  route("prepare", readWorldSchema, worldFrameSchema, (input) =>
+    owners().worlds.prepareAdvance(input.subjectId, input.worldId),
+  );
   route(
-    "prepare",
-    readWorldSchema,
-    Type.Object({
-      state: worldStateSchema,
-      world: Type.Object({ timeDomainRef: Type.String(), at: Type.String() }),
-      role: Type.Literal("world.planner"),
-      contactNature: Type.Literal("execution_only"),
-    }),
-    (input) => owners().worlds.prepareAdvance(input.subjectId, input.worldId),
+    "advanceRules",
+    advanceWorldRulesSchema,
+    worldRealizationResultSchema,
+    (input) =>
+      owners().worlds.advanceRules(input.subjectId, input.worldId, input.interval),
   );
   route("realize", realizeWorldSchema, worldRealizationResultSchema, (input) =>
     owners().worlds.realize(input),

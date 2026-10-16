@@ -15,3 +15,5 @@ Product Life 和 Agency 的语义所有者。Nous 拥有主体身份与长期认
 开发时运行 `pnpm nx run subject:build`、`pnpm nx run subject:test`。真实事务与并发测试位于 `integration/foundation`；通过 `HEPTALOGOS_TEST_PG_BIN` 指向安装的 PostgreSQL bin 后运行 Life/Agency/Messaging 对应测试，避免把跳过的数据库测试记为通过。
 
 `createPursuitService` 显式采纳 exact Desire/DesiredCondition revisions，并关联已经采纳的同 Subject Activity 与 open Nous WorkContext。来源修订/撤回、生命周期 epoch 或时间域改变会标记 reviewRequired、暂停该 Activity；继续前由 `guardActivity` 重新核验。`reconsider` 是明确换修订的采纳，保留旧 adoption/evaluation history，并保持执行暂停；实际执行仍走原 Life。官方 Motivation evaluator 是唯一真值与覆盖 owner，Pursuit 只保留实际 evaluationId、来源、verdict、finalConclusion、coverage 与时间域，不把任务完成等同于满足，也不创建后台 worker。
+
+`createWorldLifeService` 拥有正式WorldDefinition、显式日程和本地日历规律、已实现事件、主体可见投影、覆盖与待回流contact。`prepareAdvance`返回前2小时/后24小时的有界世界frame及下一自然节点；`advanceRules`实现fixed规律，choice留给正式世界/主观角色。Temporal处理IANA/DST，uuid库固定规律发生身份；重启或重复机会不重造事件。`realizeIn`与NarrativeCommit复用同一个短事务和Subject叙事锁，模型与clock读取在事务外。world-author数据与Subject感知内容在查询前分开，`asRecordedAt`和`knowledgeAtWorldTime`分别处理现实提交历史和故事内知情。正式语义见[WorldLife](../../../specs/subject/world-life.md)。

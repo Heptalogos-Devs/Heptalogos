@@ -24,6 +24,8 @@ import {
   type RealizedWorldEvent,
 } from "./world-contracts.js";
 import { subjectProblem } from "./problems.js";
+import { expandWorldRoutines, validateWorldRoutines } from "./world-calendar.js";
+import { v5 as uuidv5 } from "uuid";
 
 function conflict(detail: string): never {
   throw subjectProblem("world.conflict", "World patch is not admissible", detail);
@@ -92,7 +94,7 @@ export function createWorldLifeService(options: WorldLifeOptions) {
     subjectId: string,
     operationId: string,
     input: unknown,
-  ): Promise<unknown | undefined> => {
+  ): Promise<unknown> => {
     const rows = await executeRepositorySql<{
       request_digest: string;
       document: unknown;
@@ -207,7 +209,12 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
         conflict("Every event must use adopted world actor and place identities");
       if (
         event.scheduleId &&
-        !state.schedule.some(
+        ![
+          ...state.schedule,
+          ...expandWorldRoutines(state.definition, input.interval).map(
+            (value) => value.schedule,
+          ),
+        ].some(
           (item) => item.scheduleId === event.scheduleId && item.status === "planned",
         )
       )
@@ -309,6 +316,7 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
       } catch {
         conflict("Use an actual IANA timezone");
       }
+      validateWorldRoutines(input.definition);
       const { subjectId, worldId } = input.definition;
       if (
         !input.definition.actors.some(
@@ -343,6 +351,13 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
           const current = await readIn(tx, subjectId, worldId);
           if ((current?.revision ?? 0) !== input.expectedRevision)
             conflict("World configuration revision changed");
+          if (
+            current &&
+            current.definition.subjectActorRef !== input.definition.subjectActorRef
+          )
+            conflict(
+              "A world's Subject actor identity is stable across configuration revisions",
+            );
           if (
             current &&
             current.definition.timeDomainRef !== input.definition.timeDomainRef
@@ -383,11 +398,177 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
       ]);
       if (!state || state.definition.timeDomainRef !== world.timeDomainRef)
         conflict("World and current clock must share a declared domain");
+      const upcoming = {
+        timeDomainRef: world.timeDomainRef,
+        start: new Date(Date.parse(world.at) - 2 * 3600000).toISOString(),
+        end: new Date(Date.parse(world.at) + 24 * 3600000).toISOString(),
+      };
+      const schedule = [
+        ...state.schedule,
+        ...expandWorldRoutines(state.definition, upcoming).map(
+          (value) => value.schedule,
+        ),
+      ]
+        .filter(
+          (item) => item.status === "planned" && overlaps(item.interval, upcoming),
+        )
+        .sort((a, b) => a.interval.start.localeCompare(b.interval.start))
+        .slice(0, 256);
+      const future = schedule
+        .flatMap((item) => [item.interval.start, item.interval.end])
+        .filter((at) => Date.parse(at) > Date.parse(world.at))
+        .sort();
+      const recent = await service.query({
+        subjectId,
+        worldId,
+        interval: { ...upcoming, end: world.at },
+        view: "world_author",
+        limit: 128,
+      });
       return {
         state,
         world,
+        schedule,
+        recentEvents: recent.events,
+        nextOpportunity: future[0]
+          ? { timeDomainRef: world.timeDomainRef, at: future[0] }
+          : null,
         role: "world.planner" as const,
         contactNature: "execution_only" as const,
+      };
+    },
+    /** Realizes fixed adopted calendar rules, while choices remain actual planner/Subject opportunities. */
+    async advanceRules(
+      subjectId: string,
+      worldId: string,
+      range: { timeDomainRef: string; start: string; end: string },
+    ) {
+      const { state, world } = await service.prepareAdvance(subjectId, worldId);
+      interval(range, state.definition.timeDomainRef);
+      if (Date.parse(range.end) > Date.parse(world.at))
+        conflict("Rules cannot realize future planned life");
+      const expanded = expandWorldRoutines(state.definition, range);
+      const prior = await readRepositorySql<{ document: RealizedWorldEvent }>(
+        options.persistence,
+        "SELECT document FROM heptalogos.world_event WHERE subject_id=$1 AND world_id=$2 AND occurred_start<$4::timestamptz AND occurred_end>$3::timestamptz",
+        [subjectId, worldId, range.start, range.end],
+      );
+      const done = new Set(
+        prior.flatMap((row) =>
+          row.document.scheduleId ? [row.document.scheduleId] : [],
+        ),
+      );
+      const due = expanded.filter(
+        (value) =>
+          value.rule.mode === "fixed" &&
+          Date.parse(value.schedule.interval.start) >= Date.parse(range.start) &&
+          Date.parse(value.schedule.interval.end) <= Date.parse(range.end) &&
+          !done.has(value.schedule.scheduleId),
+      );
+      const batch = due.slice(0, 128);
+      if (!batch.length)
+        return {
+          revision: state.revision,
+          events: [],
+          interval: range,
+          coverage: "limited" as const,
+        };
+      const events = batch.map(({ rule, schedule }) => ({
+        eventId: uuidv5(`event:${schedule.scheduleId}`, worldId),
+        interval: schedule.interval,
+        title: rule.title,
+        content: rule.content,
+        actorRefs: rule.actorRefs,
+        placeRef: rule.placeRef,
+        scheduleId: schedule.scheduleId,
+        parentEventId: null,
+        causalEventRefs: [],
+        overlap: "exclusive" as const,
+        source: {
+          kind: "rule" as const,
+          producerRef: `world-rule:${worldId}:${rule.ruleId}`,
+          sourceRefs: schedule.sourceRefs,
+        },
+        perceptions:
+          rule.subjectPerception &&
+          rule.actorRefs.includes(state.definition.subjectActorRef)
+            ? [
+                {
+                  actorRef: state.definition.subjectActorRef,
+                  kind: "seen" as const,
+                  at: {
+                    timeDomainRef: range.timeDomainRef,
+                    at: schedule.interval.start,
+                  },
+                  content: rule.subjectPerception,
+                },
+              ]
+            : [],
+      }));
+      // Calendar rules define only their own slots. Unspecified intervals keep explicit limited coverage.
+      const patch = {
+        operationId: uuidv5(
+          `advance:${state.revision}:${range.start}:${range.end}`,
+          worldId,
+        ),
+        subjectId,
+        worldId,
+        expectedRevision: state.revision,
+        interval: range,
+        events,
+        coverage: "limited" as const,
+      };
+      return options.persistence.mutate((context) =>
+        useRepositoryMutationTransaction(context, (tx) => realizeIn(tx, patch, world)),
+      );
+    },
+    /** Computes complete coverage from adopted segments, retaining gaps instead of inferring life from a clock. */
+    async coverage(
+      subjectId: string,
+      worldId: string,
+      range: { timeDomainRef: string; start: string; end: string },
+      asRecordedAt?: string,
+    ) {
+      const state = await service.read(subjectId, worldId);
+      if (!state) conflict("World does not exist");
+      interval(range, state.definition.timeDomainRef);
+      const rows = await readRepositorySql<{
+        document: { interval: typeof range; coverage: "complete" | "limited" };
+        recorded_at: Date | string;
+      }>(
+        options.persistence,
+        `SELECT document,recorded_at FROM heptalogos.world_realization WHERE subject_id=$1 AND world_id=$2
+AND document->'interval'->>'timeDomainRef'=$3 AND (document->'interval'->>'start')::timestamptz<$5::timestamptz AND (document->'interval'->>'end')::timestamptz>$4::timestamptz
+AND ($6::timestamptz IS NULL OR recorded_at<=$6::timestamptz) ORDER BY document->'interval'->>'start' LIMIT 4096`,
+        [
+          subjectId,
+          worldId,
+          range.timeDomainRef,
+          range.start,
+          range.end,
+          asRecordedAt ?? null,
+        ],
+      );
+      let cursor = Date.parse(range.start);
+      for (const { document } of rows)
+        if (
+          document.coverage === "complete" &&
+          Date.parse(document.interval.start) <= cursor
+        )
+          cursor = Math.max(cursor, Date.parse(document.interval.end));
+      return {
+        interval: range,
+        coverage:
+          cursor >= Date.parse(range.end)
+            ? ("complete" as const)
+            : rows.length
+              ? ("limited" as const)
+              : ("gap" as const),
+        segments: rows.map((row) => ({
+          interval: row.document.interval,
+          coverage: row.document.coverage,
+          recordedAt: new Date(row.recorded_at).toISOString(),
+        })),
       };
     },
     /** Retries only contact handoff, never realization or external effects. */
@@ -406,6 +587,7 @@ WHERE e.subject_id=$1 AND e.world_id=$2 AND r.event_id IS NULL AND EXISTS(SELECT
         ],
       );
       return rows.map((row) => ({
+        sourceRef: `world-event:${worldId}:${row.document.eventId}:${row.document.revision}`,
         eventId: row.document.eventId,
         eventRevision: row.document.revision,
         worldId,

@@ -25,3 +25,4 @@ export { createWorldLifeService, lockSubjectNarrative } from "./world-life.js";
 
 export * from "./narrative-contracts.js";
 export { createNarrativeService, validateNarrativeCandidate } from "./narrative.js";
+export { expandWorldRoutines, worldOccurrenceId } from "./world-calendar.js";
