@@ -4,6 +4,8 @@
  * Supplies the same real audience history and known world view to current subjective calls.
  * @module subject-context
  */
+import type { NousClient } from "@nous-wave/client";
+import { managementProblem } from "@heptalogos/management";
 import type {
   createWorldLifeService,
   createNarrativeService,
@@ -11,6 +13,23 @@ import type {
 } from "@heptalogos/subject";
 import { decodeCognitionUsage } from "@nous-wave/client/host-bridge";
 import type { RoleInvocation } from "./subject-roles.js";
+/** Captures the public current stamp for one actual contact, never a virtual event's historical perception. */
+export async function readActualSubjectStamp(
+  nous: () => Promise<Pick<NousClient, "clocks">>,
+  subjectId: string,
+) {
+  const clock = await (
+    await nous()
+  ).clocks.readClock({ subjectId }, { timeoutMs: 5000 });
+  if (!clock.now?.at || clock.now.timeDomainRef !== clock.timeDomainRef)
+    throw managementProblem(
+      "gateway.clock_unavailable",
+      "Actual Subject clock is unavailable",
+      "Read the configured official clock before a new actual contact",
+      "unavailable",
+    );
+  return clock.now;
+}
 /** Current records are direct owner projections, not guessed from a future reflection. */
 export async function currentSubjectContext(
   options: {

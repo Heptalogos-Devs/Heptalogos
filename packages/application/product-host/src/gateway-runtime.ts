@@ -53,7 +53,7 @@ import { createSubjectDecisionHandler, decisionPhaseId } from "./subject-decisio
 import { createBoundLifeReader } from "./native-life-read.js";
 import { createWorldHostRuntime } from "./world-host-runtime.js";
 import { createWorldRuntime } from "./world-runtime.js";
-import { currentSubjectContext } from "./subject-context.js";
+import { currentSubjectContext, readActualSubjectStamp } from "./subject-context.js";
 import type { NativeWorldSchedule, NativeAgentSelect } from "./native-dispatch.js";
 import { timestampFromDate } from "@nous-wave/client/host-bridge";
 import { createActivityDispatcher } from "./activity-dispatch.js";
@@ -348,19 +348,8 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
   let readLife: ReturnType<typeof createBoundLifeReader>;
   const native = createNativeCognitionBridge({
     readLife: (binding, request) => readLife(binding, request),
-    captureObservedStamp: async (subjectId) => {
-      const clock = await cognitionRead(async () =>
-        (await nous()).clocks.readClock({ subjectId }, { timeoutMs: 5000 }),
-      );
-      if (!clock.now?.at || clock.now.timeDomainRef !== clock.timeDomainRef)
-        throw managementProblem(
-          "gateway.clock_unavailable",
-          "Actual Subject clock is unavailable",
-          "Read the configured official clock before a new actual contact",
-          "unavailable",
-        );
-      return clock.now;
-    },
+    captureObservedStamp: (subjectId) =>
+      cognitionRead(() => readActualSubjectStamp(nous, subjectId)),
     persistence: options.persistence,
     life,
     now: options.now,
