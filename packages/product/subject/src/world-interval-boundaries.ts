@@ -1,6 +1,9 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Shared cuts for already domain-filtered realized intervals. @module world-interval-boundaries */
+/**
+ * Shared cuts for already domain-filtered realized intervals.
+ * @module world-interval-boundaries
+ */
 import type { RealizedWorldEvent } from "./world-contracts.js";
 /** Preserve every actual overlap boundary and in-range policy change exactly once. */
 export function worldIntervalBoundaries(
