@@ -277,6 +277,26 @@ export function createLifeService(options: LifeOptions) {
     },
     /** Actual world time is read before entering any Host mutation. */
     worldNow: options.worldNow,
+    /** Reads the actual current proposal/adoption by its stable creation identity before reconstructing a retry. */
+    async readOperation(
+      subjectId: string,
+      operationId: string,
+      transaction?: PersistenceInternalTransaction,
+    ): Promise<LifeActivity | undefined> {
+      const statement =
+        "SELECT document FROM heptalogos.life_activity WHERE subject_id=$1 AND operation_id=$2";
+      const rows = transaction
+        ? await executeRepositorySql<{ document: unknown }>(transaction, statement, [
+            subjectId,
+            operationId,
+          ])
+        : await readRepositorySql<{ document: unknown }>(
+            options.persistence,
+            statement,
+            [subjectId, operationId],
+          );
+      return rows[0] ? readDocument(rows[0]) : undefined;
+    },
     async propose(value: Static<typeof proposeActivitySchema>): Promise<LifeActivity> {
       const input = checked<Static<typeof proposeActivitySchema>>(
         proposeActivitySchema,
