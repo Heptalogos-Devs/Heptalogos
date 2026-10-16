@@ -5,6 +5,8 @@ accepts native messages from live ingress, self echoes and history through one
 stable identity: platform, receiving account, conversation kind/id, and native
 message id. Every native identifier stays a string.
 
+不可变 MessageFact 与接触边界见[Messaging 合同](../../../specs/messaging/messaging-subject-chat.md)。当前 QQ 渠道和单前台消费者的交付范围见[活动计划](../../../project/plans/qq-continuous-subject.md)，实际外发与回执见[行为合同](../../../specs/subject/reaction-behavior.md)。
+
 ## Persistent boundary
 
 `createMessagingService({ persistence })` requires the caller's current Host

@@ -4,6 +4,8 @@ Identity owns opaque Host Entity references in `entity:heptalogos:<uuid>` form a
 external accounts, authenticated UIDs, groups and a cognitive Subject's own
 Host identity. It owns no cognition and makes no network calls.
 
+消息与身份分界见[消息架构](../../../docs/architecture/messaging.md)；世界人物的独立 Entity 与 Subject self 约束见[WorldLife 合同](../../../specs/subject/world-life.md)。
+
 ## Public surface
 
 `createIdentityService({ persistence })` consumes the caller's current
