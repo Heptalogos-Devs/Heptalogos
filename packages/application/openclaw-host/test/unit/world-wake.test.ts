@@ -52,7 +52,7 @@ describe("deterministic native world callback", () => {
     try {
       expect(await wakeWorld(input)).toEqual({ status: "processed" });
       expect(received).toEqual({
-        path: "/gateway/v1/world/advance",
+        path: "/gateway/v1/reactor/opportunity",
         auth: `Bearer ${token}`,
         body: request,
       });

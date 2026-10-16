@@ -64,7 +64,9 @@ describe("actual bound native life reads", () => {
     const read = createBoundLifeReader({
       worlds: {
         query,
-        resolveSourceRefs: async (input) => input.sourceRefs as string[],
+        resolveSourceRefs: async (input: { sourceRefs: readonly string[] }) => [
+          ...input.sourceRefs,
+        ],
         releasedEventIds: async () => [knownId],
       },
       narrative: { claimsTo, explainStatement },

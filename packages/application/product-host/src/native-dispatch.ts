@@ -21,8 +21,8 @@ export interface InstalledNativeOptions {
 export interface NativeWorldScheduleInput {
   readonly realAt: string | null;
   readonly subjectId: string;
-  readonly worldId: string;
-  readonly activityId: string;
+  readonly worldId?: string;
+  readonly activityId?: string;
   readonly requestId: string;
 }
 /** No Host timer or secondary scheduler exists behind this operation. */
@@ -145,8 +145,11 @@ export function createInstalledNativeDispatcher(
   const invoke = installedCommand(options, "dispatch");
   return async (params) => {
     const result = await invoke(params, params.timeout);
-    return result.status === "resolved" && result.response.status === "terminal"
-      ? { status: "terminal", result: result.response.result }
+    return result.status === "resolved" &&
+      ["terminal", "accepted"].includes(String(result.response.status))
+      ? result.response.status === "accepted"
+        ? { status: "accepted", result: result.response.result }
+        : { status: "terminal", result: result.response.result }
       : {
           status: "unresolved",
           code: result.status === "unresolved" ? result.code : "native_dispatch_failed",

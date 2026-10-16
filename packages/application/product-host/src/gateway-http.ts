@@ -14,6 +14,8 @@ import * as subject from "@heptalogos/subject";
 import {
   HOST_BRIDGE_PATHS,
   HOST_BRIDGE_JSON_SCHEMAS,
+  type HostRunTerminalRequest,
+  type HostRunTerminalResponse,
   type HostPrepareRequest,
   type HostPrepareResponse,
   type HostAdmittedRequest,
@@ -45,6 +47,10 @@ import {
   type NativeLifeResponse,
 } from "./native-life-contracts.js";
 import type { createActivityDispatcher } from "./activity-dispatch.js";
+import {
+  reactorOpportunityInputSchema,
+  reactorOpportunityResultSchema,
+} from "./subject-reactor.js";
 import * as contracts from "./gateway-contracts.js";
 import type { createArchiveStore } from "./archive-store.js";
 import { channelRouteSchema, type createChannelRouteStore } from "./channel-routes.js";
@@ -55,6 +61,8 @@ const ack = Type.Object(
 const empty = Type.Object({}, { additionalProperties: false });
 /** Managed cognition uses the official Client's public wire, with no parallel observation DTO. */
 export interface GatewayCognitionBridge {
+  /** Durable outer-native terminal means ready, never viewed or delivered. */
+  runTerminal(input: HostRunTerminalRequest): Promise<HostRunTerminalResponse>;
   /** Required terminal/completion admission from the actual native durable child owner. */
   completion(input: HostCompletionRequest): Promise<HostCompletionResponse>;
   /** Selects bounded retained results for a new Subject contact; no model text replacement. */
@@ -74,6 +82,9 @@ export interface GatewayCognitionBridge {
 }
 /** Service credential and semantic owners are resolved in the Host composition. */
 export interface GatewayHttpOptions {
+  readonly reactor: (
+    input: Static<typeof reactorOpportunityInputSchema>,
+  ) => Promise<Static<typeof reactorOpportunityResultSchema>>;
   readonly authenticate: (token: string | undefined) => Promise<void>;
   readonly runMutation: <T>(kind: string, operation: () => Promise<T>) => Promise<T>;
   readonly scope: () => Promise<contracts.GatewayScope>;
@@ -546,8 +557,24 @@ export function registerGatewayHttp(
     subject.attentionResultSchema,
     (v) => owners().life.takeAttention(v),
   );
+  endpoint(
+    "subjectReactorOpportunity",
+    "/gateway/v1/reactor/opportunity",
+    reactorOpportunityInputSchema,
+    reactorOpportunityResultSchema,
+    (v) => owners().reactor(v),
+    true,
+  );
   // The original Client schemas own these JSON boundaries; no field list is copied here.
   const wire = HOST_BRIDGE_JSON_SCHEMAS;
+  endpoint(
+    "completeNativeRun",
+    HOST_BRIDGE_PATHS.runTerminal,
+    wire.runTerminalRequest as TSchema,
+    wire.runTerminalResponse as TSchema,
+    (v) => owners().cognition.runTerminal(v as HostRunTerminalRequest),
+    true,
+  );
   endpoint(
     "prepareCognition",
     HOST_BRIDGE_PATHS.prepare,

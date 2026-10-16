@@ -13,10 +13,12 @@ import type { PersistenceInternalTransaction } from "@heptalogos/persistence/rep
 import { createMessagingService } from "@heptalogos/messaging";
 import { createIdentityService } from "@heptalogos/identity";
 import {
+  createSubjectReactorService,
   createLifeService,
   createPursuitService,
   createAgencyService,
   createWorldLifeService,
+  createWorldProfileService,
   createWorldHostLifecycleService,
   createDeliberationService,
   createNarrativeService,
@@ -27,20 +29,25 @@ import {
   type LifeActivity,
 } from "@heptalogos/subject";
 import {
+  effectiveReactorPolicy,
   managementProblem,
   type ProductManagement,
   type SubjectRoleBinding,
 } from "@heptalogos/management";
 import { createArchiveStore } from "./archive-store.js";
 import { createChannelRouteStore } from "./channel-routes.js";
+import { hasCanonicalProfileSources } from "./native-profile-source.js";
 import { authorizeAdoptedTaskSources } from "./adopted-task-sources.js";
 import { createNativeCognitionBridge } from "./native-cognition.js";
+import { projectWorldDeadline } from "@nous-wave/client";
 import { connectProductNous } from "./nous.js";
 import { createActivityOpportunity } from "./activity-opportunity.js";
 import { createSelectedMediaUploader } from "./selected-media.js";
 import {
   encodeCognitionUsage,
   decodeCognitionUsage,
+  decodeObservationInput,
+  decodeAcceptedObservation,
 } from "@nous-wave/client/host-bridge";
 import {
   hasCanonicalNativeMessages,
@@ -48,6 +55,10 @@ import {
 } from "./native-source-selection.js";
 import { createPursuitMotivation } from "./pursuit-motivation.js";
 import { compileSchema } from "@heptalogos/schema-runtime";
+import { createSubjectReactor } from "./subject-reactor.js";
+import { createSubjectSituationRuntime } from "./subject-situation.js";
+import { createSubjectAttentionRuntime } from "./subject-attention-runtime.js";
+import { createSubjectActivityResolver } from "./subject-activity-resolver.js";
 import { createSubjectRoles } from "./subject-roles.js";
 import { createSubjectActivityStarter } from "./subject-activity-runtime.js";
 import { createSubjectDecisionHandler, decisionPhaseId } from "./subject-decisions.js";
@@ -323,7 +334,27 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
     now: options.now,
     worldNow: life.worldNow,
   });
+  const profiles = createWorldProfileService({
+    persistence: options.persistence,
+    now: options.now,
+    worldNow: life.worldNow,
+    worlds,
+    resolveActor: async (input) => {
+      if (input.subjectId !== (await currentSubject()))
+        denied("WorldProfile names another current Subject");
+      return input.actorKey === "self"
+        ? (await identity.ensureSubjectEntity({ subjectId: input.subjectId })).entityRef
+        : (
+            await identity.resolveWorldActor({
+              worldId: input.worldId,
+              actorKey: input.actorKey,
+            })
+          ).entityRef;
+    },
+  });
   const worldHostLifecycle = createWorldHostRuntime({
+    profiles,
+    currentWorldId: async () => (await currentSettings()).subject.worldId,
     life,
     worlds,
     currentSubject,
@@ -347,7 +378,96 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
     },
   });
   let readLife: ReturnType<typeof createBoundLifeReader>;
+  let foreground: ReturnType<typeof createSubjectReactorService>;
+  let reactor: ReturnType<typeof createSubjectReactor>;
+  const scheduleNative: NativeWorldSchedule =
+    options.scheduleWorld ??
+    (async () => {
+      throw managementProblem(
+        "gateway.native_unavailable",
+        "Native scheduler unavailable",
+        "Use the installed native command scheduler",
+        "unavailable",
+      );
+    });
   const native = createNativeCognitionBridge({
+    workerConcurrency: async (tx) =>
+      effectiveReactorPolicy(await currentSettings(tx)).workerConcurrency,
+    onRunReady: async (input) => {
+      if (input.subjectId !== (await currentSubject())) return;
+      await scheduleNative({
+        subjectId: input.subjectId,
+        activityId: input.activityId,
+        realAt: new Date(Date.parse(options.now()) + 1000).toISOString(),
+        requestId: decisionPhaseId(input.runId, "terminal-ready"),
+      });
+    },
+    assertForegroundIn: async (tx, registration) => {
+      if (
+        !["subject.deliberation", "subject.render", "narrative.review"].includes(
+          registration.roleScope.role,
+        )
+      )
+        return;
+      if (!registration.foreground)
+        denied(
+          "This new foreground provider attempt has no actual Reactor qualification",
+        );
+      await foreground.assertCurrentIn(
+        tx,
+        registration.subjectId,
+        registration.activityId,
+        registration.foreground,
+      );
+    },
+    onWorldContactsAdmitted: async (input, registration) => {
+      const acknowledged = new Set<string>();
+      for (const contact of registration.contacts) {
+        const observation = decodeObservationInput(contact.observation),
+          source = observation.worldRealized;
+        if (
+          !source ||
+          !input.occurrences.some(
+            (receipt) =>
+              receipt.contactRef === contact.contactRef &&
+              decodeAcceptedObservation(receipt.receipt).occurrenceId,
+          )
+        )
+          continue;
+        const key = source.worldId + ":" + source.eventId;
+        if (acknowledged.has(key)) continue;
+        await worlds.acknowledgeContact({
+          subjectId: input.subjectId,
+          worldId: source.worldId,
+          eventId: source.eventId,
+          runId: input.native.runId,
+          contactRef: contact.contactRef,
+        });
+        acknowledged.add(key);
+      }
+    },
+    authorizeRetainedResult: async (registration, activity, tx) => {
+      await pursuits.assertActivityCurrent(
+        registration.subjectId,
+        registration.activityId,
+        tx,
+      );
+      await self(registration.subjectId, registration.actorEntityRef, tx);
+      if (
+        !activity.scope ||
+        !(await hasCanonicalNativeMessages(registration, messaging, tx))
+      )
+        denied("The original result source authority changed");
+      assertScopeWithin(
+        activity.scope,
+        await authority(
+          registration.subjectId,
+          registration.actorEntityRef,
+          activity.scope,
+          tx,
+        ),
+      );
+    },
     authorizeAdoptedTaskSources: (registration, parent, transaction) =>
       authorizeAdoptedTaskSources(
         { decisions, life, worlds },
@@ -420,7 +540,10 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
         )
       )
         denied("This actual role invocation exceeds the Activity's adopted tools");
-      if (!(await hasCanonicalNativeMessages(registration, messaging, transaction)))
+      if (
+        !(await hasCanonicalNativeMessages(registration, messaging, transaction)) ||
+        !(await hasCanonicalProfileSources(registration, profiles, transaction))
+      )
         denied(
           "Selected message contacts do not match the actual authorized conversation",
         );
@@ -613,12 +736,25 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
         run.registration.roleScope.role !== "subject.deliberation"
       )
         denied("The actual decision source changed before adoption");
+      if (!run.registration.foreground)
+        denied("The decision source has no Reactor foreground qualification");
+      await foreground.assertCurrentIn(
+        tx,
+        input.subjectId,
+        input.activityId,
+        run.registration.foreground,
+      );
       await pursuits.assertActivityCurrent(input.subjectId, input.activityId, tx);
       const settings = await self(input.subjectId, run.registration.actorEntityRef, tx);
       await bindingFor("subject.deliberation", run.registration.nativeAgentId, tx);
       if (!settings.subject.enabled) denied("The current Subject is disabled");
       const activity = await life.get(input.subjectId, input.activityId, tx);
       if (!activity?.scope) denied("The actual decision Activity is unavailable");
+      if (
+        !(await hasCanonicalNativeMessages(run.registration, messaging, tx)) ||
+        !hasAuthorizedNativeSources(activity, run.registration)
+      )
+        denied("The actual decision's admitted source authority changed");
       assertScopeWithin(
         activity.scope,
         await authority(
@@ -664,6 +800,7 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
   });
   let narrative: ReturnType<typeof createNarrativeService>;
   const roles: ReturnType<typeof createSubjectRoles> = {
+    startExecution: nativeRoles.startExecution,
     invoke: async (input) => {
       if (input.role !== "subject.deliberation") return nativeRoles.invoke(input);
       const activity = await life.get(input.subjectId, input.activityId);
@@ -701,6 +838,17 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
     agency,
     worldNow: life.worldNow,
     now: options.now,
+    assertCandidateCurrentIn: async (tx, runId) => {
+      const run = await native.readRun(runId, tx);
+      if (!run?.registration.foreground)
+        denied("The renderer has no actual foreground qualification");
+      await foreground.assertCurrentIn(
+        tx,
+        run.registration.subjectId,
+        run.registration.activityId,
+        run.registration.foreground,
+      );
+    },
     review: async (brief, prepared) => {
       const applied = await native.readAppliedContext(prepared.runId);
       const claims = await narrative.claimsTo({
@@ -732,6 +880,7 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
         activityId: brief.activityId,
         parentRunId: prepared.runId,
         role: "narrative.review",
+        foreground: (await native.readRun(prepared.runId))!.registration.foreground,
         deadlineAt: brief.validUntil,
         context: {
           brief,
@@ -775,53 +924,12 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
       native,
       nous,
       authorize: authorizeActivity,
-      schedule: async (activity, adopted, context) => {
-        if (
-          activity.scope?.sourceRefs.some((ref) => /^world:[0-9a-f-]{36}$/i.test(ref))
-        ) {
-          await worldRuntime.reproject();
-          return;
-        }
-        const sourceRefs = adopted.sourceRefs.filter(
-          (ref) =>
-            activity.scope?.sourceRefs.includes(ref) && !ref.startsWith("message:"),
-        );
-        const requestId = decisionPhaseId(adopted.decisionId, "initial-deliberation");
-        const run = await roles.invoke({
-          requestId,
-          requestDigest: digestCanonicalJson("host.new-activity.v1", {
-            decisionId: adopted.decisionId,
-            activityId: activity.activityId,
-          }).hex,
+      schedule: async (activity, adopted) => {
+        await scheduleNative({
           subjectId: activity.subjectId,
           activityId: activity.activityId,
-          role: "subject.deliberation",
-          deadlineAt: context.deadlineAt,
-          context: {
-            actualDecisionRef: adopted.decisionRef,
-            purpose: activity.purpose,
-            learningGoal: adopted.decision.action === "learn" ? activity.purpose : null,
-          },
-          contacts: [],
-          sourceRefs,
-          usage: encodeCognitionUsage({
-            agentInstanceId: requestId,
-            purpose: "subject_deliberation",
-            intent: activity.purpose,
-            audience: { visibility: "internal" },
-            participants: [],
-            sourceRead: {
-              subjectId: activity.subjectId,
-              sourceRefs: [{ kind: "work_context", value: activity.workContextId! }],
-              originConversationRefs: [],
-            },
-          }),
-        });
-        await decisionHandler.adopt({
-          requestId,
-          subjectId: activity.subjectId,
-          activityId: activity.activityId,
-          run,
+          realAt: new Date(Date.parse(options.now()) + 1000).toISOString(),
+          requestId: decisionPhaseId(adopted.decisionId, "initial-opportunity"),
         });
       },
     }),
@@ -878,7 +986,7 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
     narrative,
     roles,
     native,
-    handler: decisionHandler,
+    wakeSubject: (input) => reactor.wake(input),
     nous,
     currentSubject,
     enabled: async () => !!(await currentSettings()).subject.enabled,
@@ -914,8 +1022,7 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
     scope,
     nous,
     now: options.now,
-    roles,
-    consumeDeliberation: (input) => decisionHandler.adopt(input),
+    wake: (input) => reactor.wake(input),
     authorizeActivity: async (activity) => {
       await pursuits.guardActivity(activity.subjectId, activity.activityId);
       if (!activity.scope || !activity.adoptedBy) denied("The Activity is not adopted");
@@ -925,15 +1032,167 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
       );
     },
   });
-  const opportunity = createActivityOpportunity({
-    scope,
+  const attention = createSubjectAttentionRuntime({
+    profiles,
+    persistence: options.persistence,
+    settings: currentSettings,
     life,
+    worlds,
+    narrative,
+    native,
+    messaging,
+    now: options.now,
+  });
+  foreground = createSubjectReactorService({
+    life,
+    persistence: options.persistence,
+    now: options.now,
+    policy: async (tx) => effectiveReactorPolicy(await currentSettings(tx)),
+    attention,
+    assertActivityIn: async (tx, subjectId, activityId) => {
+      const activity = await life.get(subjectId, activityId, tx);
+      if (
+        !activity?.adoptedBy ||
+        !activity.scope ||
+        activity.state !== "active" ||
+        activity.continuationRequired
+      )
+        denied("Use the current adopted active Activity");
+      await pursuits.assertActivityCurrent(subjectId, activityId, tx);
+      const settings = await self(subjectId, activity.adoptedBy, tx);
+      if (!settings.subject.enabled) denied("The Subject is disabled");
+      assertScopeWithin(
+        activity.scope,
+        await authority(subjectId, activity.adoptedBy, activity.scope, tx),
+      );
+    },
+  });
+  const resolveActivity = createSubjectActivityResolver({
+    settings: currentSettings,
+    identity,
+    life,
+    nous,
+    authorize: authorizeActivity,
+    scopeFor: (subjectId, actor, worldId) =>
+      authority(subjectId, actor, {
+        conversations: [],
+        tools: [],
+        sourceRefs: worldId ? ["world:" + worldId] : [],
+        maxRunMs: 1000,
+      }),
+  });
+  const situation = createSubjectSituationRuntime({
+    profiles,
+    nous,
+    persistence: options.persistence,
+    settings: currentSettings,
+    resolveActivity,
+    life,
+    worlds,
+    foreground,
+    native,
+    roles,
+    decisions: decisionHandler,
     messaging,
     activities,
+    now: options.now,
+  });
+  reactor = createSubjectReactor({
+    worldNow: life.worldNow,
+    readActivity: (subjectId, activityId) => life.get(subjectId, activityId),
+    foreground,
+    attention,
+    roles,
+    decisions: decisionHandler,
+    native,
+    now: options.now,
+    enabled: async () => !!(await currentSettings()).subject.enabled,
+    resolveActivity,
+    afterYield: (subjectId) => reprojectSubject(subjectId),
+    prepare: situation.prepare,
+    act: situation.act,
+    saveContinuation: situation.saveContinuation,
+  });
+  const requestReactorOpportunity = async (input: {
+    subjectId: string;
+    operationRef: string;
+  }) => {
+    if (input.subjectId !== (await currentSubject()))
+      denied("The opportunity names another current Subject");
+    await scheduleNative({
+      subjectId: input.subjectId,
+      realAt: new Date(Date.parse(options.now()) + 1000).toISOString(),
+      requestId: decisionPhaseId(input.operationRef, "reactor-opportunity"),
+    });
+  };
+  const reprojectSubject = async (subjectId: string) => {
+    let next = await worldRuntime.reproject();
+    const selection = await attention.select({ subjectId });
+    const actualNow = Date.parse(options.now());
+    const metadataAt = selection.selected
+      ? new Date(actualNow + 1000).toISOString()
+      : selection.nextConsiderAt;
+    if (metadataAt && (!next || Date.parse(metadataAt) < Date.parse(next)))
+      next = new Date(Math.max(Date.parse(metadataAt), actualNow + 1000)).toISOString();
+    const clock = await (
+      await nous()
+    ).clocks.readClock({ subjectId }, { timeoutMs: 5000 });
+    let afterId: string | undefined;
+    if (clock.now)
+      do {
+        const page = await life.schedule({
+          subjectId,
+          states: ["active"],
+          limit: 128,
+          ...(afterId ? { afterId } : {}),
+        });
+        for (const activity of page.activities)
+          if (activity.nextOpportunity && !activity.continuationRequired) {
+            const due = projectWorldDeadline(clock, {
+              ...clock.now,
+              timeDomainRef: activity.nextOpportunity.timeDomainRef,
+              at: timestampFromDate(new Date(activity.nextOpportunity.at)),
+            });
+            if (due.kind === "due") {
+              const at = new Date(
+                Math.max(due.at.getTime(), actualNow + 1000),
+              ).toISOString();
+              if (!next || Date.parse(at) < Date.parse(next)) next = at;
+            }
+          }
+        afterId = page.nextId ?? undefined;
+      } while (afterId);
+    await scheduleNative({
+      subjectId,
+      realAt: next,
+      requestId: decisionPhaseId(subjectId, "reactor-next:" + (next ?? "none")),
+    });
+  };
+  const opportunity = createActivityOpportunity({
+    scope,
+    wake: (input) => reactor.wake(input),
     enabled: async () =>
       !!(await options.product.configuration()).settings?.subject.enabled,
   });
   const http: GatewayHttpOptions = {
+    reactor: async (input) => {
+      if (input.subjectId !== (await currentSubject()))
+        denied("The Reactor wake belongs to another Subject");
+      if (input.worldId && input.activityId) {
+        await worldRuntime.advance({
+          ...input,
+          worldId: input.worldId,
+          activityId: input.activityId,
+        });
+        return { status: "processed" };
+      }
+      const result = await reactor.wake({
+        subjectId: input.subjectId,
+        naturalOpportunity: true,
+      });
+      await reprojectSubject(input.subjectId);
+      return result;
+    },
     opportunity,
     authenticate: await serviceCredential(options.secretRoot),
     runMutation: options.runMutation,
@@ -951,14 +1210,22 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
     http,
     life,
     native,
+    foreground,
+    reactor,
+    attention,
+    requestReactorOpportunity,
+    reprojectSubject,
     routes,
     messaging,
     identity,
     activities,
     pursuits,
     worldRuntime,
+    profiles,
     worldHostLifecycle,
     worldHttp: {
+      profiles,
+      living: worlds.readLivingState,
       authenticate: http.authenticate,
       runMutation: options.runMutation,
       worlds: {

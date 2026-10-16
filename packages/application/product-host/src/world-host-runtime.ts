@@ -8,6 +8,7 @@ import { NousError, type NousClient } from "@nous-wave/client";
 import type {
   createLifeService,
   createWorldLifeService,
+  createWorldProfileService,
   createWorldHostLifecycleService,
   WorldHostClock,
 } from "@heptalogos/subject";
@@ -35,14 +36,33 @@ export function createWorldHostRuntime(options: {
   worlds: ReturnType<typeof createWorldLifeService>;
   lifecycle: ReturnType<typeof createWorldHostLifecycleService>;
   currentSubject: () => Promise<string>;
+  currentWorldId?: () => Promise<string | undefined>;
+  profiles?: Pick<ReturnType<typeof createWorldProfileService>, "read">;
   nous: () => Promise<Pick<NousClient, "clocks">>;
 }) {
   const selected = async () => {
     const subjectId = await options.currentSubject();
     const entries = new Map<
       string,
-      { worldId: string; activityId: string; domain: string; policy: string }
+      {
+        worldId: string;
+        domain: string;
+        policy: string;
+        rates?: { offlineRate: number; onlineRate: number };
+      }
     >();
+    const primary = await options.currentWorldId?.();
+    if (primary) {
+      const state = await options.worlds.read(subjectId, primary),
+        profile = await options.profiles?.read(subjectId, primary);
+      if (state)
+        entries.set(primary, {
+          worldId: primary,
+          domain: state.definition.timeDomainRef,
+          policy: state.definition.offlinePolicy,
+          ...(profile ? { rates: profile.profile.clock } : {}),
+        });
+    }
     let afterId: string | undefined;
     do {
       const page = await options.life.schedule({
@@ -59,9 +79,9 @@ export function createWorldHostRuntime(options: {
           if (state)
             entries.set(worldId, {
               worldId,
-              activityId: activity.activityId,
               domain: state.definition.timeDomainRef,
               policy: state.definition.offlinePolicy,
+              rates: (await options.profiles?.read(subjectId, worldId))?.profile.clock,
             });
         }
       }
@@ -74,14 +94,16 @@ export function createWorldHostRuntime(options: {
   ) => {
     if (!receipt.before) throw Error("world_clock_pause_not_observed");
     const clocks = (await options.nous()).clocks;
-    const paused = await clocks.pauseClock(
-      {
-        subjectId: receipt.subjectId,
-        operationId: receipt.operationId,
-        expectedRevision: BigInt(receipt.before.revision),
-      },
-      { timeoutMs: 5000 },
-    );
+    const request = {
+      subjectId: receipt.subjectId,
+      operationId: receipt.operationId,
+      expectedRevision: BigInt(receipt.before.revision),
+    };
+    const target = receipt.ratePolicy?.offlineRate ?? 0;
+    const paused =
+      target === 0
+        ? await clocks.pauseClock(request, { timeoutMs: 5000 })
+        : await clocks.resumeClock({ ...request, rate: target }, { timeoutMs: 5000 });
     return options.lifecycle.confirmPause({
       subjectId: receipt.subjectId,
       operationId: receipt.operationId,
@@ -127,15 +149,19 @@ export function createWorldHostRuntime(options: {
             receipt = { ...receipt, status: "resuming" };
           }
           if (receipt.status === "resuming") {
-            const resumed = await clocks.resumeClock(
-              {
-                subjectId,
-                operationId: receipt.resumeOperationId,
-                rate: receipt.before!.rate,
-                expectedRevision: BigInt(receipt.paused!.revision),
-              },
-              { timeoutMs: 5000 },
-            );
+            const request = {
+              subjectId,
+              operationId: receipt.resumeOperationId,
+              expectedRevision: BigInt(receipt.paused!.revision),
+            };
+            const target = receipt.ratePolicy?.onlineRate ?? receipt.before!.rate;
+            const resumed =
+              target === 0
+                ? await clocks.pauseClock(request, { timeoutMs: 5000 })
+                : await clocks.resumeClock(
+                    { ...request, rate: target },
+                    { timeoutMs: 5000 },
+                  );
             receipt = await options.lifecycle.confirmResume({
               subjectId,
               operationId: receipt.operationId,
@@ -168,13 +194,10 @@ export function createWorldHostRuntime(options: {
           return;
         }
       }
-      if (!entries.some((entry) => entry.policy === "pause_with_host")) return;
+      if (!entries.length) return;
       const clocks = (await options.nous()).clocks;
       const clock = await clocks.readClock({ subjectId }, { timeoutMs: 5000 });
-      const world = entries.find(
-        (entry) =>
-          entry.domain === clock.timeDomainRef && entry.policy === "pause_with_host",
-      );
+      const world = entries.find((entry) => entry.domain === clock.timeDomainRef);
       if (world && clock.rate > 0)
         await options.lifecycle.recordRunning({
           subjectId,
@@ -184,7 +207,7 @@ export function createWorldHostRuntime(options: {
     },
     async stop() {
       const { subjectId, entries } = await selected();
-      if (!entries.some((entry) => entry.policy === "pause_with_host")) return;
+      if (!entries.length) return;
       let clock: Clock;
       try {
         clock = await (
@@ -193,7 +216,7 @@ export function createWorldHostRuntime(options: {
       } catch {
         await options.lifecycle.recordGap({
           subjectId,
-          worldId: entries.find((entry) => entry.policy === "pause_with_host")!.worldId,
+          worldId: entries[0]!.worldId,
           detail:
             "Normal stop could not read the official clock; the shutdown point is unknown",
         });
@@ -202,9 +225,15 @@ export function createWorldHostRuntime(options: {
       const sameDomain = entries.filter(
         (entry) => entry.domain === clock.timeDomainRef,
       );
-      const world = sameDomain.find((entry) => entry.policy === "pause_with_host");
+      const world = sameDomain[0];
       if (!world || clock.rate === 0) return;
-      if (sameDomain.some((entry) => entry.policy !== world.policy))
+      if (
+        sameDomain.some(
+          (entry) =>
+            entry.policy !== world.policy ||
+            JSON.stringify(entry.rates ?? null) !== JSON.stringify(world.rates ?? null),
+        )
+      )
         throw managementProblem(
           "world.lifecycle_conflict",
           "World clock policies disagree",
@@ -215,6 +244,9 @@ export function createWorldHostRuntime(options: {
         subjectId,
         worldId: world.worldId,
         clock: snapshot(clock),
+        ...(world.policy === "simulate_elapsed"
+          ? { ratePolicy: world.rates ?? { offlineRate: 1, onlineRate: clock.rate } }
+          : {}),
       });
       try {
         await finishPause(receipt);

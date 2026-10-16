@@ -37,6 +37,8 @@ export interface WorldHostLifecycleReceipt {
     | "resumed"
     | "unknown"
     | "superseded";
+  /** The simulate_elapsed policy owns an offline-rate CAS, while pause_with_host owns rate zero. */
+  ratePolicy?: { offlineRate: number; onlineRate: number };
   before: WorldHostClock | null;
   paused: WorldHostClock | null;
   resumed: WorldHostClock | null;
@@ -178,12 +180,21 @@ export function createWorldHostLifecycleService(options: {
       subjectId: string;
       worldId: string;
       clock: WorldHostClock;
+      ratePolicy?: { offlineRate: number; onlineRate: number };
     }) {
       valid(input.clock);
+      if (
+        input.ratePolicy &&
+        (!Number.isFinite(input.ratePolicy.offlineRate) ||
+          input.ratePolicy.offlineRate < 0 ||
+          !Number.isFinite(input.ratePolicy.onlineRate) ||
+          input.ratePolicy.onlineRate < 0)
+      )
+        conflict("Use finite actual offline/online rate policy");
       if (input.clock.subjectId !== input.subjectId || input.clock.rate <= 0)
         conflict("An already paused clock is owned by its operator");
       const operationId = uuidv5(
-        `${input.subjectId}:${input.clock.timeDomainRef}:${input.clock.revision}:pause`,
+        `${input.subjectId}:${input.clock.timeDomainRef}:${input.clock.revision}:pause:${JSON.stringify(input.ratePolicy ?? null)}`,
         ns,
       );
       return change(input.subjectId, (current) => {
@@ -201,6 +212,7 @@ export function createWorldHostLifecycleService(options: {
           resumeOperationId: uuidv5("resume", operationId),
           status: "prepared",
           before: input.clock,
+          ...(input.ratePolicy ? { ratePolicy: input.ratePolicy } : {}),
           paused: null,
           resumed: null,
           gap: null,
@@ -226,7 +238,7 @@ export function createWorldHostLifecycleService(options: {
         if (
           input.clock.subjectId !== current.subjectId ||
           input.clock.timeDomainRef !== current.before.timeDomainRef ||
-          input.clock.rate !== 0 ||
+          input.clock.rate !== (current.ratePolicy?.offlineRate ?? 0) ||
           BigInt(input.clock.revision) !== BigInt(current.before.revision) + 1n
         )
           conflict("Pause confirmation must be the exact CAS mutation receipt");
@@ -256,7 +268,7 @@ export function createWorldHostLifecycleService(options: {
           input.clock.subjectId === current.subjectId &&
           input.clock.timeDomainRef === current.paused.timeDomainRef &&
           input.clock.revision === current.paused.revision &&
-          input.clock.rate === 0;
+          input.clock.rate === current.paused.rate;
         return {
           ...current,
           status: exact ? "resuming" : "superseded",
@@ -285,7 +297,8 @@ export function createWorldHostLifecycleService(options: {
           !current.paused ||
           input.clock.subjectId !== current.subjectId ||
           input.clock.timeDomainRef !== current.paused.timeDomainRef ||
-          input.clock.rate !== current.before.rate ||
+          input.clock.rate !==
+            (current.ratePolicy?.onlineRate ?? current.before.rate) ||
           BigInt(input.clock.revision) !== BigInt(current.paused.revision) + 1n
         )
           conflict("Resume confirmation must be the exact CAS mutation receipt");

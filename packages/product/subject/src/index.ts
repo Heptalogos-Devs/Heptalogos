@@ -40,8 +40,15 @@ export * from "./world-calendar-contracts.js";
 
 export * from "./attention-contracts.js";
 export { createSubjectAttentionService } from "./attention.js";
+
+export * from "./reactor-contracts.js";
+export { createSubjectReactorService } from "./reactor.js";
+
 export * from "./world-profile-contracts.js";
 export * from "./world-energy-contracts.js";
 export { createWorldProfileService } from "./world-profile.js";
 export { integrateWorldEnergy } from "./world-living.js";
+
+export * from "./situation-contracts.js";
+
 export * from "./world-action-contracts.js";

@@ -1180,8 +1180,9 @@ real("native child completion causality", () => {
       const createDirect = async (
         role: "subject.execution" | "subject.render",
         admitted = true,
+        selectedRunId = randomUUID(),
       ) => {
-        const nativeRunId = randomUUID(),
+        const nativeRunId = selectedRunId,
           sessionKey = "native:direct-role:" + randomUUID();
         const registered = await f.c.run(() =>
           f.bridge.registerInput({
@@ -1275,7 +1276,65 @@ real("native child completion causality", () => {
       ).rejects.toMatchObject({
         problem: { problemCode: "gateway.native_result_release_denied" },
       });
-      await f.c.run(() => f.bridge.finishRun(direct.input.native.runId, "completed"));
+      const terminal = {
+        ...sdk.hostContactIdentitySchema.strip().parse(direct.input),
+        outcome: "completed" as const,
+        endedAt: "2026-01-01T00:00:00.000Z",
+      };
+      const terminalReceipt = await f.c.run(() => f.bridge.runTerminal(terminal));
+      expect(terminalReceipt).toMatchObject({
+        accepted: true,
+        ready: true,
+        resultRetained: true,
+      });
+      const firstReady = await f.bridge.readyResults({
+        subjectId: f.input.subjectId,
+        limit: 128,
+      });
+      expect(firstReady.runs.map((value) => value.runId)).toContain(
+        direct.input.native.runId,
+      );
+      const recordedAt = firstReady.runs.find(
+        (value) => value.runId === direct.input.native.runId,
+      )!.terminalAt;
+      expect(recordedAt).not.toBe(terminal.endedAt);
+      expect(await f.c.run(() => f.bridge.runTerminal(terminal))).toEqual(
+        terminalReceipt,
+      );
+      expect(
+        (
+          await f.bridge.readyResults({ subjectId: f.input.subjectId, limit: 128 })
+        ).runs.find((value) => value.runId === direct.input.native.runId)!.terminalAt,
+      ).toBe(recordedAt);
+      await expect(
+        f.c.run(() =>
+          f.bridge.runTerminal({ ...terminal, endedAt: "2026-01-02T00:00:00.000Z" }),
+        ),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_terminal_changed" },
+      });
+      const later = await createDirect(
+        "subject.execution",
+        true,
+        "00000000-0000-4000-8000-000000000001",
+      );
+      await f.c.run(() =>
+        f.bridge.runTerminal({
+          ...sdk.hostContactIdentitySchema.strip().parse(later.input),
+          outcome: "completed",
+          endedAt: "2025-01-01T00:00:00.000Z",
+        }),
+      );
+      expect(
+        (
+          await f.bridge.readyResults({
+            subjectId: f.input.subjectId,
+            limit: 128,
+            afterRunId: direct.input.native.runId,
+          })
+        ).runs.map((value) => value.runId),
+      ).toContain(later.input.native.runId);
+      expect(f.recordObservation).not.toHaveBeenCalled();
       expect(
         await readRepositorySql(
           f.c.persistence,
@@ -1332,6 +1391,11 @@ real("native child completion causality", () => {
         ),
       );
       const released = await f.c.run(() => f.bridge.releaseResult(direct.release));
+      expect(
+        (
+          await f.bridge.readyResults({ subjectId: f.input.subjectId, limit: 128 })
+        ).runs.map((value) => value.runId),
+      ).toContain(direct.input.native.runId);
       expect(await f.c.run(() => f.bridge.releaseResult(direct.release))).toEqual(
         released,
       );
@@ -1417,6 +1481,11 @@ real("native child completion causality", () => {
       const selected = await f.c.run(() => f.bridge.prepare(subjectInput));
       expect(selected.contacts).toHaveLength(1);
       await admitSelected({ ...f, input: subjectInput }, selected);
+      expect(
+        (
+          await f.bridge.readyResults({ subjectId: f.input.subjectId, limit: 128 })
+        ).runs.map((value) => value.runId),
+      ).not.toContain(direct.input.native.runId);
       expect((await f.bridge.readAppliedContext(subjectRun)).roleScope.role).toBe(
         "subject.deliberation",
       );

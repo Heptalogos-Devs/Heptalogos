@@ -6,8 +6,8 @@ import {
   createWorldOpportunity,
   type WorldOpportunityOptions,
 } from "../../src/world-opportunity.js";
-describe("world opportunity provider admission boundary", () => {
-  it("keeps world events pending until actual Subject contact receipts and excludes unselected visible data", async () => {
+describe("world realization stays outside the subjective foreground", () => {
+  it("notifies the single Reactor without selecting or perceiving world contacts", async () => {
     const subjectId = randomUUID(),
       worldId = randomUUID(),
       activityId = randomUUID(),
@@ -53,6 +53,7 @@ describe("world opportunity provider admission boundary", () => {
       readRealization: async (): Promise<unknown> => undefined,
       realizationCursor: async () => world,
       advanceRules: vi.fn(),
+      completeActions: vi.fn(async () => []),
       pendingContacts: async () => [event],
       releasedEventIds: async () => [],
       query: async () => ({
@@ -65,17 +66,12 @@ describe("world opportunity provider admission boundary", () => {
       }),
       acknowledgeContact,
     };
-    let admitted = false;
-    const invoke = vi.fn(async () => ({
-      runId: randomUUID(),
-      status: "completed",
-      text: "continue",
-      admitted,
-    }));
-    const acceptedWorldContact = vi.fn(async () => ({
-      contactRef: "contact:accepted",
-    }));
-    const adoptDeliberation = vi.fn(async () => {}),
+    const invoke = vi.fn(async () => {
+      throw Error(
+        "A preserved world patch or fixed routine must not launch a new paid role",
+      );
+    });
+    const wakeSubject = vi.fn(async () => {}),
       scheduleNext = vi.fn(async () => {});
     const options = {
       worlds,
@@ -98,44 +94,22 @@ describe("world opportunity provider admission boundary", () => {
         sourceRefs: [event.sourceRef],
         usage: {},
       }),
-      releaseWorldContact: async () => ({
-        contactRef: "contact:candidate",
-        selected: true,
-      }),
-      acceptedWorldContact,
-      adoptDeliberation,
+      wakeSubject,
       scheduleNext,
     } as unknown as WorldOpportunityOptions<never, object>;
     const opportunity = createWorldOpportunity(options),
       request = { subjectId, worldId, activityId, requestId: randomUUID() };
-    await expect(opportunity.advance(request)).rejects.toMatchObject({
-      problem: { problemCode: "world.contact_not_admitted" },
-    });
+    expect((await opportunity.advance(request)).status).toBe("processed");
     expect(acknowledgeContact).not.toHaveBeenCalled();
-    expect(acceptedWorldContact).not.toHaveBeenCalled();
-    expect(JSON.stringify(invoke.mock.calls)).not.toContain("unselected view content");
-    admitted = true;
-    expect(
-      (await opportunity.advance({ ...request, requestId: randomUUID() })).status,
-    ).toBe("processed");
-    expect(acknowledgeContact).toHaveBeenCalledWith({
-      subjectId,
-      worldId,
-      eventId,
-      contactRef: "contact:accepted",
-      runId: expect.any(String),
-    });
-    expect(adoptDeliberation).toHaveBeenCalledOnce();
+    expect(invoke).not.toHaveBeenCalled();
+    expect(wakeSubject).toHaveBeenCalledWith({ subjectId, naturalOpportunity: true });
     expect(scheduleNext).toHaveBeenCalledOnce();
-    // An adopted patch remains the paid planner result even when a later frame lacks future slots.
+    // A saved paid planner patch never launches another planner when its caller resumes.
     vi.spyOn(worlds, "readRealization").mockResolvedValue({ operationId: "adopted" });
     const prepared = await worlds.prepareAdvance();
     vi.spyOn(worlds, "prepareAdvance").mockResolvedValue({ ...prepared, schedule: [] });
-    invoke.mockClear();
     await opportunity.advance({ ...request, requestId: randomUUID() });
-    expect(invoke).toHaveBeenCalledOnce();
-    expect(invoke).toHaveBeenCalledWith(
-      expect.objectContaining({ role: "subject.deliberation" }),
-    );
+    expect(invoke).not.toHaveBeenCalled();
+    expect(acknowledgeContact).not.toHaveBeenCalled();
   });
 });

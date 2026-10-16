@@ -74,6 +74,7 @@ it("executes Life through the real pinned agent RPC and cannot inherit a binding
         fileURLToPath(new URL("../support/life-rpc.ts", import.meta.url)),
         native,
         fileURLToPath(new URL("../../dist/life-tool.js", import.meta.url)),
+        fileURLToPath(new URL("../../dist/dispatch.js", import.meta.url)),
       ],
       {
         env: {
@@ -88,6 +89,7 @@ it("executes Life through the real pinned agent RPC and cannot inherit a binding
     );
     expect(result.stdout).toContain('"nativeAgentRpcLifeTool":"PASS"');
     expect(result.stdout).toContain('"nativeLifeReadAction":"PASS"');
+    expect(result.stdout).toContain('"nativeEarlyAcknowledgement":"PASS"');
     expect(result.stdout).toContain('"unboundNextRun":"PASS"');
     expect(result.stdout).toContain('"paidCalls":0');
   } finally {

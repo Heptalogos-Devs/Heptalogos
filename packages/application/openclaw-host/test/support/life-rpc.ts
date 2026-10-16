@@ -11,6 +11,7 @@ import { pathToFileURL } from "node:url";
 import { randomUUID } from "node:crypto";
 const native = resolve(process.argv[2]!);
 const toolModule = pathToFileURL(resolve(process.argv[3]!)).href;
+const dispatchModule = resolve(process.argv[4]!);
 const root = await mkdtemp(join(tmpdir(), "native-bindings-"));
 const proof = join(root, "factory.jsonl");
 const readRequest = {
@@ -54,6 +55,10 @@ export default {id:'binding-fixture',name:'Life fixture',register(api){
 }};
 `,
 );
+let releaseFirst!: () => void;
+const firstResponseGate = new Promise<void>((done) => {
+  releaseFirst = done;
+});
 let modelCalls = 0;
 let activeRun = 0;
 const turns = [0, 0];
@@ -70,6 +75,7 @@ const provider = createServer((req, res) => {
     const callId = second ? "binding-second" : "binding-first";
     turns[activeRun] = (turns[activeRun] ?? 0) + 1;
     const done = turns[activeRun]! > 1;
+    if (activeRun === 0 && turns[activeRun] === 1) await firstResponseGate;
     assert(modelCalls <= 4, "Unexpected model loop in native fixture");
     const response = {
       id: "fixture-" + modelCalls,
@@ -273,7 +279,7 @@ try {
   assert.equal(modelCalls, 0);
 
   const sessionKey = "agent:main:bindings-fixture";
-  const firstResult = await sdk.callGatewayFromCli("agent", opts, {
+  const firstParams = {
     agentId: "main",
     sessionKey,
     message: "FIRST: call heptalogos_life once, then finish.",
@@ -286,7 +292,54 @@ try {
         activityRef: "11111111-2222-4333-8444-555555555555",
       },
     },
+  };
+  const acknowledgement = await new Promise<{
+    status: string;
+    result: { runId?: string };
+  }>((done, failed) => {
+    const dispatch = spawn(process.execPath, [dispatchModule], {
+      env: {
+        ...process.env,
+        NODE_USE_ENV_PROXY: "0",
+        OPENCLAW_GATEWAY_TOKEN: "fixture-only-gateway",
+      },
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    let output = "",
+      errors = "";
+    dispatch.stdout.on("data", (chunk) => {
+      output += String(chunk);
+    });
+    dispatch.stderr.on("data", (chunk) => {
+      errors += String(chunk);
+    });
+    dispatch.once("error", failed);
+    dispatch.once("close", (code) => {
+      try {
+        if (code !== 0) throw Error("Actual dispatch entry failed: " + errors);
+        done(JSON.parse(output));
+      } catch (error) {
+        failed(error);
+      }
+    });
+    dispatch.stdin.end(JSON.stringify({ ...firstParams, waitForFinal: false }));
   });
+  assert.equal(
+    acknowledgement.status,
+    "accepted",
+    "Long execution must return while the actual native provider is still blocked",
+  );
+  assert.equal(acknowledgement.result.runId, first);
+  assert(
+    turns[0]! <= 1,
+    "The first native result must still be blocked at early acknowledgement",
+  );
+  releaseFirst();
+  const firstResult = await sdk.callGatewayFromCli("agent.wait", opts, {
+    runId: first,
+    timeoutMs: 30000,
+  });
+  assert.equal((firstResult as { status: string }).status, "ok");
   activeRun = 1;
   const secondResult = await sdk.callGatewayFromCli("agent", opts, {
     agentId: "main",
@@ -296,7 +349,7 @@ try {
     deliver: false,
     timeout: 30,
   });
-  assert.equal((firstResult as { runId?: string }).runId, first);
+  assert.equal(acknowledgement.result.runId, first);
   assert.equal((secondResult as { runId?: string }).runId, second);
   const entries = (await readFile(proof, "utf8"))
     .trim()
@@ -324,6 +377,7 @@ try {
   console.log(
     JSON.stringify({
       nativeAgentRpcLifeTool: "PASS",
+      nativeEarlyAcknowledgement: "PASS",
       nativeLifeReadAction: "PASS",
       unboundNextRun: "PASS",
       modelCalls,
@@ -346,6 +400,7 @@ try {
     { cause: error },
   );
 } finally {
+  releaseFirst();
   if (child.exitCode === null) {
     const stopped = new Promise<void>((done) => child.once("exit", () => done()));
     child.kill();

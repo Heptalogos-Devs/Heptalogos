@@ -14,6 +14,7 @@ import {
   executeRepositorySql as sql,
   readRepositorySql,
   useRepositoryMutationTransaction,
+  type PersistenceInternalTransaction,
 } from "@heptalogos/persistence/repository";
 import { compileSchema } from "@heptalogos/schema-runtime";
 import type { Static } from "@heptalogos/schema-runtime/typebox";
@@ -177,6 +178,11 @@ export interface NarrativeOptions {
     ReturnType<typeof createAgencyService>,
     "prepareAdoption" | "adoptDeliveryIn"
   >;
+  /** New candidates must still own foreground qualification; immutable adopted batches remain deliverable. */
+  readonly assertCandidateCurrentIn?: (
+    tx: PersistenceInternalTransaction,
+    rendererRunId: string,
+  ) => Promise<void>;
   readonly review: (
     brief: ExpressionBrief,
     prepared: PreparedDelivery,
@@ -334,6 +340,7 @@ export function createNarrativeService(options: NarrativeOptions) {
               );
             return { reference: previous[0].document.reference };
           }
+          await options.assertCandidateCurrentIn?.(tx, prepared.runId);
           if (Date.parse(options.now()) > Date.parse(brief.validUntil))
             denied(
               "The expression's relative time and dependencies have expired; render a new candidate",

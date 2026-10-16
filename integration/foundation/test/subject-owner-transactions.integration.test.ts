@@ -1,6 +1,6 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import { afterEach, describe, expect, it } from "vitest";
 import { createIdentityService } from "@heptalogos/identity";
@@ -511,6 +511,10 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
             contactRequestId: randomUUID(),
             invocationId: "actual-role-fixture",
             promptDigest: pending.promptDigest,
+            currentContextDigest:
+              params.extraSystemPrompt === undefined
+                ? undefined
+                : createHash("sha256").update(params.extraSystemPrompt).digest("hex"),
             native: {
               sessionKey: params.sessionKey,
               sessionId: randomUUID(),
@@ -519,6 +523,13 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
               historyGeneration: randomUUID(),
             },
           };
+          expect(params.message).not.toContain("CURRENT_EPHEMERAL_WORLD_FIXTURE");
+          expect(params.extraSystemPrompt).toContain("CURRENT_EPHEMERAL_WORLD_FIXTURE");
+          await expect(
+            native.prepare({ ...input, currentContextDigest: "0".repeat(64) }),
+          ).rejects.toMatchObject({
+            problem: { problemCode: "gateway.native_context_changed" },
+          });
           const prepared = await native.prepare(input);
           const occurrences = prepared.contacts.map((entry) => ({
             contactRef: entry.contactRef,
@@ -547,7 +558,7 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
                 payloads: [
                   {
                     text: JSON.stringify({
-                      action: "observe",
+                      action: "inspect",
                       reason: "Actual registered RoleInvoker fixture",
                     }),
                   },
@@ -563,7 +574,10 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
           subjectId,
           activityId: activity.activityId,
           role: "subject.deliberation",
-          context: { worldSource: eventRef },
+          context: {
+            worldSource: eventRef,
+            currentSituation: "CURRENT_EPHEMERAL_WORLD_FIXTURE",
+          },
           contacts: [worldContact],
           sourceRefs: [eventRef],
           usage: sdk.encodeCognitionUsage({
@@ -626,7 +640,7 @@ real("Subject authority reuses the caller's sole PostgreSQL connection", () => {
           sourceRunId: runId,
           expectedActivityRevision: beforeDecision.revision,
           decision: {
-            action: "delegate",
+            action: "search",
             reason: "Use an actually released old scene",
             delegation: {
               goal: "Inspect this scene",

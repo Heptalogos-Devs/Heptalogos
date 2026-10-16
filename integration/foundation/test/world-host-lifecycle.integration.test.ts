@@ -139,6 +139,7 @@ real("World Host clock obligations in real PostgreSQL", () => {
     let revision = 1n,
       rate = 20,
       loseResumeResponse = true;
+    let offlinePolicy = "pause_with_host";
     const operations = new Map<string, unknown>();
     const snapshot = () => ({
       subjectId,
@@ -170,7 +171,14 @@ real("World Host clock obligations in real PostgreSQL", () => {
         rate: number;
       }) => {
         if (operations.has(input.operationId)) return operations.get(input.operationId);
-        expect((await lifecycle.read(subjectId))?.status).toBe("resuming");
+        const stored = await lifecycle.read(subjectId);
+        expect(stored?.status).toBe(
+          stored?.ratePolicy &&
+            input.rate === stored.ratePolicy.offlineRate &&
+            stored.status === "prepared"
+            ? "prepared"
+            : "resuming",
+        );
         if (input.expectedRevision !== revision)
           throw Error("actual owner CAS rejected");
         revision++;
@@ -186,6 +194,9 @@ real("World Host clock obligations in real PostgreSQL", () => {
     };
     const host = createWorldHostRuntime({
       lifecycle,
+      profiles: {
+        read: async () => ({ profile: { clock: { onlineRate: 3, offlineRate: 1 } } }),
+      },
       currentSubject: async () => subjectId,
       life: {
         schedule: async () => ({
@@ -197,7 +208,7 @@ real("World Host clock obligations in real PostgreSQL", () => {
       },
       worlds: {
         read: async () => ({
-          definition: { timeDomainRef: "school", offlinePolicy: "pause_with_host" },
+          definition: { timeDomainRef: "school", offlinePolicy },
         }),
       },
       nous: async () => ({ clocks }),
@@ -222,6 +233,19 @@ real("World Host clock obligations in real PostgreSQL", () => {
       await current.run(host.start);
       expect(revision).toBe(edited);
       expect(rate).toBe(5);
+      // The same normal Host lifecycle must use profile rates, not accelerated online time while stopped.
+      offlinePolicy = "simulate_elapsed";
+      await current.run(host.stop);
+      expect(rate).toBe(1);
+      expect((await lifecycle.read(subjectId))?.ratePolicy).toEqual({
+        onlineRate: 3,
+        offlineRate: 1,
+      });
+      await current.run(host.start);
+      expect(rate).toBe(3);
+      const resumedRevision = revision;
+      await current.run(host.start);
+      expect(revision).toBe(resumedRevision);
     } finally {
       await current.close();
     }

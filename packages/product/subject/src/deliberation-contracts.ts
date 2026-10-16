@@ -1,9 +1,14 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Adopted Subject decisions are distinct from model proposals and actual task outcomes. @module deliberation-contracts */
+/**
+ * Adopted Subject decisions are distinct from model proposals and actual task outcomes.
+ * @module deliberation-contracts
+ */
 import { Type, type Static } from "@heptalogos/schema-runtime/typebox";
 import type { PersistenceService } from "@heptalogos/persistence";
 import type { PersistenceInternalTransaction } from "@heptalogos/persistence/repository";
+import { changeCalendarSchema } from "./world-calendar-contracts.js";
+import { interactionActionSchema } from "./reactor-contracts.js";
 import { activitySchema, worldPointSchema } from "./contracts.js";
 import type { createLifeService } from "./life.js";
 const object = { additionalProperties: false } as const;
@@ -31,19 +36,9 @@ export const decisionExpressionIntentSchema = Type.Object(
 /** One bounded subjective choice; accompanying expression is explicit and never inferred from its action. */
 export const deliberationDecisionSchema = Type.Object(
   {
-    action: Type.Union([
-      Type.Literal("continue_activity"),
-      Type.Literal("observe"),
-      Type.Literal("defer"),
-      Type.Literal("decline"),
-      Type.Literal("ask"),
-      Type.Literal("communicate"),
-      Type.Literal("learn"),
-      Type.Literal("delegate"),
-      Type.Literal("initiate_activity"),
-      Type.Literal("rest"),
-    ]),
+    ...interactionActionSchema.properties,
     reason: summary,
+    calendarChange: Type.Optional(Type.Pick(changeCalendarSchema, ["scope", "change"])),
     nextOpportunity: Type.Optional(Type.Union([worldPointSchema, Type.Null()])),
     expressionIntent: Type.Optional(decisionExpressionIntentSchema),
     delegation: Type.Optional(

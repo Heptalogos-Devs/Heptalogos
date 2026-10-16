@@ -36,17 +36,23 @@ async function readParameters(): Promise<Record<string, unknown>> {
 try {
   if (process.argv.length !== 2) throw Error("dispatch_arguments_rejected");
   const params = await readParameters();
+  const { waitForFinal, ...nativeParams } = params;
+  if (waitForFinal !== undefined && typeof waitForFinal !== "boolean")
+    throw Error("dispatch_wait_invalid");
+  const expectFinal = waitForFinal !== false;
   const result = await callGatewayFromCli(
     "agent",
     {
-      expectFinal: true,
+      expectFinal,
       timeout: String(Number(params.timeout) * 1000 + 30_000),
       json: true,
     },
-    params,
-    { expectFinal: true, progress: false },
+    nativeParams,
+    { expectFinal, progress: false },
   );
-  process.stdout.write(JSON.stringify({ status: "terminal", result }) + "\n");
+  process.stdout.write(
+    JSON.stringify({ status: expectFinal ? "terminal" : "accepted", result }) + "\n",
+  );
 } catch {
   // RPC failures can be uncertain after submission; the Host reconciles the registered run.
   process.stdout.write(

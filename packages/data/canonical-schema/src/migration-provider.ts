@@ -31,9 +31,11 @@ import { worldHostLifecycleMigration } from "./migrations/0013-world-host-lifecy
 
 import { worldContactSelectionMigration } from "./migrations/0014-world-contact-selection.js";
 
-import { worldProfileLivingMigration } from "./migrations/0016-world-profile-living.js";
-
 import { subjectAttentionMigration } from "./migrations/0017-subject-attention.js";
+
+import { subjectReactorMigration } from "./migrations/0015-subject-reactor.js";
+
+import { worldProfileLivingMigration } from "./migrations/0016-world-profile-living.js";
 
 const migrations: Readonly<Record<string, Migration>> = Object.freeze({
   "0001_foundation_baseline": foundationBaselineMigration,
@@ -50,6 +52,7 @@ const migrations: Readonly<Record<string, Migration>> = Object.freeze({
   "0012_subject_decisions": subjectDecisionsMigration,
   "0013_world_host_lifecycle": worldHostLifecycleMigration,
   "0014_world_contact_selection": worldContactSelectionMigration,
+  "0015_subject_reactor": subjectReactorMigration,
   "0016_world_profile_living": worldProfileLivingMigration,
   "0017_subject_attention": subjectAttentionMigration,
 });
@@ -77,6 +80,7 @@ export const canonicalMigrationNames = Object.freeze([
   "0012_subject_decisions",
   "0013_world_host_lifecycle",
   "0014_world_contact_selection",
+  "0015_subject_reactor",
   "0016_world_profile_living",
   "0017_subject_attention",
 ] as const);

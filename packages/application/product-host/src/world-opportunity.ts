@@ -11,9 +11,8 @@ import { compileSchema } from "@heptalogos/schema-runtime";
 import { managementProblem } from "@heptalogos/management";
 import { v5 as uuidv5 } from "uuid";
 type Worlds = ReturnType<typeof createWorldLifeService>;
-type WorldContact = Awaited<ReturnType<Worlds["pendingContacts"]>>[number];
 type Point = { timeDomainRef: string; at: string };
-type Role = "world.planner" | "subject.deliberation";
+type Role = "world.planner";
 /** Native identities and official usage/contact construction remain in their existing owner. */
 export interface WorldOpportunityOptions<TContact, TUsage> {
   readonly worlds: Worlds;
@@ -50,30 +49,11 @@ export interface WorldOpportunityOptions<TContact, TUsage> {
     sourceRefs: readonly string[];
     usage: TUsage;
   }>;
-  readonly releaseWorldContact: (
-    input: WorldContact & { subjectId: string; activityId: string },
-  ) => Promise<{ contactRef: string; selected: boolean }>;
-  /** Maps a world point to a real due instant through the official clock mapping, then replaces the one native life schedule. */
-  readonly acceptedWorldContact: (input: {
-    runId: string;
-    event: WorldContact;
-  }) => Promise<{ contactRef: string } | undefined>;
-  /** Life/Agency owns actual choices, delegation and expression after the role returns. */
-  readonly adoptDeliberation: (input: {
+  /** World realization only notifies the one foreground; it never reads events for the Subject. */
+  readonly wakeSubject: (input: {
     subjectId: string;
-    worldId: string;
-    activityId: string;
-    requestId: string;
-    world: Point;
-    run: {
-      runId: string;
-      text?: string;
-      result?: unknown;
-      status: string;
-      activityRevision?: number;
-      deadlineAt?: string;
-    };
-  }) => Promise<void>;
+    naturalOpportunity: boolean;
+  }) => Promise<unknown>;
   readonly scheduleNext: (input: {
     subjectId: string;
     worldId: string;
@@ -106,6 +86,7 @@ export function createWorldOpportunity<TContact, TUsage>(
           "Use an active same-Subject Activity and its actual permissions",
           "conflict",
         );
+      await options.worlds.completeActions({subjectId:input.subjectId,worldId:input.worldId,limit:32});
       let frame = await options.worlds.prepareAdvance(input.subjectId, input.worldId);
       if (activity.world.timeDomainRef !== frame.world.timeDomainRef)
         throw managementProblem(
@@ -131,22 +112,6 @@ export function createWorldOpportunity<TContact, TUsage>(
       if (Date.parse(start) < Date.parse(end))
         await options.worlds.advanceRules(input.subjectId, input.worldId, range);
       frame = await options.worlds.prepareAdvance(input.subjectId, input.worldId);
-      const selectedRefs: string[] = [];
-      const selectedEvents = new Map<string, WorldContact>();
-      const pending = await options.worlds.pendingContacts(
-        input.subjectId,
-        input.worldId,
-      );
-      for (const event of pending) {
-        const selection = await options.releaseWorldContact({
-          ...event,
-          subjectId: input.subjectId,
-          activityId: input.activityId,
-        });
-        if (!selection.selected) continue;
-        selectedRefs.push(event.sourceRef);
-        selectedEvents.set(event.eventId, event);
-      }
       // A choice or an unset scene needs the world author; ordinary fixed routines do not.
       const needsPlanner =
         !frame.schedule.some(
@@ -252,110 +217,10 @@ export function createWorldOpportunity<TContact, TUsage>(
             },
           })),
         });
-        for (const event of await options.worlds.pendingContacts(
-          input.subjectId,
-          input.worldId,
-        )) {
-          if (selectedEvents.has(event.eventId)) continue;
-          const selection = await options.releaseWorldContact({
-            ...event,
-            subjectId: input.subjectId,
-            activityId: input.activityId,
-          });
-          if (!selection.selected) continue;
-          selectedRefs.push(event.sourceRef);
-          selectedEvents.set(event.eventId, event);
-        }
       }
-      const subjectView = await options.worlds.query({
+      await options.wakeSubject({
         subjectId: input.subjectId,
-        worldId: input.worldId,
-        interval: {
-          timeDomainRef: frame.world.timeDomainRef,
-          start: new Date(Date.parse(end) - 2 * 3600000).toISOString(),
-          end,
-        },
-        view: "subject",
-        knowledgeAtWorldTime: frame.world,
-        limit: 128,
-      });
-      const released = await options.worlds.releasedEventIds(
-        input.subjectId,
-        input.worldId,
-        [...new Set(subjectView.events.map((event) => event.eventId))],
-      );
-      const admittedOrSelected = new Set([...released, ...selectedEvents.keys()]);
-      const safeSubjectView = {
-        ...subjectView,
-        events: subjectView.events.filter((event) =>
-          admittedOrSelected.has(event.eventId),
-        ),
-      };
-      const context = await options.contextFor({
-        ...input,
-        role: "subject.deliberation",
-        world: frame.world,
-        sourceRefs: selectedRefs,
-      });
-      const deliberation = await options.invoke({
-        ...input,
-        requestId: uuidv5("subject.deliberation", input.requestId),
-        role: "subject.deliberation",
-        deadlineAt,
-        context: {
-          activity,
-          world: frame.world,
-          worldSubject: safeSubjectView,
-          worldContactCoverage: {
-            selectedEvents: selectedEvents.size,
-            limited: pending.some((event) => !selectedEvents.has(event.eventId)),
-          },
-          choices: [
-            "continue_activity",
-            "observe",
-            "defer",
-            "decline",
-            "ask",
-            "communicate",
-            "learn",
-            "delegate",
-            "initiate_activity",
-            "rest",
-          ],
-        },
-        ...context,
-      });
-      if (deliberation.admitted !== true)
-        throw managementProblem(
-          "world.contact_not_admitted",
-          "Subject has not actually perceived these world events",
-          "Keep pending until real native consumer admission and accepted contact receipts exist",
-          "conflict",
-        );
-      for (const event of selectedEvents.values()) {
-        const receipt = await options.acceptedWorldContact({
-          runId: deliberation.runId,
-          event,
-        });
-        if (!receipt)
-          throw managementProblem(
-            "world.contact_receipt_missing",
-            "World perception has no actual accepted contact",
-            "Inspect the admitted Subject run receipt and retry its existing handoff",
-            "conflict",
-          );
-        await options.worlds.acknowledgeContact({
-          subjectId: input.subjectId,
-          worldId: input.worldId,
-          eventId: event.eventId,
-          contactRef: receipt.contactRef,
-          runId: deliberation.runId,
-        });
-      }
-      await options.adoptDeliberation({
-        ...input,
-        world: frame.world,
-        run: deliberation,
+        naturalOpportunity: true,
       });
       const next = await options.worlds.prepareAdvance(input.subjectId, input.worldId);
       const currentActivity = await options.life.get(input.subjectId, input.activityId);
@@ -373,7 +238,7 @@ export function createWorldOpportunity<TContact, TUsage>(
       return {
         status: "processed" as const,
         plannerRunId,
-        deliberationRunId: deliberation.runId,
+
         nextOpportunity,
       };
     },

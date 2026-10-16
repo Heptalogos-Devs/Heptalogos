@@ -1,7 +1,10 @@
 #!/usr/bin/env node
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** One deterministic scheduler callback into the authenticated Host owner. @module world-wake */
+/**
+ * One deterministic scheduler callback into the authenticated Host owner.
+ * @module world-wake
+ */
 import { readFile, lstat } from "node:fs/promises";
 import { isAbsolute } from "node:path";
 import { createLocalManagementEndpointReader } from "@heptalogos/management-client/discovery";
@@ -12,8 +15,8 @@ export interface WorldWake {
   readonly credentialFile: string;
   readonly request: {
     subjectId: string;
-    worldId: string;
-    activityId: string;
+    worldId?: string;
+    activityId?: string;
     requestId: string;
   };
 }
@@ -28,11 +31,17 @@ export function validateWorldWake(value: unknown): WorldWake {
     !/^[0-9a-f-]{36}$/i.test(input.installationId)
   )
     throw Error("invalid_world_wake");
-  for (const key of ["subjectId", "worldId", "activityId", "requestId"] as const)
+  for (const key of ["subjectId", "requestId"] as const)
     if (
       !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
         input.request?.[key],
       )
+    )
+      throw Error("invalid_world_wake");
+  for (const key of ["worldId", "activityId"] as const)
+    if (
+      input.request[key] !== undefined &&
+      !/^[0-9a-f-]{36}$/i.test(input.request[key]!)
     )
       throw Error("invalid_world_wake");
   return input;
@@ -51,7 +60,7 @@ export async function wakeWorld(value: unknown) {
   const token = (await readFile(input.credentialFile, "utf8")).trim();
   if (!/^[a-f0-9]{64}$/.test(token)) throw Error("world_wake_credential_invalid");
   const result = await fetch(
-    new URL("/gateway/v1/world/advance", current.endpoint.origin),
+    new URL("/gateway/v1/reactor/opportunity", current.endpoint.origin),
     {
       method: "POST",
       headers: { authorization: `Bearer ${token}`, "content-type": "application/json" },

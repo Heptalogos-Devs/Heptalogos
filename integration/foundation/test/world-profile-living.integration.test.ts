@@ -1,9 +1,16 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
 import { afterEach, describe, it, expect } from "vitest";
+import { readFile } from "node:fs/promises";
+import { createNativeCognitionBridge } from "../../../packages/application/product-host/dist/native-cognition.js";
+import {
+  hasCanonicalProfileSources,
+  readInitialSettingSource,
+} from "../../../packages/application/product-host/dist/native-profile-source.js";
 import { randomUUID } from "node:crypto";
 import { createIdentityService } from "@heptalogos/identity";
 import {
+  createLifeService,
   createWorldLifeService,
   createWorldProfileService,
   DEFAULT_WORLD_ENERGY,
@@ -16,6 +23,14 @@ import {
   cleanupCanonicalPostgresFixtures,
 } from "../support/canonical-postgres.js";
 import { composeProductPersistence } from "../support/product-persistence.js";
+const sdkMetaUrl = new URL(
+  "../../../packages/application/product-host/node_modules/@nous-wave/client/package.json",
+  import.meta.url,
+);
+const sdkMeta = JSON.parse(await readFile(sdkMetaUrl, "utf8"));
+const sdk = await import(
+  new URL(sdkMeta.exports["./host-bridge"].import, sdkMetaUrl).href
+);
 const real = qualifiedPgBin ? describe : describe.skip;
 afterEach(cleanupCanonicalPostgresFixtures);
 real("WorldProfile and realized interval energy under real PostgreSQL", () => {
@@ -100,6 +115,204 @@ real("WorldProfile and realized interval energy under real PostgreSQL", () => {
       expect(await current.run(() => profiles.adopt(request))).toEqual(adopted);
       expect((await worlds.readLivingState({ subjectId, worldId }))?.energy).toBe(80);
       const actor = adopted.subjectActorRef;
+      const settingScope = {
+        conversations: [],
+        tools: [],
+        sourceRefs: [`world:${worldId}`],
+        maxRunMs: 60000,
+      };
+      const settingsLife = createLifeService({
+        persistence: current.persistence,
+        now: () => new Date().toISOString(),
+        worldNow,
+        scopeAuthority: async () => settingScope,
+      });
+      let entryActivity = await current.run(async () =>
+        settingsLife.propose({
+          operationId: randomUUID(),
+          subjectId,
+          purpose: "Read the adopted entry declaration",
+          mode: "work",
+          window: { notBefore: null, notAfter: null },
+          proposedBy: actor,
+          sourceRefs: settingScope.sourceRefs,
+          workContextId: randomUUID(),
+          world: await worldNow(),
+          nextOpportunity: null,
+          interruptOn: [],
+        }),
+      );
+      entryActivity = await current.run(() =>
+        settingsLife.adopt({
+          subjectId,
+          activityId: entryActivity.activityId,
+          expectedRevision: entryActivity.revision,
+          adoptedBy: actor,
+          scope: settingScope,
+        }),
+      );
+      entryActivity = await current.run(() =>
+        settingsLife.transition({
+          subjectId,
+          activityId: entryActivity.activityId,
+          expectedRevision: entryActivity.revision,
+          action: "start",
+          reason: "Actual initial-setting contact proof",
+        }),
+      );
+      const native = createNativeCognitionBridge({
+        persistence: current.persistence,
+        life: settingsLife,
+        now: () => new Date().toISOString(),
+        captureObservedStamp: async () =>
+          sdk.decodeObservationInput(
+            sdk.encodeObservationInput({
+              observedStamp: {
+                timeDomainRef: "school",
+                at: sdk.timestampFromDate(new Date(worldAt)),
+                recordedAt: sdk.timestampFromDate(new Date()),
+              },
+            }),
+          ).observedStamp!,
+        authorizeInput: async (reg, _activity, tx) => {
+          if (!(await hasCanonicalProfileSources(reg, profiles, tx)))
+            throw subjectProblem(
+              "native.noncanonical_initial_setting",
+              "Initial setting is not canonical",
+              "Read the adopted profile owner material",
+              "conflict",
+            );
+        },
+        recordContact: async () => {
+          throw Error("Initial settings are not QQ message contacts");
+        },
+        nous: async () => {
+          throw Error(
+            "Owner admission fixture must not call a model or remote cognition service",
+          );
+        },
+      });
+      const runId = randomUUID();
+      const setting = await readInitialSettingSource(
+        { profiles, hasAcceptedSource: native.hasAcceptedSource },
+        { subjectId, sourceRef: adopted.entrySourceRef, nativeRunId: runId },
+      );
+      expect(setting.contacts).toHaveLength(1);
+      expect(await native.hasAcceptedSource(subjectId, adopted.entrySourceRef)).toBe(
+        false,
+      );
+      const input = {
+        subjectId,
+        activityId: entryActivity.activityId,
+        sessionKey: "native:initial-setting:" + runId,
+        nativeAgentId: "main",
+        nativeRunId: runId,
+        prompt: "Read this original adopted setting, not a prior lived event",
+        role: "main" as const,
+        roleScope: {
+          role: "subject.deliberation" as const,
+          purpose: "subject_deliberation" as const,
+          view: "subject" as const,
+          contactNature: "subject_experience" as const,
+        },
+        tokenBudget: { inputTokens: 4096, outputTokens: 512 },
+        allowedToolNames: [],
+        actorEntityRef: actor,
+        workContextId: entryActivity.workContextId!,
+        usage: sdk.decodeCognitionUsage({
+          purpose: "subject_deliberation",
+          intent: entryActivity.purpose,
+          audience: { visibility: "internal" },
+          worldId,
+          sourceRead: { subjectId, sourceRefs: [] },
+        }),
+        sourceRefs: [`world:${worldId}`, adopted.entrySourceRef],
+        messageRefs: [],
+        contacts: setting.contacts,
+      };
+      const wrong = sdk.decodeObservationInput(setting.contacts[0]!.observation);
+      wrong.material.value.text = JSON.stringify({
+        ...JSON.parse(wrong.material.value.text),
+        entry: { ...profile.entry, description: "Invented prior career" },
+      });
+      await expect(
+        current.run(() =>
+          native.registerInput({
+            ...input,
+            nativeRunId: randomUUID(),
+            sessionKey: "native:forged-initial:" + randomUUID(),
+            contacts: [
+              {
+                contactRef: adopted.entrySourceRef,
+                observation: sdk.encodeObservationInput(wrong),
+              },
+            ],
+          }),
+        ),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "native.noncanonical_initial_setting" },
+      });
+      const registered = await current.run(() => native.registerInput(input));
+      const contactRequest = {
+        version: 1 as const,
+        subjectId,
+        nousSessionId: randomUUID(),
+        contactRequestId: randomUUID(),
+        invocationId: "initial:1",
+        promptDigest: registered.promptDigest,
+        native: {
+          sessionKey: registered.sessionKey,
+          sessionId: randomUUID(),
+          runId,
+          agentId: "main",
+          historyGeneration: randomUUID(),
+        },
+      };
+      const prepared = await current.run(() => native.prepare(contactRequest));
+      const firstSetting = sdk.decodeObservationInput(
+        prepared.contacts[0]!.observation,
+      );
+      expect(firstSetting.sourceClass).toBe("initial_setting");
+      expect(firstSetting.worldRealized).toBeUndefined();
+      expect(firstSetting.occurredTime).toBeUndefined();
+      expect(firstSetting.observedStamp.timeDomainRef).toBe("school");
+      expect(await native.hasAcceptedSource(subjectId, adopted.entrySourceRef)).toBe(
+        false,
+      );
+      const occurrences = prepared.contacts.map((value) => ({
+        contactRef: value.contactRef,
+        receipt: sdk.encodeAcceptedObservation({ occurrenceId: randomUUID() }),
+      }));
+      await current.run(() =>
+        native.admitted({
+          ...sdk.hostContactIdentitySchema.strip().parse(contactRequest),
+          occurrences,
+          projection: sdk.encodeProjection({
+            projectionId: randomUUID(),
+            consumerId: "consumer:initial-setting-owner-fixture",
+            subjectId,
+            sessionId: contactRequest.nousSessionId,
+            usage: sdk.withAcceptedContactRoots(
+              sdk.decodeCognitionUsage(prepared.usage),
+              subjectId,
+              occurrences.map((value) => sdk.decodeAcceptedObservation(value.receipt)),
+            ),
+          }),
+        }),
+      );
+      expect(await native.hasAcceptedSource(subjectId, adopted.entrySourceRef)).toBe(
+        true,
+      );
+      const knownSetting = await readInitialSettingSource(
+        { profiles, hasAcceptedSource: native.hasAcceptedSource },
+        { subjectId, sourceRef: adopted.entrySourceRef, nativeRunId: randomUUID() },
+      );
+      expect(knownSetting.contacts).toEqual([]);
+      expect(knownSetting.context.retrievalOnly).toBe(true);
+      expect((await worlds.prepareAdvance(subjectId, worldId)).recentEvents).toEqual(
+        [],
+      );
+
       worldAt = "2026-10-19T01:00:00.000Z";
       const range = {
         timeDomainRef: "school",
@@ -466,5 +679,5 @@ real("WorldProfile and realized interval energy under real PostgreSQL", () => {
     } finally {
       await current.close();
     }
-  });
+  }, 15000);
 });

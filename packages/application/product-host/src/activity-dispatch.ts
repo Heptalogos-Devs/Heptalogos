@@ -13,7 +13,6 @@ import { managementProblem } from "@heptalogos/management";
 import type { MessagingService } from "@heptalogos/messaging";
 import type { IdentityService } from "@heptalogos/identity";
 import type { createLifeService, LifeActivity } from "@heptalogos/subject";
-import { captureActivityOpportunity } from "@heptalogos/subject";
 import type { NousClient } from "@nous-wave/client";
 import {
   encodeObservationInput,
@@ -21,11 +20,7 @@ import {
   encodeCognitionUsage,
 } from "@nous-wave/client/host-bridge";
 import { deliberationDecisionSchema } from "@heptalogos/subject";
-import {
-  nativeRoleText,
-  type createSubjectRoles,
-  type RoleInvocationResult,
-} from "./subject-roles.js";
+import { type RoleInvocation } from "./subject-roles.js";
 import type { createNativeCognitionBridge } from "./native-cognition.js";
 import type { createChannelRouteStore } from "./channel-routes.js";
 import type { GatewayScope } from "./gateway-contracts.js";
@@ -65,13 +60,11 @@ export interface ActivityDispatchOptions {
       }>;
     };
   }>;
-  readonly roles: Pick<ReturnType<typeof createSubjectRoles>, "invoke">;
-  readonly consumeDeliberation: (input: {
+  /** External selections notify the one foreground; they never read or invoke independently. */
+  readonly wake: (input: {
     subjectId: string;
-    activityId: string;
-    requestId: string;
-    run: RoleInvocationResult;
-  }) => Promise<unknown>;
+    naturalOpportunity: boolean;
+  }) => Promise<{ runId?: string }>;
   readonly now: () => string;
 }
 function denied(detail: string): never {
@@ -82,23 +75,30 @@ function denied(detail: string): never {
     "authorization",
   );
 }
-function publicResult(value: ActivityDispatchResult): ActivityDispatchResult {
-  return {
-    requestId: value.requestId,
-    nativeRunId: value.nativeRunId,
-    sessionKey: value.sessionKey,
-    promptDigest: value.promptDigest,
-    state: value.state,
-    replayed: value.replayed,
-    ...(value.result === undefined ? {} : { result: value.result }),
-    ...(value.code ? { code: value.code } : {}),
-  };
-}
 /** A service-only exact selection: no prompt, model role, source grants or tool permissions in input. */
 export function createActivityDispatcher(options: ActivityDispatchOptions) {
   const codec = compileSchema<ActivityDispatchInput>(activityDispatchInputSchema);
   return {
     async dispatch(value: ActivityDispatchInput): Promise<ActivityDispatchResult> {
+      const checked = compileSchema<ActivityDispatchInput>(
+        activityDispatchInputSchema,
+      ).validate(value);
+      if (!checked.ok) denied("Use an exact adopted Activity notification");
+      const result = await options.wake({
+        subjectId: checked.value.subjectId,
+        naturalOpportunity: true,
+      });
+      const actual = result.runId
+        ? await options.native.readDispatch(checked.value.subjectId, result.runId)
+        : undefined;
+      if (!actual)
+        denied(
+          "The global foreground retained its current focus or no actual native call was selected",
+        );
+      return actual;
+    },
+    /** Only the Reactor's actual read action calls this exact permission-checked material path. */
+    async prepare(value: ActivityDispatchInput): Promise<RoleInvocation> {
       const checked = codec.validate(value);
       if (!checked.ok)
         denied("Use an exact adopted Activity and bounded real message selection");
@@ -143,58 +143,8 @@ export function createActivityDispatcher(options: ActivityDispatchOptions) {
       });
       if (!authorized.conversationIds.includes(conversationId))
         denied("The exact target has no current operator observe grant");
-      const previous = await options.native.readDispatch(
-        input.subjectId,
-        input.requestId,
-      );
-      if (previous) {
-        if (previous.requestDigest !== requestDigest)
-          denied("The request identity already binds another selection");
-        if (previous.state === "completed") {
-          const saved = previous.result as {
-            kind?: string;
-            activityRevision?: number;
-            deadlineAt?: string;
-            nativeResult?: unknown;
-          };
-          if (
-            saved?.kind !== "subject_role_result" ||
-            !Number.isInteger(saved.activityRevision) ||
-            typeof saved.deadlineAt !== "string"
-          )
-            denied("The saved Subject run lacks its actual adopted basis");
-          await options.consumeDeliberation({
-            subjectId: input.subjectId,
-            activityId: input.activityId,
-            requestId: input.requestId,
-            run: {
-              runId: input.requestId,
-              activityRevision: saved.activityRevision!,
-              deadlineAt: saved.deadlineAt!,
-              text: nativeRoleText(saved.nativeResult),
-              result: saved.nativeResult,
-              status: "completed",
-              admitted: true,
-            },
-          });
-        }
-        return publicResult(previous);
-      }
-      if (!options.roles)
-        throw managementProblem(
-          "gateway.native_dispatch_unavailable",
-          "Native dispatch is not configured",
-          "Bind the existing official native CLI adapter",
-          "unavailable",
-        );
-      const opportunity = input.messageRefs.length
-        ? undefined
-        : captureActivityOpportunity(
-            activity,
-            await options.life.worldNow(input.subjectId),
-          );
-      if (!input.messageRefs.length && !opportunity)
-        denied("An empty selection requires the current due work opportunity");
+      if (!input.messageRefs.length)
+        denied("A read action requires its actual bounded message selection");
       const prepared = input.messageRefs.length
         ? await options.messaging.prepareRead({
             messageRefs: input.messageRefs,
@@ -303,7 +253,7 @@ export function createActivityDispatcher(options: ActivityDispatchOptions) {
       }));
       const usage = {
         agentInstanceId: input.requestId,
-        purpose: "deliberation",
+        purpose: "subject_deliberation",
         intent: activity.purpose,
         audience: {
           conversationRef: input.conversationRef,
@@ -373,14 +323,14 @@ export function createActivityDispatcher(options: ActivityDispatchOptions) {
         contacts.push(
           ...(await options.prepareMedia(input.subjectId, selected, contacts)),
         );
-      const run = await options.roles.invoke({
+      return {
         requestId: input.requestId,
         requestDigest,
         subjectId: input.subjectId,
         activityId: activity.activityId,
         role: "subject.deliberation",
         context: {
-          trigger: { kind: opportunity ? "activity_result" : "message" },
+          trigger: { kind: "message" },
           selectedMessages: selected,
           outputContract: deliberationDecisionSchema,
         },
@@ -388,16 +338,7 @@ export function createActivityDispatcher(options: ActivityDispatchOptions) {
         sourceRefs: input.messageRefs.map((ref) => "message:" + ref),
         messageRefs: input.messageRefs,
         usage: encodeCognitionUsage(usage),
-      });
-      await options.consumeDeliberation({
-        subjectId: input.subjectId,
-        activityId: activity.activityId,
-        requestId: input.requestId,
-        run,
-      });
-      const saved = await options.native.readDispatch(input.subjectId, input.requestId);
-      if (!saved) denied("The actual role invocation has no durable dispatch result");
-      return publicResult(saved);
+      };
     },
   };
 }

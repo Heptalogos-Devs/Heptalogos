@@ -110,17 +110,22 @@ export function createDeliberationService(options: DeliberationOptions) {
         return checked<DecisionCommit>(decisionCommitSchema, old[0].document);
       }
       const decision = input.decision;
-      if (
-        ["ask", "communicate"].includes(decision.action) &&
-        !decision.expressionIntent
-      )
+      if (decision.action === "communicate" && !decision.expressionIntent)
         conflict(
-          "An adopted ask/communicate choice requires its explicit expression intent",
+          "An adopted communicate choice requires its explicit expression intent",
         );
-      if (decision.action === "delegate" && !decision.delegation)
-        conflict("Delegation requires its actual bounded goal, tools and sources");
-      if (decision.action === "initiate_activity" && !decision.newActivity)
-        conflict("A new Activity choice requires its actual purpose and mode");
+      if (decision.expressionIntent && decision.action !== "communicate")
+        conflict(
+          "Use the canonical communicate action for an explicit expression intent",
+        );
+      if (decision.calendarChange && decision.action !== "adjust_plan")
+        conflict("A calendar change belongs to the canonical adjust_plan action");
+      if (decision.delegation && decision.action !== "search")
+        conflict("A professional search task requires the canonical search action");
+      if (decision.newActivity && decision.action !== "continue")
+        conflict(
+          "Adopt a new foreground activity through the canonical continue action",
+        );
       const [world, authority] = await Promise.all([
         options.worldNow(input.subjectId),
         options.validateSourceRun(input),
@@ -209,7 +214,7 @@ export function createDeliberationService(options: DeliberationOptions) {
           const mode =
             decision.action === "rest"
               ? ("rest" as const)
-              : decision.action === "defer"
+              : decision.action === "wait"
                 ? ("wait" as const)
                 : activity.mode;
           const updated = await options.life.progressIn(

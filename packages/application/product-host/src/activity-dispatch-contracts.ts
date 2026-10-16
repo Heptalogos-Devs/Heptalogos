@@ -54,6 +54,8 @@ export type NativeActivityParams = {
   readonly promptMode?: "full" | "minimal";
   readonly idempotencyKey: string;
   readonly timeout: number;
+  /** Long execution yields after the official Gateway durable acknowledgement. */
+  readonly waitForFinal?: boolean;
   readonly toolBindings: {
     readonly heptalogos: { readonly nativeRunId: string; readonly activityRef: string };
   };
@@ -70,5 +72,7 @@ export type NativeActivityParams = {
 export type NativeActivityDispatch = (
   params: NativeActivityParams,
 ) => Promise<
-  { status: "terminal"; result: unknown } | { status: "unresolved"; code: string }
+  | { status: "terminal"; result: unknown }
+  | { status: "accepted"; result: unknown }
+  | { status: "unresolved"; code: string }
 >;

@@ -56,7 +56,10 @@ export function createWorldRuntime(options: {
     ReturnType<typeof createNativeCognitionBridge>,
     "readRun" | "readAppliedContext" | "readDispatch"
   >;
-  handler: ReturnType<typeof createSubjectDecisionHandler>;
+  wakeSubject: (input: {
+    subjectId: string;
+    naturalOpportunity: boolean;
+  }) => Promise<unknown>;
   nous: () => Promise<Pick<NousClient, "clocks" | "runtime">>;
   currentSubject: () => Promise<string>;
   enabled: () => Promise<boolean>;
@@ -108,6 +111,7 @@ export function createWorldRuntime(options: {
         ns,
       ),
     });
+    return realAt;
   };
   const reproject = async () => {
     const subjectId = await options.currentSubject();
@@ -137,7 +141,16 @@ export function createWorldRuntime(options: {
           const frame = await options.worlds.prepareAdvance(subjectId, worldId);
           const context = { subjectId, worldId, activityId: activity.activityId };
           fallback ??= context;
-          for (const next of [frame.nextOpportunity, activity.nextOpportunity])
+          const pendingActions = await options.worlds.readPendingActions(
+            subjectId,
+            worldId,
+            64,
+          );
+          for (const next of [
+            frame.nextOpportunity,
+            activity.nextOpportunity,
+            ...pendingActions.map((action) => action.nextOpportunity),
+          ])
             if (enabled && next?.timeDomainRef === frame.world.timeDomainRef)
               candidates.push({ ...context, next });
         }
@@ -145,8 +158,9 @@ export function createWorldRuntime(options: {
       afterId = page.nextId ?? undefined;
     } while (afterId);
     candidates.sort((a, b) => Date.parse(a.next.at) - Date.parse(b.next.at));
-    if (candidates[0]) await scheduleNext(candidates[0]);
-    else if (fallback) await scheduleNext({ ...fallback, next: null });
+    if (candidates[0]) return scheduleNext(candidates[0]);
+    if (fallback) return scheduleNext({ ...fallback, next: null });
+    return null;
   };
   return {
     scheduleNext,
@@ -214,55 +228,6 @@ export function createWorldRuntime(options: {
         typeof plannerResult.deadlineAt === "string"
           ? plannerResult.deadlineAt
           : undefined;
-      const subjectRunId = uuidv5("subject.deliberation", input.requestId);
-      const priorSubject = await options.native.readRun(subjectRunId);
-      const frozenContacts = priorSubject
-        ? new Set(
-            priorSubject.registration.contacts.map((contact) => contact.contactRef),
-          )
-        : undefined;
-      const acceptedContact = async (
-        runId: string,
-        event: Awaited<ReturnType<typeof options.worlds.pendingContacts>>[number],
-      ) => {
-        const run = await options.native.readRun(runId);
-        if (
-          !run?.consumerId ||
-          run.registration.subjectId !== input.subjectId ||
-          run.registration.roleScope.role !== "subject.deliberation" ||
-          !run.registration.sourceRefs.includes(event.sourceRef)
-        )
-          return undefined;
-        const exact = run.registration.contacts.find(
-          (contact) => contact.contactRef === event.sourceRef,
-        );
-        if (!exact) return undefined;
-        const observation = decodeObservationInput(exact.observation);
-        if (
-          observation.subjectId !== input.subjectId ||
-          observation.sourceClass !== "world_realized" ||
-          observation.worldRealized?.worldId !== event.worldId ||
-          observation.worldRealized.eventId !== event.eventId ||
-          observation.worldRealized.eventRevision !== String(event.eventRevision)
-        )
-          return undefined;
-        const applied = await options.native.readAppliedContext(runId);
-        if (
-          applied.roleScope.role !== "subject.deliberation" ||
-          decodeProjection(applied.projection).consumerId !== run.consumerId ||
-          !applied.occurrences.some(
-            (item) =>
-              item.contactRef === event.sourceRef &&
-              decodeAcceptedObservation(item.receipt).occurrenceId,
-          )
-        )
-          return undefined;
-        return { contactRef: event.sourceRef };
-      };
-      const contacts = new Map<string, HostPrepareResponse["contacts"][number]>();
-      const binding = await options.bindingFor("subject.deliberation");
-      const maxBytes = Math.max(0, Math.floor(binding.inputTokens / 3));
-      let selectedBytes = 0;
       const op = createWorldOpportunity<
         HostPrepareResponse["contacts"][number],
         HostPrepareResponse["usage"]
@@ -288,116 +253,14 @@ export function createWorldRuntime(options: {
                   : null,
             } as CanonicalJsonValue).hex,
           }),
-        releaseWorldContact: async (event) => {
-          if (frozenContacts && !frozenContacts.has(event.sourceRef))
-            return { contactRef: event.sourceRef, selected: false };
-          const text = JSON.stringify({
-            worldId: event.worldId,
-            eventId: event.eventId,
-            eventRevision: event.eventRevision,
-            interval: event.interval,
-            perceptions: event.perceptions,
-          });
-          const bytes = Buffer.byteLength(text);
-          if (contacts.size >= 32 || selectedBytes + bytes > maxBytes)
-            return { contactRef: event.sourceRef, selected: false };
-          const at = options.now(),
-            last = [...event.perceptions]
-              .sort((a, b) => Date.parse(a.at.at) - Date.parse(b.at.at))
-              .at(-1);
-          if (!last) return { contactRef: event.sourceRef, selected: false };
-          const selection = await options.worlds.selectContact({
-            subjectId: input.subjectId,
-            worldId: input.worldId,
-            eventId: event.eventId,
-            runId: subjectRunId,
-          });
-          if (!selection.selected || selection.state === "released") {
-            if (
-              selection.state === "selected" &&
-              selection.selectedRunId &&
-              (await acceptedContact(selection.selectedRunId, event))
-            )
-              await options.worlds.acknowledgeContact({
-                subjectId: input.subjectId,
-                worldId: input.worldId,
-                eventId: event.eventId,
-                contactRef: selection.contactRef,
-                runId: selection.selectedRunId,
-              });
-            return { contactRef: event.sourceRef, selected: false };
-          }
-          const observed = timestampFromDate(new Date(at));
-          contacts.set(event.sourceRef, {
-            contactRef: event.sourceRef,
-            observation: encodeObservationInput({
-              subjectId: input.subjectId,
-              requestId: uuidv5(event.sourceRef + ":contact", ns),
-              sourceClass: "world_realized",
-              externalObjectRef: "object:heptalogos:" + event.sourceRef,
-              actorEntityRef: last.actorRef,
-              observedAt: observed,
-              occurredTime: {
-                timeDomainRef: event.interval.timeDomainRef,
-                extent: {
-                  value: {
-                    case: "interval",
-                    value: {
-                      start: timestampFromDate(new Date(event.interval.start)),
-                      end: timestampFromDate(new Date(event.interval.end)),
-                    },
-                  },
-                },
-              },
-              worldRealized: {
-                worldId: event.worldId,
-                eventId: event.eventId,
-                eventRevision: String(event.eventRevision),
-                producerRef: event.source.producerRef,
-                generationMethod: event.source.kind,
-                realizedAt: timestampFromDate(new Date(event.recordedAt)),
-                worldObserved: {
-                  timeDomainRef: last.at.timeDomainRef,
-                  at: timestampFromDate(new Date(last.at.at)),
-                  recordedAt: observed,
-                },
-                sharedOriginRefs: [
-                  event.source.producerRef,
-                  ...event.source.sourceRefs,
-                ],
-              },
-              material: {
-                case: "inlineText",
-                value: { text, mediaType: "application/json" },
-              },
-              context: {
-                activity_ref: input.activityId,
-                world_event_ref: event.sourceRef,
-                actual_producer: "heptalogos.world_life",
-              },
-              admit: false,
-            }),
-          });
-          selectedBytes += bytes;
-          return { contactRef: event.sourceRef, selected: true };
-        },
         contextFor: async (context) => {
-          const selected =
-            context.role === "world.planner"
-              ? []
-              : context.sourceRefs.flatMap((ref) =>
-                  contacts.has(ref) ? [contacts.get(ref)!] : [],
-                );
           return {
-            contacts: selected,
+            contacts: [],
             sourceRefs: [
               `world:${input.worldId}`,
-              ...selected.map((contact) => contact.contactRef),
-              ...(context.role === "world.planner"
-                ? context.sourceRefs.filter((ref) =>
-                    activity!.scope!.sourceRefs.includes(ref),
-                  )
-                : []),
+              ...context.sourceRefs.filter((ref) =>
+                activity!.scope!.sourceRefs.includes(ref),
+              ),
             ],
             usage: encodeCognitionUsage({
               agentInstanceId: decisionPhaseId(input.requestId, context.role),
@@ -417,11 +280,10 @@ export function createWorldRuntime(options: {
             }),
           };
         },
-        acceptedWorldContact: ({ runId, event }) => acceptedContact(runId, event),
-        adoptDeliberation: async (decision) => {
-          await options.handler.adopt(decision);
+        wakeSubject: options.wakeSubject,
+        scheduleNext: async () => {
+          await reproject();
         },
-        scheduleNext: reproject,
       });
       return op.advance(input);
     },

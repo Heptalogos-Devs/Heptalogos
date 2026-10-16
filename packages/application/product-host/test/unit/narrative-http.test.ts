@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { describe, it, expect, vi } from "vitest";
 import { randomUUID } from "node:crypto";
+import type { ProductManagement } from "@heptalogos/management";
 import { createProductHttpApp } from "../../src/product-http.js";
 describe("read-only narrative operator HTTP", () => {
   it("queries the bound Subject only and exposes no caller-written review or commit route", async () => {
@@ -14,16 +15,12 @@ describe("read-only narrative operator HTTP", () => {
     const app = await createProductHttpApp({
       authentication: {
         authenticate: unavailable,
+        ensureFirstAdministratorClaim: unavailable,
         claimFirstAdministrator: unavailable,
         login: unavailable,
         logout: unavailable,
       },
-      product: {
-        configuration: unavailable,
-        status: unavailable,
-        check: unavailable,
-        configure: unavailable,
-      },
+      product: {} as ProductManagement,
       identity: { installationId: "fixture", bootId: "fixture" },
       onAdministratorClaimed: unavailable,
       narrative: {

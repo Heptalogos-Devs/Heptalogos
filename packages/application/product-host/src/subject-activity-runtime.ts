@@ -36,12 +36,13 @@ export function createSubjectActivityStarter(options: {
     if (
       !saved ||
       saved.decisionId !== adopted.decisionId ||
-      !["initiate_activity", "learn"].includes(saved.decision.action)
+      saved.decision.action !== "continue" ||
+      !saved.decision.newActivity
     )
       throw managementProblem(
         "subject.activity_denied",
         "A new Activity has no adopted decision",
-        "Use its actual adopted initiate_activity or learn choice",
+        "Use the actual adopted continue choice and newActivity",
         "authorization",
       );
     const parent = await options.life.get(saved.subjectId, saved.activityId);
@@ -61,7 +62,7 @@ export function createSubjectActivityStarter(options: {
         subjectId: saved.subjectId,
         operationId: decisionPhaseId(saved.decisionId, "new-work-context"),
         purpose,
-        unresolvedQuestions: saved.decision.action === "learn" ? [purpose] : [],
+        unresolvedQuestions: [purpose],
         constraints: {
           decision_ref: saved.decisionRef,
           parent_activity_ref: saved.activityId,

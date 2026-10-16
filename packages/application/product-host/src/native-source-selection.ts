@@ -59,6 +59,24 @@ export function hasAuthorizedNativeSources(
       seen.add(ref);
       continue;
     }
+    if (ref.startsWith("world-profile:")) {
+      const match = /^world-profile:([0-9a-f-]{36}):1$/i.exec(ref);
+      if (
+        !match ||
+        observation.subjectId !== registration.subjectId ||
+        observation.actorEntityRef !== registration.actorEntityRef ||
+        observation.sourceClass !== "initial_setting" ||
+        observation.externalObjectRef !== "object:" + ref ||
+        observation.worldRealized ||
+        observation.occurredTime?.extent?.value.case ||
+        !registration.sourceRefs.includes(ref) ||
+        ![ref, `world:${match[1]}`].some((root) => scope.sourceRefs.includes(root))
+      )
+        return false;
+      seen.add(ref);
+      worldEvents.add(ref);
+      continue;
+    }
     // Host registration and canonical WorldLife resolution supply this source;
     // a contact prefix alone grants no world or hidden-event permission.
     if (ref.startsWith("world-event:")) {
@@ -147,11 +165,23 @@ export function hasAuthorizedNativeSources(
                 (registration.inheritedSourceRefs ?? []).includes(ref))
             );
           })()
-        : ref.startsWith("message:")
-          ? (selected.has(ref.slice(8)) && seen.has(ref)) || inherited.has(ref)
-          : scope.sourceRefs.includes(ref) ||
-            (registration.inheritedSourceRefs ?? []).includes(ref) ||
-            (ref.startsWith("role-result-release:") && seen.has(ref)),
+        : ref.startsWith("world-profile:")
+          ? (() => {
+              const match = /^world-profile:([0-9a-f-]{36}):1$/i.exec(ref);
+              return (
+                !!match &&
+                (worldEvents.has(ref) ||
+                  (registration.inheritedSourceRefs ?? []).includes(ref)) &&
+                [ref, `world:${match[1]}`].some((root) =>
+                  scope.sourceRefs.includes(root),
+                )
+              );
+            })()
+          : ref.startsWith("message:")
+            ? (selected.has(ref.slice(8)) && seen.has(ref)) || inherited.has(ref)
+            : scope.sourceRefs.includes(ref) ||
+              (registration.inheritedSourceRefs ?? []).includes(ref) ||
+              (ref.startsWith("role-result-release:") && seen.has(ref)),
     ) &&
     [...selected].every(
       (ref) =>
@@ -182,6 +212,7 @@ export async function hasCanonicalNativeMessages(
     return registration.contacts.every(
       (contact) =>
         contact.contactRef.startsWith("world-event:") ||
+        contact.contactRef.startsWith("world-profile:") ||
         contact.contactRef.startsWith("role-result-release:"),
     );
   const result = await messaging.messageSources(

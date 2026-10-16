@@ -22,7 +22,6 @@ import {
   decodeProjection,
   encodeProjection,
   decodeCognitionUsage,
-  decodeObservationInput,
   type HostPrepareResponse,
 } from "@nous-wave/client/host-bridge";
 import type { createNativeCognitionBridge } from "./native-cognition.js";
@@ -147,7 +146,7 @@ export function createSubjectDecisionHandler(options: {
         result?: unknown;
         status?: string;
       };
-    }): Promise<unknown> {
+    }): Promise<DecisionCommit> {
       const run = await options.native.readRun(input.run.runId);
       if (
         !run?.consumerId ||
@@ -181,6 +180,29 @@ export function createSubjectDecisionHandler(options: {
           decision,
         });
       }
+      return adopted;
+    },
+    startActivity: options.startActivity,
+    /** Rendering is one explicit foreground action, never an implicit task completion effect. */
+    async express(input: {
+      subjectId: string;
+      activityId: string;
+      worldId?: string;
+      adopted: DecisionCommit;
+      run: { runId: string; deadlineAt?: string };
+    }) {
+      const adopted = input.adopted;
+      const run = await options.native.readRun(input.run.runId);
+      if (
+        !run?.consumerId ||
+        adopted.sourceRunId !== input.run.runId ||
+        adopted.subjectId !== input.subjectId ||
+        adopted.activityId !== input.activityId
+      )
+        denied(
+          "subject.decision_source_denied",
+          "Use the exact adopted subjective source run",
+        );
       const decision = adopted.decision;
       const applied = await options.native.readAppliedContext(input.run.runId);
       if (!applied)
@@ -207,6 +229,15 @@ export function createSubjectDecisionHandler(options: {
               code: "agency.recipient_not_permitted",
             },
           };
+        const actualAudience = decodeCognitionUsage(applied.usage).audience;
+        if (
+          actualAudience?.conversationRef !== audience.conversationRef ||
+          !["direct", "group"].includes(actualAudience.visibility)
+        )
+          denied(
+            "subject.expression_audience_changed",
+            "Use a fresh actual projection admitted for this exact external audience before rendering",
+          );
         const rendererRunId = decisionPhaseId(input.run.runId, "render");
         let brief = await options.narrative.briefForRun(rendererRunId);
         if (!brief) {
@@ -277,6 +308,7 @@ export function createSubjectDecisionHandler(options: {
           activityId: input.activityId,
           parentRunId: input.run.runId,
           role: "subject.render",
+          foreground: run.registration.foreground,
           deadlineAt: input.run.deadlineAt,
           context: { adoptedDecisionRef: adopted.decisionRef, brief },
           contacts: [],
@@ -293,102 +325,7 @@ export function createSubjectDecisionHandler(options: {
           expression: { state: "rendered" as const, runId: render.runId },
         };
       };
-      const expression = await express();
-      const startedActivity = ["initiate_activity", "learn"].includes(decision.action)
-        ? await options.startActivity(adopted, { deadlineAt: input.run.deadlineAt })
-        : undefined;
-      if (decision.delegation) {
-        const execution = await options.roles.invoke({
-          requestId: decisionPhaseId(input.run.runId, "execution"),
-          requestDigest: digestCanonicalJson("subject.role-phase.v1", {
-            decisionRef: adopted.decisionRef,
-            phase: "execution",
-          }).hex,
-          subjectId: input.subjectId,
-          activityId: input.activityId,
-          parentRunId: input.run.runId,
-          role: "subject.execution",
-          deadlineAt: input.run.deadlineAt,
-          taskTools: decision.delegation.tools,
-          adoptedDecisionRef: adopted.decisionRef,
-          context: {
-            adoptedDecisionRef: adopted.decisionRef,
-            task: decision.delegation.goal,
-            sourceRefs: decision.delegation.sourceRefs,
-            permittedTools: decision.delegation.tools,
-          },
-          contacts: [],
-          sourceRefs: decision.delegation.sourceRefs,
-          usage: applied.usage,
-        });
-        const releaseId = decisionPhaseId(input.run.runId, "release");
-        const previousRelease = await options.native.readResultRelease(
-          input.subjectId,
-          releaseId,
-        );
-        const retained = previousRelease
-          ? undefined
-          : await options.native.readRoleResults(input.subjectId, execution.runId);
-        const released =
-          previousRelease ??
-          (await options.native.releaseResult({
-            version: 1,
-            requestId: releaseId,
-            subjectId: input.subjectId,
-            parentRunId: input.run.runId,
-            childRunId: execution.runId,
-            resultIds: (() => {
-              const generated = retained!.results.filter(
-                (result) => result.observation.sourceClass === "generated",
-              );
-              return (generated.length ? generated : retained!.results).map(
-                (result) => result.resultId,
-              );
-            })(),
-          }));
-        const followup = await options.roles.invoke({
-          requestId: decisionPhaseId(input.run.runId, "execution-deliberation"),
-          requestDigest: digestCanonicalJson("subject.role-phase.v1", {
-            decisionRef: adopted.decisionRef,
-            phase: "execution-deliberation",
-            releaseId,
-          }).hex,
-          subjectId: input.subjectId,
-          activityId: input.activityId,
-          role: "subject.deliberation",
-          deadlineAt: input.run.deadlineAt,
-          context: {
-            trigger: { kind: "activity_result", decisionRef: adopted.decisionRef },
-            resultRefs: released.contacts.map((contact) => contact.contactRef),
-            outputContract: deliberationDecisionSchema,
-            receivedResults: released.contacts.map((contact) => {
-              const observation = decodeObservationInput(contact.observation);
-              return {
-                contactRef: contact.contactRef,
-                material: observation.material,
-                context: observation.context,
-              };
-            }),
-            completedTask: decision.delegation.goal,
-            previousDecisionRef: adopted.decisionRef,
-          },
-          contacts: released.contacts,
-          sourceRefs: released.contacts.map((contact) => contact.contactRef),
-          usage: applied.usage,
-        });
-        return {
-          decisionRef: adopted.decisionRef,
-          executionRunId: execution.runId,
-          expression,
-          startedActivity,
-          followup: await service.adopt({
-            ...input,
-            requestId: followup.runId,
-            run: followup,
-          }),
-        };
-      }
-      return { ...expression, startedActivity };
+      return express();
     },
   };
   return service;

@@ -19,6 +19,7 @@ import {
 import { managementProblem } from "@heptalogos/management";
 import {
   activitySchema,
+  type ForegroundQualification,
   type LifeActivity,
   type createLifeService,
   type AgencyDeliveryFact,
@@ -29,6 +30,9 @@ import { compileSchema } from "@heptalogos/schema-runtime";
 import type { MessagingService } from "@heptalogos/messaging";
 import type { NousClient } from "@nous-wave/client";
 import {
+  hostRunTerminalRequestSchema,
+  type HostRunTerminalRequest,
+  type HostRunTerminalResponse,
   hostPrepareRequestSchema,
   hostPrepareResponseSchema,
   hostAdmittedRequestSchema,
@@ -86,6 +90,7 @@ export interface Registration {
   readonly nativeAgentId: string;
   readonly nativeRunId: string;
   readonly promptDigest: string;
+  readonly currentContextDigest?: string;
   readonly role: "main" | "worker";
   readonly roleScope: HostRoleScope;
   readonly tokenBudget: HostTokenBudget;
@@ -99,6 +104,8 @@ export interface Registration {
   readonly parentRunId?: string;
   /** Exact immutable Subject choice authorizing this professional task. Host-only. */
   readonly adoptedDecisionRef?: string;
+  /** Internal revocable foreground capability; never derived from model arguments. */
+  readonly foreground?: ForegroundQualification;
   /** Owner-derived exact inherited roots; callers cannot grant these fields. */
   readonly inheritedSourceRefs?: readonly string[];
   readonly inheritedMessageSources?: readonly string[];
@@ -140,7 +147,7 @@ export interface NativeRoleResults {
   readonly run: NativeRunSnapshot;
   readonly results: {
     resultId: string;
-    observation: Record<string, CanonicalJsonValue>;
+    observation: HostPrepareResponse["contacts"][number]["observation"];
   }[];
   readonly omitted: boolean;
 }
@@ -215,6 +222,16 @@ export interface NativeCognitionOptions {
     subjectId: string,
   ) => Promise<NonNullable<ObservationInput["observedStamp"]>>;
   readonly now: () => string;
+  /** Effective Product limit, read before entering a short task reservation transaction. */
+  readonly workerConcurrency?: (
+    transaction?: PersistenceInternalTransaction,
+  ) => Promise<number>;
+  /** Projects a normal native wake after terminal durability, never reads/releases results. */
+  readonly onRunReady?: (input: {
+    subjectId: string;
+    activityId: string;
+    runId: string;
+  }) => Promise<void>;
   /** Existing product role configuration supplies the actual execution profile policy. */
   readonly resolveChildProviderPolicy?: (
     parent: NativeRunSnapshot,
@@ -231,11 +248,27 @@ export interface NativeCognitionOptions {
     registration: Readonly<Registration>,
     activity: LifeActivity,
   ) => Promise<void>;
+  /** Production Reactor checks provider/tool entry against the exact current foreground. */
+  readonly assertForegroundIn?: (
+    transaction: PersistenceInternalTransaction,
+    registration: Readonly<Registration>,
+  ) => Promise<void>;
+  /** Retained result viewing checks current source/Activity authority without granting a new provider attempt. */
+  readonly authorizeRetainedResult?: (
+    registration: Readonly<Registration>,
+    activity: LifeActivity,
+    transaction: PersistenceInternalTransaction,
+  ) => Promise<void>;
   /** Rechecks only current local authority while holding the actual Activity/send-point fence. */
   readonly authorizeInput: (
     registration: Readonly<Registration>,
     activity: LifeActivity,
     transaction?: PersistenceInternalTransaction,
+  ) => Promise<void>;
+  /** Completes exact World owner handoffs only after the actual admitted occurrence receipt. */
+  readonly onWorldContactsAdmitted?: (
+    input: HostAdmittedRequest,
+    registration: Readonly<Registration>,
   ) => Promise<void>;
   readonly recordContact: MessagingService["recordContact"];
   readonly nous: () => Promise<Pick<NousClient, "runtime">>;
@@ -340,6 +373,37 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
     options.persistence.mutate((context) =>
       useRepositoryMutationTransaction(context, run),
     );
+  const assertTaskCapacityIn = async (
+    tx: PersistenceInternalTransaction,
+    subjectId: string,
+    limit: number | undefined,
+  ) => {
+    limit = (await options.workerConcurrency?.(tx)) ?? limit;
+    if (limit === undefined) return;
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 16) invalid();
+    const rows = await sql<{ count: string }>(
+      tx,
+      `SELECT count(*)::text AS count FROM (
+      SELECT i.native_run_id AS id FROM heptalogos.life_native_input i
+      LEFT JOIN heptalogos.life_native_run r ON r.run_id=i.native_run_id
+      WHERE i.subject_id=$1 AND i.document#>>'{registration,roleScope,role}'='subject.execution'
+      AND COALESCE(r.state,'registered') NOT IN ('completed','failed','cancelled')
+      UNION
+      SELECT r.run_id FROM heptalogos.life_native_run r WHERE r.subject_id=$1
+      AND r.document#>>'{registration,roleScope,role}'='subject.execution' AND r.state NOT IN ('completed','failed','cancelled')
+      UNION
+      SELECT h.child_session_key FROM heptalogos.life_handoff h
+      WHERE h.document#>>'{registration,subjectId}'=$1::text
+      AND NOT EXISTS(SELECT 1 FROM heptalogos.life_native_run r WHERE r.session_key=h.child_session_key)
+    ) active_tasks`,
+      [subjectId],
+    );
+    if (Number(rows[0]!.count) >= limit)
+      deny(
+        "native_worker_capacity",
+        "The actual concurrent native task budget is occupied; retain ready/unknown tasks without rerunning",
+      );
+  };
   const captureObservedStamp = async (subjectId: string) => {
     const stamp = await options.captureObservedStamp(subjectId);
     if (!stamp?.at || !stamp.recordedAt || !stamp.timeDomainRef)
@@ -498,8 +562,10 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         | "inheritedMessageSources"
         | "inheritedSourceRefs"
         | "providerPolicyState"
+        | "currentContextDigest"
       > & {
         readonly prompt: string;
+        readonly extraSystemPrompt?: string;
         readonly usage: Parameters<typeof encodeCognitionUsage>[0];
       },
       dispatch?: Omit<NativeDispatchRecord, "state" | "result" | "code">,
@@ -523,6 +589,23 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         code?: string;
       },
     ): Promise<ActivityDispatchResult>;
+    /** Bounded terminal execution directory. Bodies remain in RoleRun until explicit viewing. */
+    readyResults(input: {
+      subjectId: string;
+      limit: number;
+      afterRunId?: string;
+    }): Promise<{
+      runs: {
+        runId: string;
+        role: string;
+        activityId: string;
+        terminalAt: string;
+        resultCount: number;
+        adoptedDecisionRef?: string;
+      }[];
+      more: boolean;
+      nextRunId?: string;
+    }>;
     /** Trusted Host reads execution output; this operation creates no Subject contact. */
     readRoleResults(subjectId: string, runId: string): Promise<NativeRoleResults>;
     /** Reads the immutable release receipt before a retry selects any newly arrived output. */
@@ -532,7 +615,19 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
     ): Promise<HostResultReleaseResponse | undefined>;
     /** Trusted Host reads what Nous actually applied, including its official EpistemicView. */
     readAppliedContext(runId: string): Promise<NativeAppliedContext>;
+    /** Metadata receipt lookup never reads source bodies or synthesizes experience. */
+    hasAcceptedSource(
+      subjectId: string,
+      sourceRef: string,
+      transaction?: PersistenceInternalTransaction,
+    ): Promise<boolean>;
     readRun: typeof readRun;
+    /** Trusted recovery checks whether the original input ever crossed Host prepare. */
+    readInputState(
+      subjectId: string,
+      runId: string,
+      transaction?: PersistenceInternalTransaction,
+    ): Promise<{ registration: Registration; prepared: boolean } | undefined>;
     recordDeliveryFact(fact: AgencyDeliveryFact): Promise<void>;
     finishRun(
       runId: string,
@@ -541,11 +636,16 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
     flushPendingFeedback(limit: number): Promise<{ delivered: number }>;
   } = {
     async registerInput(input, dispatch) {
-      const { prompt, usage, ...selection } = input;
+      const taskLimit =
+        input.roleScope.role === "subject.execution"
+          ? await options.workerConcurrency?.()
+          : undefined;
+      const { prompt, usage, extraSystemPrompt, ...selection } = input;
       if (
         "inheritedMessageSources" in input ||
         "inheritedSourceRefs" in input ||
-        "providerPolicyState" in input
+        "providerPolicyState" in input ||
+        "currentContextDigest" in input
       )
         invalid();
       const sourceParent = input.parentRunId
@@ -665,6 +765,13 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         contacts,
         usage: canonicalUsage,
         promptDigest: createHash("sha256").update(prompt).digest("hex"),
+        ...(extraSystemPrompt !== undefined
+          ? {
+              currentContextDigest: createHash("sha256")
+                .update(extraSystemPrompt)
+                .digest("hex"),
+            }
+          : {}),
       };
       if (registration.adoptedDecisionRef)
         await options.authorizeAdoptedTaskSources!(registration, sourceParent!);
@@ -716,9 +823,11 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
             };
           }
         }
+        await assertTaskCapacityIn(tx, input.subjectId, taskLimit);
         await sessionLock(tx, input.sessionKey);
         const activity = await lockedActivity(tx, input.subjectId, input.activityId);
         current(activity, registration);
+        await options.assertForegroundIn?.(tx, registration);
         await options.authorizeInput(registration, activity, tx);
         if (!activity.workContextId || activity.workContextId !== input.workContextId)
           deny(
@@ -828,6 +937,11 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         )
           ? await captureObservedStamp(input.subjectId)
           : undefined;
+      if (input.currentContextDigest !== preflight.currentContextDigest)
+        deny(
+          "native_context_changed",
+          "The actual ephemeral context differs from this trusted registered input",
+        );
       const prepared = await mutate(async (tx) => {
         await sql(tx, "SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
           input.subjectId,
@@ -906,6 +1020,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           registration.activityId,
         );
         current(activity, registration);
+        await options.assertForegroundIn?.(tx, registration);
         await options.authorizeInput(registration, activity, tx);
         if (registration.role === "main" && input.native.parentSessionKey)
           deny(
@@ -1134,6 +1249,9 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
     async admitted(value) {
       const input = validated(() => hostAdmittedRequestSchema.parse(value));
       const selected = await mutate(async (tx) => {
+        await sql(tx, "SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
+          input.subjectId,
+        ]);
         const runs = await sql<{ document: NativeRunSnapshot }>(
           tx,
           "SELECT document FROM heptalogos.life_native_run WHERE run_id=$1 FOR UPDATE",
@@ -1207,6 +1325,22 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
             "native_receipt_changed",
             "An acknowledged actual projection or occurrence result cannot be overwritten",
           );
+        if (!contact.admitted) {
+          const registered = runs[0]?.document.registration;
+          if (!registered)
+            deny(
+              "native_run_unknown",
+              "The exact admitted input registration is missing",
+            );
+          const activity = await lockedActivity(
+            tx,
+            input.subjectId,
+            registered.activityId,
+          );
+          current(activity, registered);
+          await options.assertForegroundIn?.(tx, registered);
+          await options.authorizeInput(registered, activity, tx);
+        }
         if (!contact.admitted)
           await sql(
             tx,
@@ -1225,6 +1359,9 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           messageRefs: [...selected.messageRefs],
           observedAt: selected.observedAt,
         });
+      const actualRun = await readRun(input.native.runId);
+      if (actualRun)
+        await options.onWorldContactsAdmitted?.(input, actualRun.registration);
       return { version: 1, accepted: true };
     },
     async readResultRelease(subjectId, requestId) {
@@ -1294,7 +1431,11 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           parent.registration.activityId,
         );
         current(activity, parent.registration);
-        await options.authorizeInput(parent.registration, activity, tx);
+        await (options.authorizeRetainedResult ?? options.authorizeInput)(
+          parent.registration,
+          activity,
+          tx,
+        );
         const links = await sql<{ parent_run_id: string; document: Handoff }>(
           tx,
           "SELECT parent_run_id,document FROM heptalogos.life_handoff WHERE child_session_key=$1 FOR SHARE",
@@ -1592,6 +1733,10 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         // derived retrieval rather than fresh external testimony. No result body
         // is published until the current authority is checked again below.
         await mutate(async (tx) => {
+          await sql(tx, "SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
+            preflight.registration.subjectId,
+          ]);
+          await options.assertForegroundIn?.(tx, preflight.registration);
           const contact = await contactIn(tx, readContact.request);
           const trace = {
             requestDigest: digest(readAction),
@@ -1644,6 +1789,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         await sql(tx, "SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
           preflight.registration.subjectId,
         ]);
+        await options.assertForegroundIn?.(tx, preflight.registration);
         await sessionLock(tx, input.sessionKey);
         const rows = await sql<{ state: string; document: NativeRunSnapshot }>(
           tx,
@@ -1806,6 +1952,10 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
       providerPolicy(preflight.registration);
       await checkInput(preflight.registration);
       return mutate(async (tx) => {
+        await sql(tx, "SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
+          input.subjectId,
+        ]);
+        await options.assertForegroundIn?.(tx, preflight.registration);
         await sessionLock(tx, input.native.sessionKey);
         const contact = await contactIn(tx, input);
         const runs = await sql<{ state: string; document: NativeRunSnapshot }>(
@@ -1852,6 +2002,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
       });
     },
     async handoff(value) {
+      const taskLimit = await options.workerConcurrency?.();
       const input = validated(() => hostHandoffRequestSchema.parse(value));
       const preflight = await readRun(input.parentRunId);
       if (
@@ -1881,6 +2032,9 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
       await checkInput(preflight.registration);
 
       await mutate(async (tx) => {
+        await sql(tx, "SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
+          input.subjectId,
+        ]);
         await sessionLock(tx, input.parentSessionKey);
         const matches = await sql<{ document: NativeRunSnapshot }>(
           tx,
@@ -1939,6 +2093,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
               ref.startsWith("message:"),
             ),
             role: "worker",
+            currentContextDigest: input.childCurrentContextDigest,
             nativeAgentId: input.childNativeAgentId,
             roleScope: {
               role: "subject.execution",
@@ -1958,6 +2113,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
             );
           return;
         }
+        await assertTaskCapacityIn(tx, input.subjectId, taskLimit);
         await sql(
           tx,
           "INSERT INTO heptalogos.life_handoff(child_session_key,parent_run_id,activity_id,document,recorded_at) VALUES($1,$2,$3,$4::jsonb,$5)",
@@ -1971,6 +2127,84 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         );
       });
       return { version: 1, accepted: true };
+    },
+    async runTerminal(value) {
+      const input = validated(() => hostRunTerminalRequestSchema.parse(value));
+      const response = await mutate(async (tx) => {
+        await sql(tx, "SELECT pg_advisory_xact_lock(hashtextextended($1,0))", [
+          input.subjectId,
+        ]);
+        const contact = await contactIn(tx, input);
+        const rows = await sql<{
+          state: string;
+          document: NativeRunSnapshot & {
+            terminal?: {
+              request: HostRunTerminalRequest;
+              response: HostRunTerminalResponse;
+            };
+          };
+        }>(
+          tx,
+          "SELECT state,document FROM heptalogos.life_native_run WHERE run_id=$1 AND subject_id=$2 FOR UPDATE",
+          [input.native.runId, input.subjectId],
+        );
+        const run = rows[0];
+        if (
+          !run ||
+          !contact.admitted ||
+          !run.document.consumerId ||
+          contact.request.native.runId !== input.native.runId ||
+          run.document.registration.roleScope.contactNature !== "execution_only"
+        )
+          deny(
+            "native_terminal_denied",
+            "A terminal marker needs its exact registered execution-only run and actual admitted contact",
+          );
+        if (run.document.terminal) {
+          if (digest(run.document.terminal.request) !== digest(input))
+            deny(
+              "native_terminal_changed",
+              "A terminal marker cannot change its original identity, outcome or time",
+            );
+          return run.document.terminal.response;
+        }
+        if (
+          ["completed", "failed", "cancelled"].includes(run.state) &&
+          run.state !== input.outcome
+        )
+          deny(
+            "native_terminal_changed",
+            "The retained actual run terminal outcome cannot be overwritten",
+          );
+        const receipt: HostRunTerminalResponse = {
+          version: 1,
+          accepted: true,
+          runId: input.native.runId,
+          activityRef: run.document.registration.activityId,
+          resultRetained: true,
+          ready: true,
+        };
+        await sql(
+          tx,
+          "UPDATE heptalogos.life_native_run SET state=$2,document=$3::jsonb,updated_at=$4 WHERE run_id=$1",
+          [
+            input.native.runId,
+            input.outcome,
+            JSON.stringify({
+              ...run.document,
+              terminal: { request: input, response: receipt },
+            }),
+            options.now(),
+          ],
+        );
+        return receipt;
+      });
+      await options.onRunReady?.({
+        subjectId: input.subjectId,
+        activityId: response.activityRef,
+        runId: response.runId,
+      });
+      return response;
     },
     async feedback(value) {
       const input = validated(() => hostFeedbackRequestSchema.parse(value));
@@ -2159,6 +2393,75 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         );
         return { version: 1, stage: "committed", accepted: true };
       });
+    },
+    async hasAcceptedSource(subjectId, sourceRef, transaction) {
+      const query = `SELECT 1 AS accepted FROM heptalogos.life_native_contact c JOIN heptalogos.life_native_run r ON r.run_id=c.run_id CROSS JOIN LATERAL jsonb_array_elements(COALESCE(c.document#>'{admitted,occurrences}','[]'::jsonb)) occurrence WHERE c.subject_id=$1 AND occurrence->>'contactRef'=$2 AND r.document#>>'{registration,roleScope,contactNature}'='subject_experience' LIMIT 1`;
+      const rows = transaction
+        ? await sql(transaction, query, [subjectId, sourceRef])
+        : await readRepositorySql(options.persistence, query, [subjectId, sourceRef]);
+      return rows.length > 0;
+    },
+    async readInputState(subjectId, runId, transaction) {
+      const query =
+        "SELECT document FROM heptalogos.life_native_input WHERE subject_id=$1 AND native_run_id=$2";
+      const rows = transaction
+        ? await sql<{ document: StoredInput }>(transaction, query, [subjectId, runId])
+        : await readRepositorySql<{ document: StoredInput }>(
+            options.persistence,
+            query,
+            [subjectId, runId],
+          );
+      return rows[0]
+        ? {
+            registration: rows[0].document.registration,
+            prepared: !!rows[0].document.firstContact,
+          }
+        : undefined;
+    },
+    async readyResults(input) {
+      if (!Number.isSafeInteger(input.limit) || input.limit < 1 || input.limit > 128)
+        invalid();
+      const rows = await readRepositorySql<{
+        run_id: string;
+        activity_id: string;
+        role: string;
+        terminal_at: string;
+        result_count: string;
+        decision_ref: string | null;
+      }>(
+        options.persistence,
+        `
+        SELECT r.run_id,r.activity_id,r.document#>>'{registration,roleScope,role}' AS role,
+        r.updated_at::text AS terminal_at,
+        (SELECT count(*) FROM heptalogos.role_run_result x WHERE x.run_id=r.run_id)::text AS result_count,
+        r.document#>>'{registration,adoptedDecisionRef}' AS decision_ref
+        FROM heptalogos.life_native_run r
+        WHERE r.subject_id=$1 AND ($2::text IS NULL OR (r.updated_at,r.run_id)>(SELECT cursor.updated_at,cursor.run_id FROM heptalogos.life_native_run cursor WHERE cursor.subject_id=$1 AND cursor.run_id=$2))
+        AND r.state IN ('completed','failed','cancelled')
+        AND r.document#>>'{registration,roleScope,role}'='subject.execution'
+        AND r.document->>'consumerId' IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM heptalogos.role_result_release rel
+          JOIN heptalogos.life_native_contact c ON c.subject_id=rel.subject_id
+          CROSS JOIN LATERAL jsonb_array_elements(COALESCE(c.document#>'{admitted,occurrences}','[]'::jsonb)) receipt
+          WHERE rel.child_run_id=r.run_id AND receipt->>'contactRef'='role-result-release:'||rel.request_id::text
+        )
+        ORDER BY r.updated_at,r.run_id LIMIT $3`,
+        [input.subjectId, input.afterRunId ?? null, input.limit + 1],
+      );
+      const selected = rows.slice(0, input.limit);
+      return {
+        runs: selected.map((row) => ({
+          runId: row.run_id,
+          role: row.role,
+          activityId: row.activity_id,
+          terminalAt: new Date(row.terminal_at).toISOString(),
+          resultCount: Number(row.result_count),
+          ...(row.decision_ref ? { adoptedDecisionRef: row.decision_ref } : {}),
+        })),
+        more: rows.length > input.limit,
+        ...(rows.length > input.limit ? { nextRunId: selected.at(-1)!.run_id } : {}),
+      };
     },
     async readRoleResults(subjectId, runId) {
       const run = await readRun(runId);

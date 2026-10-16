@@ -16,7 +16,7 @@ import { composeProductPersistence } from "../support/product-persistence.js";
 const real = qualifiedPgBin ? describe : describe.skip;
 afterEach(cleanupCanonicalPostgresFixtures);
 real("Subject DecisionCommit under real fenced PostgreSQL", () => {
-  it("adopts one exact choice under CAS, retains explicit rest expression and replays canonical decisions without live dependencies", async () => {
+  it("adopts one exact choice under CAS, retains explicit communication intent and replays canonical decisions without live dependencies", async () => {
     const current = await composeProductPersistence();
     const subjectId = randomUUID(),
       sourceRunId = "native:subject:deliberation:" + randomUUID(),
@@ -111,8 +111,8 @@ real("Subject DecisionCommit under real fenced PostgreSQL", () => {
         sourceRunId,
         expectedActivityRevision: activity.revision,
         decision: {
-          action: "rest",
-          reason: "I choose to rest and say goodnight",
+          action: "communicate",
+          reason: "I choose to say goodnight before a separate rest action",
           expressionIntent: {
             intent: "Say goodnight before resting",
             stance: "Brief and warm",
@@ -130,7 +130,7 @@ real("Subject DecisionCommit under real fenced PostgreSQL", () => {
       expect(new Set(adopted.map((value) => value.decisionRef)).size).toBe(1);
       const result = adopted[0]!;
       expect(result.decision.expressionIntent?.deception).toBe("conceal");
-      expect(result.mode).toBe("rest");
+      expect(result.mode).toBe("work");
       expect(result.nextOpportunity).toBeNull();
       expect((await life.get(subjectId, activity.activityId))?.revision).toBe(
         activity.revision + 1,
@@ -178,7 +178,7 @@ real("Subject DecisionCommit under real fenced PostgreSQL", () => {
         activityId: racing.activityId,
         sourceRunId,
         expectedActivityRevision: racing.revision,
-        decision: { action: "continue_activity", reason: "Continue my own activity" },
+        decision: { action: "continue", reason: "Continue my own activity" },
       };
       const races = await current.run(() =>
         Promise.allSettled([
@@ -186,7 +186,7 @@ real("Subject DecisionCommit under real fenced PostgreSQL", () => {
           decisions.adopt({
             ...choice,
             operationId: randomUUID(),
-            decision: { action: "defer", reason: "Defer this opportunity" },
+            decision: { action: "wait", reason: "Defer this opportunity" },
           }),
         ]),
       );
@@ -200,7 +200,7 @@ real("Subject DecisionCommit under real fenced PostgreSQL", () => {
             operationId: randomUUID(),
             expectedActivityRevision: actual.revision,
             decision: {
-              action: "delegate",
+              action: "search",
               reason: "Try a task outside real authority",
               delegation: {
                 goal: "Read an unrelated source",
