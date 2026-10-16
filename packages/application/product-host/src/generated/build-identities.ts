@@ -8,6 +8,6 @@ import type {
 import type { BootstrapRuntimeGenerationId } from "@heptalogos/bootstrap-state";
 
 /** Product content identity materialized by the build. */
-export const PRODUCT_GENERATION_ID = "7598eaef4b078f58b789a893c929c12ef5dfda2b010dbe47756b74d81bcf94cc" as ProductGenerationId;
+export const PRODUCT_GENERATION_ID = "6f5e56631f797bbb572f44f53793f3c7958fb604fa3cd2b9a07930fdf2e717dc" as ProductGenerationId;
 /** Bootstrap runtime content identity materialized by the build. */
 export const BOOTSTRAP_RUNTIME_GENERATION_ID = "e095ab36eeab757c48cfcacc8b44fdf31810a838f7c5b4881c824b143bc8825e" as BootstrapRuntimeGenerationId;
