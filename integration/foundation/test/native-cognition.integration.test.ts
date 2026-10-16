@@ -1173,6 +1173,223 @@ real("native Life bound to the current admitted run", () => {
 });
 
 real("native child completion causality", () => {
+  it("releases an admitted terminal direct execution RoleRun through its exact registered parent without a native handoff", async () => {
+    const f = await fixture();
+    try {
+      await admitSelected(f, await f.c.run(() => f.bridge.prepare(f.input)));
+      const createDirect = async (
+        role: "subject.execution" | "subject.render",
+        admitted = true,
+      ) => {
+        const nativeRunId = randomUUID(),
+          sessionKey = "native:direct-role:" + randomUUID();
+        const registered = await f.c.run(() =>
+          f.bridge.registerInput({
+            ...f.registration,
+            parentRunId: f.input.native.runId,
+            nativeRunId,
+            sessionKey,
+            prompt: "Actual bounded direct role result",
+            roleScope:
+              role === "subject.execution"
+                ? {
+                    role,
+                    purpose: "professional_execution",
+                    view: "worker",
+                    contactNature: "execution_only",
+                  }
+                : {
+                    role,
+                    purpose: "subject_rendering",
+                    view: "renderer",
+                    contactNature: "execution_only",
+                  },
+            usage: sdk.decodeCognitionUsage({
+              purpose: "professional_execution",
+              sourceRead: { subjectId: f.input.subjectId, sourceRefs: [] },
+              audience: {
+                visibility: "group",
+                conversationRef: "conversation:qq:registered",
+              },
+            }),
+            sourceRefs: [],
+            messageRefs: [],
+            contacts: [],
+          }),
+        );
+        const input = {
+          ...f.input,
+          contactRequestId: randomUUID(),
+          invocationId: "direct:1",
+          nousSessionId: randomUUID(),
+          promptDigest: registered.promptDigest,
+          native: {
+            ...f.input.native,
+            runId: nativeRunId,
+            sessionKey,
+            sessionId: randomUUID(),
+            historyGeneration: randomUUID(),
+          },
+        };
+        const prepared = await f.c.run(() => f.bridge.prepare(input));
+        expect(prepared.contacts).toEqual([]);
+        if (admitted) await admitSelected({ ...f, input }, prepared);
+        const resultId = randomUUID();
+        const pending = await f.c.run(() =>
+          f.bridge.feedback({
+            ...sdk.hostContactIdentitySchema.strip().parse(input),
+            stage: "pending",
+            observation: sdk.encodeObservationInput({
+              subjectId: f.input.subjectId,
+              sessionId: input.nousSessionId,
+              requestId: resultId,
+              sourceClass: "generated",
+              observedAt: sdk.timestampFromDate(new Date()),
+              material: {
+                case: "inlineText",
+                value: {
+                  text: "IMMUTABLE DIRECT ROLE RESULT",
+                  mediaType: "text/plain",
+                },
+              },
+            }),
+          }),
+        );
+        expect(pending).toMatchObject({ retainedOnly: true });
+        return {
+          input,
+          resultId,
+          release: {
+            version: 1 as const,
+            requestId: randomUUID(),
+            subjectId: f.input.subjectId,
+            parentRunId: f.input.native.runId,
+            childRunId: nativeRunId,
+            resultIds: [resultId],
+          },
+        };
+      };
+      const direct = await createDirect("subject.execution");
+      await expect(
+        f.c.run(() => f.bridge.releaseResult(direct.release)),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_result_release_denied" },
+      });
+      await f.c.run(() => f.bridge.finishRun(direct.input.native.runId, "completed"));
+      expect(
+        await readRepositorySql(
+          f.c.persistence,
+          "SELECT child_session_key FROM heptalogos.life_handoff WHERE child_session_key=$1",
+          [direct.input.native.sessionKey],
+        ),
+      ).toEqual([]);
+      const unadmitted = await createDirect("subject.execution", false);
+      await f.c.run(() =>
+        f.bridge.finishRun(unadmitted.input.native.runId, "completed"),
+      );
+      await expect(
+        f.c.run(() => f.bridge.releaseResult(unadmitted.release)),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_result_release_denied" },
+      });
+      const renderer = await createDirect("subject.render");
+      await f.c.run(() => f.bridge.finishRun(renderer.input.native.runId, "completed"));
+      await expect(
+        f.c.run(() => f.bridge.releaseResult(renderer.release)),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_result_release_denied" },
+      });
+      let drift = true;
+      const alteredParent = randomUUID();
+      f.setExternalCheck(async () => {
+        if (!drift) return;
+        drift = false;
+        await f.c.persistence.mutate((ctx) =>
+          useRepositoryMutationTransaction(ctx, (tx) =>
+            executeRepositorySql(
+              tx,
+              "UPDATE heptalogos.life_native_run SET document=jsonb_set(document,'{registration,parentRunId}',to_jsonb($2::text)) WHERE run_id=$1",
+              [direct.input.native.runId, alteredParent],
+            ),
+          ),
+        );
+      });
+      await expect(
+        f.c.run(() => f.bridge.releaseResult(direct.release)),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_result_release_denied" },
+      });
+      f.setExternalCheck(async () => {});
+      await f.c.run(() =>
+        f.c.persistence.mutate((ctx) =>
+          useRepositoryMutationTransaction(ctx, (tx) =>
+            executeRepositorySql(
+              tx,
+              "UPDATE heptalogos.life_native_run SET document=jsonb_set(document,'{registration,parentRunId}',to_jsonb($2::text)) WHERE run_id=$1",
+              [direct.input.native.runId, f.input.native.runId],
+            ),
+          ),
+        ),
+      );
+      const released = await f.c.run(() => f.bridge.releaseResult(direct.release));
+      expect(await f.c.run(() => f.bridge.releaseResult(direct.release))).toEqual(
+        released,
+      );
+      expect(released).toMatchObject({
+        contactNature: "subject_experience",
+        opportunity: {
+          kind: "activity_result",
+          parentRunId: f.input.native.runId,
+          childRunId: direct.input.native.runId,
+        },
+      });
+      expect(JSON.stringify(released.contacts)).toContain(
+        "IMMUTABLE DIRECT ROLE RESULT",
+      );
+      expect(f.recordObservation).not.toHaveBeenCalled();
+      const subjectRun = randomUUID(),
+        subjectSession = "native:released-direct:" + randomUUID();
+      const registered = await f.c.run(() =>
+        f.bridge.registerInput({
+          ...f.registration,
+          nativeRunId: subjectRun,
+          sessionKey: subjectSession,
+          prompt: "Deliberate on this explicitly released professional result",
+          sourceRefs: released.contacts.map((contact) => contact.contactRef),
+          messageRefs: [],
+          contacts: released.contacts,
+        }),
+      );
+      const subjectInput = {
+        ...f.input,
+        contactRequestId: randomUUID(),
+        invocationId: "direct-result:subject",
+        promptDigest: registered.promptDigest,
+        native: {
+          ...f.input.native,
+          runId: subjectRun,
+          sessionKey: subjectSession,
+          sessionId: randomUUID(),
+          historyGeneration: randomUUID(),
+        },
+      };
+      const selected = await f.c.run(() => f.bridge.prepare(subjectInput));
+      expect(selected.contacts).toHaveLength(1);
+      await admitSelected({ ...f, input: subjectInput }, selected);
+      expect((await f.bridge.readAppliedContext(subjectRun)).roleScope.role).toBe(
+        "subject.deliberation",
+      );
+      expect(
+        await readRepositorySql(
+          f.c.persistence,
+          "SELECT child_session_key FROM heptalogos.life_handoff WHERE child_session_key=$1",
+          [direct.input.native.sessionKey],
+        ),
+      ).toEqual([]);
+    } finally {
+      await f.c.close();
+    }
+  }, 120000);
   it("retains exact worker results outside cognition and releases only selected facts into a new Subject contact", async () => {
     const f = await fixture(["read", "heptalogos_life"]);
     try {

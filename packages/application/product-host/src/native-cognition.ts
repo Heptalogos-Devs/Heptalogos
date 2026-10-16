@@ -1207,6 +1207,9 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         child.registration.subjectId !== input.subjectId ||
         child.registration.activityId !== parent.registration.activityId ||
         !["completed", "failed", "cancelled"].includes(child.state) ||
+        !parent.consumerId ||
+        !child.consumerId ||
+        roleScope(child.registration).role !== "subject.execution" ||
         roleScope(child.registration).contactNature !== "execution_only"
       )
         deny(
@@ -1219,6 +1222,30 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           input.subjectId,
         ]);
         await sessionLock(tx, parent.native.sessionKey);
+        await sql(
+          tx,
+          "SELECT run_id FROM heptalogos.life_native_run WHERE run_id=ANY($1::text[]) ORDER BY run_id FOR SHARE",
+          [[input.parentRunId, input.childRunId]],
+        );
+        const actualParent = await readRun(input.parentRunId, tx);
+        const actualChild = await readRun(input.childRunId, tx);
+        if (
+          !actualParent ||
+          !actualChild ||
+          digest(actualParent.registration) !== digest(parent.registration) ||
+          digest(actualChild.registration) !== digest(child.registration) ||
+          digest(actualParent.native) !== digest(parent.native) ||
+          digest(actualChild.native) !== digest(child.native) ||
+          actualParent.nousSessionId !== parent.nousSessionId ||
+          actualChild.nousSessionId !== child.nousSessionId ||
+          actualChild.state !== child.state ||
+          !actualParent.consumerId ||
+          actualChild.consumerId !== child.consumerId
+        )
+          deny(
+            "native_result_release_denied",
+            "The admitted parent/terminal child binding changed during external checks",
+          );
         const activity = await lockedActivity(
           tx,
           input.subjectId,
@@ -1226,16 +1253,48 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         );
         current(activity, parent.registration);
         await options.authorizeInput(parent.registration, activity, tx);
-        const links = await sql<{ parent_run_id: string }>(
+        const links = await sql<{ parent_run_id: string; document: Handoff }>(
           tx,
-          "SELECT parent_run_id FROM heptalogos.life_handoff WHERE child_session_key=$1 FOR SHARE",
-          [child.native.sessionKey],
+          "SELECT parent_run_id,document FROM heptalogos.life_handoff WHERE child_session_key=$1 FOR SHARE",
+          [actualChild.native.sessionKey],
         );
-        if (links[0]?.parent_run_id !== input.parentRunId)
-          deny(
-            "native_result_release_denied",
-            "The child belongs to another immutable parent binding",
+        const link = links[0];
+        if (link) {
+          const handoff = link.document.request;
+          if (
+            link.parent_run_id !== input.parentRunId ||
+            handoff.parentRunId !== input.parentRunId ||
+            handoff.parentSessionKey !== actualParent.native.sessionKey ||
+            handoff.parentSessionId !== actualParent.native.sessionId ||
+            handoff.parentNousSessionId !== actualParent.nousSessionId ||
+            handoff.childSessionKey !== actualChild.native.sessionKey ||
+            handoff.childSessionId !== actualChild.native.sessionId ||
+            handoff.childNousSessionId !== actualChild.nousSessionId ||
+            handoff.childNativeAgentId !== actualChild.native.agentId ||
+            actualChild.native.parentSessionKey !== actualParent.native.sessionKey
+          )
+            deny(
+              "native_result_release_denied",
+              "The worker must retain its exact immutable native handoff",
+            );
+        } else {
+          const selected = await sql<{ document: StoredInput }>(
+            tx,
+            "SELECT document FROM heptalogos.life_native_input WHERE session_key=$1 AND native_run_id=$2 FOR SHARE",
+            [actualChild.native.sessionKey, input.childRunId],
           );
+          if (
+            actualChild.native.parentSessionKey ||
+            actualChild.registration.parentRunId !== input.parentRunId ||
+            !selected[0] ||
+            digest(selected[0].document.registration) !==
+              digest(actualChild.registration)
+          )
+            deny(
+              "native_result_release_denied",
+              "A direct execution RoleRun requires its original exact registered parent",
+            );
+        }
         const existing = await sql<{
           document: { input: typeof input; response: HostResultReleaseResponse };
         }>(
