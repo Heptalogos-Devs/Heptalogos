@@ -288,10 +288,12 @@ function current(activity: LifeActivity, registration: Registration) {
     );
 }
 function actualFeedback(value: Pending["observation"]) {
-  // A retry may discover the same event later; only its first actual observedAt
-  // is retained. Event content and source identity still cannot change.
+  // A retry may discover the same event later; the first actual observedAt and
+  // observedStamp stay with the pending fact. Canonical worldObserved remains
+  // event content and cannot change or be backfilled by a retry.
   const facts = { ...value };
   delete facts.observedAt;
+  delete facts.observedStamp;
   return digest(facts);
 }
 
