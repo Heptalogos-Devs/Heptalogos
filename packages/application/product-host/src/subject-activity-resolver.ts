@@ -125,7 +125,8 @@ export function createSubjectActivityResolver(options: {
           resumeConditions: [],
           budgetSummary: {},
           cognitionAnchors: [],
-          entityAnchors: [actor],
+          // H Activity actors are not Nous-owned cognitive EntityRefs.
+          entityAnchors: [],
           tagAnchors: [],
         },
         { timeoutMs: 5000 },
