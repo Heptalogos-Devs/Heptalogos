@@ -15,12 +15,13 @@ import { createQqChannel } from "../../src/channel.js";
 import { QqScopePolicy } from "../../src/policy.js";
 import { OneBotTransport } from "../../src/transport.js";
 import { OneBotPresence } from "../../src/presence.js";
-import { nativeRegistry } from "../support/native.js";
+import { nativeRegistry, nativeStateCloser } from "../support/native.js";
 import { resolveQqNativeRoute } from "../../src/routing.js";
 it("uses public durable native send with real SQLite, generated Host HTTP and one actual OneBot request per approved source", async () => {
   const state = await mkdtemp(join(tmpdir(), "qq-native-send-isolated-"));
   const previous = process.env.OPENCLAW_STATE_DIR;
   process.env.OPENCLAW_STATE_DIR = state;
+  const closeNativeState = await nativeStateCloser(state);
   const accountId = "3644596926";
   let networkSends = 0;
   let rejectNext = false;
@@ -347,6 +348,7 @@ it("uses public durable native send with real SQLite, generated Host HTTP and on
     await new Promise<void>((resolve) => wss.close(() => resolve()));
     hostServer.closeAllConnections();
     await new Promise<void>((resolve) => hostServer.close(() => resolve()));
+    expect(closeNativeState()).toBe(true);
     if (previous === undefined) delete process.env.OPENCLAW_STATE_DIR;
     else process.env.OPENCLAW_STATE_DIR = previous;
     await rm(state, { recursive: true, force: true });

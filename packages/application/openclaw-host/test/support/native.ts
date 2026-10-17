@@ -23,6 +23,16 @@ export async function nativeQueue(
       stateDir: string;
     }) => ChannelIngressQueue<string>;
   };
+  return {
+    queue: provider.t({
+      channelId: "heptalogos-qq",
+      accountId: "3644596926",
+      stateDir,
+    }),
+    close: await nativeStateCloser(stateDir),
+  };
+}
+export async function nativeStateCloser(stateDir: string): Promise<() => boolean> {
   const state = (await import(
     pathToFileURL(join(dist, "openclaw-state-db-cache-AunrvrzG.js")).href
   )) as {
@@ -32,15 +42,8 @@ export async function nativeQueue(
   const databasePath = state._({
     env: { ...process.env, OPENCLAW_STATE_DIR: stateDir },
   });
-  return {
-    queue: provider.t({
-      channelId: "heptalogos-qq",
-      accountId: "3644596926",
-      stateDir,
-    }),
-    // The pinned native owner caches SQLite beyond monitor.stop(); release only this fixture's handle.
-    close: () => state.r(databasePath),
-  };
+  // The pinned native owner caches SQLite beyond monitor.stop(); release only this fixture's handle.
+  return () => state.r(databasePath);
 }
 export async function nativeRegistry(plugin: ChannelPlugin) {
   const provider = (await import(
