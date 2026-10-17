@@ -13,6 +13,8 @@ import {
   deliberationDecisionSchema,
   worldPlannerProposalSchema,
   narrativeReviewProposalSchema,
+  type NarrativeReviewProposal,
+  type ExpressionBrief,
   situationFrameSchema,
   type LifeActivity,
   type SituationFrame,
@@ -32,7 +34,12 @@ import type {
   NativeActivityParams,
 } from "./activity-dispatch-contracts.js";
 import { compileSchema } from "@heptalogos/schema-runtime";
-import { currentSituationDecisionInput } from "./subject-target.js";
+import {
+  currentSituationDecisionInput,
+  allowedReferencesSchema,
+} from "./subject-target.js";
+import { Type } from "@heptalogos/schema-runtime/typebox";
+import type { currentSubjectContext } from "./subject-context.js";
 import { ROLE_PROMPTS } from "./role-prompts.js";
 /** Internal trusted producer context; this is never a model tool or caller-granted role. */
 export interface RoleInvocation {
@@ -47,7 +54,10 @@ export interface RoleInvocation {
   readonly adoptedDecisionRef?: string;
   readonly foreground?: ForegroundQualification;
   readonly role: SubjectRoleBinding["role"];
-  readonly context: Readonly<Record<string, unknown>>;
+  readonly context: Readonly<Record<string, unknown>> &
+    Partial<Awaited<ReturnType<typeof currentSubjectContext>>> & {
+      readonly brief?: ExpressionBrief;
+    };
   readonly contacts: HostPrepareResponse["contacts"];
   readonly sourceRefs: readonly string[];
   readonly usage: HostPrepareResponse["usage"];
@@ -98,6 +108,51 @@ const SCOPE: Readonly<Record<SubjectRoleBinding["role"], HostRoleScope>> = {
 /** Trusted role binding maps product duty to its exact native identity and knowledge view. */
 function roleScope(role: SubjectRoleBinding["role"]): HostRoleScope {
   return { ...SCOPE[role] };
+}
+/** Review classifies the current candidate using only the adopted brief's reference sets. */
+export function narrativeReviewOutputContract(brief: ExpressionBrief) {
+  const base = narrativeReviewProposalSchema.properties.claims.items;
+  const properties = {
+    ...base.properties,
+    sourceRefs: allowedReferencesSchema(brief.sourceRefs),
+    cognitionRefs: allowedReferencesSchema(brief.cognitionRefs),
+    priorClaimRefs: allowedReferencesSchema(brief.priorClaimRefs),
+  };
+  const bases: NarrativeReviewProposal["claims"][number]["basis"][] = [
+    "report",
+    "uncertain",
+    "commitment",
+  ];
+  if (brief.eventRefs.length) bases.push("world");
+  if (brief.cognitionRefs.length) bases.push("cognition");
+  if (brief.deception !== "none") bases.push("deliberate");
+  const ordinary = Type.Object(
+    {
+      ...properties,
+      basis: Type.Union(bases.map((value) => Type.Literal(value))),
+      eventRefs: allowedReferencesSchema(brief.eventRefs),
+    },
+    { additionalProperties: false },
+  );
+  const claim = brief.worldDetailScope
+    ? Type.Union([
+        ordinary,
+        Type.Object(
+          { ...properties, basis: Type.Literal("new_virtual_detail") },
+          { additionalProperties: false },
+        ),
+      ])
+    : ordinary;
+  return Type.Object(
+    {
+      ...narrativeReviewProposalSchema.properties,
+      claims: Type.Array(claim, { maxItems: 128 }),
+      worldPatch: brief.worldDetailScope
+        ? narrativeReviewProposalSchema.properties.worldPatch
+        : Type.Null(),
+    },
+    { additionalProperties: false },
+  );
 }
 function denied(code: string, detail: string): never {
   throw managementProblem(
@@ -346,8 +401,20 @@ export function createSubjectRoles(options: {
         "role.situation_invalid",
         "Use the current typed SituationFrame for this choice",
       );
+    if (input.role === "narrative.review" && !input.context.brief)
+      denied("role.review_brief_missing", "Use the current adopted expression brief");
     const choiceInput = situation?.ok
-      ? currentSituationDecisionInput(situation.value)
+      ? currentSituationDecisionInput(situation.value, {
+          eventRefs: (input.context.knownWorldViews ?? []).flatMap((view) =>
+            view.events.map(
+              (event) =>
+                `world-event:${view.worldId}:${event.eventId}:${"eventRevision" in event ? event.eventRevision : "revision" in event ? event.revision : 0}`,
+            ),
+          ),
+          priorClaimRefs: (input.context.currentClaims?.claims ?? []).map(
+            (claim) => claim.claimId,
+          ),
+        })
       : undefined;
 
     const context = {
@@ -358,7 +425,7 @@ export function createSubjectRoles(options: {
           : input.role === "world.planner"
             ? worldPlannerProposalSchema
             : input.role === "narrative.review"
-              ? narrativeReviewProposalSchema
+              ? narrativeReviewOutputContract(input.context.brief!)
               : binding.outputContract,
       ...(choiceInput
         ? {
@@ -405,6 +472,9 @@ export function createSubjectRoles(options: {
       });
     const historyScope = digestCanonicalJson("host.role-history.v1", {
       templateId: template.id,
+      ...(["subject.render", "narrative.review"].includes(input.role)
+        ? { expressionRunId: input.requestId }
+        : {}),
       audience: input.usage.audience ?? null,
       sourceRead: input.usage.sourceRead ?? null,
       worldId: input.usage.worldId ?? null,
