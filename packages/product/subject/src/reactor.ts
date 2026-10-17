@@ -182,9 +182,7 @@ export function createSubjectReactorService(options: SubjectReactorOptions) {
           checked<SubjectReaction>(subjectReactionSchema, row.document),
         ),
         more: rows.length > input.limit,
-        ...(rows.length > input.limit
-          ? { nextReactionId: selected.at(-1)!.reaction_id }
-          : {}),
+        nextReactionId: rows.length > input.limit ? selected.at(-1)!.reaction_id : null,
       };
     },
     /** Exact reserved role identity, including a never-prepared read, stays attached to its retired Reaction. */

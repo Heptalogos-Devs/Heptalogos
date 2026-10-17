@@ -11,6 +11,7 @@ const source = (group: string, packageName: string, file = "index.js") =>
 
 const aliases = {
   "@heptalogos/subject": source("product", "subject"),
+  "@heptalogos/management": source("system", "management"),
   "@heptalogos/messaging": source("product", "messaging"),
   "@heptalogos/identity": source("product", "identity"),
   "@heptalogos/foundation-contracts": source("foundation", "foundation-contracts"),
