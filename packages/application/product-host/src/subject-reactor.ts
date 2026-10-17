@@ -3,9 +3,8 @@
 /** One bounded foreground across notifications, virtual actions and professional result viewing.
  * @module subject-reactor
  */
-import { v5 as uuidv5 } from "uuid";
 import { resolveSituationTarget } from "./subject-target.js";
-import { digestCanonicalJson } from "@heptalogos/foundation-contracts";
+import { digestCanonicalJson, createUuidV7Id } from "@heptalogos/foundation-contracts";
 import { Type } from "@heptalogos/schema-runtime/typebox";
 import { compileSchema } from "@heptalogos/schema-runtime";
 import { managementProblem } from "@heptalogos/management";
@@ -55,7 +54,6 @@ export const reactorOpportunityResultSchema = Type.Object(
   },
   { additionalProperties: false },
 );
-const namespace = "f13fa115-f6bf-4c2c-82c4-40ef4d83eaa0";
 /** The source owner supplies actual contacts only after an explicit read action. */
 export interface ReactorPreparedView {
   readonly frame: SituationFrame;
@@ -148,11 +146,17 @@ export function createSubjectReactor(options: {
   };
   return {
     /** Every trusted opportunity uses this entry; no channel/world caller invokes a second subjective loop. */
-    async wake(input: { subjectId: string; naturalOpportunity?: boolean }): Promise<{
+    async wake(input: {
+      subjectId: string;
+      naturalOpportunity?: boolean;
+      requestId?: string;
+    }): Promise<{
       status: "disabled" | "idle" | "busy" | "yielded" | "processed";
       reactionId?: string;
       runId?: string;
     }> {
+      const claimRequestId =
+        input.requestId ?? createUuidV7Id("SubjectReactionRequestId");
       let reaction = await options.foreground.current(input.subjectId);
       const enabled = await options.enabled();
       if (!enabled) {
@@ -250,10 +254,7 @@ export function createSubjectReactor(options: {
           ...(opportunity ? { opportunity } : {}),
           subjectId: input.subjectId,
           activityId: nextActivity.activityId,
-          reactionId: uuidv5(
-            `${selection.switchRequested.candidateRef}:${selection.switchRequested.sourceRevision}:${nextActivity.activityId}`,
-            namespace,
-          ),
+          requestId: claimRequestId,
           candidateRef: selection.switchRequested.candidateRef,
           explanationRef: selection.explanationRef,
           replace: {
@@ -278,10 +279,7 @@ export function createSubjectReactor(options: {
           ...(opportunity ? { opportunity } : {}),
           subjectId: input.subjectId,
           activityId: activity.activityId,
-          reactionId: uuidv5(
-            `${selection.selected.candidateRef}:${selection.selected.sourceRevision}:${activity.activityId}`,
-            namespace,
-          ),
+          requestId: claimRequestId,
           candidateRef: selection.selected.candidateRef,
           explanationRef: selection.explanationRef,
         });

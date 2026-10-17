@@ -316,28 +316,43 @@ export function createSubjectDecisionHandler(options: {
           };
           await options.narrative.saveBrief(brief, rendererRunId);
         }
-        const render = await options.roles.invoke({
-          requestId: rendererRunId,
-          requestDigest: digestCanonicalJson("subject.role-phase.v1", {
-            decisionRef: adopted.decisionRef,
-            phase: "render",
-          }).hex,
-          subjectId: input.subjectId,
-          activityId: input.activityId,
-          parentRunId: input.run.runId,
-          role: "subject.render",
-          foreground: run.registration.foreground,
-          deadlineAt: input.run.deadlineAt,
-          context: { adoptedDecisionRef: adopted.decisionRef, brief },
-          contacts: [],
-          sourceRefs: run.registration.sourceRefs,
-          usage: applied.usage,
-          delivery: {
-            channel: "heptalogos-qq",
-            accountId: audience.accountId,
-            to: audience.to,
-          },
-        });
+        let render: Awaited<ReturnType<typeof options.roles.invoke>>;
+        try {
+          render = await options.roles.invoke({
+            requestId: rendererRunId,
+            requestDigest: digestCanonicalJson("subject.role-phase.v1", {
+              decisionRef: adopted.decisionRef,
+              phase: "render",
+            }).hex,
+            subjectId: input.subjectId,
+            activityId: input.activityId,
+            parentRunId: input.run.runId,
+            role: "subject.render",
+            foreground: run.registration.foreground,
+            deadlineAt: input.run.deadlineAt,
+            context: { adoptedDecisionRef: adopted.decisionRef, brief },
+            contacts: [],
+            sourceRefs: run.registration.sourceRefs,
+            usage: applied.usage,
+            delivery: {
+              channel: "heptalogos-qq",
+              accountId: audience.accountId,
+              to: audience.to,
+            },
+          });
+        } catch (error) {
+          const rejection = await options.narrative.rejectionForRun(
+            input.subjectId,
+            rendererRunId,
+          );
+          if (rejection && rejection.activityId === input.activityId)
+            return {
+              decisionRef: adopted.decisionRef,
+              expression: { state: "rejected" as const, problem: rejection.problem },
+            };
+          throw error;
+        }
+
         return {
           decisionRef: adopted.decisionRef,
           expression: { state: "rendered" as const, runId: render.runId },

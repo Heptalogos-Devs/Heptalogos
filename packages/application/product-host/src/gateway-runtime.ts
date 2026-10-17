@@ -1190,6 +1190,7 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
       }
       const result = await reactor.wake({
         subjectId: input.subjectId,
+        requestId: input.requestId,
         naturalOpportunity: true,
       });
       await reprojectSubject(input.subjectId);

@@ -77,3 +77,5 @@ Reactor 的目标解析只接受当前 SituationFrame 列出的精确对象 hand
 Feedback 重放按首次 canonical Observation envelope 核对原 Contact/native 身份与实际事件事实，并返回原 envelope；后来的 Contact scope 或 SDK 诊断字段不改写历史用途、接触时间或事实摘要。未知 context 与原有 audit 矛盾仍拒绝，新的 provider/tool 输入及结果显式释放继续经过当前权限 owner。
 
 Custody promotion 可保留同一事件的既有 committed receipt 行；只有完整原身份/envelope 一致且 receipt 已提交时，它才是合法历史副本。重放保留原 receipt、返回 retained-only envelope，不再次提交 Nous；未提交或内容矛盾的双表记录仍拒绝。
+
+同一已采纳 Task/WorkContext 跨 Reaction 承接实际已见材料时，Host 只读取同 Contact 的正式 admission 与实际 provider 完成反馈。每次按当前来源集合、听众和 observe grant 重查，恢复 exact occurrence roots；不把 Activity 继续文字、旧投影摘要或聚合 epistemic entry 作为权限。既有派生材料由官方 Material 元数据核对原 artifact/source-region lineage 后作为 currentSources 选择，不能凭历史 derived ID 授权，也不重新观察或解码。

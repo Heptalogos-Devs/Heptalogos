@@ -4,6 +4,7 @@
  * Adopted expression, claim history and local narrative transaction contracts.
  * @module narrative-contracts
  */
+import { reactorActionProblemSchema } from "./reactor-contracts.js";
 import { Type, type Static } from "@heptalogos/schema-runtime/typebox";
 import { worldIntervalSchema, realizeWorldSchema } from "./world-contracts.js";
 import { preparedDeliverySchema } from "./agency-contracts.js";
@@ -173,3 +174,19 @@ export interface AdoptedClaim extends Static<typeof narrativeClaimSchema> {
   readonly status: "adopted" | "expressed" | "uncertain" | "not_sent";
   readonly platformMessageIds: readonly string[];
 }
+
+/** Exact owner rejection is a result of one rendered candidate, not a rewritten brief. */
+export const narrativeRejectionSchema = Type.Object(
+  {
+    subjectId: id,
+    activityId: id,
+    rendererRunId: ref,
+    reviewerRunId: ref,
+    preparedDigest: ref,
+    recordedAt: activitySchema.properties.createdAt,
+    problem: reactorActionProblemSchema,
+  },
+  object,
+);
+/** Durable evidence that this candidate did not reach Narrative/Agency commit. */
+export type NarrativeRejection = Static<typeof narrativeRejectionSchema>;

@@ -284,7 +284,14 @@ describe("one current Situation target resolver", () => {
       },
       resolveActivity,
       foreground: { current: async () => reaction },
-      native: { readyResults: async () => ({ runs: [] }) },
+      native: {
+        readyResults: async () => ({ runs: [] }),
+        readTaskPerceptions: async () => ({
+          sourceRefs: [],
+          accepted: [],
+          cognitionRefs: [],
+        }),
+      },
       activities: { prepare: prepareRead },
       now: () => initial.world.at,
       nous: async () => ({
@@ -513,6 +520,13 @@ describe("one current Situation target resolver", () => {
       },
     };
     const runtime = createSubjectSituationRuntime({
+      native: {
+        readTaskPerceptions: async () => ({
+          sourceRefs: [],
+          accepted: [],
+          cognitionRefs: [],
+        }),
+      },
       life: { get: async () => activity, worldNow: async () => view.world },
       settings: async () => ({ subject: {} }),
       nous: async () => ({
