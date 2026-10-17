@@ -97,6 +97,7 @@ export interface Registration {
   readonly roleScope: HostRoleScope;
   readonly tokenBudget: HostTokenBudget;
   readonly allowedToolNames: readonly string[];
+  readonly responseFormat?: HostPrepareResponse["responseFormat"];
   readonly providerPolicyState?: "configured" | "unconfigured";
   readonly actorEntityRef: string;
   readonly workContextId: string;
@@ -324,7 +325,10 @@ function providerPolicy(registration: Registration) {
       registration.allowedToolNames,
     ),
   );
-  return { tokenBudget, allowedToolNames };
+  const responseFormat = validated(() =>
+    hostPrepareResponseSchema.shape.responseFormat.parse(registration.responseFormat),
+  );
+  return { tokenBudget, allowedToolNames, responseFormat };
 }
 function current(activity: LifeActivity, registration: Registration) {
   if (
@@ -830,6 +834,9 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         invalid();
       validated(() => hostRoleScopeSchema.parse(input.roleScope));
       validated(() => hostTokenBudgetSchema.parse(input.tokenBudget));
+      validated(() =>
+        hostPrepareResponseSchema.shape.responseFormat.parse(input.responseFormat),
+      );
       validated(() =>
         hostPrepareResponseSchema.shape.allowedToolNames.parse(input.allowedToolNames),
       );
@@ -1338,6 +1345,9 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           workContextId: activity.workContextId,
           roleScope: roleScope(registration),
           tokenBudget: providerPolicy(registration).tokenBudget,
+          ...(providerPolicy(registration).responseFormat
+            ? { responseFormat: providerPolicy(registration).responseFormat }
+            : {}),
           allowedToolNames: ["subject.render", "narrative.review"].includes(
             roleScope(registration).role,
           )

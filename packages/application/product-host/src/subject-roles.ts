@@ -447,6 +447,16 @@ export function createSubjectRoles(options: {
           outputTokens: binding.outputTokens,
         },
         allowedToolNames: allowedTools,
+        responseFormat: structured
+          ? {
+              type: "json_schema",
+              json_schema: {
+                name: input.role.replaceAll(".", "_"),
+                strict: true,
+                schema: JSON.parse(JSON.stringify(context.outputContract)),
+              },
+            }
+          : { type: "text" },
         ...(input.parentRunId ? { parentRunId: input.parentRunId } : {}),
         ...(input.adoptedDecisionRef
           ? { adoptedDecisionRef: input.adoptedDecisionRef }

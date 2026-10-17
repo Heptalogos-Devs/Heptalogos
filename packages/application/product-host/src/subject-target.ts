@@ -88,7 +88,19 @@ export function currentSituationDecisionInput(frame: SituationFrame) {
     const target = choice.targets.length
       ? Type.Union(choice.targets.map((value) => Type.Literal(value)))
       : Type.Never();
+    const requiredField =
+      choice.action === "communicate"
+        ? "expressionIntent"
+        : choice.action === "search"
+          ? "delegation"
+          : choice.action === "adjust_plan"
+            ? "calendarChange"
+            : undefined;
     return Type.Object({
+      ...(requiredField
+        ? Type.Required(Type.Pick(deliberationDecisionSchema, [requiredField]))
+            .properties
+        : {}),
       action: Type.Literal(choice.action),
       target: choice.targetRequired ? target : Type.Optional(target),
     });
