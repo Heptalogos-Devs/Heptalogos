@@ -13,7 +13,9 @@ import {
   deliberationDecisionSchema,
   realizeWorldSchema,
   narrativeReviewSchema,
+  situationFrameSchema,
   type LifeActivity,
+  type SituationFrame,
   type ForegroundQualification,
   type createLifeService,
 } from "@heptalogos/subject";
@@ -29,6 +31,8 @@ import type {
   NativeActivityDispatch,
   NativeActivityParams,
 } from "./activity-dispatch-contracts.js";
+import { compileSchema } from "@heptalogos/schema-runtime";
+import { currentSituationDecisionInput } from "./subject-target.js";
 import { ROLE_PROMPTS } from "./role-prompts.js";
 /** Internal trusted producer context; this is never a model tool or caller-granted role. */
 export interface RoleInvocation {
@@ -102,6 +106,35 @@ function denied(code: string, detail: string): never {
     detail,
     "unavailable",
     "after-change",
+  );
+}
+/** Only an exact terminal agent response is a known failed role; wait/transport timeouts stay uncertain. */
+function failedNativeRoleResult(raw: unknown, runId: string): boolean {
+  return (
+    !!raw &&
+    typeof raw === "object" &&
+    !Array.isArray(raw) &&
+    "runId" in raw &&
+    raw.runId === runId &&
+    "status" in raw &&
+    raw.status === "error"
+  );
+}
+/** Includes historical RPC-completed records whose retained native result was an actual failure. */
+export function isFailedRoleDispatch(
+  dispatch: { state: string; result?: unknown } | undefined,
+  runId: string,
+): boolean {
+  if (dispatch?.state === "failed") return true;
+  const saved = dispatch?.result;
+  return (
+    dispatch?.state === "completed" &&
+    !!saved &&
+    typeof saved === "object" &&
+    "kind" in saved &&
+    saved.kind === "subject_role_result" &&
+    "nativeResult" in saved &&
+    failedNativeRoleResult(saved.nativeResult, runId)
   );
 }
 /** Reads only the pinned native public agent response shape, keeping raw data in protected persistence. */
@@ -182,6 +215,11 @@ export function createSubjectRoles(options: {
           admitted: !!run?.consumerId,
         };
       }
+      if (isFailedRoleDispatch(prior, input.requestId))
+        denied(
+          "role.native_run_failed",
+          "The saved exact native role ended in failure",
+        );
       if (prior.state !== "completed")
         denied(
           "role.result_pending",
@@ -297,16 +335,39 @@ export function createSubjectRoles(options: {
         "Configure this duty with its actual role output contract",
       );
     const template = ROLE_PROMPTS[input.role];
+    const situation =
+      input.role === "subject.deliberation" && input.context.situation
+        ? compileSchema<SituationFrame>(situationFrameSchema).validate(
+            input.context.situation,
+          )
+        : undefined;
+    if (situation && !situation.ok)
+      denied(
+        "role.situation_invalid",
+        "Use the current typed SituationFrame for this choice",
+      );
+    const choiceInput = situation?.ok
+      ? currentSituationDecisionInput(situation.value)
+      : undefined;
+
     const context = {
       templateId: template.id,
       outputContract:
         input.role === "subject.deliberation"
-          ? deliberationDecisionSchema
+          ? (choiceInput?.outputContract ?? deliberationDecisionSchema)
           : input.role === "world.planner"
             ? realizeWorldSchema
             : input.role === "narrative.review"
               ? narrativeReviewSchema
               : binding.outputContract,
+      ...(choiceInput
+        ? {
+            currentSituationChoices: {
+              frameRef: choiceInput.frameRef,
+              actionTargets: choiceInput.actionTargets,
+            },
+          }
+        : {}),
       activity: {
         activityId: activity.activityId,
         purpose: activity.purpose,
@@ -437,8 +498,10 @@ export function createSubjectRoles(options: {
       );
     }
     const result = outcome.result;
+    const failed = failedNativeRoleResult(result, input.requestId);
     await options.native.finishDispatch(input.subjectId, input.requestId, {
-      state: "completed",
+      state: failed ? "failed" : "completed",
+      ...(failed ? { code: "native_role_failed" } : {}),
       result: {
         kind: "subject_role_result",
         subjectId: input.subjectId,
@@ -450,6 +513,8 @@ export function createSubjectRoles(options: {
         nativeResult: result,
       },
     });
+    if (failed)
+      denied("role.native_run_failed", "The exact native role ended in failure");
     const text = nativeRoleText(result);
     const run = await options.native.readRun(input.requestId);
     if (

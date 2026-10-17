@@ -66,7 +66,11 @@ import { createBoundLifeReader } from "./native-life-read.js";
 import { createWorldHostRuntime } from "./world-host-runtime.js";
 import { createWorldRuntime } from "./world-runtime.js";
 import { currentSubjectContext, readActualSubjectStamp } from "./subject-context.js";
-import type { NativeWorldSchedule, NativeAgentSelect } from "./native-dispatch.js";
+import {
+  selectNativeOpportunity,
+  type NativeWorldSchedule,
+  type NativeAgentSelect,
+} from "./native-dispatch.js";
 import { timestampFromDate } from "@nous-wave/client/host-bridge";
 import { createActivityDispatcher } from "./activity-dispatch.js";
 import type { NativeActivityDispatch } from "./activity-dispatch-contracts.js";
@@ -994,16 +998,7 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
     enabled: async () => !!(await currentSettings()).subject.enabled,
     bindingFor,
     authorize: authorizeActivity,
-    schedule:
-      options.scheduleWorld ??
-      (async () => {
-        throw managementProblem(
-          "gateway.native_unavailable",
-          "Native scheduler is not configured",
-          "Use the installed Subject Gateway cron adapter",
-          "unavailable",
-        );
-      }),
+    reproject: async () => reprojectSubject(await currentSubject()),
     now: options.now,
   });
   const routes = createChannelRouteStore({
@@ -1128,7 +1123,8 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
     });
   };
   const reprojectSubject = async (subjectId: string) => {
-    let next = await worldRuntime.reproject();
+    const worldOpportunity = await worldRuntime.nextOpportunity();
+    let next = worldOpportunity?.realAt ?? null;
     const selection = await attention.select({ subjectId });
     const actualNow = Date.parse(options.now());
     const metadataAt = selection.selected
@@ -1164,11 +1160,13 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
           }
         afterId = page.nextId ?? undefined;
       } while (afterId);
-    await scheduleNative({
-      subjectId,
-      realAt: next,
-      requestId: decisionPhaseId(subjectId, "reactor-next:" + (next ?? "none")),
-    });
+    await scheduleNative(
+      selectNativeOpportunity(worldOpportunity, {
+        subjectId,
+        realAt: next,
+        requestId: decisionPhaseId(subjectId, "reactor-next:" + (next ?? "none")),
+      }),
+    );
   };
   const opportunity = createActivityOpportunity({
     scope,

@@ -28,7 +28,7 @@ import type { createSubjectRoles } from "./subject-roles.js";
 import { decisionPhaseId } from "./subject-decisions.js";
 import type { createNativeCognitionBridge } from "./native-cognition.js";
 import type { NativeWorldSchedule } from "./native-dispatch.js";
-import { createWorldOpportunity } from "./world-opportunity.js";
+import { createWorldOpportunity, hasCurrentWorldScene } from "./world-opportunity.js";
 const ns = "b6cb3efa-3bd9-4cc1-bfa4-4a72742b1d13";
 function plannerRevision(context: Record<string, unknown>): number | null {
   const frame = context.frame;
@@ -61,14 +61,15 @@ export function createWorldRuntime(options: {
   enabled: () => Promise<boolean>;
   bindingFor: (role: SubjectRoleBinding["role"]) => Promise<SubjectRoleBinding>;
   authorize: (activity: LifeActivity) => Promise<void>;
-  schedule: NativeWorldSchedule;
+  reproject: () => Promise<void>;
   now: () => string;
 }) {
-  const scheduleNext = async (input: {
+  const projectNext = async (input: {
     subjectId: string;
     worldId: string;
     activityId: string;
     next: { timeDomainRef: string; at: string } | null;
+    requestId?: string;
   }) => {
     let realAt: string | null = null;
     if (input.next) {
@@ -99,17 +100,22 @@ export function createWorldRuntime(options: {
           Math.max(deadline.at.getTime(), Date.parse(options.now()) + 1000),
         ).toISOString();
     }
-    await options.schedule({
-      ...input,
+    return {
+      subjectId: input.subjectId,
+      worldId: input.worldId,
+      activityId: input.activityId,
       realAt,
-      requestId: uuidv5(
-        `${input.subjectId}:${input.worldId}:${input.activityId}:${input.next?.timeDomainRef ?? "paused"}:${input.next?.at ?? "none"}`,
-        ns,
-      ),
-    });
-    return realAt;
+      requestId:
+        input.requestId ??
+        uuidv5(
+          `${input.subjectId}:${input.worldId}:${input.activityId}:${input.next?.timeDomainRef ?? "paused"}:${input.next?.at ?? "none"}`,
+          ns,
+        ),
+    };
   };
-  const reproject = async () => {
+  const nextOpportunity = async (): Promise<
+    Parameters<NativeWorldSchedule>[0] | null
+  > => {
     const subjectId = await options.currentSubject();
     const enabled = await options.enabled();
     let afterId: string | undefined;
@@ -118,6 +124,7 @@ export function createWorldRuntime(options: {
       worldId: string;
       activityId: string;
       next: { timeDomainRef: string; at: string };
+      requestId?: string;
     }[] = [];
     let fallback:
       { subjectId: string; worldId: string; activityId: string } | undefined;
@@ -132,6 +139,22 @@ export function createWorldRuntime(options: {
           const frame = await options.worlds.prepareAdvance(subjectId, worldId);
           const context = { subjectId, worldId, activityId: activity.activityId };
           fallback ??= context;
+          // Bootstrap one unset scene through the same declaration. Its durable patch
+          // suppresses repeats; subsequent work follows actual calendar/action nodes.
+          const initialRequestId = uuidv5("initial-world-opportunity", worldId);
+          if (
+            enabled &&
+            !hasCurrentWorldScene(frame.schedule, frame.world.at) &&
+            !(await options.worlds.readRealization(
+              subjectId,
+              uuidv5("world.patch", initialRequestId),
+            ))
+          )
+            candidates.push({
+              ...context,
+              next: frame.world,
+              requestId: initialRequestId,
+            });
           const pendingActions = await options.worlds.readPendingActions(
             subjectId,
             worldId,
@@ -149,13 +172,12 @@ export function createWorldRuntime(options: {
       afterId = page.nextId ?? undefined;
     } while (afterId);
     candidates.sort((a, b) => Date.parse(a.next.at) - Date.parse(b.next.at));
-    if (candidates[0]) return scheduleNext(candidates[0]);
-    if (fallback) return scheduleNext({ ...fallback, next: null });
+    if (candidates[0]) return projectNext(candidates[0]);
+    if (fallback) return projectNext({ ...fallback, next: null });
     return null;
   };
   return {
-    scheduleNext,
-    reproject,
+    nextOpportunity,
     async advance(input: {
       subjectId: string;
       worldId: string;
@@ -272,9 +294,7 @@ export function createWorldRuntime(options: {
           };
         },
         wakeSubject: options.wakeSubject,
-        scheduleNext: async () => {
-          await reproject();
-        },
+        scheduleNext: options.reproject,
       });
       return op.advance(input);
     },

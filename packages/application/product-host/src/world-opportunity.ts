@@ -13,6 +13,17 @@ import { v5 as uuidv5 } from "uuid";
 type Worlds = ReturnType<typeof createWorldLifeService>;
 type Point = { timeDomainRef: string; at: string };
 type Role = "world.planner";
+/** A distant calendar entry does not establish the Subject's present scene. */
+export function hasCurrentWorldScene(
+  schedule: readonly { interval: { start: string; end: string } }[],
+  at: string,
+): boolean {
+  return schedule.some(
+    (item) =>
+      Date.parse(item.interval.start) <= Date.parse(at) &&
+      Date.parse(item.interval.end) > Date.parse(at),
+  );
+}
 /** Native identities and official usage/contact construction remain in their existing owner. */
 export interface WorldOpportunityOptions<TContact, TUsage> {
   readonly worlds: Worlds;
@@ -118,9 +129,7 @@ export function createWorldOpportunity<TContact, TUsage>(
       frame = await options.worlds.prepareAdvance(input.subjectId, input.worldId);
       // A choice or an unset scene needs the world author; ordinary fixed routines do not.
       const needsPlanner =
-        !frame.schedule.some(
-          (item) => Date.parse(item.interval.start) > Date.parse(end),
-        ) ||
+        !hasCurrentWorldScene(frame.schedule, end) ||
         frame.schedule.some(
           (item) =>
             Date.parse(item.interval.end) <= Date.parse(end) &&
