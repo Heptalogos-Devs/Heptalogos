@@ -130,7 +130,11 @@ export function registerGatewayHttp(
       authenticate: async (request) => owners().authenticate(tokenFromRequest(request)),
       operation: async (input, _request, reply) => {
         // Native model/tool calls retain their existing Activity deadline.
-        if (name === "dispatchActivity" || name === "takeActivityOpportunity")
+        if (
+          name === "dispatchActivity" ||
+          name === "takeActivityOpportunity" ||
+          name === "subjectReactorOpportunity"
+        )
           reply.raw.setTimeout(0);
         return mutation
           ? owners().runMutation("gateway." + name, () => operation(input))
