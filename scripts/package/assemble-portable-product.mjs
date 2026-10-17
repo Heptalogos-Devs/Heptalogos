@@ -274,10 +274,11 @@ export async function ensureArtifactDependencies(artifactRoot, label) {
   const inputDigest = await digestArtifactInputs(artifactRoot);
   const previous = await readJsonIfPresent(statePath);
   if (
-    previous?.schemaVersion === 3 &&
+    previous?.schemaVersion === 4 &&
     previous?.inputDigest === inputDigest &&
     previous?.nodeLinker === artifactNodeLinker &&
-    (await pathExists(join(artifactRoot, "node_modules/.modules.yaml")))
+    (await pathExists(join(artifactRoot, "node_modules/.modules.yaml"))) &&
+    previous.outputDigest === (await digestTree(join(artifactRoot, "node_modules")))
   ) {
     return inputDigest;
   }
@@ -286,7 +287,8 @@ export async function ensureArtifactDependencies(artifactRoot, label) {
   // lockfile reconciliation and dependency materialization inside that artifact.
   // File-directory dependencies may change without a new package version or
   // lockfile identity. Force-install alone can retain an existing hoisted
-  // payload; rebuild only the generated dependency tree on changed inputs.
+  // payload. Cached/Nx-restored dependency bytes can also drift independently
+  // from unchanged inputs; rebuild that generated tree when either digest changes.
   await rm(join(artifactRoot, "node_modules"), { recursive: true, force: true });
   run(pnpmCommand, ["install", "--lockfile-only"], artifactRoot);
   run(
@@ -301,12 +303,14 @@ export async function ensureArtifactDependencies(artifactRoot, label) {
     artifactRoot,
   );
   const finalInputDigest = await digestArtifactInputs(artifactRoot);
+  const outputDigest = await digestTree(join(artifactRoot, "node_modules"));
   await mkdir(stateDirectory, { recursive: true });
   await writeFile(
     statePath,
     JSON.stringify({
-      schemaVersion: 3,
+      schemaVersion: 4,
       inputDigest: finalInputDigest,
+      outputDigest,
       nodeLinker: artifactNodeLinker,
     }),
     { encoding: "utf8", mode: 0o600 },
