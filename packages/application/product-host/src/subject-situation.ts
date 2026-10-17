@@ -74,6 +74,7 @@ export interface SubjectSituationOptions {
     | "readAppliedContext"
     | "readResultRelease"
     | "readRoleResults"
+    | "readResultParent"
     | "releaseResult"
   >;
   roles: Pick<ReturnType<typeof createSubjectRoles>, "startExecution">;
@@ -832,10 +833,13 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
           if (
             !child ||
             child.registration.subjectId !== reaction.subjectId ||
-            child.registration.activityId !== reaction.activityId ||
-            !child.registration.parentRunId
+            child.registration.activityId !== reaction.activityId
           )
             denied("Use the exact adopted professional task within this Activity");
+          const parentRunId = await options.native.readResultParent(
+            reaction.subjectId,
+            childRunId,
+          );
           const releaseId = decisionPhaseId(childRunId, "explicit-view");
           const previous = await options.native.readResultRelease(
             reaction.subjectId,
@@ -854,7 +858,7 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
               version: 1,
               requestId: releaseId,
               subjectId: reaction.subjectId,
-              parentRunId: child.registration.parentRunId,
+              parentRunId,
               childRunId,
               resultIds: (generated?.length ? generated : retained!.results).map(
                 (value) => value.resultId,

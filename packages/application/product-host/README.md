@@ -42,7 +42,7 @@ node scripts/package/update-linux-product.mjs --target /absolute/path/heptalogos
 
 QQ 插件使用独立的 `SECRET/channel-service-token` 访问同一 Host 的服务接口；管理员会话继续使用管理入口。服务接口消费语义 owner 的 schema 并生成 Client。原始协议 JSON 保存在受保护 archive，媒体完整流式上传到 CAS；普通消息读取只提供授权材料和已保存的媒体状态。具体 QQ 运行入口见 [原生渠道包](../openclaw-host/README.md)。
 
-启动时仅恢复本地 Activity 与发送不确定状态，随后开放管理。实际原生模型输入由 Host 预登记的运行 ID、提示摘要、当前活动和 scope 绑定；相同提示可在 RESET 后的新运行重新登记，旧运行不能改绑。子 Agent 交接使用真实父运行 ID；实际结果先保全，再沿原 scope 提交 Nous。
+启动时仅恢复本地 Activity 与发送不确定状态，随后开放管理。实际原生模型输入由 Host 预登记的运行 ID、提示摘要、当前活动和 scope 绑定；相同提示可在 RESET 后的新运行重新登记，旧运行不能改绑。子 Agent 交接使用真实父运行 ID；实际结果先保全，再沿原 scope 提交 Nous。 原生持久终态可用精确 completion recovery 将 uncertain custody 收敛为原终态，不重新执行 worker；旧 handoff 与直接 RoleRun 的父关系均由 Native owner 核验，查看结果不改写原注册。
 
 ## 已采纳 Activity 的单次派发
 
