@@ -39,3 +39,5 @@ Profile 的课表保存原采用输入来源；当前可写课表只有 WorldDef
 世界接触先由 `selectContact` 为一个稳定 native run 独占；selected 不是已感知。实际 admitted projection 与 exact official occurrence 回执成立后，原 run 才能 `acknowledgeContact` 置 released。未知发布状态不换随机 observation ID；只有可信 Reactor 已证明原 run 从未 prepare/publish 且已撤销时，才可同事务 CAS 转移 selection，并保留依据。`pendingContact` 精确读一个事件，分页按实际 recordedAt/eventId，而不是 UUID 大小或故事发生时间推进。
 
 以上是当前 owner 操作与本地 PostgreSQL 证据，正式安装、真实角色/QQ、跨日运行仍由整体活动计划完成；不能将本包测试当作已上线。
+
+Reactor 的 action 收据可保存有界 `problem`。表达 owner 在 brief/render/effect 前明确拒绝的引用或听众问题以 rejected 完成，下一主观步骤读取实际问题和可用引用；未知或已可能产生效果的异常不因此改判，实际收据仍不可重写。

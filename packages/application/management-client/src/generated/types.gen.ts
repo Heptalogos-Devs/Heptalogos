@@ -12583,6 +12583,11 @@ export type ReactorStatusResponses = {
             state: 'started' | 'completed' | 'pending' | 'rejected' | 'unavailable';
             resultRefs: Array<string>;
             recordedAt: string;
+            problem?: {
+                code: string;
+                detail: string;
+                availableCognitionRefs?: Array<string>;
+            };
         } | null;
         policy: {
             /**

@@ -44,6 +44,10 @@ parallel schema authorities.
 Run `pnpm nx run canonical-schema:test`, lint, typecheck, and the relevant real
 PostgreSQL initialization/integration scenarios. The incremental `0004_messaging_identity` migration preserves existing message
 records while extending their canonical material and identity ownership.
+`0018_retained_result_domain_time` repairs old RoleRun time envelopes on installations
+that had already recorded the original 0011. It changes only the implicit real-domain
+wire wrapper and its dependent facts digest; original material, purpose, timestamps
+and committed feedback receipts remain intact.
 
 Any baseline rewrite also
 requires the PRE_PRODUCTION reset/recreate procedure and full repository gates.

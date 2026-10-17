@@ -317,7 +317,8 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
           availableAt: options.now(),
           related: true,
           metadata: {
-            label: "Task 已明确采用的消息材料",
+            label:
+              "已采纳消息：read 取得该消息及已就绪的授权附件，附件可用性以实际读取结果为准",
             conversationRef: "conversation:heptalogos:" + source.conversationId,
             messageRefs: [source.messageRef],
           },
@@ -1035,7 +1036,11 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
           ? result("completed", ["role-run:" + expression.expression.runId], {
               yield: true,
             })
-          : result("rejected", [adopted.decisionRef], { yield: true });
+          : expression.expression.state === "rejected"
+            ? result("rejected", [adopted.decisionRef], {
+                problem: expression.expression.problem,
+              })
+            : result("rejected", [adopted.decisionRef], { yield: true });
       }
       if (action === "continue") {
         if (adopted.decision.newActivity) {

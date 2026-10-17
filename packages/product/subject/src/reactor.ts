@@ -476,6 +476,7 @@ export function createSubjectReactorService(options: SubjectReactorOptions) {
       actionId: string;
       state: Exclude<ReactorActionReceipt["state"], "started">;
       resultRefs: readonly string[];
+      problem?: ReactorActionReceipt["problem"];
     }) {
       return mutate(async (tx) => {
         await lockSubjectNarrative(tx, input.subjectId);
@@ -485,7 +486,10 @@ export function createSubjectReactorService(options: SubjectReactorOptions) {
           ...prior,
           state: input.state,
           resultRefs: [...new Set(input.resultRefs)],
+          ...(input.problem ? { problem: input.problem } : {}),
         });
+        if (input.problem && !["rejected", "unavailable"].includes(input.state))
+          denied("Only a known rejected or unavailable action may carry a problem");
         if (prior.state !== "started") {
           if (JSON.stringify(prior) !== JSON.stringify(receipt))
             denied("An actual action receipt cannot be rewritten");

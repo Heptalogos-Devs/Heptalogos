@@ -96,6 +96,7 @@ describe("canonical schema adapter", () => {
       "0015_subject_reactor",
       "0016_world_profile_living",
       "0017_subject_attention",
+      "0018_retained_result_domain_time",
     ]);
     await expect(canonicalMigrationProvider.getMigrations()).resolves.toEqual(
       expect.objectContaining({

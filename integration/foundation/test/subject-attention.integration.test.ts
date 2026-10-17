@@ -409,6 +409,7 @@ real("Metadata-only global Attention on real PostgreSQL", () => {
         nous: async () => ({
           runtime: {
             createWorkContext: async (input) => {
+              expect(input.entityAnchors).toEqual([]);
               constraints.set(input.operationId!, input.constraints);
               return {
                 $typeName: "nous.wave.v1alpha1.WorkContextResponse",

@@ -32,6 +32,8 @@ message/world_event/schedule/activity_result/cognition_change/explicit_subject_i
 
 search采用真实信息目标和范围，由原生worker搜索/浏览并保留原页/时间/范围；ready只提示，实际查看才release。虚拟浏览页不伪称物理鼠标点击。move/participate先由WorldLife检查地点/区间/因果再实现；非瞬时动作有正式结束点，不让模型改钟。交流只产生意图，交独立自然文本renderer。
 
+表达 owner 在创建 brief、调用 renderer 或产生效果前确认引用不在实际已接纳投影、或听众不获准时，返回正式 rejected 与有界 problem（实际码、可行动作说明及至多 16 条实际 cognition 引用）。前台保存完整 action 收据后，同一 Reaction 的下一步可看到 previousAction.problem 并重新选择；不把无效提案卡成 started。未读对象声明 read 表示材料可通过正式读取取得，元信息不等于读取失败；模型不得虚构引用，没有适用引用时使用空数组。未知存储/原生异常或已越过效果点的异常保持原不确定性所有权，不自动重发。
+
 结果沿owner的completed/pending/unavailable/rejected/cancelled/uncertain等现有状态，保留世界变化、实际材料、可见省略及可继续对象，不为统一拼写加shim。动作operation绑定源Reaction/目标版本，补交结果不重做副作用。
 
 ## 交接与连续性

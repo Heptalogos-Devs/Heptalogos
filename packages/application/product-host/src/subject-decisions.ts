@@ -215,6 +215,21 @@ export function createSubjectDecisionHandler(options: {
           "subject.cognition_not_admitted",
           "The actual subjective projection is unavailable",
         );
+      const reject = (
+        code: string,
+        detail: string,
+        availableCognitionRefs?: string[],
+      ) => ({
+        decisionRef: adopted.decisionRef,
+        expression: {
+          state: "rejected" as const,
+          problem: {
+            code,
+            detail,
+            ...(availableCognitionRefs ? { availableCognitionRefs } : {}),
+          },
+        },
+      });
       const express = async () => {
         if (!decision.expressionIntent)
           return {
@@ -227,21 +242,18 @@ export function createSubjectDecisionHandler(options: {
           applied.usage,
         );
         if (!audience)
-          return {
-            decisionRef: adopted.decisionRef,
-            expression: {
-              state: "blocked" as const,
-              code: "agency.recipient_not_permitted",
-            },
-          };
+          return reject(
+            "agency.recipient_not_permitted",
+            "The current Activity has no permitted external audience; choose another current action.",
+          );
         const actualAudience = decodeCognitionUsage(applied.usage).audience;
         if (
           actualAudience?.conversationRef !== audience.conversationRef ||
           !["direct", "group"].includes(actualAudience.visibility)
         )
-          denied(
+          return reject(
             "subject.expression_audience_changed",
-            "Use a fresh actual projection admitted for this exact external audience before rendering",
+            "Read or open the permitted audience to obtain its actual projection before communicating.",
           );
         const rendererRunId = decisionPhaseId(input.run.runId, "render");
         let brief = await options.narrative.briefForRun(rendererRunId);
@@ -264,9 +276,10 @@ export function createSubjectDecisionHandler(options: {
             ),
           );
           if (decision.expressionIntent.cognitionRefs.some((ref) => !visible.has(ref)))
-            denied(
+            return reject(
               "subject.expression_source_denied",
-              "The expression cites cognition outside its actual applied projection",
+              "Use only exact cognition references from the admitted projection, or an empty cognitionRefs array. A listed read action obtains actual material; metadata is not a failed read.",
+              [...visible].filter((ref) => ref.length <= 2048).slice(0, 16),
             );
           const at = options.now();
           brief = {

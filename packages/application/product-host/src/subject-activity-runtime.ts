@@ -71,7 +71,8 @@ export function createSubjectActivityStarter(options: {
         budgetSummary: {},
         cognitionAnchors: usage.sourceRead?.sourceRefs ?? [],
         contextText: saved.decision.reason,
-        entityAnchors: [parent.adoptedBy],
+        // H Activity actors are not Nous-owned cognitive EntityRefs.
+        entityAnchors: [],
         tagAnchors: [],
       },
       { timeoutMs: 5000 },
