@@ -131,6 +131,18 @@ export const narrativeReviewSchema = Type.Object(
 );
 /** A review can reject a candidate; it never publishes or silently rewrites text. */
 export type NarrativeReview = Static<typeof narrativeReviewSchema>;
+/** Review quotes actual text; the owner derives canonical UTF-16 positions. */
+export const narrativeReviewProposalSchema = Type.Object(
+  {
+    ...narrativeReviewSchema.properties,
+    claims: Type.Array(Type.Omit(narrativeClaimSchema, ["start", "end"]), {
+      maxItems: 128,
+    }),
+  },
+  object,
+);
+/** Model review before the owner binds exact final text positions. */
+export type NarrativeReviewProposal = Static<typeof narrativeReviewProposalSchema>;
 /** Final payload, brief and the actual role that read back the text. */
 export const narrativeCommitSchema = Type.Object(
   {

@@ -241,6 +241,31 @@ export const realizeWorldSchema = Type.Object(
   },
   object,
 );
+/** Planner proposals omit the identity, elapsed range and producer fields bound by the Host. */
+export const worldPlannerProposalSchema = Type.Object(
+  {
+    ...Type.Omit(realizeWorldSchema, [
+      "operationId",
+      "subjectId",
+      "worldId",
+      "expectedRevision",
+      "interval",
+    ]).properties,
+    events: Type.Array(
+      Type.Object(
+        {
+          ...Type.Omit(worldEventInputSchema, ["source"]).properties,
+          source: Type.Pick(worldEventInputSchema.properties.source, ["sourceRefs"]),
+        },
+        object,
+      ),
+      { maxItems: 128 },
+    ),
+  },
+  object,
+);
+/** World-author proposal before the Host binds identity, time and producer provenance. */
+export type WorldPlannerProposal = Static<typeof worldPlannerProposalSchema>;
 /** Bounded world/subject reads distinguish story knowledge from database history. */
 export const queryWorldSchema = Type.Object(
   {

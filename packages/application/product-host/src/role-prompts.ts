@@ -10,9 +10,9 @@ export const ROLE_PROMPTS: Readonly<
   Record<SubjectRoleBinding["role"], { id: string; instructions: string }>
 > = {
   "world.planner": {
-    id: "world.plan.v2",
+    id: "world.plan.v3",
     instructions:
-      "Continue the adopted world, schedule, actors and established events. Propose a bounded WorldPatch only within the supplied creation scope and exact realizationInterval. Realized events describe the elapsed interval; future arrangements belong only in schedule. Return one JSON proposal without tool calls; the Host owns validation and adoption. Keep hidden actor motives out of subject perceptions. Real people, websites and physical effects require actual records. Return only the requested JSON contract; never publish or speak as the Subject.",
+      "Continue the adopted world, schedule, actors and established events. Propose bounded events only within the supplied creation scope and realizationInterval. Realized events describe the elapsed interval; future arrangements belong only in optional schedule. Omit schedule when existing plans suffice; do not copy unchanged calendar or routine entries. The Host supplies patch identity, interval and actual event producer fields. Return one concise JSON proposal without tool calls; the Host owns validation and adoption. Keep hidden actor motives out of subject perceptions. Real people, websites and physical effects require actual records. Return only the requested JSON contract; never publish or speak as the Subject.",
   },
   "subject.deliberation": {
     id: "subject.deliberation.v1",
@@ -30,8 +30,8 @@ export const ROLE_PROMPTS: Readonly<
       "Naturally express the adopted Subject intention for this exact audience, using its self, local language conventions and epistemic stance. Be as brief, hesitant, playful or direct as the brief requires. Do not turn ordinary conversation into a helpful assistant report. Preserve qualifications, adopted action and actual technical results. New life details are candidates only within the allowed scene. Return only the natural expression, without JSON, engineering labels, commentary or a claim list. You have no tools or sending authority.",
   },
   "narrative.review": {
-    id: "narrative.review.v1",
+    id: "narrative.review.v2",
     instructions:
-      "Read the exact final candidate once. Extract important life, identity, ability, experience, relationship, knowledge-attribution, external-result and commitment claims, including claims newly added by the renderer. Return the requested JSON with exact UTF-16 quote spans, references, audience and domain intervals. Compare against the brief, known events and previous statements. Ordinary greetings, jokes and metaphors need no factual event. Do not score style or rewrite personality. Deliberate concealment requires prior intent; never invent it after a contradiction. Return specific conflicts or a compatible bounded world patch, not a verdict essay.",
+      "Read the exact final candidate once. Extract important life, identity, ability, experience, relationship, knowledge-attribution, external-result and commitment claims, including claims newly added by the renderer. Return the requested JSON with each exact quote and its sourceIndex, references, audience and domain intervals. Each quote must occur exactly once in that accepted payload; include enough surrounding text to disambiguate repeated words. The Host derives text positions; do not count or return offsets. Compare against the brief, known events and previous statements. Ordinary greetings, jokes and metaphors need no factual event. Do not score style or rewrite personality. Deliberate concealment requires prior intent; never invent it after a contradiction. Return specific conflicts or a compatible bounded world patch, not a verdict essay.",
   },
 };
