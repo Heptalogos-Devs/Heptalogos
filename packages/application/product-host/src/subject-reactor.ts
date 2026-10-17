@@ -22,7 +22,11 @@ import {
   type createSubjectReactorService,
   type createSubjectAttentionService,
 } from "@heptalogos/subject";
-import type { RoleInvocation, createSubjectRoles } from "./subject-roles.js";
+import {
+  isFailedRoleDispatch,
+  type RoleInvocation,
+  type createSubjectRoles,
+} from "./subject-roles.js";
 import {
   decisionPhaseId,
   parseDeliberation,
@@ -220,6 +224,26 @@ export function createSubjectReactor(options: {
           ? await options.native.readDispatch(input.subjectId, reaction.currentRunId)
           : undefined;
         if (
+          reaction?.currentRunId &&
+          isFailedRoleDispatch(saved, reaction.currentRunId)
+        ) {
+          const failedRunId = reaction.currentRunId;
+          reaction = await options.foreground.settleRun({
+            subjectId: reaction.subjectId,
+            activityId: reaction.activityId,
+            focus: reaction,
+            runId: failedRunId,
+          });
+          return {
+            ...(await yieldReaction(
+              reaction,
+              "native_role_failed:" + failedRunId,
+              lastAction,
+            )),
+            runId: failedRunId,
+          };
+        }
+        if (
           (!saved && lastAction?.state !== "completed") ||
           (saved && saved.state !== "completed") ||
           lastAction?.state === "started"
@@ -323,32 +347,48 @@ export function createSubjectReactor(options: {
           focus: reaction,
           runId,
         });
-        const result = await options.roles.invoke({
-          requestId: runId,
-          requestDigest: digestCanonicalJson("reactor.subject-phase.v1", {
-            reactionId: reaction.reactionId,
-            focusRevision: reaction.focusRevision,
-            step: reaction.stepCount,
-          }).hex,
-          subjectId: reaction.subjectId,
-          activityId: reaction.activityId,
-          role: "subject.deliberation",
-          foreground: {
-            reactionId: reaction.reactionId,
-            focusRevision: reaction.focusRevision,
-          },
-          deadlineAt: reaction.deadlineAt,
-          contacts: view.contacts,
-          sourceRefs: view.sourceRefs,
-          messageRefs: view.messageRefs,
-          usage: view.usage,
-          context: {
-            ...view.context,
-            situation: frame.value,
-            previousAction: previous ?? null,
-            outputContract: deliberationDecisionSchema,
-          },
-        });
+        let result: Awaited<ReturnType<typeof options.roles.invoke>>;
+        try {
+          result = await options.roles.invoke({
+            requestId: runId,
+            requestDigest: digestCanonicalJson("reactor.subject-phase.v1", {
+              reactionId: reaction.reactionId,
+              focusRevision: reaction.focusRevision,
+              step: reaction.stepCount,
+            }).hex,
+            subjectId: reaction.subjectId,
+            activityId: reaction.activityId,
+            role: "subject.deliberation",
+            foreground: {
+              reactionId: reaction.reactionId,
+              focusRevision: reaction.focusRevision,
+            },
+            deadlineAt: reaction.deadlineAt,
+            contacts: view.contacts,
+            sourceRefs: view.sourceRefs,
+            messageRefs: view.messageRefs,
+            usage: view.usage,
+            context: {
+              ...view.context,
+              situation: frame.value,
+              previousAction: previous ?? null,
+              outputContract: deliberationDecisionSchema,
+            },
+          });
+        } catch (error) {
+          const saved = await options.native.readDispatch(reaction.subjectId, runId);
+          if (!isFailedRoleDispatch(saved, runId)) throw error;
+          reaction = await options.foreground.settleRun({
+            subjectId: reaction.subjectId,
+            activityId: reaction.activityId,
+            focus: reaction,
+            runId,
+          });
+          return {
+            ...(await yieldReaction(reaction, "native_role_failed:" + runId, previous)),
+            runId,
+          };
+        }
         await options.foreground.settleRun({
           subjectId: reaction.subjectId,
           activityId: reaction.activityId,
