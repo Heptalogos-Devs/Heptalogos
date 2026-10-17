@@ -88,6 +88,8 @@ export interface GatewayHttpOptions {
   ) => Promise<Static<typeof reactorOpportunityResultSchema>>;
   readonly authenticate: (token: string | undefined) => Promise<void>;
   readonly runMutation: <T>(kind: string, operation: () => Promise<T>) => Promise<T>;
+  /** Current Subject binding is independent of optional QQ channel authority. */
+  readonly currentSubject: () => Promise<string>;
   readonly scope: () => Promise<contracts.GatewayScope>;
   readonly messaging: messaging.MessagingService;
   readonly identity: identity.IdentityService;

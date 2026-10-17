@@ -5,7 +5,11 @@ import { mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { ProductManagement } from "@heptalogos/management";
+import type {
+  ProductManagement,
+  ManagementAuthentication,
+} from "@heptalogos/management";
+import { createProductHttpApp } from "../../../packages/application/product-host/src/product-http.js";
 import { createGatewayRuntime } from "../../../packages/application/product-host/src/gateway-runtime.js";
 import {
   qualifiedPgBin,
@@ -42,11 +46,12 @@ real("Host-only native role admission", () => {
     try {
       const subjectId = randomUUID(),
         workContextId = randomUUID();
+      let subjectEnabled = true;
       const product = {
         configuration: async () => ({
           revision: randomUUID(),
           settings: {
-            subject: { id: subjectId, enabled: true },
+            subject: { id: subjectId, enabled: subjectEnabled },
             nous: { runRoot: join(root, "unused"), expectedInstanceId: null },
             roles: [
               {
@@ -167,6 +172,33 @@ real("Host-only native role admission", () => {
       expect(response.contacts).toEqual([]);
       expect(response.allowedToolNames).toEqual(["heptalogos_life"]);
       expect(sdk.decodeCognitionUsage(response.usage).view).toBe("world_author");
+      subjectEnabled = false;
+      const app = await createProductHttpApp({
+        product,
+        authentication: {} as ManagementAuthentication,
+        identity: { installationId: "fixture", bootId: "fixture" },
+        onAdministratorClaimed: async () => {},
+        gateway: gateway.http,
+      });
+      try {
+        const token = (
+          await readFile(join(root, "secret/channel-service-token"), "utf8")
+        ).trim();
+        const read = (id: string) =>
+          app.inject({
+            method: "POST",
+            url: "/gateway/v1/life/read",
+            headers: { authorization: "Bearer " + token },
+            payload: { subjectId: id, activityId: activity.activityId },
+          });
+        const actual = await read(subjectId);
+        expect(actual.statusCode).toBe(200);
+        expect(actual.json().activity).toEqual(activity);
+        expect(actual.json().activity.scope.conversations).toEqual([]);
+        expect((await read(randomUUID())).statusCode).toBe(403);
+      } finally {
+        await app.close();
+      }
       await expect(gateway.http.scope()).rejects.toThrow();
     } finally {
       await c.close();

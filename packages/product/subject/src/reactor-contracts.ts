@@ -87,6 +87,9 @@ export const reactorActionProblemSchema = Type.Object(
   {
     code: Type.String({ minLength: 1, maxLength: 128 }),
     detail: Type.String({ minLength: 1, maxLength: 512 }),
+    availableSourceRefs: Type.Optional(
+      Type.Array(ref, { maxItems: 16, uniqueItems: true }),
+    ),
     availableCognitionRefs: Type.Optional(
       Type.Array(ref, { maxItems: 16, uniqueItems: true }),
     ),

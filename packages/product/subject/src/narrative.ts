@@ -6,6 +6,7 @@
  */
 import {
   createUuidV7Id,
+  ProblemError,
   digestCanonicalJson,
   type CanonicalJsonValue,
 } from "@heptalogos/foundation-contracts";
@@ -30,6 +31,8 @@ import type { createAgencyService } from "./agency.js";
 import { createWorldLifeService, lockSubjectNarrative } from "./world-life.js";
 import {
   expressionBriefSchema,
+  narrativeRejectionSchema,
+  type NarrativeRejection,
   narrativeCommitSchema,
   claimsToSchema,
   narrativeCommitmentSchema,
@@ -93,7 +96,11 @@ export function validateNarrativeCandidate(
       [claim.priorClaimRefs, brief.priorClaimRefs],
     ] as const) {
       if (actual.some((ref) => !allowed.includes(ref)))
-        denied("The review introduced an unadopted source or cognition reference");
+        throw subjectProblem(
+          "narrative.review_source_denied",
+          "Review source is outside the adopted brief",
+          "The review introduced an unadopted source or cognition reference",
+        );
     }
     if (
       (claim.basis === "deliberate" || claim.stance === "deliberate") &&
@@ -218,8 +225,77 @@ export function createNarrativeService(options: NarrativeOptions) {
     ELSE 'adopted' END AS status,
     COALESCE((SELECT jsonb_agg(p.document#>>'{outcome,platformMessageId}') FROM heptalogos.agency_delivery_part p WHERE p.behavior_id=c.behavior_id AND p.source_index=c.source_index AND p.state='accepted'),'[]'::jsonb) AS message_ids
     FROM heptalogos.narrative_claim c`;
+  const rejectionForRun = async (
+    subjectId: string,
+    rendererRunId: string,
+  ): Promise<NarrativeRejection | undefined> => {
+    const rows = await readRepositorySql<{ rejection: unknown }>(
+      options.persistence,
+      `SELECT b.rejection FROM heptalogos.expression_brief b WHERE b.subject_id=$1 AND b.renderer_run_id=$2 AND b.rejection IS NOT NULL
+       AND NOT EXISTS(SELECT 1 FROM heptalogos.narrative_commit n WHERE n.brief_id=b.brief_id)
+       AND NOT EXISTS(SELECT 1 FROM heptalogos.agency_behavior a WHERE a.subject_id=b.subject_id AND a.run_id=b.renderer_run_id)`,
+      [subjectId, rendererRunId],
+    );
+    return rows[0]
+      ? checked<NarrativeRejection>(narrativeRejectionSchema, rows[0].rejection)
+      : undefined;
+  };
+  const retainSourceRejection = async (
+    brief: ExpressionBrief,
+    prepared: PreparedDelivery,
+    reviewerRunId: string,
+  ) =>
+    options.persistence.mutate((context) =>
+      useRepositoryMutationTransaction(context, async (tx) => {
+        await lockSubjectNarrative(tx, brief.subjectId);
+        const rows = await sql<{ rejection: unknown; committed: boolean }>(
+          tx,
+          `SELECT b.rejection, (EXISTS(SELECT 1 FROM heptalogos.narrative_commit n WHERE n.brief_id=b.brief_id) OR EXISTS(SELECT 1 FROM heptalogos.agency_behavior a WHERE a.subject_id=b.subject_id AND a.run_id=b.renderer_run_id)) AS committed
+       FROM heptalogos.expression_brief b WHERE b.brief_id=$1 FOR UPDATE`,
+          [brief.briefId],
+        );
+        if (!rows[0] || rows[0].committed)
+          denied(
+            "A candidate with a Narrative/Agency commit cannot become a pre-commit rejection",
+          );
+        const value = checked<NarrativeRejection>(narrativeRejectionSchema, {
+          subjectId: brief.subjectId,
+          activityId: brief.activityId,
+          rendererRunId: prepared.runId,
+          reviewerRunId,
+          preparedDigest: digest(prepared),
+          recordedAt: options.now(),
+          problem: {
+            code: "narrative.review_source_denied",
+            detail:
+              "The review must use only the adopted brief's exact source and cognition references; no delivery was committed.",
+            availableSourceRefs: brief.sourceRefs.slice(0, 16),
+            availableCognitionRefs: brief.cognitionRefs.slice(0, 16),
+          },
+        });
+        if (rows[0].rejection) {
+          const old = checked<NarrativeRejection>(
+            narrativeRejectionSchema,
+            rows[0].rejection,
+          );
+          if (
+            old.preparedDigest !== value.preparedDigest ||
+            old.reviewerRunId !== reviewerRunId
+          )
+            denied("A rejected candidate cannot change its actual review or payload");
+          return old;
+        }
+        await sql(
+          tx,
+          "UPDATE heptalogos.expression_brief SET rejection=$2::jsonb WHERE brief_id=$1",
+          [brief.briefId, JSON.stringify(value)],
+        );
+        return value;
+      }),
+    );
   return {
     briefForRun,
+    rejectionForRun,
     async saveBrief(value: ExpressionBrief, rendererRunId: string) {
       const brief = checked<ExpressionBrief>(expressionBriefSchema, value);
       if (!rendererRunId || Date.parse(brief.validUntil) <= Date.parse(brief.createdAt))
@@ -279,6 +355,16 @@ export function createNarrativeService(options: NarrativeOptions) {
       if (old) return old;
       const brief = await briefForRun(prepared.runId);
       if (!brief) denied("This native result has no adopted expression brief");
+      const rejection = await rejectionForRun(brief.subjectId, prepared.runId);
+      if (rejection) {
+        if (rejection.preparedDigest !== digest(prepared))
+          denied("A rejected renderer identity cannot change its payload");
+        throw subjectProblem(
+          rejection.problem.code,
+          "Candidate was rejected before commit",
+          rejection.problem.detail,
+        );
+      }
       const reviewed = await options.review(brief, prepared);
       if (reviewed.reviewerRunId === prepared.runId)
         denied("Narrative readback must be an independent actual purpose invocation");
@@ -310,7 +396,16 @@ export function createNarrativeService(options: NarrativeOptions) {
             : null,
         },
       });
-      validateNarrativeCandidate(brief, prepared, input.review);
+      try {
+        validateNarrativeCandidate(brief, prepared, input.review);
+      } catch (error) {
+        if (
+          error instanceof ProblemError &&
+          error.problem.problemCode === "narrative.review_source_denied"
+        )
+          await retainSourceRejection(brief, prepared, reviewed.reviewerRunId);
+        throw error;
+      }
       const authority = await options.agency.prepareAdoption(prepared);
       if (
         authority.current.activity.subjectId !== brief.subjectId ||
@@ -340,6 +435,13 @@ export function createNarrativeService(options: NarrativeOptions) {
               );
             return { reference: previous[0].document.reference };
           }
+          const rejected = await sql<{ rejection: unknown }>(
+            tx,
+            "SELECT rejection FROM heptalogos.expression_brief WHERE brief_id=$1 FOR UPDATE",
+            [brief.briefId],
+          );
+          if (rejected[0]?.rejection)
+            denied("The actual candidate already has a terminal pre-commit rejection");
           await options.assertCandidateCurrentIn?.(tx, prepared.runId);
           if (Date.parse(options.now()) > Date.parse(brief.validUntil))
             denied(

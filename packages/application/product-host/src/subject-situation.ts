@@ -29,6 +29,9 @@ import {
 } from "@heptalogos/subject";
 import {
   encodeCognitionUsage,
+  decodeCognitionUsage,
+  decodeAcceptedObservation,
+  withAcceptedContactRoots,
   decodeObservationInput,
   encodeObservationInput,
 } from "@nous-wave/client/host-bridge";
@@ -80,6 +83,7 @@ export interface SubjectSituationOptions {
     ReturnType<typeof createNativeCognitionBridge>,
     | "readyResults"
     | "hasAcceptedSource"
+    | "readTaskPerceptions"
     | "readRun"
     | "readInputState"
     | "readAppliedContext"
@@ -488,7 +492,7 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
       ? await audienceFor(selectedConversation)
       : undefined;
     const conversation = audience?.conversationRef;
-    const view: ReactorPreparedView = {
+    let view: ReactorPreparedView = {
       frame,
       candidates: bindings,
       contacts: [],
@@ -521,6 +525,24 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
           : {}),
       },
     };
+    const perceptions = await options.native.readTaskPerceptions({
+      subjectId: reaction.subjectId,
+      activityId: activity.activityId,
+      workContextId: activity.workContextId,
+      conversationRef: conversation,
+    });
+    if (perceptions.accepted.length) {
+      const usage = withAcceptedContactRoots(
+        decodeCognitionUsage(view.usage),
+        reaction.subjectId,
+        perceptions.accepted.map((entry) => decodeAcceptedObservation(entry.receipt)),
+      );
+      view = {
+        ...view,
+        usage: encodeCognitionUsage(usage),
+        sourceRefs: [...new Set([...view.sourceRefs, ...perceptions.sourceRefs])],
+      };
+    }
     if (
       input.lastAction?.action.action === "read" &&
       input.lastAction.state === "completed"

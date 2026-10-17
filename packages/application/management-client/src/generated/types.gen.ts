@@ -12586,6 +12586,7 @@ export type ReactorStatusResponses = {
             problem?: {
                 code: string;
                 detail: string;
+                availableSourceRefs?: Array<string>;
                 availableCognitionRefs?: Array<string>;
             };
         } | null;

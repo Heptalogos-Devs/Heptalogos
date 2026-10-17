@@ -49,6 +49,10 @@ that had already recorded the original 0011. It changes only the implicit real-d
 wire wrapper and its dependent facts digest; original material, purpose, timestamps
 and committed feedback receipts remain intact.
 
+`0019_subject_continuation` preserves the request-to-Reaction claim result and a nullable
+pre-commit Narrative rejection receipt. Existing Reaction history and immutable brief facts
+are retained; no historical request identities are invented.
+
 Any baseline rewrite also
 requires the PRE_PRODUCTION reset/recreate procedure and full repository gates.
 

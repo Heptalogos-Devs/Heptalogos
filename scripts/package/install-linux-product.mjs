@@ -14,6 +14,7 @@ import { dirname, join, resolve, sep, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
   ensureArtifactDependencies,
+  digestTree,
   normalizeCliArtifactManifest,
   verifyPortableLinks,
 } from "./assemble-portable-product.mjs";
@@ -109,8 +110,8 @@ async function install(options) {
   if (!/\b18\.6\b/u.test(run(originalPostgres, ["--version"])))
     throw new Error("Linux installation requires PostgreSQL 18.6");
   run("systemctl", ["--user", "show-environment"], 10_000);
-  const hostDigest = await ensureArtifactDependencies(options.host, "product-host");
-  const cliDigest = await ensureArtifactDependencies(options.cli, "cli");
+  await ensureArtifactDependencies(options.host, "product-host");
+  await ensureArtifactDependencies(options.cli, "cli");
   const identityText = await readFile(
     join(options.host, "generated/build-identities.js"),
     "utf8",
@@ -126,6 +127,8 @@ async function install(options) {
   await cp(options.host, product, { recursive: true, verbatimSymlinks: true });
   await cp(options.cli, cli, { recursive: true, verbatimSymlinks: true });
   await normalizeCliArtifactManifest(cli);
+  const hostDigest = await digestTree(product);
+  const cliDigest = await digestTree(cli);
   const nodeRoot = join(options.target, "runtime/node");
   const postgresRoot = join(options.target, "runtime/postgresql");
   await mkdir(join(nodeRoot, "bin"), { recursive: true });
@@ -190,7 +193,7 @@ async function install(options) {
     join(options.target, "manifest.json"),
     JSON.stringify(
       {
-        schemaVersion: 1,
+        schemaVersion: 2,
         platform: process.platform,
         arch: process.arch,
         productGeneration: generation,
@@ -200,7 +203,7 @@ async function install(options) {
           hostDigest,
           cliDigest,
           dependencyClosure:
-            "Nx prune-lockfile/copy-workspace-modules and frozen pnpm production installation",
+            "Manifest v2 binds the copied Host and CLI payloads including materialized production dependencies",
         },
         installationId,
         managementUnit: services.host.unit,

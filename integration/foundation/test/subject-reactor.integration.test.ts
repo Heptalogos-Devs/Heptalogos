@@ -223,7 +223,7 @@ real("One Subject foreground on real PostgreSQL", () => {
       const input = {
         subjectId,
         activityId: activity.activityId,
-        reactionId: randomUUID(),
+        requestId: randomUUID(),
         candidateRef: selected.selected!.candidateRef,
         explanationRef: selected.explanationRef,
         opportunity: due,
@@ -358,7 +358,7 @@ real("One Subject foreground on real PostgreSQL", () => {
       const nextInput = {
         subjectId,
         activityId: activity.activityId,
-        reactionId: randomUUID(),
+        requestId: randomUUID(),
         candidateRef: next.selected!.candidateRef,
         explanationRef: next.explanationRef,
         replace: { ...focus, continuationRef: "work-context:actual" },
@@ -427,7 +427,7 @@ real("One Subject foreground on real PostgreSQL", () => {
         reactor.claim({
           subjectId,
           activityId: activity.activityId,
-          reactionId: randomUUID(),
+          requestId: randomUUID(),
           candidateRef: lastSelection.selected!.candidateRef,
           explanationRef: lastSelection.explanationRef,
         }),
@@ -614,7 +614,7 @@ real("One Subject foreground on real PostgreSQL", () => {
         reactor.claim({
           subjectId,
           activityId: activity.activityId,
-          reactionId: randomUUID(),
+          requestId: randomUUID(),
           candidateRef: recoveryChoice.selected!.candidateRef,
           explanationRef: recoveryChoice.explanationRef,
         }),
@@ -656,7 +656,7 @@ real("One Subject foreground on real PostgreSQL", () => {
         reactor.claim({
           subjectId,
           activityId: activity.activityId,
-          reactionId: randomUUID(),
+          requestId: randomUUID(),
           candidateRef: unknownChoice.selected!.candidateRef,
           explanationRef: unknownChoice.explanationRef,
         }),
@@ -667,6 +667,64 @@ real("One Subject foreground on real PostgreSQL", () => {
       expect(
         (await worlds.pendingContact({ subjectId, worldId, eventId }))!.selectedRunId,
       ).toBe(replacementRun);
+      // The same unread candidate is not the permanent identity of all future attempts.
+      await c.run(() =>
+        reactor.yield({
+          subjectId,
+          activityId: activity.activityId,
+          focus: unknown.reaction,
+          continuationRef: "activity:retained",
+          reason: "reaction_deadline",
+          revoke: true,
+        }),
+      );
+      clock += 180001;
+      const renewedRequest = {
+        subjectId,
+        activityId: activity.activityId,
+        requestId: randomUUID(),
+        candidateRef: unknown.reaction.candidate.candidateRef,
+        explanationRef: unknownChoice.explanationRef,
+      };
+      const renewedClaims = await Promise.all([
+        c.run(() => reactor.claim(renewedRequest)),
+        c.run(() => reactor.claim(renewedRequest)),
+      ]);
+      expect(renewedClaims.filter((claim) => claim.claimed)).toHaveLength(1);
+      const renewed = renewedClaims[0]!.reaction;
+      const coalescedRequest = { ...renewedRequest, requestId: randomUUID() };
+      expect(
+        (await c.run(() => reactor.claim(coalescedRequest))).reaction.reactionId,
+      ).toBe(renewed.reactionId);
+      expect(renewed.reactionId).not.toBe(unknown.reaction.reactionId);
+      expect(renewed.focusRevision).toBeGreaterThan(unknown.reaction.focusRevision);
+      expect(renewed.candidate.sourceRevision).toBe(
+        unknown.reaction.candidate.sourceRevision,
+      );
+      await c.run(() =>
+        reactor.yield({
+          subjectId,
+          activityId: activity.activityId,
+          focus: renewed,
+          continuationRef: "activity:retained",
+          reason: "completed",
+          completed: true,
+        }),
+      );
+      expect(
+        (await c.run(() => reactor.claim(renewedRequest))).reaction.reactionId,
+      ).toBe(renewed.reactionId);
+      expect(await reactor.current(subjectId)).toBeUndefined();
+      expect(await c.run(() => reactor.claim(coalescedRequest))).toMatchObject({
+        claimed: false,
+        reaction: { reactionId: renewed.reactionId },
+      });
+      expect(await reactor.current(subjectId)).toBeUndefined();
+      const nextAttempt = await c.run(() =>
+        reactor.claim({ ...renewedRequest, requestId: randomUUID() }),
+      );
+      expect(nextAttempt.claimed).toBe(true);
+      expect(nextAttempt.reaction.reactionId).not.toBe(renewed.reactionId);
     } finally {
       await c.close();
     }

@@ -46,12 +46,17 @@ real("Bounded Reactor application under real PostgreSQL", () => {
         actor = "entity:subject:" + randomUUID();
       const messageId = randomUUID(),
         conversationRef = "conversation:heptalogos:" + randomUUID();
+      const messageB = randomUUID();
+      const attachmentId = randomUUID(),
+        derivedA = randomUUID(),
+        derivedB = randomUUID(),
+        foreignOccurrence = randomUUID();
       const now = () => new Date().toISOString();
       const worldNow = async () => ({ timeDomainRef: "time:real", at: now() });
       const scope = {
         conversations: [{ conversationRef, operations: ["observe" as const] }],
         tools: [],
-        sourceRefs: [],
+        sourceRefs: ["message:" + messageId, "message:" + messageB],
         maxRunMs: 180000,
       };
       const life = createLifeService({
@@ -68,7 +73,7 @@ real("Bounded Reactor application under real PostgreSQL", () => {
           mode: "work",
           window: { notBefore: null, notAfter: null },
           proposedBy: actor,
-          sourceRefs: [],
+          sourceRefs: scope.sourceRefs,
           workContextId: randomUUID(),
           world: await worldNow(),
           nextOpportunity: null,
@@ -158,9 +163,17 @@ real("Bounded Reactor application under real PostgreSQL", () => {
             );
         },
         recordContact: async () => {},
-        nous: async () => {
-          throw Error("No remote model/Core in this owner proof");
-        },
+        nous: async () =>
+          ({
+            runtime: {
+              recordObservation: async () =>
+                sdk.decodeAcceptedObservation(
+                  sdk.encodeAcceptedObservation({ occurrenceId: randomUUID() }),
+                ),
+            },
+          }) as unknown as Awaited<
+            ReturnType<Parameters<typeof createNativeCognitionBridge>[0]["nous"]>
+          >,
       });
       let providerCalls = 0,
         actualAdmittedContacts = 0;
@@ -212,14 +225,45 @@ real("Bounded Reactor application under real PostgreSQL", () => {
             contactRef: value.contactRef,
             receipt: sdk.encodeAcceptedObservation({ occurrenceId: randomUUID() }),
           }));
+          const projectionId = randomUUID();
           await native.admitted({
             ...sdk.hostContactIdentitySchema.strip().parse(identity),
             occurrences,
             projection: sdk.encodeProjection({
-              projectionId: randomUUID(),
+              projectionId,
               consumerId: "consumer:budget-fixture",
               subjectId,
               sessionId: identity.nousSessionId,
+              epistemicView: {
+                experiences: [
+                  {
+                    text: "Aggregate historical content must not be copied by Host",
+                    sourceRefs: [
+                      { kind: "derived_representation", value: derivedA },
+                      { kind: "derived_representation", value: derivedB },
+                    ],
+                    evidence: [
+                      {
+                        basisRole: "actual_occurrence",
+                        reference: {
+                          kind: "occurrence",
+                          value:
+                            occurrences.at(-1)?.receipt.occurrenceId ??
+                            foreignOccurrence,
+                        },
+                      },
+                      {
+                        basisRole: "actual_occurrence",
+                        reference: {
+                          kind: "occurrence",
+                          value:
+                            occurrences[2]?.receipt.occurrenceId ?? foreignOccurrence,
+                        },
+                      },
+                    ],
+                  },
+                ],
+              },
               usage: sdk.withAcceptedContactRoots(
                 sdk.decodeCognitionUsage(prepared.usage),
                 subjectId,
@@ -227,6 +271,38 @@ real("Bounded Reactor application under real PostgreSQL", () => {
                   sdk.decodeAcceptedObservation(value.receipt),
                 ),
               ),
+            }),
+          });
+          if (prepared.contacts.length) {
+            expect(
+              await native.readTaskPerceptions({
+                subjectId,
+                activityId: activity.activityId,
+                workContextId: activity.workContextId!,
+                conversationRef,
+              }),
+            ).toMatchObject({ sourceRefs: [], accepted: [] });
+          }
+          await native.feedback({
+            ...sdk.hostContactIdentitySchema.strip().parse(identity),
+            stage: "pending",
+            observation: sdk.encodeObservationInput({
+              subjectId,
+              sessionId: identity.nousSessionId,
+              requestId: randomUUID(),
+              sourceClass: "host_event",
+              context: {
+                outcome: "completed",
+                invocation_id: identity.invocationId,
+                projection_id: projectionId,
+              },
+              material: {
+                case: "inlineText",
+                value: {
+                  text: "Actual provider invocation completed",
+                  mediaType: "text/plain",
+                },
+              },
             }),
           });
           return {
@@ -312,6 +388,38 @@ real("Bounded Reactor application under real PostgreSQL", () => {
           },
         }),
       };
+      const attachmentContact = {
+        contactRef: "attachment:" + attachmentId,
+        observation: sdk.encodeObservationInput({
+          subjectId,
+          requestId: randomUUID(),
+          sourceClass: "message",
+          conversationRef,
+          externalObjectRef: "object:heptalogos:attachment:" + attachmentId,
+          material: { case: "artifactId", value: randomUUID() },
+          context: {
+            host_selected_media: true,
+            message_ref: "message:" + messageId,
+            attachment_ref: "attachment:" + attachmentId,
+            part_index: 0,
+          },
+        }),
+      };
+      const contactB = {
+        ...contact,
+        contactRef: "message:" + messageB,
+        observation: sdk.encodeObservationInput({
+          subjectId,
+          requestId: randomUUID(),
+          sourceClass: "message",
+          externalObjectRef: "object:heptalogos:message:" + messageB,
+          conversationRef,
+          material: {
+            case: "inlineText",
+            value: { text: "Different revoked Task material", mediaType: "text/plain" },
+          },
+        }),
+      };
       let readDone = false,
         interruptOnce = true;
       const application = createSubjectReactor({
@@ -355,9 +463,9 @@ real("Bounded Reactor application under real PostgreSQL", () => {
               deadlineAt: reaction.deadlineAt,
             },
             candidates: [candidate],
-            contacts: readDone ? [contact] : [],
-            sourceRefs: readDone ? ["message:" + messageId] : [],
-            messageRefs: readDone ? [messageId] : [],
+            contacts: readDone ? [contact, attachmentContact, contactB] : [],
+            sourceRefs: readDone ? ["message:" + messageId, "message:" + messageB] : [],
+            messageRefs: readDone ? [messageId, messageB] : [],
             usage: sdk.encodeCognitionUsage({
               purpose: "subject_deliberation",
               audience: { visibility: "group", conversationRef },
@@ -401,7 +509,7 @@ real("Bounded Reactor application under real PostgreSQL", () => {
       );
       expect(resumed.status).toBe("yielded");
       expect(providerCalls).toBe(9);
-      expect(actualAdmittedContacts).toBe(1);
+      expect(actualAdmittedContacts).toBe(3);
       expect(await native.hasAcceptedSource(subjectId, contact.contactRef)).toBe(true);
       expect(await foreground.current(subjectId)).toBeUndefined();
       const retained = (await foreground.readReaction(subjectId, before.reactionId))!;
@@ -418,6 +526,121 @@ real("Bounded Reactor application under real PostgreSQL", () => {
           ),
         ),
       ).toBeUndefined();
+      const restarted = createNativeCognitionBridge({
+        persistence: c.persistence,
+        life: {
+          ...life,
+          get: async (...args) => {
+            const current = await life.get(...args);
+            return current
+              ? {
+                  ...current,
+                  scope: { ...current.scope!, sourceRefs: ["message:" + messageId] },
+                }
+              : undefined;
+          },
+        },
+        now,
+        authorizeInput: async () => {},
+        captureObservedStamp: async () => {
+          throw Error("No new observation clock capture");
+        },
+        recordContact: async () => {
+          throw Error("No repeated contact");
+        },
+        nous: async () => {
+          throw Error("No new observation or decode");
+        },
+      });
+      const restored = await restarted.readTaskPerceptions({
+        subjectId,
+        activityId: activity.activityId,
+        workContextId: activity.workContextId!,
+        conversationRef,
+      });
+      expect(restored.sourceRefs).toEqual(["message:" + messageId]);
+      expect(restored.accepted.map((item) => item.contactRef).sort()).toEqual(
+        [contact.contactRef, attachmentContact.contactRef].sort(),
+      );
+      const restoredUsage = sdk.withAcceptedContactRoots(
+        sdk.decodeCognitionUsage(
+          sdk.encodeCognitionUsage({
+            audience: { visibility: "group", conversationRef },
+            sourceRead: {
+              subjectId,
+              sourceRefs: [{ kind: "work_context", value: activity.workContextId! }],
+            },
+          }),
+        ),
+        subjectId,
+        restored.accepted.map((item) => sdk.decodeAcceptedObservation(item.receipt)),
+      );
+      expect(
+        restoredUsage.sourceRead!.sourceRefs.filter((ref) => ref.kind === "occurrence"),
+      ).toHaveLength(2);
+      expect(
+        restoredUsage.sourceRead!.sourceRefs.some(
+          (ref) =>
+            ref.kind === "derived_representation" || ref.value === foreignOccurrence,
+        ),
+      ).toBe(false);
+      expect(JSON.stringify(restored)).not.toContain("Aggregate historical content");
+      expect(
+        await restarted.readTaskPerceptions({
+          subjectId,
+          activityId: activity.activityId,
+          workContextId: randomUUID(),
+          conversationRef,
+        }),
+      ).toMatchObject({ accepted: [], sourceRefs: [] });
+      expect(
+        await restarted.readTaskPerceptions({
+          subjectId,
+          activityId: activity.activityId,
+          workContextId: activity.workContextId!,
+          conversationRef: "conversation:heptalogos:" + randomUUID(),
+        }),
+      ).toMatchObject({ accepted: [], sourceRefs: [] });
+      expect(
+        await restarted.readTaskPerceptions({
+          subjectId,
+          activityId: activity.activityId,
+          workContextId: activity.workContextId!,
+          conversationRef,
+          sourceRefs: ["message:" + randomUUID()],
+        }),
+      ).toMatchObject({ accepted: [], sourceRefs: [] });
+      const original = (await native.readInputState(
+        subjectId,
+        decisionPhaseId(before.reactionId, "deliberation:8"),
+      ))!.registration;
+      const {
+        promptDigest: _digest,
+        currentContextDigest: _context,
+        providerPolicyState: _policy,
+        inheritedMessageSources: _message,
+        inheritedSourceRefs: _source,
+        foreground: _focus,
+        ...base
+      } = original;
+      const recallId = randomUUID();
+      await c.run(() =>
+        restarted.registerInput({
+          ...base,
+          nativeRunId: recallId,
+          sessionKey: "native:recall:" + recallId,
+          prompt: "Use existing actual perception references",
+          sourceRefs: restored.sourceRefs,
+          messageRefs: [],
+          contacts: [],
+          usage: restoredUsage,
+        }),
+      );
+      expect(
+        (await restarted.readInputState(subjectId, recallId))!.registration
+          .inheritedMessageSources,
+      ).toEqual(restored.sourceRefs);
+      expect(providerCalls).toBe(9);
     } finally {
       await c.close();
     }

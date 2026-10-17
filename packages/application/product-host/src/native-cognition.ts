@@ -4,6 +4,8 @@
 /** Trusted native-input admission and actual cognition feedback, without an agent loop.
  * @module native-cognition
  */
+import { selectPerceivedMaterials } from "./perceived-materials.js";
+import { createTaskPerceptionReader } from "./native-perceptions.js";
 import { createHash } from "node:crypto";
 import {
   digestCanonicalJson,
@@ -271,7 +273,7 @@ export interface NativeCognitionOptions {
     registration: Readonly<Registration>,
   ) => Promise<void>;
   readonly recordContact: MessagingService["recordContact"];
-  readonly nous: () => Promise<Pick<NousClient, "runtime">>;
+  readonly nous: () => Promise<Pick<NousClient, "runtime" | "material">>;
 }
 const digest = (value: unknown) =>
   digestCanonicalJson(
@@ -419,6 +421,7 @@ function assertFeedbackReplay(
 
 /** No polling, model calls, network sends, or parallel durable queue is created here. */
 export function createNativeCognitionBridge(options: NativeCognitionOptions) {
+  const readTaskPerceptions = createTaskPerceptionReader(options);
   const mutate = <T>(run: (tx: PersistenceInternalTransaction) => Promise<T>) =>
     options.persistence.mutate((context) =>
       useRepositoryMutationTransaction(context, run),
@@ -755,6 +758,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
       sourceRef: string,
       transaction?: PersistenceInternalTransaction,
     ): Promise<boolean>;
+    readTaskPerceptions: typeof readTaskPerceptions;
     readRun: typeof readRun;
     /** Trusted recovery checks whether the original input ever crossed Host prepare. */
     readInputState(
@@ -885,6 +889,17 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           observation: encodeObservationInput(observation),
         };
       });
+      const known =
+        !sourceParent && input.roleScope.view === "subject"
+          ? await readTaskPerceptions({
+              subjectId: input.subjectId,
+              activityId: input.activityId,
+              workContextId: input.workContextId,
+              conversationRef:
+                decodeCognitionUsage(canonicalUsage).audience?.conversationRef,
+              sourceRefs: input.sourceRefs,
+            })
+          : undefined;
       const registration: Registration = {
         ...selection,
         providerPolicyState: "configured",
@@ -892,6 +907,13 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           ? {
               inheritedSourceRefs: [...input.sourceRefs],
               inheritedMessageSources: input.sourceRefs.filter((ref) =>
+                ref.startsWith("message:"),
+              ),
+            }
+          : {}),
+        ...(!sourceParent && known?.sourceRefs.length
+          ? {
+              inheritedMessageSources: known.sourceRefs.filter((ref) =>
                 ref.startsWith("message:"),
               ),
             }
@@ -962,6 +984,24 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         const activity = await lockedActivity(tx, input.subjectId, input.activityId);
         current(activity, registration);
         await options.assertForegroundIn?.(tx, registration);
+        if (!sourceParent && known?.sourceRefs.length) {
+          const actualKnown = await readTaskPerceptions(
+            {
+              subjectId: input.subjectId,
+              activityId: input.activityId,
+              workContextId: input.workContextId,
+              conversationRef:
+                decodeCognitionUsage(canonicalUsage).audience?.conversationRef,
+              sourceRefs: input.sourceRefs,
+            },
+            tx,
+          );
+          if (known.sourceRefs.some((ref) => !actualKnown.sourceRefs.includes(ref)))
+            deny(
+              "native_perception_scope_changed",
+              "The Task's previously admitted material scope changed",
+            );
+        }
         await options.authorizeInput(registration, activity, tx);
         if (!activity.workContextId || activity.workContextId !== input.workContextId)
           deny(
@@ -1071,6 +1111,21 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         )
           ? await captureObservedStamp(input.subjectId)
           : undefined;
+      const known = await readTaskPerceptions({
+        subjectId: preflight.subjectId,
+        activityId: preflight.activityId,
+        workContextId: preflight.workContextId,
+        conversationRef: decodeCognitionUsage(preflight.usage).audience
+          ?.conversationRef,
+        sourceRefs: preflight.sourceRefs,
+      });
+      const currentSources = known.accepted.length
+        ? await selectPerceivedMaterials(
+            preflight.subjectId,
+            known,
+            (await options.nous()).material,
+          )
+        : [];
       if (input.currentContextDigest !== preflight.currentContextDigest)
         deny(
           "native_context_changed",
@@ -1156,6 +1211,34 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         current(activity, registration);
         await options.assertForegroundIn?.(tx, registration);
         await options.authorizeInput(registration, activity, tx);
+        if (known.accepted.length) {
+          const fresh = await readTaskPerceptions(
+            {
+              subjectId: registration.subjectId,
+              activityId: registration.activityId,
+              workContextId: registration.workContextId,
+              conversationRef: decodeCognitionUsage(registration.usage).audience
+                ?.conversationRef,
+              sourceRefs: registration.sourceRefs,
+            },
+            tx,
+          );
+          const allowed = new Set(
+            fresh.accepted.map(
+              (item) => decodeAcceptedObservation(item.receipt).occurrenceId,
+            ),
+          );
+          if (
+            known.accepted.some(
+              (item) =>
+                !allowed.has(decodeAcceptedObservation(item.receipt).occurrenceId),
+            )
+          )
+            deny(
+              "native_perception_scope_changed",
+              "The selected actual Task material is no longer in its current scope",
+            );
+        }
         if (registration.role === "main" && input.native.parentSessionKey)
           deny(
             "native_role_changed",
@@ -1265,7 +1348,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
                   !["message", "sessions_send", "cron"].includes(name),
               ),
           allowedHistoryUserKeys,
-          currentSources: [],
+          currentSources,
           usage: encodeCognitionUsage(scopedUsage),
           scope: {
             activityRef: registration.activityId,
@@ -2643,6 +2726,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
       };
     },
     readRun,
+    readTaskPerceptions,
     async recordDeliveryFact(fact) {
       const run = await readRun(fact.runId);
       if (

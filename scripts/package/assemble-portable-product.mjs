@@ -156,7 +156,8 @@ async function digestFile(path) {
     .digest("hex");
 }
 
-async function digestTree(root, ignoredDirectories = new Set()) {
+/** Hashes the exact artifact tree, including dependency bytes and symlink targets. */
+export async function digestTree(root, ignoredDirectories = new Set()) {
   const entries = [];
   async function visit(directory, prefix) {
     const children = await readdir(directory, { withFileTypes: true });
@@ -624,12 +625,12 @@ async function main() {
       .map((component) => [component.name, component]),
   );
   await mkdir(join(options.target, "program", "product"), { recursive: true });
-  const applicationNeedsReplacement =
+  let applicationNeedsReplacement =
+    existingManifest?.schemaVersion !== 2 ||
     existingManifest?.assembly?.applicationArtifactDigest !==
       applicationArtifactDigest ||
     !(await pathExists(join(productRoot, "bin.js"))) ||
     !(await pathExists(join(cliRoot, "bin.js")));
-  const applicationChanged = applicationNeedsReplacement;
   const nodeNeedsReplacement =
     !targetExists ||
     previousComponents.get("node")?.version !== nodeVersion.slice(1) ||
@@ -647,11 +648,26 @@ async function main() {
     previousComponents.get("postgresql")?.version !== "18.6" ||
     previousComponents.get("postgresql")?.digest === undefined ||
     !(await pathExists(join(options.target, "runtime", "postgresql", "bin")));
+  let existingPayloadDigests = !applicationNeedsReplacement
+    ? await Promise.all([digestTree(productRoot), digestTree(cliRoot)])
+    : undefined;
+  if (
+    existingPayloadDigests &&
+    (previousComponents.get("product-host")?.digest !== existingPayloadDigests[0] ||
+      previousComponents.get("reference-cli")?.digest !== existingPayloadDigests[1])
+  ) {
+    // Never bless drift in a prior payload by merely resealing its manifest.
+    applicationNeedsReplacement = true;
+    existingPayloadDigests = undefined;
+  }
+  const applicationChanged = applicationNeedsReplacement;
   if (
     targetExists &&
     !applicationNeedsReplacement &&
     !nodeNeedsReplacement &&
-    !postgresNeedsReplacement
+    !postgresNeedsReplacement &&
+    previousComponents.get("product-host")?.digest === existingPayloadDigests?.[0] &&
+    previousComponents.get("reference-cli")?.digest === existingPayloadDigests?.[1]
   ) {
     await retirePreviousProductPayloads(options.target, productGeneration);
     console.log("PASS portable Product unchanged at " + options.target);
@@ -725,14 +741,13 @@ async function main() {
   const postgresComponentDigest = postgresNeedsReplacement
     ? await digestTree(join(options.target, "runtime/postgresql"))
     : previousComponents.get("postgresql")?.digest;
-  const productComponentDigest = applicationChanged
-    ? hostArtifactDigest
-    : previousComponents.get("product-host")?.digest;
-  const cliComponentDigest = applicationChanged
-    ? cliArtifactDigest
-    : previousComponents.get("reference-cli")?.digest;
+  // The frozen manifest binds the actual assembled code and node_modules,
+  // rather than the mutable source/prune inputs used for incremental builds.
+  const productComponentDigest =
+    existingPayloadDigests?.[0] ?? (await digestTree(productRoot));
+  const cliComponentDigest = existingPayloadDigests?.[1] ?? (await digestTree(cliRoot));
   const manifest = {
-    schemaVersion: 1,
+    schemaVersion: 2,
     productGeneration,
     bootstrapGeneration,
     target: { os: process.platform, arch: process.arch },

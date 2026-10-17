@@ -14,11 +14,21 @@ function expressionFixture() {
   const saveBrief = vi.fn(),
     invoke = vi.fn();
   const briefForRun = vi.fn(async () => undefined);
+  const rejectionForRun = vi.fn(
+    async (): Promise<
+      { activityId: string; problem: { code: string; detail: string } } | undefined
+    > => undefined,
+  );
   const handler = createSubjectDecisionHandler({
     native: {
       readRun: async () => ({
         consumerId: "consumer:openclaw:subject",
-        registration: { subjectId, activityId },
+        registration: {
+          subjectId,
+          activityId,
+          actorEntityRef: "entity:actual",
+          sourceRefs: [],
+        },
       }),
       readAppliedContext: async () => ({
         usage: encodeCognitionUsage({
@@ -37,7 +47,8 @@ function expressionFixture() {
         }),
       }),
     },
-    narrative: { briefForRun, saveBrief },
+    narrative: { briefForRun, saveBrief, rejectionForRun },
+    now: () => "2026-10-17T06:00:00.000Z",
     roles: { invoke },
     deliveryFor: async () => ({ conversationRef }),
   } as unknown as Parameters<typeof createSubjectDecisionHandler>[0]);
@@ -53,9 +64,9 @@ function expressionFixture() {
         expressionIntent: { cognitionRefs: ["cognition:subject_deliberation"] },
       },
     },
-    run: { runId },
+    run: { runId, deadlineAt: "2026-10-17T06:03:00.000Z" },
   } as unknown as Parameters<typeof handler.express>[0];
-  return { handler, input, saveBrief, invoke, briefForRun, work };
+  return { handler, input, saveBrief, invoke, briefForRun, work, rejectionForRun };
 }
 describe("known pre-effect expression rejection", () => {
   it("returns the real invalid-cognition problem and exact admitted references without creating a brief or renderer", async () => {
@@ -71,6 +82,31 @@ describe("known pre-effect expression rejection", () => {
     });
     expect(f.saveBrief).not.toHaveBeenCalled();
     expect(f.invoke).not.toHaveBeenCalled();
+  });
+  it("recovers only a durable owner-certified no-commit Narrative rejection across a failed native callback", async () => {
+    const f = expressionFixture();
+    f.input.adopted.decision.expressionIntent!.cognitionRefs = [f.work];
+    f.invoke.mockRejectedValueOnce(Error("native callback unavailable"));
+    const problem = {
+      code: "narrative.review_source_denied",
+      detail: "No Narrative or Agency commit; use the adopted brief's exact sources.",
+    };
+    f.rejectionForRun.mockResolvedValueOnce({
+      activityId: f.input.activityId,
+      problem,
+    });
+    expect((await f.handler.express(f.input)).expression).toEqual({
+      state: "rejected",
+      problem,
+    });
+    expect(f.saveBrief).toHaveBeenCalledOnce();
+    expect(f.invoke).toHaveBeenCalledOnce();
+    const unknown = expressionFixture();
+    unknown.input.adopted.decision.expressionIntent!.cognitionRefs = [unknown.work];
+    unknown.invoke.mockRejectedValueOnce(Error("unknown delivery result"));
+    await expect(unknown.handler.express(unknown.input)).rejects.toThrow(
+      "unknown delivery result",
+    );
   });
   it("does not relabel an unknown custody/storage error as a safe rejection", async () => {
     const f = expressionFixture();

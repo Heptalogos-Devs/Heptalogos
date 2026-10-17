@@ -675,6 +675,55 @@ real("Narrative adoption on real fenced PostgreSQL", () => {
           await narrative.claimsTo({ ...q, order: "newest", status: "not_sent" })
         ).claims.map((claim) => claim.claimId),
       ).toEqual([newest.claims[0]!.claimId, older.claims[0]!.claimId]);
+      const deniedIntent = await adoptIntent("conceal");
+      const deniedRun = randomUUID();
+      await retainRun(deniedRun, "subject.render");
+      const deniedBrief = {
+        ...brief,
+        briefId: randomUUID(),
+        decisionRef: deniedIntent.decisionRef,
+        expectedActivityRevision: deniedIntent.activityRevision,
+      };
+      await c.run(() => narrative.saveBrief(deniedBrief, deniedRun));
+      const deniedPrepared = {
+        ...prepared,
+        runId: deniedRun,
+        nativeIntentId: randomUUID(),
+      };
+      review.claims = [
+        {
+          ...review.claims[0]!,
+          sourceIndex: 4,
+          start: 0,
+          end: 4,
+          quote: "我在复习",
+          sourceRefs: ["source:not-adopted"],
+        },
+      ];
+      const beforeRejectionCalls = calls;
+      await expect(
+        c.run(() => narrative.adoptDelivery(deniedPrepared)),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "narrative.review_source_denied" },
+      });
+      const rejection = (await narrative.rejectionForRun(subjectId, deniedRun))!;
+      expect(rejection.problem.code).toBe("narrative.review_source_denied");
+      expect(rejection.problem.availableSourceRefs).toEqual(deniedBrief.sourceRefs);
+      expect(calls).toBe(beforeRejectionCalls + 1);
+      await expect(
+        c.run(() => narrative.adoptDelivery(deniedPrepared)),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "narrative.review_source_denied" },
+      });
+      expect(calls).toBe(beforeRejectionCalls + 1);
+      expect(await narrative.rejectionForRun(subjectId, deniedRun)).toEqual(rejection);
+      await expect(
+        c.run(() =>
+          narrative.adoptDelivery({ ...deniedPrepared, nativeIntentId: randomUUID() }),
+        ),
+      ).rejects.toThrow();
+      expect(await narrative.rejectionForRun(subjectId, deniedRun)).toEqual(rejection);
+      expect(await narrative.rejectionForRun(randomUUID(), deniedRun)).toBeUndefined();
     } finally {
       await c.close();
     }

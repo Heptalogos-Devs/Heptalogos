@@ -367,22 +367,23 @@ async function assembleCandidate(
     join(assembledProductRoot, "bin.js"),
   ];
   const beforeIncremental = await Promise.all(stablePaths.map((path) => lstat(path)));
+  const incrementalArgs = [
+    resolve(repositoryRoot, "scripts/package/assemble-portable-product.mjs"),
+    "--target",
+    assemblyRoot,
+    "--incremental",
+    "--host-artifact",
+    resolve(repositoryRoot, "packages/application/product-host/dist"),
+    "--cli-artifact",
+    resolve(repositoryRoot, "packages/application/cli/dist"),
+    "--node-root",
+    nodeRoot,
+    "--postgres-root",
+    postgresRoot,
+  ];
   const incrementalOutput = await runChecked(
     process.execPath,
-    [
-      resolve(repositoryRoot, "scripts/package/assemble-portable-product.mjs"),
-      "--target",
-      assemblyRoot,
-      "--incremental",
-      "--host-artifact",
-      resolve(repositoryRoot, "packages/application/product-host/dist"),
-      "--cli-artifact",
-      resolve(repositoryRoot, "packages/application/cli/dist"),
-      "--node-root",
-      nodeRoot,
-      "--postgres-root",
-      postgresRoot,
-    ],
+    incrementalArgs,
     repositoryRoot,
   );
   expect(incrementalOutput).toContain("PASS portable Product unchanged");
@@ -393,6 +394,20 @@ async function assembleCandidate(
   await expect(
     readFile(join(assemblyRoot, "config", "incremental-marker.txt"), "utf8"),
   ).resolves.toBe("preserve\n");
+  const providerPath = join(
+    assembledProductRoot,
+    "node_modules/@heptalogos/canonical-schema/dist/migration-provider.js",
+  );
+  const correctProvider = await readFile(providerPath, "utf8");
+  await writeFile(providerPath, 'export const canonicalMigrationNames = ["0017"];\n');
+  // Input keys are unchanged: payload drift must trigger a real replacement,
+  // never a new manifest digest blessing the stale dependency bytes.
+  await runChecked(process.execPath, incrementalArgs, repositoryRoot);
+  expect(await readFile(providerPath, "utf8")).toBe(correctProvider);
+  expect(
+    JSON.parse(await readFile(join(assemblyRoot, "manifest.json"), "utf8"))
+      .schemaVersion,
+  ).toBe(2);
   await rename(assemblyRoot, candidateRoot);
   const afterStatus = await runChecked(
     "git",

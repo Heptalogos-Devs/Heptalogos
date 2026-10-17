@@ -41,3 +41,7 @@ Profile 的课表保存原采用输入来源；当前可写课表只有 WorldDef
 以上是当前 owner 操作与本地 PostgreSQL 证据，正式安装、真实角色/QQ、跨日运行仍由整体活动计划完成；不能将本包测试当作已上线。
 
 Reactor 的 action 收据可保存有界 `problem`。表达 owner 在 brief/render/effect 前明确拒绝的引用或听众问题以 rejected 完成，下一主观步骤读取实际问题和可用引用；未知或已可能产生效果的异常不因此改判，实际收据仍不可重写。
+
+前台 claim 在 Subject 短事务中用实际 focus revision 区分每次取得的 Reaction；原请求及并发合流请求均由 `subject_reactor_claim` 指向同一结果，终态后重放不产生另一次机会。候选身份本身不锁死后续正常尝试。
+
+独立 Narrative review 在采用前明确引用超出 brief 时，owner 仅在同一短锁内证明尚无 NarrativeCommit/Agency 行为后保留有界 rejection；同 brief 重放读取原结果，不重复 review。Host 据此完成 rejected action 并将实际问题交下一主观步骤。未知或可能已产生效果的异常仍保留原所有权。

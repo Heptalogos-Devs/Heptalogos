@@ -3,6 +3,7 @@
 /** Revocable logical foreground qualification across short Host transactions.
  * @module reactor
  */
+import { v5 as uuidv5 } from "uuid";
 import {
   digestCanonicalJson,
   type CanonicalJsonValue,
@@ -236,7 +237,7 @@ export function createSubjectReactorService(options: SubjectReactorOptions) {
     async claim(input: {
       subjectId: string;
       activityId: string;
-      reactionId: string;
+      requestId: string;
       candidateRef: string;
       explanationRef: string;
       opportunity?: ActivityOpportunity;
@@ -250,7 +251,14 @@ export function createSubjectReactorService(options: SubjectReactorOptions) {
           reactionDeadlineMs: settings.reactionDeadlineMs,
           workerConcurrency: settings.workerConcurrency,
         });
-        const prior = await readReaction(input.subjectId, input.reactionId, tx);
+        const priorRows = await sql<{ document: unknown }>(
+          tx,
+          "SELECT r.document FROM heptalogos.subject_reactor_claim c JOIN heptalogos.subject_reaction r USING(subject_id,reaction_id) WHERE c.subject_id=$1 AND c.request_id=$2",
+          [input.subjectId, input.requestId],
+        );
+        const prior = priorRows[0]
+          ? checked<SubjectReaction>(subjectReactionSchema, priorRows[0].document)
+          : undefined;
         if (prior) {
           if (
             prior.activityId !== input.activityId ||
@@ -277,6 +285,18 @@ export function createSubjectReactorService(options: SubjectReactorOptions) {
           );
         const old = await current(input.subjectId, tx);
         if (old) {
+          if (
+            !input.replace &&
+            old.activityId === input.activityId &&
+            old.candidate.candidateRef === input.candidateRef
+          ) {
+            await sql(
+              tx,
+              "INSERT INTO heptalogos.subject_reactor_claim(subject_id,request_id,reaction_id) VALUES($1,$2,$3)",
+              [input.subjectId, input.requestId, old.reactionId],
+            );
+            return { claimed: false, reaction: old };
+          }
           if (
             !input.replace ||
             old.reactionId !== input.replace.reactionId ||
@@ -334,13 +354,22 @@ export function createSubjectReactorService(options: SubjectReactorOptions) {
         const now = options.now();
         const rows = await sql<{ focus_revision: string | number }>(
           tx,
-          "INSERT INTO heptalogos.subject_foreground(subject_id,focus_revision,reaction_id,updated_at) VALUES($1,1,$2,$3) ON CONFLICT(subject_id) DO UPDATE SET focus_revision=subject_foreground.focus_revision+1,reaction_id=excluded.reaction_id,updated_at=excluded.updated_at RETURNING focus_revision",
-          [input.subjectId, input.reactionId, now],
+          "INSERT INTO heptalogos.subject_foreground(subject_id,focus_revision,reaction_id,updated_at) VALUES($1,1,NULL,$2) ON CONFLICT(subject_id) DO UPDATE SET focus_revision=subject_foreground.focus_revision+1,reaction_id=NULL,updated_at=excluded.updated_at RETURNING focus_revision",
+          [input.subjectId, now],
+        );
+        const reactionId = uuidv5(
+          `${input.subjectId}:${rows[0]!.focus_revision}`,
+          "7d774d31-939e-4e08-8ce4-31a105609c3b",
+        );
+        await sql(
+          tx,
+          "UPDATE heptalogos.subject_foreground SET reaction_id=$2 WHERE subject_id=$1",
+          [input.subjectId, reactionId],
         );
         const reaction = checked<SubjectReaction>(subjectReactionSchema, {
           subjectId: input.subjectId,
           activityId: input.activityId,
-          reactionId: input.reactionId,
+          reactionId,
           focusRevision: Number(rows[0]!.focus_revision),
           candidate,
           explanationRef: input.explanationRef,
@@ -363,10 +392,15 @@ export function createSubjectReactorService(options: SubjectReactorOptions) {
             now,
           ],
         );
+        await sql(
+          tx,
+          "INSERT INTO heptalogos.subject_reactor_claim(subject_id,request_id,reaction_id) VALUES($1,$2,$3)",
+          [input.subjectId, input.requestId, reaction.reactionId],
+        );
         await options.attention.recordConsidered(
           {
             subjectId: input.subjectId,
-            reactionId: input.reactionId,
+            reactionId: reaction.reactionId,
             candidateRef: input.candidateRef,
             explanationRef: input.explanationRef,
           },

@@ -13,7 +13,7 @@ import { tokenFromRequest } from "./http-auth.js";
 /** Registers schema-generated read access; a service token never changes the current Subject binding. */
 export function registerLifeReadHttp(
   app: FastifyInstance,
-  options?: GatewayHttpOptions,
+  options?: Pick<GatewayHttpOptions, "authenticate" | "currentSubject" | "life">,
 ) {
   const owners = () =>
     options ??
@@ -51,7 +51,7 @@ export function registerLifeReadHttp(
     },
     async (request) => {
       const input = request.body as { subjectId: string; activityId: string };
-      if (input.subjectId !== (await owners().scope()).subjectId)
+      if (input.subjectId !== (await owners().currentSubject()))
         throw managementProblem(
           "gateway.scope_denied",
           "Activity belongs to another Subject",
