@@ -1,6 +1,10 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
 import { randomUUID } from "node:crypto";
+import {
+  digestCanonicalJson,
+  type CanonicalJsonValue,
+} from "@heptalogos/foundation-contracts";
 import { readFile } from "node:fs/promises";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLifeService } from "@heptalogos/subject";
@@ -70,6 +74,7 @@ afterEach(cleanupCanonicalPostgresFixtures);
 async function fixture(
   tools = ["read"],
   readLife?: NativeCognitionOptions["readLife"],
+  executionOnly = false,
 ) {
   const c = await composeProductPersistence();
   const subjectId = randomUUID();
@@ -183,12 +188,19 @@ async function fixture(
     role: "main" as const,
     tokenBudget: { inputTokens: 8192, outputTokens: 2048 },
     allowedToolNames: tools,
-    roleScope: {
-      role: "subject.deliberation" as const,
-      purpose: "subject_deliberation" as const,
-      view: "subject" as const,
-      contactNature: "subject_experience" as const,
-    },
+    roleScope: executionOnly
+      ? {
+          role: "subject.execution" as const,
+          purpose: "professional_execution" as const,
+          view: "worker" as const,
+          contactNature: "execution_only" as const,
+        }
+      : {
+          role: "subject.deliberation" as const,
+          purpose: "subject_deliberation" as const,
+          view: "subject" as const,
+          contactNature: "subject_experience" as const,
+        },
     actorEntityRef: actor,
     workContextId,
     usage: sdk.decodeCognitionUsage({
@@ -409,6 +421,164 @@ real(
       }
     }, 120000);
 
+    it.each([true, false])(
+      "replays the anonymized paid envelope unchanged after scope/audit changes (execution=%s)",
+      async (executionOnly) => {
+        const f = await fixture(undefined, undefined, executionOnly);
+        try {
+          await admitSelected(f, await f.c.run(() => f.bridge.prepare(f.input)));
+          const sample = JSON.parse(
+            await readFile(
+              new URL("../fixtures/retained-paid-feedback.json", import.meta.url),
+              "utf8",
+            ),
+          );
+          const original = sdk.encodeObservationInput({
+            ...sdk.decodeObservationInput(sample.observation),
+            requestId: randomUUID(),
+            subjectId: f.input.subjectId,
+            sessionId: f.input.nousSessionId,
+            actorEntityRef: f.actor,
+          });
+          const identity = sdk.hostContactIdentitySchema.strip().parse(f.input);
+          const facts = { ...original };
+          delete facts.observedAt;
+          delete facts.observedStamp;
+          const document = {
+            identity,
+            observation: original,
+            factsDigest: digestCanonicalJson(
+              "host.native-cognition.v1",
+              facts as CanonicalJsonValue,
+            ).hex,
+          };
+          const table = executionOnly
+              ? "role_run_result"
+              : "cognition_pending_feedback",
+            key = executionOnly ? "result_id" : "request_id";
+          await f.c.run(() =>
+            f.c.persistence.mutate((context) =>
+              useRepositoryMutationTransaction(context, (tx) =>
+                executeRepositorySql(
+                  tx,
+                  `INSERT INTO heptalogos.${table}(${key},subject_id,run_id,document,recorded_at) VALUES($1,$2,$3,$4::jsonb,now())`,
+                  [
+                    original.requestId,
+                    f.input.subjectId,
+                    f.input.native.runId,
+                    JSON.stringify(document),
+                  ],
+                ),
+              ),
+            ),
+          );
+          const replay = structuredClone(original);
+          delete replay.actorEntityRef;
+          replay.context = {
+            ...replay.context,
+            cognition_usage: {
+              purpose: "professional_execution",
+              role: "subject.execution",
+            },
+            native_model: "actual-original-model",
+            native_provider: "original-provider",
+            native_api: "original-api",
+          };
+          replay.observedAt = new Date().toISOString();
+          replay.observedStamp = {
+            timeDomainRef: "time:real",
+            at: replay.observedAt,
+            recordedAt: replay.observedAt,
+          };
+          const pending = {
+            ...identity,
+            stage: "pending" as const,
+            observation: replay,
+          };
+          const returned = await f.c.run(() => f.bridge.feedback(pending));
+          expect(returned).toEqual({
+            version: 1,
+            stage: "pending",
+            accepted: true,
+            retainedOnly: executionOnly,
+            observation: original,
+          });
+          for (const change of [
+            {
+              inlineText: {
+                ...replay.inlineText,
+                text: replay.inlineText.text + "changed",
+              },
+            },
+            {
+              occurredTime: {
+                timeDomainRef: "time:real",
+                extent: { instant: "2026-10-17T00:00:00Z" },
+              },
+            },
+            {
+              context: {
+                ...replay.context,
+                unknown_event_metadata: { original: false },
+              },
+            },
+            { context: { ...replay.context, unexpected_metadata: true } },
+            {
+              context: Object.fromEntries(
+                Object.entries(replay.context).filter(
+                  ([key]) => key !== "unknown_event_metadata",
+                ),
+              ),
+            },
+            { sourceClass: "tool" },
+            { externalObjectRef: "object:changed" },
+            { subjectId: randomUUID() },
+            { sessionId: randomUUID() },
+            { actorEntityRef: "entity:changed" },
+          ])
+            await expect(
+              f.c.run(() =>
+                f.bridge.feedback({
+                  ...pending,
+                  observation: { ...replay, ...change },
+                }),
+              ),
+            ).rejects.toBeDefined();
+          for (const change of [
+            { subjectId: randomUUID() },
+            { nousSessionId: randomUUID() },
+            { native: { ...identity.native, sessionId: randomUUID() } },
+          ])
+            await expect(
+              f.c.run(() => f.bridge.feedback({ ...pending, ...change })),
+            ).rejects.toMatchObject({
+              problem: { problemCode: "gateway.native_contact_changed" },
+            });
+          expect(
+            await readRepositorySql<{ document: unknown }>(
+              f.c.persistence,
+              `SELECT document FROM heptalogos.${table} WHERE ${key}=$1`,
+              [original.requestId],
+            ),
+          ).toEqual([{ document }]);
+          expect(f.submissions).toEqual([]);
+          if (!executionOnly) {
+            expect(await f.c.run(() => f.bridge.flushPendingFeedback(1))).toEqual({
+              delivered: 1,
+            });
+            expect(await f.c.run(() => f.bridge.feedback(pending))).toEqual(returned);
+            expect(await f.c.run(() => f.bridge.flushPendingFeedback(1))).toEqual({
+              delivered: 0,
+            });
+            expect(f.submissions).toEqual([original]);
+          }
+        } finally {
+          await f.c.close();
+        }
+      },
+      120000,
+    );
+
     it("keeps pending actual results and original scope after cancellation, replays first observations, and never overwrites accepted receipts", async () => {
       const f = await fixture();
       try {
@@ -427,7 +597,12 @@ real(
               mediaType: "application/json",
             },
           },
-          context: { tool_call_id: "actual-tool" },
+          context: {
+            tool_call_id: "actual-tool",
+            native_model: "original-model",
+            native_provider: "original-provider",
+            native_api: "original-api",
+          },
         });
         const pending = { ...f.input, stage: "pending" as const, observation: actual };
         delete (pending as Partial<typeof pending>).promptDigest;
@@ -451,6 +626,21 @@ real(
           },
         };
         expect(await f.c.run(() => f.bridge.feedback(later))).toEqual(first);
+        for (const key of ["native_model", "native_provider", "native_api"])
+          await expect(
+            f.c.run(() =>
+              f.bridge.feedback({
+                ...later,
+                observation: {
+                  ...later.observation,
+                  context: { ...actual.context, [key]: "contradiction" },
+                },
+              }),
+            ),
+          ).rejects.toMatchObject({
+            problem: { problemCode: "gateway.native_feedback_changed" },
+          });
+
         if (first.stage !== "pending")
           throw new Error("Expected retained pending fact");
         expect(first.observation.context).toMatchObject({

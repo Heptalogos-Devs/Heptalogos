@@ -65,3 +65,5 @@ Host按正式RoleBinding调用独立原生world/deliberation/execution/render/re
 Reactor 的目标解析只接受当前 SituationFrame 列出的精确对象 handle 或公开 sourceRef，随后核对对象动作及现有 owner 权限。只观察会话不展示 communicate；未知目标和歧义将具体问题与可选动作保存在既有 Activity 继续信息中，供下一正常机会考虑，参见 [Reactor 合同](../../../specs/subject/reactor.md)。
 
 已采纳 Task 在自身获准会话内打开和读取材料会保留原 Activity、WorkContext、目的、来源和工具范围。当前听众取自仍获准的打开视图或唯一观察会话；多会话未打开时为 internal，不从 WorkContext 的隐式约束键取得听众或权限。
+
+Feedback 重放按首次 canonical Observation envelope 核对原 Contact/native 身份与实际事件事实，并返回原 envelope；后来的 Contact scope 或 SDK 诊断字段不改写历史用途、接触时间或事实摘要。未知 context 与原有 audit 矛盾仍拒绝，新的 provider/tool 输入及结果显式释放继续经过当前权限 owner。
