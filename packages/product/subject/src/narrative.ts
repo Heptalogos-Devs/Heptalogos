@@ -38,6 +38,7 @@ import {
   narrativeCommitmentSchema,
   type ExpressionBrief,
   type NarrativeReview,
+  type NarrativeReviewProposal,
   type AdoptedClaim,
   type NarrativeCommitInput,
 } from "./narrative-contracts.js";
@@ -66,6 +67,23 @@ function payloadTexts(input: PreparedDelivery): Map<number, string> {
     );
   }
   return result;
+}
+/** Resolve exact, unambiguous quotations against the final accepted payload. */
+export function resolveNarrativeReview(
+  prepared: PreparedDelivery,
+  proposal: NarrativeReviewProposal,
+): NarrativeReview {
+  const texts = payloadTexts(prepared);
+  return {
+    ...proposal,
+    claims: proposal.claims.map((claim) => {
+      const text = texts.get(claim.sourceIndex);
+      const start = text?.indexOf(claim.quote) ?? -1;
+      if (text === undefined || start < 0 || text.indexOf(claim.quote, start + 1) >= 0)
+        denied("The claim must identify one exact quotation in its final payload");
+      return { ...claim, start, end: start + claim.quote.length };
+    }),
+  };
 }
 /** Checks actual quote spans, provenance boundaries and deliberate intent before any owner write. */
 export function validateNarrativeCandidate(

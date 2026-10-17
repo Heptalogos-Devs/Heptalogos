@@ -5,7 +5,11 @@
  * @module world-opportunity
  */
 import type { createWorldLifeService, createLifeService } from "@heptalogos/subject";
-import { realizeWorldSchema } from "@heptalogos/subject";
+import {
+  realizeWorldSchema,
+  worldPlannerProposalSchema,
+  type WorldPlannerProposal,
+} from "@heptalogos/subject";
 import type { Static } from "@heptalogos/schema-runtime/typebox";
 import { compileSchema } from "@heptalogos/schema-runtime";
 import { managementProblem } from "@heptalogos/management";
@@ -163,17 +167,18 @@ export function createWorldOpportunity<TContact, TUsage>(
             frame,
             realizationInterval: range,
             outputContract: {
-              schema: realizeWorldSchema,
+              schema: worldPlannerProposalSchema,
               hostOwnedFields: [
                 "operationId",
                 "subjectId",
                 "worldId",
                 "expectedRevision",
+                "interval",
                 "events[].source.kind",
                 "events[].source.producerRef",
               ],
               instructions:
-                "Return only one WorldPatch JSON proposal. Copy realizationInterval into interval and keep all realized events inside that actual elapsed interval. Preserve existing realized events; add only compatible virtual events for unset scenes. Future arrangements for the next 24 world hours belong only in optional schedule, never in interval or events. Do not call tools or report real external effects. The Host validates and adopts the proposal and supplies identity and actual producer fields.",
+                "Return only the requested events, coverage and optional changed schedule. Keep realized events inside realizationInterval; the Host supplies that patch interval and its identity/producer fields. Preserve existing realized events and propose compatible virtual events for unset scenes. Future arrangements belong only in optional schedule; omit schedule when existing plans suffice, and do not copy unchanged calendar/routine entries. Do not call tools or report real external effects.",
             },
           },
           ...context,
@@ -194,16 +199,33 @@ export function createWorldOpportunity<TContact, TUsage>(
             );
           }
         }
-        const fields =
-          candidate && typeof candidate === "object"
-            ? (candidate as Record<string, unknown>)
-            : {};
+        const proposal = compileSchema<WorldPlannerProposal>(
+          worldPlannerProposalSchema,
+        ).validate(candidate);
+        if (!proposal.ok)
+          throw managementProblem(
+            "world.planner_invalid",
+            "World planner proposal is invalid",
+            "Inspect the saved proposal against its role contract",
+            "conflict",
+          );
         const patch = {
-          ...fields,
+          ...proposal.value,
           operationId: uuidv5("world.patch", input.requestId),
           subjectId: input.subjectId,
           worldId: input.worldId,
           expectedRevision: frame.state.revision,
+          interval: range,
+          events: proposal.value.events.map((event) => ({
+            ...event,
+            source: {
+              kind: "world_planner" as const,
+              producerRef: result.runId,
+              sourceRefs: event.source.sourceRefs.filter((ref) =>
+                context.sourceRefs.includes(ref),
+              ),
+            },
+          })),
         };
         const validation =
           compileSchema<Static<typeof realizeWorldSchema>>(realizeWorldSchema).validate(
@@ -216,19 +238,7 @@ export function createWorldOpportunity<TContact, TUsage>(
             "Inspect the exact world output contract",
             "conflict",
           );
-        await options.worlds.realize({
-          ...validation.value,
-          events: validation.value.events.map((event) => ({
-            ...event,
-            source: {
-              kind: "world_planner" as const,
-              producerRef: result.runId,
-              sourceRefs: event.source.sourceRefs.filter((ref) =>
-                context.sourceRefs.includes(ref),
-              ),
-            },
-          })),
-        });
+        await options.worlds.realize(validation.value);
       }
       await options.wakeSubject({
         subjectId: input.subjectId,

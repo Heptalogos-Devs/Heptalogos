@@ -11,8 +11,8 @@ import {
 import { managementProblem, type SubjectRoleBinding } from "@heptalogos/management";
 import {
   deliberationDecisionSchema,
-  realizeWorldSchema,
-  narrativeReviewSchema,
+  worldPlannerProposalSchema,
+  narrativeReviewProposalSchema,
   situationFrameSchema,
   type LifeActivity,
   type SituationFrame,
@@ -356,9 +356,9 @@ export function createSubjectRoles(options: {
         input.role === "subject.deliberation"
           ? (choiceInput?.outputContract ?? deliberationDecisionSchema)
           : input.role === "world.planner"
-            ? realizeWorldSchema
+            ? worldPlannerProposalSchema
             : input.role === "narrative.review"
-              ? narrativeReviewSchema
+              ? narrativeReviewProposalSchema
               : binding.outputContract,
       ...(choiceInput
         ? {
@@ -404,6 +404,7 @@ export function createSubjectRoles(options: {
         sourceData: context,
       });
     const historyScope = digestCanonicalJson("host.role-history.v1", {
+      templateId: template.id,
       audience: input.usage.audience ?? null,
       sourceRead: input.usage.sourceRead ?? null,
       worldId: input.usage.worldId ?? null,

@@ -22,8 +22,9 @@ import {
   createWorldHostLifecycleService,
   createDeliberationService,
   createNarrativeService,
-  narrativeReviewSchema,
-  type NarrativeReview,
+  narrativeReviewProposalSchema,
+  resolveNarrativeReview,
+  type NarrativeReviewProposal,
   assertScopeWithin,
   type ActivityScope,
   type LifeActivity,
@@ -893,7 +894,7 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
           prepared,
           currentClaims: claims,
           relatedWorld: world,
-          outputContract: narrativeReviewSchema,
+          outputContract: narrativeReviewProposalSchema,
         },
         contacts: [],
         sourceRefs: brief.sourceRefs,
@@ -910,8 +911,9 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
           "validation",
         );
       }
-      const checked =
-        compileSchema<NarrativeReview>(narrativeReviewSchema).validate(parsed);
+      const checked = compileSchema<NarrativeReviewProposal>(
+        narrativeReviewProposalSchema,
+      ).validate(parsed);
       if (!checked.ok)
         throw managementProblem(
           "narrative.invalid_review",
@@ -919,7 +921,10 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
           "Inspect the actual saved review result",
           "validation",
         );
-      return { reviewerRunId: review.runId, review: checked.value };
+      return {
+        reviewerRunId: review.runId,
+        review: resolveNarrativeReview(prepared, checked.value),
+      };
     },
   });
   readLife = createBoundLifeReader({ worlds, narrative, messaging });

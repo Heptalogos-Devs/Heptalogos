@@ -6445,6 +6445,18 @@ export type PrepareCognitionResponses = {
             inputTokens: number;
             outputTokens: number;
         };
+        responseFormat?: {
+            type: 'text';
+        } | {
+            type: 'json_schema';
+            json_schema: {
+                name: string;
+                strict: true;
+                schema: {
+                    [key: string]: unknown;
+                };
+            };
+        };
         allowedToolNames: Array<string>;
         currentSources: Array<{
             [key: string]: unknown;
