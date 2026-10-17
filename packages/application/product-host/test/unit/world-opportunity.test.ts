@@ -37,9 +37,15 @@ describe("world realization stays outside the subjective foreground", () => {
     const acknowledgeContact = vi.fn(async () => ({ contactRef: "contact:accepted" }));
     const worlds = {
       prepareAdvance: async () => ({
-        state: { revision: 1 },
+        state: { revision: 1, definition: { informationSourceRefs: [] } },
         world,
         schedule: [
+          {
+            interval: {
+              start: "2026-10-16T02:30:00.000Z",
+              end: "2026-10-16T03:30:00.000Z",
+            },
+          },
           {
             interval: {
               start: "2026-10-16T04:00:00.000Z",
@@ -111,5 +117,24 @@ describe("world realization stays outside the subjective foreground", () => {
     await opportunity.advance({ ...request, requestId: randomUUID() });
     expect(invoke).not.toHaveBeenCalled();
     expect(acknowledgeContact).not.toHaveBeenCalled();
+    // Tomorrow's calendar does not establish today's missing scene.
+    vi.spyOn(worlds, "readRealization").mockResolvedValue(undefined);
+    vi.spyOn(worlds, "prepareAdvance").mockResolvedValue({
+      ...prepared,
+      schedule: [
+        {
+          interval: {
+            start: "2026-10-16T04:00:00.000Z",
+            end: "2026-10-16T04:30:00.000Z",
+          },
+        },
+      ],
+    });
+    await expect(
+      opportunity.advance({ ...request, requestId: randomUUID() }),
+    ).rejects.toThrow("must not launch");
+    expect(invoke).toHaveBeenCalledWith(
+      expect.objectContaining({ role: "world.planner" }),
+    );
   });
 });

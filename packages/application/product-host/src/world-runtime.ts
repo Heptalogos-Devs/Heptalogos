@@ -28,7 +28,7 @@ import type { createSubjectRoles } from "./subject-roles.js";
 import { decisionPhaseId } from "./subject-decisions.js";
 import type { createNativeCognitionBridge } from "./native-cognition.js";
 import type { NativeWorldSchedule } from "./native-dispatch.js";
-import { createWorldOpportunity } from "./world-opportunity.js";
+import { createWorldOpportunity, hasCurrentWorldScene } from "./world-opportunity.js";
 const ns = "b6cb3efa-3bd9-4cc1-bfa4-4a72742b1d13";
 function plannerRevision(context: Record<string, unknown>): number | null {
   const frame = context.frame;
@@ -69,6 +69,7 @@ export function createWorldRuntime(options: {
     worldId: string;
     activityId: string;
     next: { timeDomainRef: string; at: string } | null;
+    requestId?: string;
   }) => {
     let realAt: string | null = null;
     if (input.next) {
@@ -104,10 +105,12 @@ export function createWorldRuntime(options: {
       worldId: input.worldId,
       activityId: input.activityId,
       realAt,
-      requestId: uuidv5(
-        `${input.subjectId}:${input.worldId}:${input.activityId}:${input.next?.timeDomainRef ?? "paused"}:${input.next?.at ?? "none"}`,
-        ns,
-      ),
+      requestId:
+        input.requestId ??
+        uuidv5(
+          `${input.subjectId}:${input.worldId}:${input.activityId}:${input.next?.timeDomainRef ?? "paused"}:${input.next?.at ?? "none"}`,
+          ns,
+        ),
     };
   };
   const nextOpportunity = async (): Promise<
@@ -121,6 +124,7 @@ export function createWorldRuntime(options: {
       worldId: string;
       activityId: string;
       next: { timeDomainRef: string; at: string };
+      requestId?: string;
     }[] = [];
     let fallback:
       { subjectId: string; worldId: string; activityId: string } | undefined;
@@ -135,6 +139,22 @@ export function createWorldRuntime(options: {
           const frame = await options.worlds.prepareAdvance(subjectId, worldId);
           const context = { subjectId, worldId, activityId: activity.activityId };
           fallback ??= context;
+          // Bootstrap one unset scene through the same declaration. Its durable patch
+          // suppresses repeats; subsequent work follows actual calendar/action nodes.
+          const initialRequestId = uuidv5("initial-world-opportunity", worldId);
+          if (
+            enabled &&
+            !hasCurrentWorldScene(frame.schedule, frame.world.at) &&
+            !(await options.worlds.readRealization(
+              subjectId,
+              uuidv5("world.patch", initialRequestId),
+            ))
+          )
+            candidates.push({
+              ...context,
+              next: frame.world,
+              requestId: initialRequestId,
+            });
           const pendingActions = await options.worlds.readPendingActions(
             subjectId,
             worldId,

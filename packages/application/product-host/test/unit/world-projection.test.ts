@@ -35,10 +35,32 @@ describe("one native opportunity projection", () => {
   });
   it("returns the due world's identity without writing a competing native declaration", async () => {
     const reproject = vi.fn(async () => {});
+    let initialSettled = true;
+    let pending = true;
+    let currentScene = false;
+    const future = { ...point, at: "2026-10-19T02:30:00.000Z" };
     const runtime = createWorldRuntime({
       worlds: {
-        prepareAdvance: async () => ({ world: point, nextOpportunity: null }),
-        readPendingActions: async () => [{ nextOpportunity: point }],
+        prepareAdvance: async () => ({
+          world: point,
+          schedule: [
+            ...(currentScene
+              ? [
+                  {
+                    interval: {
+                      start: "2026-10-19T01:00:00.000Z",
+                      end: "2026-10-19T02:00:00.000Z",
+                    },
+                  },
+                ]
+              : []),
+            { interval: { start: future.at, end: "2026-10-19T03:00:00.000Z" } },
+          ],
+          nextOpportunity: future,
+        }),
+        readRealization: async () =>
+          initialSettled ? { operationId: "settled-initial-scene" } : undefined,
+        readPendingActions: async () => (pending ? [{ nextOpportunity: point }] : []),
       },
       life: {
         schedule: async () => ({
@@ -77,6 +99,23 @@ describe("one native opportunity projection", () => {
     });
     expect(projection?.requestId).toBeTypeOf("string");
     expect(await runtime.nextOpportunity()).toEqual(projection);
+    pending = false;
+    initialSettled = false;
+    const initial = await runtime.nextOpportunity();
+    expect(initial).toMatchObject({
+      subjectId,
+      worldId,
+      activityId,
+      realAt: "2026-10-19T01:30:01.000Z",
+    });
+    expect(initial?.requestId).not.toBe(projection?.requestId);
+    // A pending/failed attempt has no receipt: the same identity is retained.
+    expect(await runtime.nextOpportunity()).toEqual(initial);
+    currentScene = true;
+    expect(await runtime.nextOpportunity()).toMatchObject({ realAt: future.at });
+    currentScene = false;
+    initialSettled = true;
+    expect(await runtime.nextOpportunity()).toMatchObject({ realAt: future.at });
     expect(reproject).not.toHaveBeenCalled();
   });
 });
