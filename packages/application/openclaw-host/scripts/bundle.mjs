@@ -46,7 +46,7 @@ await writeFile(
   resolve(root, "dist/bundle.meta.json"),
   JSON.stringify(result.metafile, null, 2) + "\n",
 );
-const { qqPluginConfigSchema } = await import(
+const { nativePluginConfigSchema } = await import(
   new URL("../dist/config.js", import.meta.url)
 );
 const pkg = JSON.parse(await readFile(resolve(root, "package.json"), "utf8"));
@@ -60,7 +60,7 @@ await writeFile(
       version: pkg.version,
       channels: ["heptalogos-qq"],
       contracts: { tools: ["heptalogos_life"] },
-      configSchema: qqPluginConfigSchema,
+      configSchema: nativePluginConfigSchema,
     },
     null,
     2,

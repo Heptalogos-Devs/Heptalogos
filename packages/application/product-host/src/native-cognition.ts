@@ -367,6 +367,56 @@ function actualFeedback(value: Pending["observation"]) {
   return digest(facts);
 }
 
+/** Replays compare actual event facts, while the first Host envelope stays authoritative. */
+function assertFeedbackReplay(
+  saved: Pending,
+  incoming: Pending["observation"],
+  claimed: ReturnType<typeof identity>,
+) {
+  if (digest(saved.identity) !== digest(claimed))
+    deny(
+      "native_feedback_changed",
+      "The callback must retain its first native contact identity",
+    );
+  const previous = validated(() => decodeObservationInput(saved.observation));
+  const proposed = validated(() => decodeObservationInput(incoming));
+  previous.context ??= {};
+  proposed.context ??= {};
+  // The SDK may omit the actor selected by the first Host admission.
+  proposed.actorEntityRef ??= previous.actorEntityRef;
+  for (const key of [
+    "activity_ref",
+    "contact_request_id",
+    "cognition_usage",
+    "native_role",
+  ]) {
+    delete previous.context[key];
+    delete proposed.context[key];
+  }
+  for (const key of ["native_model", "native_provider", "native_api"]) {
+    if (
+      previous.context[key] !== undefined &&
+      proposed.context[key] !== undefined &&
+      digest(previous.context[key]) !== digest(proposed.context[key])
+    )
+      deny(
+        "native_feedback_changed",
+        "An existing native audit fact cannot be contradicted",
+      );
+    // A newer diagnostic does not backfill an originally unknown snapshot.
+    delete previous.context[key];
+    delete proposed.context[key];
+  }
+  if (
+    actualFeedback(encodeObservationInput(previous)) !==
+    actualFeedback(encodeObservationInput(proposed))
+  )
+    deny(
+      "native_feedback_changed",
+      "The actual event content conflicts with its first durable fact",
+    );
+}
+
 /** No polling, model calls, network sends, or parallel durable queue is created here. */
 export function createNativeCognitionBridge(options: NativeCognitionOptions) {
   const mutate = <T>(run: (tx: PersistenceInternalTransaction) => Promise<T>) =>
@@ -2304,6 +2354,54 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
               observation.requestId,
             ),
           );
+          const retained = await sql<{ document: Pending }>(
+            tx,
+            "SELECT document FROM heptalogos.role_run_result WHERE result_id=$1 FOR UPDATE",
+            [observation.requestId],
+          );
+          const pending = await sql<{
+            document: Pending;
+            receipt: Parameters<typeof decodeAcceptedObservation>[0] | null;
+            delivered_at: unknown;
+          }>(
+            tx,
+            "SELECT document,receipt,delivered_at FROM heptalogos.cognition_pending_feedback WHERE request_id=$1 FOR UPDATE",
+            [observation.requestId],
+          );
+          const saved = retained[0] ?? pending[0];
+          if (retained[0] && pending[0]) {
+            // Custody promotion may retain the original committed receipt row.
+            // It is one canonical event only when the complete snapshots agree.
+            const receipt = pending[0].receipt
+              ? validated(() => decodeAcceptedObservation(pending[0]!.receipt))
+              : undefined;
+            if (
+              !receipt?.occurrenceId ||
+              !pending[0].delivered_at ||
+              digest(retained[0].document.identity) !==
+                digest(pending[0].document.identity) ||
+              digest(retained[0].document.observation) !==
+                digest(pending[0].document.observation)
+            )
+              deny(
+                "native_feedback_changed",
+                "Two feedback records require one exact original envelope and committed receipt",
+              );
+          }
+          if (saved) {
+            assertFeedbackReplay(
+              saved.document,
+              encodeObservationInput(observation),
+              identity(input),
+            );
+            return {
+              version: 1,
+              stage: "pending",
+              accepted: true,
+              retainedOnly: !!retained.length,
+              observation: saved.document.observation,
+            };
+          }
           observation.actorEntityRef = contact.response.scope.actorEntityRef;
           observation.context = {
             ...observation.context,
@@ -2333,60 +2431,23 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
               observation: normalized,
               factsDigest: actualFeedback(normalized),
             };
-            const saved = await sql<{ document: Pending }>(
+            await sql(
               tx,
-              "SELECT document FROM heptalogos.role_run_result WHERE result_id=$1 FOR UPDATE",
-              [observation.requestId],
+              "INSERT INTO heptalogos.role_run_result(result_id,subject_id,run_id,document,recorded_at) VALUES($1,$2,$3,$4::jsonb,$5)",
+              [
+                observation.requestId,
+                input.subjectId,
+                input.native.runId,
+                JSON.stringify(document),
+                options.now(),
+              ],
             );
-            if (
-              saved[0] &&
-              (digest(saved[0].document.identity) !== digest(document.identity) ||
-                saved[0].document.factsDigest !== document.factsDigest)
-            )
-              deny(
-                "native_feedback_changed",
-                "A retained RoleRun result cannot change identity or actual content",
-              );
-            if (!saved[0])
-              await sql(
-                tx,
-                "INSERT INTO heptalogos.role_run_result(result_id,subject_id,run_id,document,recorded_at) VALUES($1,$2,$3,$4::jsonb,$5)",
-                [
-                  observation.requestId,
-                  input.subjectId,
-                  input.native.runId,
-                  JSON.stringify(document),
-                  options.now(),
-                ],
-              );
             return {
               version: 1,
               stage: "pending",
               accepted: true,
               retainedOnly: true,
-              observation: saved[0]?.document.observation ?? normalized,
-            };
-          }
-          const rows = await sql<{ document: Pending }>(
-            tx,
-            "SELECT document FROM heptalogos.cognition_pending_feedback WHERE request_id=$1 FOR UPDATE",
-            [observation.requestId],
-          );
-          if (rows[0]) {
-            if (
-              digest(rows[0].document.identity) !== digest(identity(input)) ||
-              rows[0].document.factsDigest !== actualFeedback(normalized)
-            )
-              deny(
-                "native_feedback_changed",
-                "The actual event identity or result conflicts with its first durable fact",
-              );
-            return {
-              version: 1,
-              stage: "pending",
-              accepted: true,
-              observation: rows[0].document.observation,
-              retainedOnly: false,
+              observation: normalized,
             };
           }
           const document: Pending = {
@@ -2426,7 +2487,8 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         );
         if (
           contact.response.roleScope.contactNature === "execution_only" &&
-          rows[0]?.document.origin !== "agency_delivery"
+          rows[0]?.document.origin !== "agency_delivery" &&
+          !rows[0]?.receipt
         )
           deny(
             "native_execution_result_only",
@@ -2437,11 +2499,14 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
             "native_feedback_changed",
             "No exact pending fact belongs to this contact",
           );
-        if (rows[0].receipt && digest(rows[0].receipt) !== digest(receipt))
-          deny(
-            "native_receipt_changed",
-            "An accepted feedback receipt cannot be overwritten",
-          );
+        if (rows[0].receipt) {
+          if (digest(rows[0].receipt) !== digest(receipt))
+            deny(
+              "native_receipt_changed",
+              "An accepted feedback receipt cannot be overwritten",
+            );
+          return { version: 1, stage: "committed", accepted: true };
+        }
         await sql(
           tx,
           "UPDATE heptalogos.cognition_pending_feedback SET receipt=$2::jsonb,delivered_at=COALESCE(delivered_at,$3) WHERE request_id=$1",

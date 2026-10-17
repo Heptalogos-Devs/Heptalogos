@@ -46,7 +46,7 @@ export const interactionActionKindSchema = Type.Union([
   Type.Literal("rest"),
   Type.Literal("adjust_plan"),
 ]);
-/** A target is a current frame handle, never a caller-provided owner identity or permission. */
+/** A target is one current frame handle or listed public sourceRef; neither grants authority. */
 export const interactionActionSchema = Type.Object(
   {
     action: interactionActionKindSchema,

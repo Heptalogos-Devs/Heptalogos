@@ -9,7 +9,7 @@ import {
   definePluginEntry,
   buildJsonPluginConfigSchema,
 } from "openclaw/plugin-sdk/plugin-entry";
-import { qqPluginConfigSchema } from "./config.js";
+import { nativePluginConfigSchema } from "./config.js";
 import { registerQqChannel } from "./runtime.js";
 export { resolveQqNativeRoute } from "./routing.js";
 export default definePluginEntry({
@@ -17,7 +17,7 @@ export default definePluginEntry({
   name: "Heptalogos QQ",
   description: "Host-governed QQ ingress and physical delivery",
   configSchema: buildJsonPluginConfigSchema(
-    Object.fromEntries(Object.entries(qqPluginConfigSchema)),
+    Object.fromEntries(Object.entries(nativePluginConfigSchema)),
   ),
   register: registerQqChannel,
 });

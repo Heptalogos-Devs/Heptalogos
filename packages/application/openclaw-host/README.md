@@ -1,6 +1,6 @@
 # Heptalogos QQ 原生渠道
 
-此包为独立 OpenClaw 提供 QQ Channel，负责 OneBot 连接、协议解析、历史和媒体适配。消息、身份、活动、行为采纳和实际回执归 Heptalogos Host；认知仍使用同一 Nous 集成。插件不启动另一套 Agent Runtime。
+此包为独立 OpenClaw 提供公共 Host/Life 接入与可选 QQ Channel，负责 OneBot 连接、协议解析、历史和媒体适配。消息、身份、活动、行为采纳和实际回执归 Heptalogos Host；认知仍使用同一 Nous 集成。插件不启动另一套 Agent Runtime。
 
 原生职责、可信运行和接触边界由[原生执行合同](../../../specs/system/ai-runtime.md)拥有；QQ 实际效果与回执由[行为合同](../../../specs/subject/reaction-behavior.md)拥有。
 
@@ -19,6 +19,8 @@ node scripts/prepare-sdk.mjs /absolute/path/to/official-runtime
 该命令核验实际 SDK 的受控补丁，只调整生成的开发依赖链接。仓库的 `openclaw-host:build` 和 `openclaw-host:pack` Nx target 构建独立 tarball。包内含实际生成的 Gateway Client，安装时不依赖未发布的 workspace 包。
 
 插件声明 `nousNativeState` 中的接收队列和原子键值存储能力，由 Nous 正式受控安装入口核对安装归档、npm 身份及实际文件后授予。普通配置不能自授原生存储权限，也不能冒用官方插件来源。
+
+只使用 Host/Life 的安装在同一 `heptalogos-qq` 插件配置中提供 `hostAnchorRoot` 和 `serviceTokenFile`，不需要 QQ 账号或连接文件。启用 QQ 时提供完整 QQ 配置；部分配置或损坏的连接文件会明确失败，不会降级为无 QQ。两种安装均通过同一 prepare CLI 更新 Nous Host bridge，并校验其真实受保护凭据文件。
 
 ## 接收、媒体与恢复
 
