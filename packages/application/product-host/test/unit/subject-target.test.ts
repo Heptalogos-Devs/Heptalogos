@@ -1,10 +1,18 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
 import { randomUUID } from "node:crypto";
-import { decodeCognitionUsage } from "@nous-wave/client/host-bridge";
+import {
+  decodeCognitionUsage,
+  encodeCognitionUsage,
+} from "@nous-wave/client/host-bridge";
 import { describe, expect, it, vi } from "vitest";
+import { compileSchema } from "@heptalogos/schema-runtime";
 import type { SituationFrame, SituationObject } from "@heptalogos/subject";
-import { resolveSituationTarget } from "../../src/subject-target.js";
+import {
+  currentSituationDecisionInput,
+  resolveSituationTarget,
+} from "../../src/subject-target.js";
+import { createSubjectRoles } from "../../src/subject-roles.js";
 import { createSubjectReactor } from "../../src/subject-reactor.js";
 import { createSubjectSituationRuntime } from "../../src/subject-situation.js";
 const conversationRef = "conversation:heptalogos:01a142a0-7f48-7151-b028-073acc90d80f";
@@ -53,6 +61,158 @@ describe("one current Situation target resolver", () => {
     expect(
       resolveSituationTarget(view, { action: "move", target: conversationRef }).problem,
     ).toContain("action_unavailable");
+  });
+  it("projects action-specific exact targets instead of an object prefix plus a business ID", () => {
+    const activityId = "01a147fd-376b-73c2-a45a-ec826de32174";
+    const activity: SituationObject = {
+      ...conversation,
+      owner: "life",
+      kind: "activity",
+      handle: "object:" + randomUUID(),
+      sourceRef: "activity:" + activityId,
+      actions: ["inspect", "continue", "wait", "rest"],
+    };
+    const water: SituationObject = { ...conversation, actions: ["inspect", "open"] };
+    const view = { ...frame([activity, water]), activityId };
+    const input = currentSituationDecisionInput(view);
+    const contract = compileSchema(input.outputContract);
+    for (const target of [activity.handle, activity.sourceRef]) {
+      expect(
+        contract.validate({
+          action: "continue",
+          target,
+          reason: "Continue current work",
+        }).ok,
+      ).toBe(true);
+      expect(resolveSituationTarget(view, { action: "continue", target }).object).toBe(
+        activity,
+      );
+    }
+    for (const target of ["object:" + activityId, "object:expired", water.handle])
+      expect(
+        contract.validate({ action: "continue", target, reason: "Current work" }).ok,
+      ).toBe(false);
+    expect(
+      contract.validate({
+        action: "communicate",
+        target: water.handle,
+        reason: "Speak",
+      }).ok,
+    ).toBe(false);
+    expect(
+      contract.validate({ action: "continue", reason: "Continue local work" }).ok,
+    ).toBe(true);
+    expect(contract.validate({ action: "open", reason: "Open" }).ok).toBe(false);
+    expect(
+      input.actionTargets.find((row) => row.action === "continue")?.targets,
+    ).toEqual([activity.handle, activity.sourceRef]);
+    const next = currentSituationDecisionInput(
+      frame([{ ...activity, handle: "object:next-frame" }]),
+    );
+    const nextContract = compileSchema(next.outputContract);
+    expect(
+      nextContract.validate({
+        action: "continue",
+        target: activity.handle,
+        reason: "Old choice",
+      }).ok,
+    ).toBe(false);
+    expect(
+      nextContract.validate({
+        action: "continue",
+        target: "object:next-frame",
+        reason: "Current choice",
+      }).ok,
+    ).toBe(true);
+  });
+  it("registers the current action target contract in the actual ephemeral role input", async () => {
+    const view = frame();
+    const registerInput = vi.fn(async (_input: unknown) => {
+      throw Error("captured native registration");
+    });
+    const dispatch = vi.fn();
+    const roles = createSubjectRoles({
+      bindings: async () => [
+        {
+          role: "subject.deliberation",
+          enabled: true,
+          nativeAgentRef: "deliberation",
+          fallbackAgentRefs: [],
+          allowedTools: [],
+          outputContract: "structured_json",
+          inputTokens: 32000,
+          outputTokens: 4096,
+          deadlineMs: 180000,
+        },
+      ],
+      selectAgent: async () => "deliberation",
+      life: {
+        get: async () => ({
+          activityId: view.activityId,
+          state: "active",
+          adoptedBy: "entity:actual",
+          workContextId: randomUUID(),
+          purpose: "Read the current directory",
+          progress: {},
+          scope: { tools: [], maxRunMs: 180000 },
+        }),
+      },
+      authorize: async () => undefined,
+      native: { readDispatch: async () => undefined, registerInput },
+      dispatch,
+    } as unknown as Parameters<typeof createSubjectRoles>[0]);
+    await expect(
+      roles.invoke({
+        requestId: randomUUID(),
+        subjectId: view.subjectId,
+        activityId: view.activityId,
+        role: "subject.deliberation",
+        context: { situation: view },
+        contacts: [],
+        sourceRefs: [],
+        usage: encodeCognitionUsage({
+          purpose: "subject_deliberation",
+          intent: "Choose current action",
+          audience: { visibility: "internal" },
+        }),
+      }),
+    ).rejects.toThrow("captured native registration");
+    const registered = registerInput.mock.calls[0]![0] as unknown as {
+      extraSystemPrompt: string;
+    };
+    const marker = '{"kind":"heptalogos_ephemeral_role_context"';
+    const context = JSON.parse(
+      registered.extraSystemPrompt.slice(registered.extraSystemPrompt.indexOf(marker)),
+    ).sourceData;
+    expect(context.currentSituationChoices).toEqual({
+      frameRef: view.frameRef,
+      actionTargets: currentSituationDecisionInput(view).actionTargets,
+    });
+    const contract = compileSchema(context.outputContract);
+    expect(
+      contract.validate({
+        action: "open",
+        target: conversation.handle,
+        reason: "Open current group",
+      }).ok,
+    ).toBe(true);
+    expect(
+      contract.validate({
+        action: "open",
+        target: "object:" + view.activityId,
+        reason: "Misclassified business ID",
+      }).ok,
+    ).toBe(false);
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+  it("omits ambiguous public aliases using the same canonical resolver", () => {
+    const other = { ...conversation, owner: "world" as const, handle: "object:other" };
+    const view = frame([conversation, other]);
+    const choice = currentSituationDecisionInput(view).actionTargets.find(
+      (row) => row.action === "open",
+    )!;
+    expect(choice.targets).toContain(conversation.handle);
+    expect(choice.targets).not.toContain(conversationRef);
   });
   it("bounds failure feedback to directory metadata without echoing an unknown target body", () => {
     const value = { ...conversation, handle: "object:" + "h".repeat(2040) };

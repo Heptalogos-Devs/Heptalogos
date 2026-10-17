@@ -4,6 +4,11 @@
  * Resolves one explicit target inside the current Situation directory without granting authority.
  * @module subject-target
  */
+import { Type } from "@heptalogos/schema-runtime/typebox";
+import {
+  deliberationDecisionSchema,
+  interactionActionKindSchema,
+} from "@heptalogos/subject";
 import type {
   InteractionAction,
   SituationFrame,
@@ -56,5 +61,44 @@ export function resolveSituationTarget(
           actions: value.actions,
         })),
     }),
+  };
+}
+
+/** These existing foreground actions can express an untargeted local choice. */
+export function allowsUntargetedSituationAction(
+  action: InteractionAction["action"],
+): boolean {
+  return ["inspect", "continue", "wait", "rest", "communicate"].includes(action);
+}
+/** Project current resolver-approved choices into model input; owner authorization remains unchanged. */
+export function currentSituationDecisionInput(frame: SituationFrame) {
+  const candidates = [
+    ...new Set(frame.objects.flatMap((object) => [object.handle, object.sourceRef])),
+  ];
+  const actionTargets = interactionActionKindSchema.anyOf
+    .map(({ const: action }) => ({
+      action,
+      targetRequired: !allowsUntargetedSituationAction(action),
+      targets: candidates.filter(
+        (target) => !resolveSituationTarget(frame, { action, target }).problem,
+      ),
+    }))
+    .filter((choice) => choice.targets.length || !choice.targetRequired);
+  const alternatives = actionTargets.map((choice) => {
+    const target = choice.targets.length
+      ? Type.Union(choice.targets.map((value) => Type.Literal(value)))
+      : Type.Never();
+    return Type.Object({
+      action: Type.Literal(choice.action),
+      target: choice.targetRequired ? target : Type.Optional(target),
+    });
+  });
+  return {
+    frameRef: frame.frameRef,
+    actionTargets,
+    outputContract: Type.Intersect([
+      deliberationDecisionSchema,
+      Type.Union(alternatives),
+    ]),
   };
 }

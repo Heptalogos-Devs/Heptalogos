@@ -9,7 +9,7 @@ function fixture(state: string, fresh = false, nativeStatus = "error") {
   const subjectId = randomUUID(),
     activityId = randomUUID(),
     reactionId = randomUUID();
-  let runId = randomUUID();
+  let runId: string = randomUUID();
   const at = "2026-10-17T07:59:52.000Z";
   let reaction = {
     subjectId,

@@ -13,7 +13,9 @@ import {
   deliberationDecisionSchema,
   realizeWorldSchema,
   narrativeReviewSchema,
+  situationFrameSchema,
   type LifeActivity,
+  type SituationFrame,
   type ForegroundQualification,
   type createLifeService,
 } from "@heptalogos/subject";
@@ -29,6 +31,8 @@ import type {
   NativeActivityDispatch,
   NativeActivityParams,
 } from "./activity-dispatch-contracts.js";
+import { compileSchema } from "@heptalogos/schema-runtime";
+import { currentSituationDecisionInput } from "./subject-target.js";
 import { ROLE_PROMPTS } from "./role-prompts.js";
 /** Internal trusted producer context; this is never a model tool or caller-granted role. */
 export interface RoleInvocation {
@@ -331,16 +335,39 @@ export function createSubjectRoles(options: {
         "Configure this duty with its actual role output contract",
       );
     const template = ROLE_PROMPTS[input.role];
+    const situation =
+      input.role === "subject.deliberation" && input.context.situation
+        ? compileSchema<SituationFrame>(situationFrameSchema).validate(
+            input.context.situation,
+          )
+        : undefined;
+    if (situation && !situation.ok)
+      denied(
+        "role.situation_invalid",
+        "Use the current typed SituationFrame for this choice",
+      );
+    const choiceInput = situation?.ok
+      ? currentSituationDecisionInput(situation.value)
+      : undefined;
+
     const context = {
       templateId: template.id,
       outputContract:
         input.role === "subject.deliberation"
-          ? deliberationDecisionSchema
+          ? (choiceInput?.outputContract ?? deliberationDecisionSchema)
           : input.role === "world.planner"
             ? realizeWorldSchema
             : input.role === "narrative.review"
               ? narrativeReviewSchema
               : binding.outputContract,
+      ...(choiceInput
+        ? {
+            currentSituationChoices: {
+              frameRef: choiceInput.frameRef,
+              actionTargets: choiceInput.actionTargets,
+            },
+          }
+        : {}),
       activity: {
         activityId: activity.activityId,
         purpose: activity.purpose,

@@ -3,7 +3,10 @@
 /** One bounded foreground across notifications, virtual actions and professional result viewing.
  * @module subject-reactor
  */
-import { resolveSituationTarget } from "./subject-target.js";
+import {
+  resolveSituationTarget,
+  allowsUntargetedSituationAction,
+} from "./subject-target.js";
 import { digestCanonicalJson, createUuidV7Id } from "@heptalogos/foundation-contracts";
 import { Type } from "@heptalogos/schema-runtime/typebox";
 import { compileSchema } from "@heptalogos/schema-runtime";
@@ -11,7 +14,6 @@ import { managementProblem } from "@heptalogos/management";
 import {
   captureActivityOpportunity,
   situationFrameSchema,
-  deliberationDecisionSchema,
   type SituationFrame,
   type SituationObject,
   type SubjectReaction,
@@ -372,7 +374,6 @@ export function createSubjectReactor(options: {
               ...view.context,
               situation: frame.value,
               previousAction: previous ?? null,
-              outputContract: deliberationDecisionSchema,
             },
           });
         } catch (error) {
@@ -414,10 +415,7 @@ export function createSubjectReactor(options: {
           };
         }
         const target =
-          proposed.target ||
-          !["inspect", "continue", "wait", "rest", "communicate"].includes(
-            proposed.action,
-          )
+          proposed.target || !allowsUntargetedSituationAction(proposed.action)
             ? resolveSituationTarget(frame.value, proposed)
             : undefined;
         if (target?.problem)
