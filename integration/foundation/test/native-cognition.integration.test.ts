@@ -562,6 +562,121 @@ real(
             ),
           ).toEqual([{ document }]);
           expect(f.submissions).toEqual([]);
+          if (executionOnly) {
+            // 0009 copied every worker fact into custody, while preserving an
+            // already-committed pending row. All eight original paid facts had this shape.
+            const receipt = sdk.encodeAcceptedObservation({
+              occurrenceId: randomUUID(),
+              artifactId: randomUUID(),
+            });
+            const updateCopy = (copy: unknown) =>
+              f.c.run(() =>
+                f.c.persistence.mutate((context) =>
+                  useRepositoryMutationTransaction(context, (tx) =>
+                    executeRepositorySql(
+                      tx,
+                      "UPDATE heptalogos.cognition_pending_feedback SET document=$2::jsonb WHERE request_id=$1",
+                      [original.requestId, JSON.stringify(copy)],
+                    ),
+                  ),
+                ),
+              );
+            await f.c.run(() =>
+              f.c.persistence.mutate((context) =>
+                useRepositoryMutationTransaction(context, (tx) =>
+                  executeRepositorySql(
+                    tx,
+                    "INSERT INTO heptalogos.cognition_pending_feedback(request_id,subject_id,run_id,document,recorded_at) VALUES($1,$2,$3,$4::jsonb,now())",
+                    [
+                      original.requestId,
+                      f.input.subjectId,
+                      f.input.native.runId,
+                      JSON.stringify(document),
+                    ],
+                  ),
+                ),
+              ),
+            );
+            await expect(
+              f.c.run(() => f.bridge.feedback(pending)),
+            ).rejects.toMatchObject({
+              problem: { problemCode: "gateway.native_feedback_changed" },
+            });
+            await f.c.run(() =>
+              f.c.persistence.mutate((context) =>
+                useRepositoryMutationTransaction(context, (tx) =>
+                  executeRepositorySql(
+                    tx,
+                    "UPDATE heptalogos.cognition_pending_feedback SET receipt=$2::jsonb,delivered_at=now() WHERE request_id=$1",
+                    [original.requestId, JSON.stringify(receipt)],
+                  ),
+                ),
+              ),
+            );
+            for (const copy of [
+              { ...document, identity: { ...identity, subjectId: randomUUID() } },
+              {
+                ...document,
+                observation: {
+                  ...original,
+                  inlineText: {
+                    ...original.inlineText,
+                    text: "changed historical body",
+                  },
+                },
+              },
+              {
+                ...document,
+                observation: {
+                  ...original,
+                  externalObjectRef: "object:changed-historical-source",
+                },
+              },
+            ]) {
+              await updateCopy(copy);
+              await expect(
+                f.c.run(() => f.bridge.feedback(pending)),
+              ).rejects.toMatchObject({
+                problem: { problemCode: "gateway.native_feedback_changed" },
+              });
+            }
+            await updateCopy(document);
+            expect(await f.c.run(() => f.bridge.feedback(pending))).toEqual(returned);
+            const committed = {
+              ...identity,
+              stage: "committed" as const,
+              observationRequestId: original.requestId,
+              receipt,
+            };
+            expect(await f.c.run(() => f.bridge.feedback(committed))).toEqual({
+              version: 1,
+              stage: "committed",
+              accepted: true,
+            });
+            await expect(
+              f.c.run(() =>
+                f.bridge.feedback({
+                  ...committed,
+                  receipt: sdk.encodeAcceptedObservation({
+                    occurrenceId: randomUUID(),
+                  }),
+                }),
+              ),
+            ).rejects.toMatchObject({
+              problem: { problemCode: "gateway.native_receipt_changed" },
+            });
+            expect(await f.c.run(() => f.bridge.flushPendingFeedback(1))).toEqual({
+              delivered: 0,
+            });
+            expect(f.submissions).toEqual([]);
+            expect(
+              await readRepositorySql(
+                f.c.persistence,
+                "SELECT document,receipt FROM heptalogos.cognition_pending_feedback WHERE request_id=$1",
+                [original.requestId],
+              ),
+            ).toEqual([{ document, receipt }]);
+          }
           if (!executionOnly) {
             expect(await f.c.run(() => f.bridge.flushPendingFeedback(1))).toEqual({
               delivered: 1,

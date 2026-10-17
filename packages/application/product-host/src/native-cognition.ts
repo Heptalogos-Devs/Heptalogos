@@ -2359,17 +2359,35 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
             "SELECT document FROM heptalogos.role_run_result WHERE result_id=$1 FOR UPDATE",
             [observation.requestId],
           );
-          const pending = await sql<{ document: Pending }>(
+          const pending = await sql<{
+            document: Pending;
+            receipt: Parameters<typeof decodeAcceptedObservation>[0] | null;
+            delivered_at: unknown;
+          }>(
             tx,
-            "SELECT document FROM heptalogos.cognition_pending_feedback WHERE request_id=$1 FOR UPDATE",
+            "SELECT document,receipt,delivered_at FROM heptalogos.cognition_pending_feedback WHERE request_id=$1 FOR UPDATE",
             [observation.requestId],
           );
           const saved = retained[0] ?? pending[0];
-          if (retained.length && pending.length)
-            deny(
-              "native_feedback_changed",
-              "One event cannot have two canonical feedback owners",
-            );
+          if (retained[0] && pending[0]) {
+            // Custody promotion may retain the original committed receipt row.
+            // It is one canonical event only when the complete snapshots agree.
+            const receipt = pending[0].receipt
+              ? validated(() => decodeAcceptedObservation(pending[0]!.receipt))
+              : undefined;
+            if (
+              !receipt?.occurrenceId ||
+              !pending[0].delivered_at ||
+              digest(retained[0].document.identity) !==
+                digest(pending[0].document.identity) ||
+              digest(retained[0].document.observation) !==
+                digest(pending[0].document.observation)
+            )
+              deny(
+                "native_feedback_changed",
+                "Two feedback records require one exact original envelope and committed receipt",
+              );
+          }
           if (saved) {
             assertFeedbackReplay(
               saved.document,
@@ -2469,7 +2487,8 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         );
         if (
           contact.response.roleScope.contactNature === "execution_only" &&
-          rows[0]?.document.origin !== "agency_delivery"
+          rows[0]?.document.origin !== "agency_delivery" &&
+          !rows[0]?.receipt
         )
           deny(
             "native_execution_result_only",
@@ -2480,11 +2499,14 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
             "native_feedback_changed",
             "No exact pending fact belongs to this contact",
           );
-        if (rows[0].receipt && digest(rows[0].receipt) !== digest(receipt))
-          deny(
-            "native_receipt_changed",
-            "An accepted feedback receipt cannot be overwritten",
-          );
+        if (rows[0].receipt) {
+          if (digest(rows[0].receipt) !== digest(receipt))
+            deny(
+              "native_receipt_changed",
+              "An accepted feedback receipt cannot be overwritten",
+            );
+          return { version: 1, stage: "committed", accepted: true };
+        }
         await sql(
           tx,
           "UPDATE heptalogos.cognition_pending_feedback SET receipt=$2::jsonb,delivered_at=COALESCE(delivered_at,$3) WHERE request_id=$1",

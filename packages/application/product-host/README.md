@@ -67,3 +67,5 @@ Reactor 的目标解析只接受当前 SituationFrame 列出的精确对象 hand
 已采纳 Task 在自身获准会话内打开和读取材料会保留原 Activity、WorkContext、目的、来源和工具范围。当前听众取自仍获准的打开视图或唯一观察会话；多会话未打开时为 internal，不从 WorkContext 的隐式约束键取得听众或权限。
 
 Feedback 重放按首次 canonical Observation envelope 核对原 Contact/native 身份与实际事件事实，并返回原 envelope；后来的 Contact scope 或 SDK 诊断字段不改写历史用途、接触时间或事实摘要。未知 context 与原有 audit 矛盾仍拒绝，新的 provider/tool 输入及结果显式释放继续经过当前权限 owner。
+
+Custody promotion 可保留同一事件的既有 committed receipt 行；只有完整原身份/envelope 一致且 receipt 已提交时，它才是合法历史副本。重放保留原 receipt、返回 retained-only envelope，不再次提交 Nous；未提交或内容矛盾的双表记录仍拒绝。
