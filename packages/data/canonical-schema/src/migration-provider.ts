@@ -37,6 +37,8 @@ import { subjectReactorMigration } from "./migrations/0015-subject-reactor.js";
 
 import { worldProfileLivingMigration } from "./migrations/0016-world-profile-living.js";
 
+import { retainedResultDomainTimeMigration } from "./migrations/0018-retained-result-domain-time.js";
+
 const migrations: Readonly<Record<string, Migration>> = Object.freeze({
   "0001_foundation_baseline": foundationBaselineMigration,
   "0002_product_gateway_prerequisites": productGatewayPrerequisitesMigration,
@@ -55,6 +57,7 @@ const migrations: Readonly<Record<string, Migration>> = Object.freeze({
   "0015_subject_reactor": subjectReactorMigration,
   "0016_world_profile_living": worldProfileLivingMigration,
   "0017_subject_attention": subjectAttentionMigration,
+  "0018_retained_result_domain_time": retainedResultDomainTimeMigration,
 });
 
 /** Provides the current canonical migration set to Kysely's Migrator. */
@@ -83,4 +86,5 @@ export const canonicalMigrationNames = Object.freeze([
   "0015_subject_reactor",
   "0016_world_profile_living",
   "0017_subject_attention",
+  "0018_retained_result_domain_time",
 ] as const);
