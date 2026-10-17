@@ -1,6 +1,6 @@
 # Heptalogos 命令行
 
-CLI 是确定性的 ManagementClient 投影，不调用模型。Linux 服务命令使用安装器发布并核对安装身份的 systemd 描述符；不能传入任意 unit 名。普通聊天不获得这些管理权限。
+CLI 是确定性的 ManagementClient 投影；查询不调用模型，明确的执行或机会命令可使原生调度器运行主体。Linux 服务命令使用安装器发布并核对安装身份的 systemd 描述符；不能传入任意 unit 名。普通聊天不获得这些管理权限。
 
 ## 安装后使用
 
@@ -21,6 +21,8 @@ heptalogos subject create --operation-id <uuid> --memory --self --json
 heptalogos services --json
 heptalogos stop --json
 heptalogos restart --json
+heptalogos start --component all --json
+heptalogos restart --component subject --json
 heptalogos maintenance status --json
 heptalogos auth logout --json
 ```
@@ -43,6 +45,10 @@ node scripts/package/install-linux-product.mjs configure-maintenance \
 `--json` 保持机器可读输出。参数错误为 exit 2，认证/权限错误为 3，连接或安装缺失为 4，合同不符为 5，冲突为 6，服务端错误为 7，前台取消为 130。取消后需按操作身份核对已提交变更，不假定远端事务回滚。
 
 精确合同见 [管理](../../../specs/management/system-authority.md)，安装和生命周期边界见 [Host](../product-host/README.md)。验证应从独立安装运行完整认领、登录、配置、启停与恢复，不能只运行源码入口。
+
+`start/stop/restart --component host|subject|maintenance|all` 明确选择组件，默认只处理 Host。`all` 启动按 Host、Subject、maintenance 的顺序处理已配置服务；停止按相反的依赖方向关闭。启动或重启 Subject 后，CLI 等待实际 Gateway 就绪，再请求同一 Reactor 原生机会。`reactorOpportunity` 单独报告 `projected`、`disabled` 或 `unavailable`；服务已启动不等于主体已执行。没有管理员会话时，服务控制仍可完成，机会投影报告需要登录。
+
+配置 `set` 在 Native 或 Nous 停机时仍可提交，额外的 `reactorOpportunity` 说明本次原生机会能否投影。配置保存和模型执行分别查询，原生 profile/model/密钥仍由独立 OpenClaw 配置管理。`config describe` 给出 `roles` 绑定及 `reactor` 限额；`reactor status` 返回实际生效值。
 
 ## 活动、注意与主动追求
 
@@ -72,3 +78,58 @@ heptalogos pursuit history --stdin --json < pursuit-history.json
 变更请求必须显式提供 schema 要求的 operationId/requestId、对象 ID、expectedRevision 和实际授权；CLI 不自动读取并替换 CAS，不生成目标或推断权限。`dispatch` 是明确的原生执行请求，只接受已采纳 Activity 和真实 messageRefs，可能实际调用模型及已授权发送；它不是只读查询。Pursuit 评价只接受实际 evidenceRefs，不能提交 truth/complete 或自由 evaluator。返回值、冲突、来源撤回、UNKNOWN/覆盖与历史全部由既有 owner 决定；CLI 不读数据库或重实现评价规则。
 
 所有命令支持 `--help` 与 `--json`，错误/取消退出码沿用上文。Gateway 凭据失效不删除已经验证的管理员 OS keyring 会话；管理会话本身失效仍需重新登录。
+
+## 世界、生活与陈述
+
+这些命令复用上述管理员登录、当前安装 discovery 和受保护 Gateway 凭据。普通查询使用明确参数；复杂世界采用或事件实现从 JSON 文件/标准输入读取。下面的 ID、域及时间须替换为实际值，创建人物或世界不会更换当前 Subject。
+
+```sh
+heptalogos world actor-resolve --subject-id <subject> --world-id <world> --actor-key math-teacher --json
+heptalogos world configure --file world-request.json --json
+heptalogos world read --subject-id <subject> --world-id <world> --json
+heptalogos world prepare --subject-id <subject> --world-id <world> --json
+heptalogos world query --subject-id <subject> --world-id <world> --domain <time-domain> --from 2026-10-16T00:00:00Z --to 2026-10-16T12:00:00Z --view subject --json
+heptalogos world coverage --subject-id <subject> --world-id <world> --domain <time-domain> --from 2026-10-16T00:00:00Z --to 2026-10-16T12:00:00Z --json
+heptalogos world history --subject-id <subject> --world-id <world> --limit 20 --json
+heptalogos world actors --subject-id <subject> --world-id <world> --entity-ref <canonical-entity-ref> --json
+heptalogos world advance-rules --subject-id <subject> --world-id <world> --domain <time-domain> --from 2026-10-16T00:00:00Z --to 2026-10-16T03:00:00Z --json
+heptalogos world advance --subject-id <subject> --world-id <world> --activity-id <adopted-activity> --request-id <uuid> --json
+heptalogos narrative claims --subject-id <subject> --conversation-ref <canonical-conversation> --limit 20 --json
+heptalogos narrative explain --subject-id <subject> --message-id <actual-platform-message-id> --json
+```
+
+`configure` 接受所属 schema 的完整 `{operationId,expectedRevision,definition,schedule}`；`realize --file patch.json` 接受完整 WorldPatch 请求。二者也支持 `--stdin`，文件/输入上限65536字节。CLI保留调用者的operationId、expectedRevision和真实来源；重试同一操作使用同一身份，不自动生成新请求。世界本人actor必须是当前Subject正式self Entity，NPC先由`actor-resolve`取得world-scoped EntityRef；同名真实QQ账号不会合并。
+
+`read` 返回定义与当前计划；`prepare` 是受保护世界作者frame及下个自然节点，查询本身不调用模型。`query` 返回生活事件/见闻，`--view world_author`仅供管理者检查完整世界；`--after-event-id`使用返回的nextEventId分页。`history`返回不可变world state revision，使用nextRevision作为`--after-revision`，它与事件时间线分别查询。
+
+`query --knowledge-at <world-time>`限定故事内知情；`--as-recorded-at <real-UTC>`限定数据库当时实际持有的记录，二者可以同时使用。`coverage`按真实采用段报告complete/limited/gap；钟已前进不会自动变成生活已实现。
+
+`advance-rules`只实现已采用fixed规律的到期段，choice保留给实际选择；`advance`触发正式内部世界机会，可能调用已配置world/主体角色并按已授予范围继续行为。两者均写产品状态，不是只读诊断。实际角色链、Nous接触和原生scheduler需要Host安装组合完成；CLI或API存在不证明独立安装和真实模型已经验收。
+
+`narrative claims`可用`--status adopted|expressed|uncertain|not_sent`和`--after-claim-id`分页，或以`--domain/--from/--to`限定所指时段。`explain`按实际平台message ID读取Claim与真实回执关联。两项均只读，不提供提交review、伪造Claim或改写已发言记录的操作。
+
+## 入场、日历与 Reactor
+
+新建独立主体后，先显式绑定它，再采用可选 WorldProfile。Seed 与 WorldProfile 分别提供；学生世界示例在 [student-world-profile.json](../../product/subject/examples/student-world-profile.json)。示例中的主体、世界、operationId、规则 UUID、时区及入场时间必须换成实际选择。不要给已有主体自动套用学生身份或倒拨原有时钟。
+
+```sh
+heptalogos world clock --subject-id <subject> --json
+heptalogos world clock-configure --file clock-request.json --json
+heptalogos world profile-adopt --file profile-request.json --json
+heptalogos world profile-read --subject-id <subject> --world-id <world> --json
+heptalogos world living --subject-id <subject> --world-id <world> --json
+heptalogos world calendar --subject-id <subject> --world-id <world> --domain <domain> --from 2026-10-01T00:00:00Z --to 2026-11-01T00:00:00Z --timezone Asia/Shanghai --calendar-view combined --perspective subject --json
+heptalogos world calendar-change --file calendar-change.json --json
+heptalogos reactor status --subject-id <subject> --json
+heptalogos reactor history --subject-id <subject> --limit 32 --json
+heptalogos reactor attention --subject-id <subject> --json
+heptalogos reactor wake --subject-id <subject> --operation-ref <explicit-operation-ref> --json
+```
+
+`clock-configure` 请求为 `{subjectId,operationId,timeDomainRef,rate,worldTime}`，通过官方 Clock 执行明确的管理操作。`profile-adopt` 请求为 `{subjectId,worldId,operationId,expectedRevision,profile}`；Clock 当前域必须匹配 profile 且不早于其入场点。采用后绑定该世界并投影统一机会；设定只有经过实际读取和 NoUS admission 才形成接触，不记成已生活的经历。
+
+`calendar` 支持任意有限区间；`--calendar-view planned|lived|combined` 区分计划与实际，`--perspective subject|world_author|public` 选择知情范围。用返回的 `continuation` 作下一页参数，显示时区不修改原始 recurrence 身份。`calendar-change` 使用 owner 的完整请求，明确 `scope: this|future|unrealized`、`expectedRevision`、`ruleId`、本地 `recurrenceId` 和 `change`。已实现部分保留历史；Profile 内原始课表仅作采用来源，当前课表以日历 owner 为准。
+
+`living` 读取实际采用区间累计的精力、地点和设备视图，查询不推进世界。`reactor status` 显示前台 Reaction、最近实际动作、有效限额、角色绑定和最近机会投影；可带 `--reaction-id` 查看某轮。`history` 用 `nextReactionId` 作 `--after-reaction-id`；`attention` 可带 `--explanation-ref` 读取当时保存的元信息选择。通知被考虑不等于已读，后台结果 ready 不等于主体已看见。
+
+`reactor wake` 只请求一次原生调度机会，随后可能按当前授权调用角色模型。主观决定、工具任务、renderer、review 和实际发送仍走同一正式执行链，查询和管理命令不提供手工写入这些结果的捷径。

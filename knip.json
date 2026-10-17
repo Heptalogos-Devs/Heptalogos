@@ -1,6 +1,5 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "ignoreDependencies": ["@typescript/native"],
   "workspaces": {
     ".": {
       "ignoreDependencies": ["@types/pg", "execa", "kysely", "@nous-wave/client"],
@@ -67,7 +66,10 @@
         "src/dispatch.ts",
         "src/prepare-gateway.ts",
         "scripts/**/*.mjs",
-        "test/support/*.mjs"
+        "test/support/*.mjs",
+        "src/agent-catalog.ts",
+        "src/world-schedule.ts",
+        "src/world-wake-cli.ts"
       ],
       "project": [
         "src/**/*.ts",
@@ -75,7 +77,7 @@
         "test/**/*.ts",
         "test/support/*.mjs"
       ],
-      "ignoreDependencies": ["ajv", "typebox"]
+      "ignoreDependencies": ["ajv", "typebox", "openclaw"]
     }
   }
 }

@@ -4,6 +4,8 @@ Identity owns opaque Host Entity references in `entity:heptalogos:<uuid>` form a
 external accounts, authenticated UIDs, groups and a cognitive Subject's own
 Host identity. It owns no cognition and makes no network calls.
 
+消息与身份分界见[消息架构](../../../docs/architecture/messaging.md)；世界人物的独立 Entity 与 Subject self 约束见[WorldLife 合同](../../../specs/subject/world-life.md)。
+
 ## Public surface
 
 `createIdentityService({ persistence })` consumes the caller's current
@@ -51,3 +53,7 @@ HEPTALOGOS_TEST_PG_BIN=/absolute/postgresql/bin \
 
 This owner does not infer social relationships or authorize platform or Host
 management actions.
+
+`resolveWorldActor({worldId,actorKey})`以世界和稳定角色key解析虚拟人物，返回正式`entity:heptalogos:<UUID>`，重复调用保持同一Entity；另一世界相同key分别建立。`readWorldActor`只读。虚拟人物不能通过`linkAccount`绑定真实协议账号。世界中Subject本人仍使用`ensureSubjectEntity`/`readSubjectEntity`的canonical self，不创建第二个人格身份。
+
+`readSubjectEntity(input, transaction?)` accepts the current owner transaction when used by an admission or send guard; it reads the same canonical mapping without borrowing another pool connection.

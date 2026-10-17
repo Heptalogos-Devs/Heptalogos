@@ -18,6 +18,7 @@ import type {
   ExecutionContextRuntime,
   LineageContextRef,
 } from "@heptalogos/execution-lineage";
+import type { PersistenceInternalTransaction } from "@heptalogos/persistence/repository";
 import type { EvidenceRef, EvidenceService } from "@heptalogos/evidence";
 import type {
   PersistenceMutationTransactionContext,
@@ -139,16 +140,19 @@ export interface ConfigurationService {
   /** Reads one immutable revision. */
   getRevision(
     revisionId: ConfigurationRevisionId | string,
+    transaction?: PersistenceInternalTransaction,
   ): Promise<ConfigurationRevision | undefined>;
   /** Reads the active revision for one scope. */
   getActivation(
     definitionId: ConfigurationDefinitionId | string,
     scopeRef: ConfigurationScopeRef,
+    transaction?: PersistenceInternalTransaction,
   ): Promise<ConfigurationActivation | undefined>;
   /** Resolves the effective revision for one definition and scope. */
   getEffectiveRevision(
     definitionId: ConfigurationDefinitionId | string,
     scopeRef: ConfigurationScopeRef,
+    transaction?: PersistenceInternalTransaction,
   ): Promise<ConfigurationRevision | undefined>;
   /** Revalidates one active revision inside a caller-owned mutation transaction. */
   assertActiveRevisionForCommit(

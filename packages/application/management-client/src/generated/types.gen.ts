@@ -813,12 +813,49 @@ export type GetProductConfigurationResponses = {
                 sourceRefs: Array<string>;
                 maxRunMs: number;
             };
+            reactor?: {
+                /**
+                 * Maximum short interactions in one foreground Reaction.
+                 */
+                maxInteractionSteps?: number;
+                /**
+                 * Real milliseconds for the foreground Reaction, excluding a yielded long worker.
+                 */
+                reactionDeadlineMs?: number;
+                /**
+                 * Concurrent adopted professional runs within the actual native capacity.
+                 */
+                workerConcurrency?: number;
+                candidateLimit?: number;
+                perSourceLimit?: number;
+                messageBatchLimit?: number;
+                /**
+                 * Real milliseconds for ordinary background message aggregation.
+                 */
+                coalesceMs?: number;
+                /**
+                 * Real milliseconds before reconsidering unchanged metadata; never a paid model polling interval.
+                 */
+                reconsiderMs?: number;
+            };
+            roles?: Array<{
+                role: 'world.planner' | 'subject.deliberation' | 'subject.execution' | 'subject.render' | 'narrative.review';
+                nativeAgentRef: string;
+                enabled: boolean;
+                outputContract: 'natural_text' | 'structured_json';
+                deadlineMs: number;
+                outputTokens: number;
+                inputTokens: number;
+                allowedTools: Array<string>;
+                fallbackAgentRefs: Array<string>;
+            }>;
             nous: {
                 runRoot: string;
                 expectedInstanceId: string | null;
             };
             subject: {
                 id: string | null;
+                worldId?: string;
                 enabled: boolean;
             };
             subjectGateway: {
@@ -851,12 +888,49 @@ export type ConfigureProductData = {
                 sourceRefs: Array<string>;
                 maxRunMs: number;
             };
+            reactor?: {
+                /**
+                 * Maximum short interactions in one foreground Reaction.
+                 */
+                maxInteractionSteps?: number;
+                /**
+                 * Real milliseconds for the foreground Reaction, excluding a yielded long worker.
+                 */
+                reactionDeadlineMs?: number;
+                /**
+                 * Concurrent adopted professional runs within the actual native capacity.
+                 */
+                workerConcurrency?: number;
+                candidateLimit?: number;
+                perSourceLimit?: number;
+                messageBatchLimit?: number;
+                /**
+                 * Real milliseconds for ordinary background message aggregation.
+                 */
+                coalesceMs?: number;
+                /**
+                 * Real milliseconds before reconsidering unchanged metadata; never a paid model polling interval.
+                 */
+                reconsiderMs?: number;
+            };
+            roles?: Array<{
+                role: 'world.planner' | 'subject.deliberation' | 'subject.execution' | 'subject.render' | 'narrative.review';
+                nativeAgentRef: string;
+                enabled: boolean;
+                outputContract: 'natural_text' | 'structured_json';
+                deadlineMs: number;
+                outputTokens: number;
+                inputTokens: number;
+                allowedTools: Array<string>;
+                fallbackAgentRefs: Array<string>;
+            }>;
             nous: {
                 runRoot: string;
                 expectedInstanceId: string | null;
             };
             subject: {
                 id: string | null;
+                worldId?: string;
                 enabled: boolean;
             };
             subjectGateway: {
@@ -996,12 +1070,49 @@ export type ConfigureProductResponses = {
                 sourceRefs: Array<string>;
                 maxRunMs: number;
             };
+            reactor?: {
+                /**
+                 * Maximum short interactions in one foreground Reaction.
+                 */
+                maxInteractionSteps?: number;
+                /**
+                 * Real milliseconds for the foreground Reaction, excluding a yielded long worker.
+                 */
+                reactionDeadlineMs?: number;
+                /**
+                 * Concurrent adopted professional runs within the actual native capacity.
+                 */
+                workerConcurrency?: number;
+                candidateLimit?: number;
+                perSourceLimit?: number;
+                messageBatchLimit?: number;
+                /**
+                 * Real milliseconds for ordinary background message aggregation.
+                 */
+                coalesceMs?: number;
+                /**
+                 * Real milliseconds before reconsidering unchanged metadata; never a paid model polling interval.
+                 */
+                reconsiderMs?: number;
+            };
+            roles?: Array<{
+                role: 'world.planner' | 'subject.deliberation' | 'subject.execution' | 'subject.render' | 'narrative.review';
+                nativeAgentRef: string;
+                enabled: boolean;
+                outputContract: 'natural_text' | 'structured_json';
+                deadlineMs: number;
+                outputTokens: number;
+                inputTokens: number;
+                allowedTools: Array<string>;
+                fallbackAgentRefs: Array<string>;
+            }>;
             nous: {
                 runRoot: string;
                 expectedInstanceId: string | null;
             };
             subject: {
                 id: string | null;
+                worldId?: string;
                 enabled: boolean;
             };
             subjectGateway: {
@@ -1011,6 +1122,11 @@ export type ConfigureProductResponses = {
                 origin: string;
             };
         } | null;
+        reactorOpportunity?: {
+            state: 'not_requested' | 'projected' | 'unavailable' | 'disabled';
+            operationRef?: string;
+            attemptedAt?: string;
+        };
     };
 };
 
@@ -1032,12 +1148,49 @@ export type CheckProductConfigurationData = {
             sourceRefs: Array<string>;
             maxRunMs: number;
         };
+        reactor?: {
+            /**
+             * Maximum short interactions in one foreground Reaction.
+             */
+            maxInteractionSteps?: number;
+            /**
+             * Real milliseconds for the foreground Reaction, excluding a yielded long worker.
+             */
+            reactionDeadlineMs?: number;
+            /**
+             * Concurrent adopted professional runs within the actual native capacity.
+             */
+            workerConcurrency?: number;
+            candidateLimit?: number;
+            perSourceLimit?: number;
+            messageBatchLimit?: number;
+            /**
+             * Real milliseconds for ordinary background message aggregation.
+             */
+            coalesceMs?: number;
+            /**
+             * Real milliseconds before reconsidering unchanged metadata; never a paid model polling interval.
+             */
+            reconsiderMs?: number;
+        };
+        roles?: Array<{
+            role: 'world.planner' | 'subject.deliberation' | 'subject.execution' | 'subject.render' | 'narrative.review';
+            nativeAgentRef: string;
+            enabled: boolean;
+            outputContract: 'natural_text' | 'structured_json';
+            deadlineMs: number;
+            outputTokens: number;
+            inputTokens: number;
+            allowedTools: Array<string>;
+            fallbackAgentRefs: Array<string>;
+        }>;
         nous: {
             runRoot: string;
             expectedInstanceId: string | null;
         };
         subject: {
             id: string | null;
+            worldId?: string;
             enabled: boolean;
         };
         subjectGateway: {
@@ -1174,12 +1327,49 @@ export type CheckProductConfigurationResponses = {
             sourceRefs: Array<string>;
             maxRunMs: number;
         };
+        reactor?: {
+            /**
+             * Maximum short interactions in one foreground Reaction.
+             */
+            maxInteractionSteps?: number;
+            /**
+             * Real milliseconds for the foreground Reaction, excluding a yielded long worker.
+             */
+            reactionDeadlineMs?: number;
+            /**
+             * Concurrent adopted professional runs within the actual native capacity.
+             */
+            workerConcurrency?: number;
+            candidateLimit?: number;
+            perSourceLimit?: number;
+            messageBatchLimit?: number;
+            /**
+             * Real milliseconds for ordinary background message aggregation.
+             */
+            coalesceMs?: number;
+            /**
+             * Real milliseconds before reconsidering unchanged metadata; never a paid model polling interval.
+             */
+            reconsiderMs?: number;
+        };
+        roles?: Array<{
+            role: 'world.planner' | 'subject.deliberation' | 'subject.execution' | 'subject.render' | 'narrative.review';
+            nativeAgentRef: string;
+            enabled: boolean;
+            outputContract: 'natural_text' | 'structured_json';
+            deadlineMs: number;
+            outputTokens: number;
+            inputTokens: number;
+            allowedTools: Array<string>;
+            fallbackAgentRefs: Array<string>;
+        }>;
         nous: {
             runRoot: string;
             expectedInstanceId: string | null;
         };
         subject: {
             id: string | null;
+            worldId?: string;
             enabled: boolean;
         };
         subjectGateway: {
@@ -1310,6 +1500,7 @@ export type GetBoundSubjectResponses = {
     200: {
         binding: {
             id: string | null;
+            worldId?: string;
             enabled: boolean;
         };
         subject: {
@@ -1458,12 +1649,49 @@ export type BindProductSubjectResponses = {
                 sourceRefs: Array<string>;
                 maxRunMs: number;
             };
+            reactor?: {
+                /**
+                 * Maximum short interactions in one foreground Reaction.
+                 */
+                maxInteractionSteps?: number;
+                /**
+                 * Real milliseconds for the foreground Reaction, excluding a yielded long worker.
+                 */
+                reactionDeadlineMs?: number;
+                /**
+                 * Concurrent adopted professional runs within the actual native capacity.
+                 */
+                workerConcurrency?: number;
+                candidateLimit?: number;
+                perSourceLimit?: number;
+                messageBatchLimit?: number;
+                /**
+                 * Real milliseconds for ordinary background message aggregation.
+                 */
+                coalesceMs?: number;
+                /**
+                 * Real milliseconds before reconsidering unchanged metadata; never a paid model polling interval.
+                 */
+                reconsiderMs?: number;
+            };
+            roles?: Array<{
+                role: 'world.planner' | 'subject.deliberation' | 'subject.execution' | 'subject.render' | 'narrative.review';
+                nativeAgentRef: string;
+                enabled: boolean;
+                outputContract: 'natural_text' | 'structured_json';
+                deadlineMs: number;
+                outputTokens: number;
+                inputTokens: number;
+                allowedTools: Array<string>;
+                fallbackAgentRefs: Array<string>;
+            }>;
             nous: {
                 runRoot: string;
                 expectedInstanceId: string | null;
             };
             subject: {
                 id: string | null;
+                worldId?: string;
                 enabled: boolean;
             };
             subjectGateway: {
@@ -1719,17 +1947,8 @@ export type TakeActivityOpportunityResponses = {
      * Default Response
      */
     200: {
-        decision: 'defer' | 'rest' | 'dispatched';
-        dispatch?: {
-            requestId: string;
-            nativeRunId: string;
-            sessionKey: string;
-            promptDigest: string;
-            state: 'dispatching' | 'completed' | 'failed' | 'uncertain';
-            replayed: boolean;
-            result?: unknown;
-            code?: string;
-        };
+        decision: 'defer' | 'considered';
+        reactionId?: string;
     };
 };
 
@@ -5849,6 +6068,248 @@ export type TakeAttentionResponses = {
 
 export type TakeAttentionResponse = TakeAttentionResponses[keyof TakeAttentionResponses];
 
+export type SubjectReactorOpportunityData = {
+    body: {
+        subjectId: string;
+        requestId: string;
+        worldId?: string;
+        activityId?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/reactor/opportunity';
+};
+
+export type SubjectReactorOpportunityErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type SubjectReactorOpportunityError = SubjectReactorOpportunityErrors[keyof SubjectReactorOpportunityErrors];
+
+export type SubjectReactorOpportunityResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        status: 'disabled' | 'idle' | 'busy' | 'yielded' | 'processed';
+        reactionId?: string;
+        runId?: string;
+    };
+};
+
+export type SubjectReactorOpportunityResponse = SubjectReactorOpportunityResponses[keyof SubjectReactorOpportunityResponses];
+
+export type CompleteNativeRunData = {
+    body: {
+        version: 1;
+        contactRequestId: string;
+        native: {
+            sessionKey: string;
+            sessionId: string;
+            runId: string;
+            agentId: string;
+            historyGeneration: string;
+            parentSessionKey?: string;
+        };
+        subjectId: string;
+        nousSessionId: string;
+        invocationId: string;
+        outcome: 'completed' | 'failed' | 'cancelled';
+        endedAt: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/cognition/run-terminal';
+};
+
+export type CompleteNativeRunErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type CompleteNativeRunError = CompleteNativeRunErrors[keyof CompleteNativeRunErrors];
+
+export type CompleteNativeRunResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        version: 1;
+        accepted: true;
+        runId: string;
+        activityRef: string;
+        resultRetained: true;
+        ready: true;
+    };
+};
+
+export type CompleteNativeRunResponse = CompleteNativeRunResponses[keyof CompleteNativeRunResponses];
+
 export type PrepareCognitionData = {
     body: {
         version: 1;
@@ -5865,6 +6326,12 @@ export type PrepareCognitionData = {
         nousSessionId: string;
         invocationId: string;
         promptDigest: string;
+        currentContextDigest?: string;
+        historyUsers?: Array<{
+            key: string;
+            nativeRunId: string;
+            promptDigest: string;
+        }>;
     };
     path?: never;
     query?: never;
@@ -5968,7 +6435,21 @@ export type PrepareCognitionResponses = {
         version: 1;
         contactRequestId: string;
         workContextId: string;
+        roleScope: {
+            role: 'world.planner' | 'subject.deliberation' | 'subject.execution' | 'subject.render' | 'narrative.review' | 'subject.reflection' | 'system.maintenance';
+            purpose: 'world_authoring' | 'subject_deliberation' | 'professional_execution' | 'subject_rendering' | 'narrative_review' | 'reflection' | 'maintenance';
+            view: 'world_author' | 'subject' | 'worker' | 'renderer' | 'review' | 'reflection' | 'maintenance';
+            contactNature: 'execution_only' | 'subject_experience';
+        };
+        tokenBudget: {
+            inputTokens: number;
+            outputTokens: number;
+        };
         allowedToolNames: Array<string>;
+        currentSources: Array<{
+            [key: string]: unknown;
+        }>;
+        allowedHistoryUserKeys: Array<string>;
         usage: {
             [key: string]: unknown;
         };
@@ -6140,6 +6621,34 @@ export type NativeLifeData = {
                 at: string;
             } | null;
             mode: 'work' | 'rest' | 'wait';
+        } | {
+            action: 'lifeAt';
+            worldId: string;
+            interval: {
+                timeDomainRef: string;
+                start: string;
+                end: string;
+            };
+            knowledgeCutoff?: {
+                timeDomainRef: string;
+                at: string;
+            };
+            afterEventId?: string;
+            limit?: number;
+        } | {
+            action: 'claimsTo';
+            aboutInterval?: {
+                timeDomainRef: string;
+                start: string;
+                end: string;
+            };
+            afterClaimId?: string;
+            limit?: number;
+        } | {
+            action: 'explainStatement';
+            messageRef: string;
+        } | {
+            action: 'epistemic';
         };
     };
     path?: never;
@@ -6260,10 +6769,273 @@ export type NativeLifeResponses = {
             resultRefs: Array<string>;
         };
         feedbackOmitted: boolean;
+    } | {
+        action: 'lifeAt' | 'claimsTo' | 'explainStatement' | 'epistemic';
+        retrievalOnly: true;
+        sourceRefs: Array<string>;
+        data: {
+            [key: string]: unknown;
+        };
     };
 };
 
 export type NativeLifeResponse = NativeLifeResponses[keyof NativeLifeResponses];
+
+export type ReleaseNativeResultData = {
+    body: {
+        version: 1;
+        requestId: string;
+        subjectId: string;
+        parentRunId: string;
+        childRunId: string;
+        resultIds: Array<string>;
+    };
+    path?: never;
+    query?: never;
+    url: '/nous/v1/result-release';
+};
+
+export type ReleaseNativeResultErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ReleaseNativeResultError = ReleaseNativeResultErrors[keyof ReleaseNativeResultErrors];
+
+export type ReleaseNativeResultResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        version: 1;
+        accepted: true;
+        activityRef: string;
+        contactNature: 'subject_experience';
+        contacts: Array<{
+            contactRef: string;
+            observation: {
+                [key: string]: unknown;
+            };
+        }>;
+        opportunity: {
+            kind: 'activity_result';
+            parentRunId: string;
+            childRunId: string;
+            releaseRef: string;
+        };
+    };
+};
+
+export type ReleaseNativeResultResponse = ReleaseNativeResultResponses[keyof ReleaseNativeResultResponses];
+
+export type CompleteNativeChildData = {
+    body: {
+        version: 1;
+        subjectId: string;
+        parentRunId?: string;
+        parentSessionKey: string;
+        parentSessionId?: string;
+        parentNousSessionId?: string;
+        childRunId: string;
+        childSessionKey: string;
+        childSessionId: string;
+        childNousSessionId: string;
+        outcome: 'completed' | 'failed' | 'cancelled';
+        endedAt: string;
+        recover?: boolean;
+    };
+    path?: never;
+    query?: never;
+    url: '/nous/v1/completion';
+};
+
+export type CompleteNativeChildErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type CompleteNativeChildError = CompleteNativeChildErrors[keyof CompleteNativeChildErrors];
+
+export type CompleteNativeChildResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        version: 1;
+        accepted: true;
+        activityRef: string;
+        parentRunId: string;
+        resultRetained: true;
+        resultIds: Array<string>;
+        resultsOmitted: boolean;
+    };
+};
+
+export type CompleteNativeChildResponse = CompleteNativeChildResponses[keyof CompleteNativeChildResponses];
 
 export type AuthorizeToolExecutionData = {
     body: {
@@ -6405,9 +7177,11 @@ export type HandoffCognitionData = {
         parentSessionKey: string;
         parentSessionId: string;
         parentNousSessionId: string;
+        childNativeAgentId: string;
         childSessionKey: string;
         childSessionId: string;
         childNousSessionId: string;
+        childCurrentContextDigest?: string;
         contextMode: 'isolated';
     };
     path?: never;
@@ -6657,6 +7431,7 @@ export type FeedbackCognitionResponses = {
         version: 1;
         stage: 'pending';
         accepted: true;
+        retainedOnly?: boolean;
         observation: {
             [key: string]: unknown;
         };
@@ -8077,3 +8852,4375 @@ export type EvaluatePursuitResponses = {
 };
 
 export type EvaluatePursuitResponse = EvaluatePursuitResponses[keyof EvaluatePursuitResponses];
+
+export type WorldConfigureData = {
+    body: {
+        operationId: string;
+        expectedRevision: number;
+        definition: {
+            worldId: string;
+            subjectId: string;
+            revision: number;
+            name: string;
+            timeDomainRef: string;
+            timezone: string;
+            offlinePolicy: 'simulate_elapsed' | 'pause_with_host';
+            places: Array<{
+                placeRef: string;
+                name: string;
+                description: string;
+            }>;
+            actors: Array<{
+                entityRef: string;
+                name: string;
+                description: string;
+            }>;
+            subjectActorRef: string;
+            rules: string;
+            creationScope: string;
+            informationSourceRefs: Array<string>;
+            routineRules?: Array<{
+                ruleId: string;
+                revision: number;
+                title: string;
+                content: string;
+                subjectPerception: string | null;
+                startsAtLocal: string;
+                timezone: string;
+                rrule: string | null;
+                rdates: Array<string>;
+                exdates: Array<string>;
+                validThrough: string | null;
+                effectiveFrom: string | null;
+                effectiveUntil: string | null;
+                startShiftSeconds: number;
+                disambiguation: 'compatible' | 'earlier' | 'later' | 'reject';
+                durationMinutes: number;
+                actorRefs: Array<string>;
+                placeRef: string;
+                activityId: string | null;
+                kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
+                visibility: 'subject' | 'world_author' | 'public';
+                adjustable: boolean;
+                cancelled?: boolean;
+                archived?: boolean;
+                mode: 'fixed' | 'choice';
+            }>;
+            calendarExceptions?: Array<{
+                exceptionId: string;
+                ruleId: string;
+                recurrenceId: string;
+                startLocal?: string;
+                preserveRuleRevision?: number;
+                durationMinutes?: number;
+                placeRef?: string;
+                actorRefs?: Array<string>;
+                status: 'planned' | 'cancelled';
+                reason: string;
+            }>;
+        };
+        schedule: Array<{
+            scheduleId: string;
+            ruleRef?: {
+                ruleId: string;
+                revision: number;
+                recurrenceId: string;
+                originalInterval: {
+                    timeDomainRef: string;
+                    start: string;
+                    end: string;
+                };
+                timezoneAdjusted: boolean;
+                exceptionId: string | null;
+            };
+            interval: {
+                timeDomainRef: string;
+                start: string;
+                end: string;
+            };
+            title: string;
+            description: string;
+            actorRefs: Array<string>;
+            placeRef: string;
+            activityId: string | null;
+            sourceRefs: Array<string>;
+            status: 'planned' | 'cancelled';
+            overlap: 'exclusive' | 'concurrent';
+        }>;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/world/configure';
+};
+
+export type WorldConfigureErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type WorldConfigureError = WorldConfigureErrors[keyof WorldConfigureErrors];
+
+export type WorldConfigureResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        definition: {
+            worldId: string;
+            subjectId: string;
+            revision: number;
+            name: string;
+            timeDomainRef: string;
+            timezone: string;
+            offlinePolicy: 'simulate_elapsed' | 'pause_with_host';
+            places: Array<{
+                placeRef: string;
+                name: string;
+                description: string;
+            }>;
+            actors: Array<{
+                entityRef: string;
+                name: string;
+                description: string;
+            }>;
+            subjectActorRef: string;
+            rules: string;
+            creationScope: string;
+            informationSourceRefs: Array<string>;
+            routineRules?: Array<{
+                ruleId: string;
+                revision: number;
+                title: string;
+                content: string;
+                subjectPerception: string | null;
+                startsAtLocal: string;
+                timezone: string;
+                rrule: string | null;
+                rdates: Array<string>;
+                exdates: Array<string>;
+                validThrough: string | null;
+                effectiveFrom: string | null;
+                effectiveUntil: string | null;
+                startShiftSeconds: number;
+                disambiguation: 'compatible' | 'earlier' | 'later' | 'reject';
+                durationMinutes: number;
+                actorRefs: Array<string>;
+                placeRef: string;
+                activityId: string | null;
+                kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
+                visibility: 'subject' | 'world_author' | 'public';
+                adjustable: boolean;
+                cancelled?: boolean;
+                archived?: boolean;
+                mode: 'fixed' | 'choice';
+            }>;
+            calendarExceptions?: Array<{
+                exceptionId: string;
+                ruleId: string;
+                recurrenceId: string;
+                startLocal?: string;
+                preserveRuleRevision?: number;
+                durationMinutes?: number;
+                placeRef?: string;
+                actorRefs?: Array<string>;
+                status: 'planned' | 'cancelled';
+                reason: string;
+            }>;
+        };
+        revision: number;
+        schedule: Array<{
+            scheduleId: string;
+            ruleRef?: {
+                ruleId: string;
+                revision: number;
+                recurrenceId: string;
+                originalInterval: {
+                    timeDomainRef: string;
+                    start: string;
+                    end: string;
+                };
+                timezoneAdjusted: boolean;
+                exceptionId: string | null;
+            };
+            interval: {
+                timeDomainRef: string;
+                start: string;
+                end: string;
+            };
+            title: string;
+            description: string;
+            actorRefs: Array<string>;
+            placeRef: string;
+            activityId: string | null;
+            sourceRefs: Array<string>;
+            status: 'planned' | 'cancelled';
+            overlap: 'exclusive' | 'concurrent';
+        }>;
+        updatedAt: string;
+    };
+};
+
+export type WorldConfigureResponse = WorldConfigureResponses[keyof WorldConfigureResponses];
+
+export type WorldReadData = {
+    body: {
+        subjectId: string;
+        worldId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/world/read';
+};
+
+export type WorldReadErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type WorldReadError = WorldReadErrors[keyof WorldReadErrors];
+
+export type WorldReadResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        world: {
+            definition: {
+                worldId: string;
+                subjectId: string;
+                revision: number;
+                name: string;
+                timeDomainRef: string;
+                timezone: string;
+                offlinePolicy: 'simulate_elapsed' | 'pause_with_host';
+                places: Array<{
+                    placeRef: string;
+                    name: string;
+                    description: string;
+                }>;
+                actors: Array<{
+                    entityRef: string;
+                    name: string;
+                    description: string;
+                }>;
+                subjectActorRef: string;
+                rules: string;
+                creationScope: string;
+                informationSourceRefs: Array<string>;
+                routineRules?: Array<{
+                    ruleId: string;
+                    revision: number;
+                    title: string;
+                    content: string;
+                    subjectPerception: string | null;
+                    startsAtLocal: string;
+                    timezone: string;
+                    rrule: string | null;
+                    rdates: Array<string>;
+                    exdates: Array<string>;
+                    validThrough: string | null;
+                    effectiveFrom: string | null;
+                    effectiveUntil: string | null;
+                    startShiftSeconds: number;
+                    disambiguation: 'compatible' | 'earlier' | 'later' | 'reject';
+                    durationMinutes: number;
+                    actorRefs: Array<string>;
+                    placeRef: string;
+                    activityId: string | null;
+                    kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
+                    visibility: 'subject' | 'world_author' | 'public';
+                    adjustable: boolean;
+                    cancelled?: boolean;
+                    archived?: boolean;
+                    mode: 'fixed' | 'choice';
+                }>;
+                calendarExceptions?: Array<{
+                    exceptionId: string;
+                    ruleId: string;
+                    recurrenceId: string;
+                    startLocal?: string;
+                    preserveRuleRevision?: number;
+                    durationMinutes?: number;
+                    placeRef?: string;
+                    actorRefs?: Array<string>;
+                    status: 'planned' | 'cancelled';
+                    reason: string;
+                }>;
+            };
+            revision: number;
+            schedule: Array<{
+                scheduleId: string;
+                ruleRef?: {
+                    ruleId: string;
+                    revision: number;
+                    recurrenceId: string;
+                    originalInterval: {
+                        timeDomainRef: string;
+                        start: string;
+                        end: string;
+                    };
+                    timezoneAdjusted: boolean;
+                    exceptionId: string | null;
+                };
+                interval: {
+                    timeDomainRef: string;
+                    start: string;
+                    end: string;
+                };
+                title: string;
+                description: string;
+                actorRefs: Array<string>;
+                placeRef: string;
+                activityId: string | null;
+                sourceRefs: Array<string>;
+                status: 'planned' | 'cancelled';
+                overlap: 'exclusive' | 'concurrent';
+            }>;
+            updatedAt: string;
+        } | null;
+    };
+};
+
+export type WorldReadResponse = WorldReadResponses[keyof WorldReadResponses];
+
+export type WorldPrepareData = {
+    body: {
+        subjectId: string;
+        worldId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/world/prepare';
+};
+
+export type WorldPrepareErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type WorldPrepareError = WorldPrepareErrors[keyof WorldPrepareErrors];
+
+export type WorldPrepareResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        state: {
+            definition: {
+                worldId: string;
+                subjectId: string;
+                revision: number;
+                name: string;
+                timeDomainRef: string;
+                timezone: string;
+                offlinePolicy: 'simulate_elapsed' | 'pause_with_host';
+                places: Array<{
+                    placeRef: string;
+                    name: string;
+                    description: string;
+                }>;
+                actors: Array<{
+                    entityRef: string;
+                    name: string;
+                    description: string;
+                }>;
+                subjectActorRef: string;
+                rules: string;
+                creationScope: string;
+                informationSourceRefs: Array<string>;
+                routineRules?: Array<{
+                    ruleId: string;
+                    revision: number;
+                    title: string;
+                    content: string;
+                    subjectPerception: string | null;
+                    startsAtLocal: string;
+                    timezone: string;
+                    rrule: string | null;
+                    rdates: Array<string>;
+                    exdates: Array<string>;
+                    validThrough: string | null;
+                    effectiveFrom: string | null;
+                    effectiveUntil: string | null;
+                    startShiftSeconds: number;
+                    disambiguation: 'compatible' | 'earlier' | 'later' | 'reject';
+                    durationMinutes: number;
+                    actorRefs: Array<string>;
+                    placeRef: string;
+                    activityId: string | null;
+                    kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
+                    visibility: 'subject' | 'world_author' | 'public';
+                    adjustable: boolean;
+                    cancelled?: boolean;
+                    archived?: boolean;
+                    mode: 'fixed' | 'choice';
+                }>;
+                calendarExceptions?: Array<{
+                    exceptionId: string;
+                    ruleId: string;
+                    recurrenceId: string;
+                    startLocal?: string;
+                    preserveRuleRevision?: number;
+                    durationMinutes?: number;
+                    placeRef?: string;
+                    actorRefs?: Array<string>;
+                    status: 'planned' | 'cancelled';
+                    reason: string;
+                }>;
+            };
+            revision: number;
+            schedule: Array<{
+                scheduleId: string;
+                ruleRef?: {
+                    ruleId: string;
+                    revision: number;
+                    recurrenceId: string;
+                    originalInterval: {
+                        timeDomainRef: string;
+                        start: string;
+                        end: string;
+                    };
+                    timezoneAdjusted: boolean;
+                    exceptionId: string | null;
+                };
+                interval: {
+                    timeDomainRef: string;
+                    start: string;
+                    end: string;
+                };
+                title: string;
+                description: string;
+                actorRefs: Array<string>;
+                placeRef: string;
+                activityId: string | null;
+                sourceRefs: Array<string>;
+                status: 'planned' | 'cancelled';
+                overlap: 'exclusive' | 'concurrent';
+            }>;
+            updatedAt: string;
+        };
+        world: {
+            timeDomainRef: string;
+            at: string;
+        };
+        schedule: Array<{
+            scheduleId: string;
+            ruleRef?: {
+                ruleId: string;
+                revision: number;
+                recurrenceId: string;
+                originalInterval: {
+                    timeDomainRef: string;
+                    start: string;
+                    end: string;
+                };
+                timezoneAdjusted: boolean;
+                exceptionId: string | null;
+            };
+            interval: {
+                timeDomainRef: string;
+                start: string;
+                end: string;
+            };
+            title: string;
+            description: string;
+            actorRefs: Array<string>;
+            placeRef: string;
+            activityId: string | null;
+            sourceRefs: Array<string>;
+            status: 'planned' | 'cancelled';
+            overlap: 'exclusive' | 'concurrent';
+        }>;
+        recentEvents: Array<{
+            eventId: string;
+            activityId?: string;
+            energy?: {
+                kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
+                participation: 'primary' | 'subsidiary';
+                delta: number;
+                reason: string;
+            };
+            interval: {
+                timeDomainRef: string;
+                start: string;
+                end: string;
+            };
+            title: string;
+            content: string;
+            actorRefs: Array<string>;
+            placeRef: string;
+            scheduleId: string | null;
+            scheduleOutcome?: 'completed' | 'missed' | 'partial';
+            parentEventId: string | null;
+            causalEventRefs: Array<string>;
+            overlap: 'exclusive' | 'concurrent';
+            source: {
+                kind: 'rule' | 'world_planner' | 'narrative' | 'environment';
+                producerRef: string;
+                sourceRefs: Array<string>;
+            };
+            perceptions: Array<{
+                actorRef: string;
+                kind: 'seen' | 'heard' | 'recall';
+                at: {
+                    timeDomainRef: string;
+                    at: string;
+                };
+                content: string;
+            }>;
+            revision: number;
+            recordedAt: string;
+        }>;
+        nextOpportunity: {
+            timeDomainRef: string;
+            at: string;
+        } | null;
+        role: 'world.planner';
+        contactNature: 'execution_only';
+    };
+};
+
+export type WorldPrepareResponse = WorldPrepareResponses[keyof WorldPrepareResponses];
+
+export type WorldAdvanceRulesData = {
+    body: {
+        subjectId: string;
+        worldId: string;
+        interval: {
+            timeDomainRef: string;
+            start: string;
+            end: string;
+        };
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/world/advanceRules';
+};
+
+export type WorldAdvanceRulesErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type WorldAdvanceRulesError = WorldAdvanceRulesErrors[keyof WorldAdvanceRulesErrors];
+
+export type WorldAdvanceRulesResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        revision: number;
+        events: Array<{
+            eventId: string;
+            activityId?: string;
+            energy?: {
+                kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
+                participation: 'primary' | 'subsidiary';
+                delta: number;
+                reason: string;
+            };
+            interval: {
+                timeDomainRef: string;
+                start: string;
+                end: string;
+            };
+            title: string;
+            content: string;
+            actorRefs: Array<string>;
+            placeRef: string;
+            scheduleId: string | null;
+            scheduleOutcome?: 'completed' | 'missed' | 'partial';
+            parentEventId: string | null;
+            causalEventRefs: Array<string>;
+            overlap: 'exclusive' | 'concurrent';
+            source: {
+                kind: 'rule' | 'world_planner' | 'narrative' | 'environment';
+                producerRef: string;
+                sourceRefs: Array<string>;
+            };
+            perceptions: Array<{
+                actorRef: string;
+                kind: 'seen' | 'heard' | 'recall';
+                at: {
+                    timeDomainRef: string;
+                    at: string;
+                };
+                content: string;
+            }>;
+            revision: number;
+            recordedAt: string;
+        }>;
+        interval: {
+            timeDomainRef: string;
+            start: string;
+            end: string;
+        };
+        coverage: 'complete' | 'limited';
+    };
+};
+
+export type WorldAdvanceRulesResponse = WorldAdvanceRulesResponses[keyof WorldAdvanceRulesResponses];
+
+export type WorldRealizeData = {
+    body: {
+        operationId: string;
+        subjectId: string;
+        worldId: string;
+        expectedRevision: number;
+        interval: {
+            timeDomainRef: string;
+            start: string;
+            end: string;
+        };
+        events: Array<{
+            eventId: string;
+            activityId?: string;
+            energy?: {
+                kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
+                participation: 'primary' | 'subsidiary';
+                delta: number;
+                reason: string;
+            };
+            interval: {
+                timeDomainRef: string;
+                start: string;
+                end: string;
+            };
+            title: string;
+            content: string;
+            actorRefs: Array<string>;
+            placeRef: string;
+            scheduleId: string | null;
+            scheduleOutcome?: 'completed' | 'missed' | 'partial';
+            parentEventId: string | null;
+            causalEventRefs: Array<string>;
+            overlap: 'exclusive' | 'concurrent';
+            source: {
+                kind: 'rule' | 'world_planner' | 'narrative' | 'environment';
+                producerRef: string;
+                sourceRefs: Array<string>;
+            };
+            perceptions: Array<{
+                actorRef: string;
+                kind: 'seen' | 'heard' | 'recall';
+                at: {
+                    timeDomainRef: string;
+                    at: string;
+                };
+                content: string;
+            }>;
+        }>;
+        schedule?: Array<{
+            scheduleId: string;
+            ruleRef?: {
+                ruleId: string;
+                revision: number;
+                recurrenceId: string;
+                originalInterval: {
+                    timeDomainRef: string;
+                    start: string;
+                    end: string;
+                };
+                timezoneAdjusted: boolean;
+                exceptionId: string | null;
+            };
+            interval: {
+                timeDomainRef: string;
+                start: string;
+                end: string;
+            };
+            title: string;
+            description: string;
+            actorRefs: Array<string>;
+            placeRef: string;
+            activityId: string | null;
+            sourceRefs: Array<string>;
+            status: 'planned' | 'cancelled';
+            overlap: 'exclusive' | 'concurrent';
+        }>;
+        coverage: 'complete' | 'limited';
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/world/realize';
+};
+
+export type WorldRealizeErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type WorldRealizeError = WorldRealizeErrors[keyof WorldRealizeErrors];
+
+export type WorldRealizeResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        revision: number;
+        events: Array<{
+            eventId: string;
+            activityId?: string;
+            energy?: {
+                kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
+                participation: 'primary' | 'subsidiary';
+                delta: number;
+                reason: string;
+            };
+            interval: {
+                timeDomainRef: string;
+                start: string;
+                end: string;
+            };
+            title: string;
+            content: string;
+            actorRefs: Array<string>;
+            placeRef: string;
+            scheduleId: string | null;
+            scheduleOutcome?: 'completed' | 'missed' | 'partial';
+            parentEventId: string | null;
+            causalEventRefs: Array<string>;
+            overlap: 'exclusive' | 'concurrent';
+            source: {
+                kind: 'rule' | 'world_planner' | 'narrative' | 'environment';
+                producerRef: string;
+                sourceRefs: Array<string>;
+            };
+            perceptions: Array<{
+                actorRef: string;
+                kind: 'seen' | 'heard' | 'recall';
+                at: {
+                    timeDomainRef: string;
+                    at: string;
+                };
+                content: string;
+            }>;
+            revision: number;
+            recordedAt: string;
+        }>;
+        interval: {
+            timeDomainRef: string;
+            start: string;
+            end: string;
+        };
+        coverage: 'complete' | 'limited';
+    };
+};
+
+export type WorldRealizeResponse = WorldRealizeResponses[keyof WorldRealizeResponses];
+
+export type WorldCalendarReadData = {
+    body: {
+        subjectId: string;
+        worldId: string;
+        interval: {
+            timeDomainRef: string;
+            start: string;
+            end: string;
+        };
+        view: 'planned' | 'lived' | 'combined';
+        perspective: 'world_author' | 'subject' | 'public';
+        displayTimezone: string;
+        actorRef?: string;
+        activityId?: string;
+        limit: number;
+        continuation?: string;
+        asRecordedAt?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/world/calendarRead';
+};
+
+export type WorldCalendarReadErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type WorldCalendarReadError = WorldCalendarReadErrors[keyof WorldCalendarReadErrors];
+
+export type WorldCalendarReadResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        worldId: string;
+        revision: number;
+        interval: {
+            timeDomainRef: string;
+            start: string;
+            end: string;
+        };
+        displayTimezone: string;
+        items: Array<{
+            instanceId: string;
+            interval: {
+                timeDomainRef: string;
+                start: string;
+                end: string;
+            };
+            localStart: string;
+            localEnd: string;
+            status: 'planned' | 'cancelled' | 'realized' | 'unplanned';
+            planned: {
+                scheduleId: string;
+                ruleRef?: {
+                    ruleId: string;
+                    revision: number;
+                    recurrenceId: string;
+                    originalInterval: {
+                        timeDomainRef: string;
+                        start: string;
+                        end: string;
+                    };
+                    timezoneAdjusted: boolean;
+                    exceptionId: string | null;
+                };
+                interval: {
+                    timeDomainRef: string;
+                    start: string;
+                    end: string;
+                };
+                title: string;
+                description: string;
+                actorRefs: Array<string>;
+                placeRef: string;
+                activityId: string | null;
+                sourceRefs: Array<string>;
+                status: 'planned' | 'cancelled';
+                overlap: 'exclusive' | 'concurrent';
+            } | null;
+            lived: Array<{
+                eventId: string;
+                activityId?: string;
+                energy?: {
+                    kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
+                    participation: 'primary' | 'subsidiary';
+                    delta: number;
+                    reason: string;
+                };
+                interval: {
+                    timeDomainRef: string;
+                    start: string;
+                    end: string;
+                };
+                title: string;
+                content: string;
+                actorRefs: Array<string>;
+                placeRef: string;
+                scheduleId: string | null;
+                scheduleOutcome?: 'completed' | 'missed' | 'partial';
+                parentEventId: string | null;
+                causalEventRefs: Array<string>;
+                overlap: 'exclusive' | 'concurrent';
+                source: {
+                    kind: 'rule' | 'world_planner' | 'narrative' | 'environment';
+                    producerRef: string;
+                    sourceRefs: Array<string>;
+                };
+                perceptions: Array<{
+                    actorRef: string;
+                    kind: 'seen' | 'heard' | 'recall';
+                    at: {
+                        timeDomainRef: string;
+                        at: string;
+                    };
+                    content: string;
+                }>;
+                revision: number;
+                recordedAt: string;
+            } | {
+                eventId: string;
+                eventRevision: number;
+                worldId: string;
+                interval: {
+                    timeDomainRef: string;
+                    start: string;
+                    end: string;
+                };
+                recordedAt: string;
+                actorRef: string;
+                kind: 'seen' | 'heard' | 'recall';
+                at: {
+                    timeDomainRef: string;
+                    at: string;
+                };
+                content: string;
+            }>;
+            recordedAt: string;
+            sourceRefs: Array<string>;
+        }>;
+        continuation: string | null;
+    };
+};
+
+export type WorldCalendarReadResponse = WorldCalendarReadResponses[keyof WorldCalendarReadResponses];
+
+export type WorldCalendarChangeData = {
+    body: {
+        operationId: string;
+        subjectId: string;
+        worldId: string;
+        expectedRevision: number;
+        ruleId: string;
+        recurrenceId: string;
+        scope: 'this' | 'future' | 'unrealized';
+        change: {
+            startLocal?: string;
+            durationMinutes?: number;
+            placeRef?: string;
+            actorRefs?: Array<string>;
+            status: 'planned' | 'cancelled';
+        };
+        reason: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/world/calendarChange';
+};
+
+export type WorldCalendarChangeErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type WorldCalendarChangeError = WorldCalendarChangeErrors[keyof WorldCalendarChangeErrors];
+
+export type WorldCalendarChangeResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        definition: {
+            worldId: string;
+            subjectId: string;
+            revision: number;
+            name: string;
+            timeDomainRef: string;
+            timezone: string;
+            offlinePolicy: 'simulate_elapsed' | 'pause_with_host';
+            places: Array<{
+                placeRef: string;
+                name: string;
+                description: string;
+            }>;
+            actors: Array<{
+                entityRef: string;
+                name: string;
+                description: string;
+            }>;
+            subjectActorRef: string;
+            rules: string;
+            creationScope: string;
+            informationSourceRefs: Array<string>;
+            routineRules?: Array<{
+                ruleId: string;
+                revision: number;
+                title: string;
+                content: string;
+                subjectPerception: string | null;
+                startsAtLocal: string;
+                timezone: string;
+                rrule: string | null;
+                rdates: Array<string>;
+                exdates: Array<string>;
+                validThrough: string | null;
+                effectiveFrom: string | null;
+                effectiveUntil: string | null;
+                startShiftSeconds: number;
+                disambiguation: 'compatible' | 'earlier' | 'later' | 'reject';
+                durationMinutes: number;
+                actorRefs: Array<string>;
+                placeRef: string;
+                activityId: string | null;
+                kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
+                visibility: 'subject' | 'world_author' | 'public';
+                adjustable: boolean;
+                cancelled?: boolean;
+                archived?: boolean;
+                mode: 'fixed' | 'choice';
+            }>;
+            calendarExceptions?: Array<{
+                exceptionId: string;
+                ruleId: string;
+                recurrenceId: string;
+                startLocal?: string;
+                preserveRuleRevision?: number;
+                durationMinutes?: number;
+                placeRef?: string;
+                actorRefs?: Array<string>;
+                status: 'planned' | 'cancelled';
+                reason: string;
+            }>;
+        };
+        revision: number;
+        schedule: Array<{
+            scheduleId: string;
+            ruleRef?: {
+                ruleId: string;
+                revision: number;
+                recurrenceId: string;
+                originalInterval: {
+                    timeDomainRef: string;
+                    start: string;
+                    end: string;
+                };
+                timezoneAdjusted: boolean;
+                exceptionId: string | null;
+            };
+            interval: {
+                timeDomainRef: string;
+                start: string;
+                end: string;
+            };
+            title: string;
+            description: string;
+            actorRefs: Array<string>;
+            placeRef: string;
+            activityId: string | null;
+            sourceRefs: Array<string>;
+            status: 'planned' | 'cancelled';
+            overlap: 'exclusive' | 'concurrent';
+        }>;
+        updatedAt: string;
+    };
+};
+
+export type WorldCalendarChangeResponse = WorldCalendarChangeResponses[keyof WorldCalendarChangeResponses];
+
+export type WorldProfileAdoptData = {
+    body: {
+        operationId: string;
+        subjectId: string;
+        worldId: string;
+        expectedRevision: number;
+        profile: {
+            name: string;
+            timeDomainRef: string;
+            timezone: string;
+            offlinePolicy: 'simulate_elapsed' | 'pause_with_host';
+            clock: {
+                onlineRate: number;
+                offlineRate: number;
+            };
+            entry: {
+                role: string;
+                description: string;
+                placeRef: string;
+                at: string;
+            };
+            places: Array<{
+                placeRef: string;
+                name: string;
+                description: string;
+            }>;
+            actors: Array<{
+                actorKey: string;
+                name: string;
+                description: string;
+            }>;
+            rules: string;
+            creationScope: string;
+            informationSourceRefs: Array<string>;
+            routineRules: Array<{
+                ruleId: string;
+                revision: number;
+                title: string;
+                content: string;
+                subjectPerception: string | null;
+                startsAtLocal: string;
+                timezone: string;
+                rrule: string | null;
+                rdates: Array<string>;
+                exdates: Array<string>;
+                validThrough: string | null;
+                effectiveFrom: string | null;
+                effectiveUntil: string | null;
+                startShiftSeconds: number;
+                disambiguation: 'compatible' | 'earlier' | 'later' | 'reject';
+                durationMinutes: number;
+                actorRefs: Array<string>;
+                placeRef: string;
+                activityId: string | null;
+                kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
+                visibility: 'subject' | 'world_author' | 'public';
+                adjustable: boolean;
+                cancelled?: boolean;
+                archived?: boolean;
+                mode: 'fixed' | 'choice';
+            }>;
+            calendarExceptions: Array<{
+                exceptionId: string;
+                ruleId: string;
+                recurrenceId: string;
+                startLocal?: string;
+                preserveRuleRevision?: number;
+                durationMinutes?: number;
+                placeRef?: string;
+                actorRefs?: Array<string>;
+                status: 'planned' | 'cancelled';
+                reason: string;
+            }>;
+            energy: {
+                initial: number;
+                unit: 'per_world_hour';
+                rates: {
+                    study: number;
+                    social: number;
+                    rest: number;
+                    sleep: number;
+                    ordinary: number;
+                    entertainment: number;
+                };
+                subsidiaryBurdenRatio: number;
+                maxEventDelta: number;
+            };
+            planning: {
+                horizonHours: number;
+                detailHours: number;
+            };
+            actionPolicy?: {
+                restMinutes: number;
+            };
+            travelEdges: Array<{
+                from: string;
+                to: string;
+                durationMinutes: number;
+            }>;
+            publicCalendar: 'none' | 'busy';
+        };
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/world/profileAdopt';
+};
+
+export type WorldProfileAdoptErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type WorldProfileAdoptError = WorldProfileAdoptErrors[keyof WorldProfileAdoptErrors];
+
+export type WorldProfileAdoptResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        subjectId: string;
+        worldId: string;
+        revision: number;
+        operationId: string;
+        profile: {
+            name: string;
+            timeDomainRef: string;
+            timezone: string;
+            offlinePolicy: 'simulate_elapsed' | 'pause_with_host';
+            clock: {
+                onlineRate: number;
+                offlineRate: number;
+            };
+            entry: {
+                role: string;
+                description: string;
+                placeRef: string;
+                at: string;
+            };
+            places: Array<{
+                placeRef: string;
+                name: string;
+                description: string;
+            }>;
+            actors: Array<{
+                actorKey: string;
+                name: string;
+                description: string;
+            }>;
+            rules: string;
+            creationScope: string;
+            informationSourceRefs: Array<string>;
+            routineRules: Array<{
+                ruleId: string;
+                revision: number;
+                title: string;
+                content: string;
+                subjectPerception: string | null;
+                startsAtLocal: string;
+                timezone: string;
+                rrule: string | null;
+                rdates: Array<string>;
+                exdates: Array<string>;
+                validThrough: string | null;
+                effectiveFrom: string | null;
+                effectiveUntil: string | null;
+                startShiftSeconds: number;
+                disambiguation: 'compatible' | 'earlier' | 'later' | 'reject';
+                durationMinutes: number;
+                actorRefs: Array<string>;
+                placeRef: string;
+                activityId: string | null;
+                kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
+                visibility: 'subject' | 'world_author' | 'public';
+                adjustable: boolean;
+                cancelled?: boolean;
+                archived?: boolean;
+                mode: 'fixed' | 'choice';
+            }>;
+            calendarExceptions: Array<{
+                exceptionId: string;
+                ruleId: string;
+                recurrenceId: string;
+                startLocal?: string;
+                preserveRuleRevision?: number;
+                durationMinutes?: number;
+                placeRef?: string;
+                actorRefs?: Array<string>;
+                status: 'planned' | 'cancelled';
+                reason: string;
+            }>;
+            energy: {
+                initial: number;
+                unit: 'per_world_hour';
+                rates: {
+                    study: number;
+                    social: number;
+                    rest: number;
+                    sleep: number;
+                    ordinary: number;
+                    entertainment: number;
+                };
+                subsidiaryBurdenRatio: number;
+                maxEventDelta: number;
+            };
+            planning: {
+                horizonHours: number;
+                detailHours: number;
+            };
+            actionPolicy?: {
+                restMinutes: number;
+            };
+            travelEdges: Array<{
+                from: string;
+                to: string;
+                durationMinutes: number;
+            }>;
+            publicCalendar: 'none' | 'busy';
+        };
+        subjectActorRef: string;
+        actorBindings: Array<{
+            actorKey: string;
+            entityRef: string;
+        }>;
+        entrySourceRef: string;
+        entryRecordedAt: string;
+        policyEffectiveAt: {
+            timeDomainRef: string;
+            at: string;
+        };
+        adoptedAt: string;
+    };
+};
+
+export type WorldProfileAdoptResponse = WorldProfileAdoptResponses[keyof WorldProfileAdoptResponses];
+
+export type WorldProfileReadData = {
+    body: {
+        subjectId: string;
+        worldId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/world/profileRead';
+};
+
+export type WorldProfileReadErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type WorldProfileReadError = WorldProfileReadErrors[keyof WorldProfileReadErrors];
+
+export type WorldProfileReadResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        profile: {
+            subjectId: string;
+            worldId: string;
+            revision: number;
+            operationId: string;
+            profile: {
+                name: string;
+                timeDomainRef: string;
+                timezone: string;
+                offlinePolicy: 'simulate_elapsed' | 'pause_with_host';
+                clock: {
+                    onlineRate: number;
+                    offlineRate: number;
+                };
+                entry: {
+                    role: string;
+                    description: string;
+                    placeRef: string;
+                    at: string;
+                };
+                places: Array<{
+                    placeRef: string;
+                    name: string;
+                    description: string;
+                }>;
+                actors: Array<{
+                    actorKey: string;
+                    name: string;
+                    description: string;
+                }>;
+                rules: string;
+                creationScope: string;
+                informationSourceRefs: Array<string>;
+                routineRules: Array<{
+                    ruleId: string;
+                    revision: number;
+                    title: string;
+                    content: string;
+                    subjectPerception: string | null;
+                    startsAtLocal: string;
+                    timezone: string;
+                    rrule: string | null;
+                    rdates: Array<string>;
+                    exdates: Array<string>;
+                    validThrough: string | null;
+                    effectiveFrom: string | null;
+                    effectiveUntil: string | null;
+                    startShiftSeconds: number;
+                    disambiguation: 'compatible' | 'earlier' | 'later' | 'reject';
+                    durationMinutes: number;
+                    actorRefs: Array<string>;
+                    placeRef: string;
+                    activityId: string | null;
+                    kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
+                    visibility: 'subject' | 'world_author' | 'public';
+                    adjustable: boolean;
+                    cancelled?: boolean;
+                    archived?: boolean;
+                    mode: 'fixed' | 'choice';
+                }>;
+                calendarExceptions: Array<{
+                    exceptionId: string;
+                    ruleId: string;
+                    recurrenceId: string;
+                    startLocal?: string;
+                    preserveRuleRevision?: number;
+                    durationMinutes?: number;
+                    placeRef?: string;
+                    actorRefs?: Array<string>;
+                    status: 'planned' | 'cancelled';
+                    reason: string;
+                }>;
+                energy: {
+                    initial: number;
+                    unit: 'per_world_hour';
+                    rates: {
+                        study: number;
+                        social: number;
+                        rest: number;
+                        sleep: number;
+                        ordinary: number;
+                        entertainment: number;
+                    };
+                    subsidiaryBurdenRatio: number;
+                    maxEventDelta: number;
+                };
+                planning: {
+                    horizonHours: number;
+                    detailHours: number;
+                };
+                actionPolicy?: {
+                    restMinutes: number;
+                };
+                travelEdges: Array<{
+                    from: string;
+                    to: string;
+                    durationMinutes: number;
+                }>;
+                publicCalendar: 'none' | 'busy';
+            };
+            subjectActorRef: string;
+            actorBindings: Array<{
+                actorKey: string;
+                entityRef: string;
+            }>;
+            entrySourceRef: string;
+            entryRecordedAt: string;
+            policyEffectiveAt: {
+                timeDomainRef: string;
+                at: string;
+            };
+            adoptedAt: string;
+        } | null;
+    };
+};
+
+export type WorldProfileReadResponse = WorldProfileReadResponses[keyof WorldProfileReadResponses];
+
+export type WorldLivingData = {
+    body: {
+        subjectId: string;
+        worldId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/world/living';
+};
+
+export type WorldLivingErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type WorldLivingError = WorldLivingErrors[keyof WorldLivingErrors];
+
+export type WorldLivingResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        living: {
+            subjectId: string;
+            worldId: string;
+            revision: number;
+            profileRevision: number;
+            energy: number;
+            integratedThrough: {
+                timeDomainRef: string;
+                at: string;
+            };
+            coverage: 'complete' | 'limited';
+            currentPlaceRef: string;
+            currentActivityRefs: Array<string>;
+            energyExplanation: string;
+            device: {
+                revision: number;
+                view: {
+                    kind: 'stowed';
+                } | {
+                    kind: 'notifications';
+                } | {
+                    kind: 'conversations';
+                } | {
+                    kind: 'conversation';
+                    conversationRef: string;
+                } | {
+                    kind: 'page';
+                    materialRef: string;
+                };
+            };
+            updatedAt: string;
+        } | null;
+    };
+};
+
+export type WorldLivingResponse = WorldLivingResponses[keyof WorldLivingResponses];
+
+export type WorldClockReadData = {
+    body: {
+        subjectId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/world/clockRead';
+};
+
+export type WorldClockReadErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type WorldClockReadError = WorldClockReadErrors[keyof WorldClockReadErrors];
+
+export type WorldClockReadResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        subjectId: string;
+        timeDomainRef: string;
+        rate: number;
+        revision: string;
+        world: {
+            timeDomainRef: string;
+            at: string;
+        };
+        recordedAt: string;
+    };
+};
+
+export type WorldClockReadResponse = WorldClockReadResponses[keyof WorldClockReadResponses];
+
+export type WorldClockConfigureData = {
+    body: {
+        subjectId: string;
+        operationId: string;
+        timeDomainRef: string;
+        rate: number;
+        worldTime: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/world/clockConfigure';
+};
+
+export type WorldClockConfigureErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type WorldClockConfigureError = WorldClockConfigureErrors[keyof WorldClockConfigureErrors];
+
+export type WorldClockConfigureResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        subjectId: string;
+        timeDomainRef: string;
+        rate: number;
+        revision: string;
+        world: {
+            timeDomainRef: string;
+            at: string;
+        };
+        recordedAt: string;
+    };
+};
+
+export type WorldClockConfigureResponse = WorldClockConfigureResponses[keyof WorldClockConfigureResponses];
+
+export type WorldQueryData = {
+    body: {
+        subjectId: string;
+        worldId: string;
+        interval: {
+            timeDomainRef: string;
+            start: string;
+            end: string;
+        };
+        view: 'world_author' | 'subject';
+        asRecordedAt?: string;
+        knowledgeAtWorldTime?: {
+            timeDomainRef: string;
+            at: string;
+        };
+        afterEventId?: string;
+        limit: number;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/world/query';
+};
+
+export type WorldQueryErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type WorldQueryError = WorldQueryErrors[keyof WorldQueryErrors];
+
+export type WorldQueryResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        revision: number;
+        view: 'world_author';
+        events: Array<{
+            eventId: string;
+            activityId?: string;
+            energy?: {
+                kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
+                participation: 'primary' | 'subsidiary';
+                delta: number;
+                reason: string;
+            };
+            interval: {
+                timeDomainRef: string;
+                start: string;
+                end: string;
+            };
+            title: string;
+            content: string;
+            actorRefs: Array<string>;
+            placeRef: string;
+            scheduleId: string | null;
+            scheduleOutcome?: 'completed' | 'missed' | 'partial';
+            parentEventId: string | null;
+            causalEventRefs: Array<string>;
+            overlap: 'exclusive' | 'concurrent';
+            source: {
+                kind: 'rule' | 'world_planner' | 'narrative' | 'environment';
+                producerRef: string;
+                sourceRefs: Array<string>;
+            };
+            perceptions: Array<{
+                actorRef: string;
+                kind: 'seen' | 'heard' | 'recall';
+                at: {
+                    timeDomainRef: string;
+                    at: string;
+                };
+                content: string;
+            }>;
+            revision: number;
+            recordedAt: string;
+        }>;
+        nextEventId: string | null;
+    } | {
+        revision: number;
+        view: 'subject';
+        events: Array<{
+            eventId: string;
+            eventRevision: number;
+            worldId: string;
+            interval: {
+                timeDomainRef: string;
+                start: string;
+                end: string;
+            };
+            recordedAt: string;
+            actorRef: string;
+            kind: 'seen' | 'heard' | 'recall';
+            at: {
+                timeDomainRef: string;
+                at: string;
+            };
+            content: string;
+        }>;
+        nextEventId: string | null;
+    };
+};
+
+export type WorldQueryResponse = WorldQueryResponses[keyof WorldQueryResponses];
+
+export type WorldHistoryData = {
+    body: {
+        subjectId: string;
+        worldId: string;
+        afterRevision?: number;
+        limit: number;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/world/history';
+};
+
+export type WorldHistoryErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type WorldHistoryError = WorldHistoryErrors[keyof WorldHistoryErrors];
+
+export type WorldHistoryResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        history: Array<{
+            definition: {
+                worldId: string;
+                subjectId: string;
+                revision: number;
+                name: string;
+                timeDomainRef: string;
+                timezone: string;
+                offlinePolicy: 'simulate_elapsed' | 'pause_with_host';
+                places: Array<{
+                    placeRef: string;
+                    name: string;
+                    description: string;
+                }>;
+                actors: Array<{
+                    entityRef: string;
+                    name: string;
+                    description: string;
+                }>;
+                subjectActorRef: string;
+                rules: string;
+                creationScope: string;
+                informationSourceRefs: Array<string>;
+                routineRules?: Array<{
+                    ruleId: string;
+                    revision: number;
+                    title: string;
+                    content: string;
+                    subjectPerception: string | null;
+                    startsAtLocal: string;
+                    timezone: string;
+                    rrule: string | null;
+                    rdates: Array<string>;
+                    exdates: Array<string>;
+                    validThrough: string | null;
+                    effectiveFrom: string | null;
+                    effectiveUntil: string | null;
+                    startShiftSeconds: number;
+                    disambiguation: 'compatible' | 'earlier' | 'later' | 'reject';
+                    durationMinutes: number;
+                    actorRefs: Array<string>;
+                    placeRef: string;
+                    activityId: string | null;
+                    kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
+                    visibility: 'subject' | 'world_author' | 'public';
+                    adjustable: boolean;
+                    cancelled?: boolean;
+                    archived?: boolean;
+                    mode: 'fixed' | 'choice';
+                }>;
+                calendarExceptions?: Array<{
+                    exceptionId: string;
+                    ruleId: string;
+                    recurrenceId: string;
+                    startLocal?: string;
+                    preserveRuleRevision?: number;
+                    durationMinutes?: number;
+                    placeRef?: string;
+                    actorRefs?: Array<string>;
+                    status: 'planned' | 'cancelled';
+                    reason: string;
+                }>;
+            };
+            revision: number;
+            schedule: Array<{
+                scheduleId: string;
+                ruleRef?: {
+                    ruleId: string;
+                    revision: number;
+                    recurrenceId: string;
+                    originalInterval: {
+                        timeDomainRef: string;
+                        start: string;
+                        end: string;
+                    };
+                    timezoneAdjusted: boolean;
+                    exceptionId: string | null;
+                };
+                interval: {
+                    timeDomainRef: string;
+                    start: string;
+                    end: string;
+                };
+                title: string;
+                description: string;
+                actorRefs: Array<string>;
+                placeRef: string;
+                activityId: string | null;
+                sourceRefs: Array<string>;
+                status: 'planned' | 'cancelled';
+                overlap: 'exclusive' | 'concurrent';
+            }>;
+            updatedAt: string;
+        }>;
+        nextRevision: number | null;
+    };
+};
+
+export type WorldHistoryResponse = WorldHistoryResponses[keyof WorldHistoryResponses];
+
+export type WorldCoverageData = {
+    body: {
+        subjectId: string;
+        worldId: string;
+        interval: {
+            timeDomainRef: string;
+            start: string;
+            end: string;
+        };
+        asRecordedAt?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/world/coverage';
+};
+
+export type WorldCoverageErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type WorldCoverageError = WorldCoverageErrors[keyof WorldCoverageErrors];
+
+export type WorldCoverageResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        interval: {
+            timeDomainRef: string;
+            start: string;
+            end: string;
+        };
+        coverage: 'complete' | 'limited' | 'gap';
+        segments: Array<{
+            interval: {
+                timeDomainRef: string;
+                start: string;
+                end: string;
+            };
+            coverage: 'complete' | 'limited';
+            recordedAt: string;
+        }>;
+    };
+};
+
+export type WorldCoverageResponse = WorldCoverageResponses[keyof WorldCoverageResponses];
+
+export type WorldActorResolveData = {
+    body: {
+        worldId: string;
+        actorKey: string;
+        subjectId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/world/actorResolve';
+};
+
+export type WorldActorResolveErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type WorldActorResolveError = WorldActorResolveErrors[keyof WorldActorResolveErrors];
+
+export type WorldActorResolveResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        entityRef: string;
+        kind: 'person' | 'group' | 'subject';
+    };
+};
+
+export type WorldActorResolveResponse = WorldActorResolveResponses[keyof WorldActorResolveResponses];
+
+export type WorldActorsData = {
+    body: {
+        worldId: string;
+        entityRefs: Array<string>;
+        subjectId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/world/actors';
+};
+
+export type WorldActorsErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type WorldActorsError = WorldActorsErrors[keyof WorldActorsErrors];
+
+export type WorldActorsResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        actors: Array<{
+            actorKey: string;
+            entity: {
+                entityRef: string;
+                kind: 'person' | 'group' | 'subject';
+            };
+        }>;
+    };
+};
+
+export type WorldActorsResponse = WorldActorsResponses[keyof WorldActorsResponses];
+
+export type ClaimsToData = {
+    body: {
+        subjectId: string;
+        conversationRef: string;
+        about?: {
+            timeDomainRef: string;
+            start: string;
+            end: string;
+        };
+        status?: 'adopted' | 'expressed' | 'uncertain' | 'not_sent';
+        order?: 'oldest' | 'newest';
+        afterClaimId?: string;
+        limit: number;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/narrative/claims';
+};
+
+export type ClaimsToErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ClaimsToError = ClaimsToErrors[keyof ClaimsToErrors];
+
+export type ClaimsToResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        claims: Array<{
+            sourceIndex: number;
+            start: number;
+            end: number;
+            quote: string;
+            content: string;
+            entityRefs: Array<string>;
+            kind: 'life' | 'identity' | 'knowledge' | 'relationship' | 'commitment' | 'external_result';
+            stance: 'asserted' | 'uncertain' | 'conditional' | 'reported' | 'deliberate';
+            polarity: 'affirm' | 'deny';
+            about: {
+                timeDomainRef: string;
+                start: string;
+                end: string;
+            } | null;
+            basis: 'world' | 'cognition' | 'new_virtual_detail' | 'commitment' | 'deliberate' | 'uncertain' | 'report';
+            sourceRefs: Array<string>;
+            eventRefs: Array<string>;
+            cognitionRefs: Array<string>;
+            priorClaimRefs: Array<string>;
+            claimId: string;
+            briefId: string;
+            behaviorRef: string;
+            conversationRef: string;
+            recordedAt: string;
+            status: 'adopted' | 'expressed' | 'uncertain' | 'not_sent';
+            platformMessageIds: Array<string>;
+        }>;
+        more: boolean;
+    };
+};
+
+export type ClaimsToResponse = ClaimsToResponses[keyof ClaimsToResponses];
+
+export type ExplainStatementData = {
+    body: {
+        subjectId: string;
+        platformMessageId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/narrative/explain';
+};
+
+export type ExplainStatementErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ExplainStatementError = ExplainStatementErrors[keyof ExplainStatementErrors];
+
+export type ExplainStatementResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        claims: Array<{
+            sourceIndex: number;
+            start: number;
+            end: number;
+            quote: string;
+            content: string;
+            entityRefs: Array<string>;
+            kind: 'life' | 'identity' | 'knowledge' | 'relationship' | 'commitment' | 'external_result';
+            stance: 'asserted' | 'uncertain' | 'conditional' | 'reported' | 'deliberate';
+            polarity: 'affirm' | 'deny';
+            about: {
+                timeDomainRef: string;
+                start: string;
+                end: string;
+            } | null;
+            basis: 'world' | 'cognition' | 'new_virtual_detail' | 'commitment' | 'deliberate' | 'uncertain' | 'report';
+            sourceRefs: Array<string>;
+            eventRefs: Array<string>;
+            cognitionRefs: Array<string>;
+            priorClaimRefs: Array<string>;
+            claimId: string;
+            briefId: string;
+            behaviorRef: string;
+            conversationRef: string;
+            recordedAt: string;
+            status: 'adopted' | 'expressed' | 'uncertain' | 'not_sent';
+            platformMessageIds: Array<string>;
+        }>;
+    };
+};
+
+export type ExplainStatementResponse = ExplainStatementResponses[keyof ExplainStatementResponses];
+
+export type ReactorStatusData = {
+    body: {
+        subjectId: string;
+        reactionId?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/reactor/status';
+};
+
+export type ReactorStatusErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ReactorStatusError = ReactorStatusErrors[keyof ReactorStatusErrors];
+
+export type ReactorStatusResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        reaction: {
+            subjectId: string;
+            activityId: string;
+            reactionId: string;
+            focusRevision: number;
+            candidate: {
+                subjectId: string;
+                candidateRef: string;
+                sourceOwner: 'messaging' | 'world' | 'life' | 'role_result' | 'cognition';
+                sourceKey: string;
+                sourceRef: string;
+                sourceRevision: string;
+                sourcePosition?: string;
+                kind: 'message' | 'world_event' | 'world_entry' | 'schedule' | 'activity_result' | 'cognition_change' | 'explicit_subject_intent';
+                activityId?: string;
+                worldId?: string;
+                priorityClass: 'important' | 'direct' | 'background';
+                availableAt: string;
+                related: boolean;
+                metadata: {
+                    label: string;
+                    conversationRef?: string;
+                    messageRefs?: Array<string>;
+                    unreadCount?: number;
+                    direct?: boolean;
+                    mention?: boolean;
+                    reply?: boolean;
+                };
+            };
+            explanationRef: string;
+            startedAt: string;
+            deadlineAt: string;
+            policy: {
+                /**
+                 * Maximum short interactions in one foreground Reaction.
+                 */
+                maxInteractionSteps: number;
+                /**
+                 * Real milliseconds for the foreground Reaction, excluding a yielded long worker.
+                 */
+                reactionDeadlineMs: number;
+                /**
+                 * Concurrent adopted professional runs within the actual native capacity.
+                 */
+                workerConcurrency: number;
+            };
+            state: 'active' | 'yielded' | 'superseded' | 'completed';
+            stepCount: number;
+            currentRunId?: string;
+            continuationRef?: string;
+            stopReason?: string;
+        } | null;
+        lastAction: {
+            actionId: string;
+            reactionId: string;
+            step: number;
+            action: {
+                action: 'inspect' | 'open' | 'read' | 'search' | 'move' | 'participate' | 'communicate' | 'continue' | 'wait' | 'rest' | 'adjust_plan';
+                target?: string;
+            };
+            state: 'started' | 'completed' | 'pending' | 'rejected' | 'unavailable';
+            resultRefs: Array<string>;
+            recordedAt: string;
+        } | null;
+        policy: {
+            /**
+             * Maximum short interactions in one foreground Reaction.
+             */
+            maxInteractionSteps: number;
+            /**
+             * Real milliseconds for the foreground Reaction, excluding a yielded long worker.
+             */
+            reactionDeadlineMs: number;
+            /**
+             * Concurrent adopted professional runs within the actual native capacity.
+             */
+            workerConcurrency: number;
+            candidateLimit: number;
+            perSourceLimit: number;
+            messageBatchLimit: number;
+            /**
+             * Real milliseconds for ordinary background message aggregation.
+             */
+            coalesceMs: number;
+            /**
+             * Real milliseconds before reconsidering unchanged metadata; never a paid model polling interval.
+             */
+            reconsiderMs: number;
+        };
+        roles: Array<{
+            role: 'world.planner' | 'subject.deliberation' | 'subject.execution' | 'subject.render' | 'narrative.review';
+            nativeAgentRef: string;
+            enabled: boolean;
+            outputContract: 'natural_text' | 'structured_json';
+            deadlineMs: number;
+            outputTokens: number;
+            inputTokens: number;
+            allowedTools: Array<string>;
+            fallbackAgentRefs: Array<string>;
+        }>;
+        opportunityProjection: {
+            state: 'not_requested' | 'projected' | 'unavailable' | 'disabled';
+            operationRef?: string;
+            attemptedAt?: string;
+        };
+    };
+};
+
+export type ReactorStatusResponse = ReactorStatusResponses[keyof ReactorStatusResponses];
+
+export type ReactorHistoryData = {
+    body: {
+        subjectId: string;
+        limit: number;
+        afterReactionId?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/reactor/history';
+};
+
+export type ReactorHistoryErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ReactorHistoryError = ReactorHistoryErrors[keyof ReactorHistoryErrors];
+
+export type ReactorHistoryResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        reactions: Array<{
+            subjectId: string;
+            activityId: string;
+            reactionId: string;
+            focusRevision: number;
+            candidate: {
+                subjectId: string;
+                candidateRef: string;
+                sourceOwner: 'messaging' | 'world' | 'life' | 'role_result' | 'cognition';
+                sourceKey: string;
+                sourceRef: string;
+                sourceRevision: string;
+                sourcePosition?: string;
+                kind: 'message' | 'world_event' | 'world_entry' | 'schedule' | 'activity_result' | 'cognition_change' | 'explicit_subject_intent';
+                activityId?: string;
+                worldId?: string;
+                priorityClass: 'important' | 'direct' | 'background';
+                availableAt: string;
+                related: boolean;
+                metadata: {
+                    label: string;
+                    conversationRef?: string;
+                    messageRefs?: Array<string>;
+                    unreadCount?: number;
+                    direct?: boolean;
+                    mention?: boolean;
+                    reply?: boolean;
+                };
+            };
+            explanationRef: string;
+            startedAt: string;
+            deadlineAt: string;
+            policy: {
+                /**
+                 * Maximum short interactions in one foreground Reaction.
+                 */
+                maxInteractionSteps: number;
+                /**
+                 * Real milliseconds for the foreground Reaction, excluding a yielded long worker.
+                 */
+                reactionDeadlineMs: number;
+                /**
+                 * Concurrent adopted professional runs within the actual native capacity.
+                 */
+                workerConcurrency: number;
+            };
+            state: 'active' | 'yielded' | 'superseded' | 'completed';
+            stepCount: number;
+            currentRunId?: string;
+            continuationRef?: string;
+            stopReason?: string;
+        }>;
+        more: boolean;
+        nextReactionId: string | null;
+    };
+};
+
+export type ReactorHistoryResponse = ReactorHistoryResponses[keyof ReactorHistoryResponses];
+
+export type ReactorAttentionExplainData = {
+    body: {
+        subjectId: string;
+        explanationRef?: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/reactor/attentionExplain';
+};
+
+export type ReactorAttentionExplainErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ReactorAttentionExplainError = ReactorAttentionExplainErrors[keyof ReactorAttentionExplainErrors];
+
+export type ReactorAttentionExplainResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        selection: {
+            subjectId: string;
+            state: 'selected' | 'switch_requested' | 'focus_retained' | 'coalescing' | 'no_new_candidate';
+            reason: string;
+            candidateRefs: Array<string>;
+            candidates: Array<{
+                subjectId: string;
+                candidateRef: string;
+                sourceOwner: 'messaging' | 'world' | 'life' | 'role_result' | 'cognition';
+                sourceKey: string;
+                sourceRef: string;
+                sourceRevision: string;
+                sourcePosition?: string;
+                kind: 'message' | 'world_event' | 'world_entry' | 'schedule' | 'activity_result' | 'cognition_change' | 'explicit_subject_intent';
+                activityId?: string;
+                worldId?: string;
+                priorityClass: 'important' | 'direct' | 'background';
+                availableAt: string;
+                related: boolean;
+                metadata: {
+                    label: string;
+                    conversationRef?: string;
+                    messageRefs?: Array<string>;
+                    unreadCount?: number;
+                    direct?: boolean;
+                    mention?: boolean;
+                    reply?: boolean;
+                };
+            }>;
+            limited: boolean;
+            policy: {
+                candidateLimit: number;
+                perSourceLimit: number;
+                messageBatchLimit: number;
+                /**
+                 * Real milliseconds for ordinary background message aggregation.
+                 */
+                coalesceMs: number;
+                /**
+                 * Real milliseconds before reconsidering unchanged metadata; never a paid model polling interval.
+                 */
+                reconsiderMs: number;
+            };
+            selected?: {
+                subjectId: string;
+                candidateRef: string;
+                sourceOwner: 'messaging' | 'world' | 'life' | 'role_result' | 'cognition';
+                sourceKey: string;
+                sourceRef: string;
+                sourceRevision: string;
+                sourcePosition?: string;
+                kind: 'message' | 'world_event' | 'world_entry' | 'schedule' | 'activity_result' | 'cognition_change' | 'explicit_subject_intent';
+                activityId?: string;
+                worldId?: string;
+                priorityClass: 'important' | 'direct' | 'background';
+                availableAt: string;
+                related: boolean;
+                metadata: {
+                    label: string;
+                    conversationRef?: string;
+                    messageRefs?: Array<string>;
+                    unreadCount?: number;
+                    direct?: boolean;
+                    mention?: boolean;
+                    reply?: boolean;
+                };
+            };
+            switchRequested?: {
+                subjectId: string;
+                candidateRef: string;
+                sourceOwner: 'messaging' | 'world' | 'life' | 'role_result' | 'cognition';
+                sourceKey: string;
+                sourceRef: string;
+                sourceRevision: string;
+                sourcePosition?: string;
+                kind: 'message' | 'world_event' | 'world_entry' | 'schedule' | 'activity_result' | 'cognition_change' | 'explicit_subject_intent';
+                activityId?: string;
+                worldId?: string;
+                priorityClass: 'important' | 'direct' | 'background';
+                availableAt: string;
+                related: boolean;
+                metadata: {
+                    label: string;
+                    conversationRef?: string;
+                    messageRefs?: Array<string>;
+                    unreadCount?: number;
+                    direct?: boolean;
+                    mention?: boolean;
+                    reply?: boolean;
+                };
+            };
+            nextConsiderAt?: string;
+            explanationRef: string;
+        } | null;
+    };
+};
+
+export type ReactorAttentionExplainResponse = ReactorAttentionExplainResponses[keyof ReactorAttentionExplainResponses];
+
+export type ReactorWakeData = {
+    body: {
+        subjectId: string;
+        operationRef: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/reactor/wake';
+};
+
+export type ReactorWakeErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ReactorWakeError = ReactorWakeErrors[keyof ReactorWakeErrors];
+
+export type ReactorWakeResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        projected: true;
+    };
+};
+
+export type ReactorWakeResponse = ReactorWakeResponses[keyof ReactorWakeResponses];
+
+export type AdvanceWorldOpportunityData = {
+    body: {
+        subjectId: string;
+        worldId: string;
+        activityId: string;
+        requestId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/world/advance';
+};
+
+export type AdvanceWorldOpportunityErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type AdvanceWorldOpportunityError = AdvanceWorldOpportunityErrors[keyof AdvanceWorldOpportunityErrors];
+
+export type AdvanceWorldOpportunityResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        status: string;
+        plannerRunId?: string;
+        deliberationRunId?: string;
+        nextOpportunity?: {
+            timeDomainRef: string;
+            at: string;
+        } | null;
+    };
+};
+
+export type AdvanceWorldOpportunityResponse = AdvanceWorldOpportunityResponses[keyof AdvanceWorldOpportunityResponses];

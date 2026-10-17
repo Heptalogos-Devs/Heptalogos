@@ -67,3 +67,33 @@ Host 为实际派发注册的 agent RPC 携带独立 `toolBindings.heptalogos`�
 service-only `/gateway/v1/native/life` 在事务外完成当前 Pursuit/来源检查与 world 读取，在 Host fence 内锁定并重新验证实际 running run、已 admitted contact、Activity scope、operator grant 与 Pursuit 本地 revision。inspect 读取该 Activity；progress 的 note 是主体陈述，来源引用由 Host 从实际选源、已提交反馈 receipt 生成，不接受模型的成果或来源宣称。两者都要求当前 `heptalogos_life` 工具许可。
 
 Life.progress 可显式改变 work/wait/rest，保持当前 active 状态，并要求下一处理点属于 Activity 当前实际 world。rest 阻止新来信正文读取；同 world 到期后由 Life owner CAS 转回 work，既有原生 opportunity 续行，无额外 timer 或模型循环。wait 仍可处理已授权来信。并发进展或授权撤回不能被旧 revision 覆盖。
+
+## 当前纠偏施工合同
+
+独立世界与陈述由[WorldLife](world-life.md)及[NarrativeCommit](narrative-claims.md)拥有，原生多角色由[执行合同](../system/ai-runtime.md)拥有。它们为唯一活动计划的当前施工范围，前文已实现消息派发路径不构成这些能力已完成的声明。
+
+机会扩展为message、world_event、schedule、activity_result、cognition_change、explicit_subject_intent。仅message必须提供实际会话；内部生活不依赖QQ账号或虚假消息。主观决定可继续、观察、推迟、拒绝、询问、交流、学习、委派、发起活动或休息。Direct/@/maxWait只触发重新考虑，不保证回复。Subject在已授予工具/来源/渠道/预算内可自行采用活动，不要求操作者逐项管理adopt。
+
+Nous EpistemicView是唯一主体知识投影，包含相关熟悉范围、接受事实/报告、亲历/听说/学习区分、未知与freshness/coverage限制、刚获得的执行辅助和学习机会。Host只传purpose/视角/真实来源和世界时间，不读取三个域拼第二份知识库。陌生主题仍可在本人愿意且权限允许时学习；后台懂得不等于主体已有专业经验。
+
+世界/worker/review使用execution_only，成果经显式有界handoff才形成subject_experience。观察、学习、reflection与后续表达保留各自来源；未读正文不能进入主体认知。短期情境心境由实际生活/评价延续，不每次随机重置或改写长期Self。
+
+## 正式主观决定采用
+
+`createDeliberationService` 在同Subject短叙事锁与Activity CAS内保存不可变DecisionCommit，引用实际sourceRunId、操作身份、确切选择及实际来源。模型JSON仍是提案；Host在事务外核对真实subject.deliberation角色、provider admission和输入范围，再在同一事务内通过受信assertion复核当前权限。模型不填写actor、渠道授权或受众。
+
+`adopt`接受明确operationId、Subject/Activity、sourceRunId、expectedActivityRevision和decision；同操作同内容返回原采用，不重做Life变化，同操作改内容拒绝。`read(subjectId,decisionRef)`和`readOperation(subjectId,operationId)`读取已有采用，调用者重入应先读receipt，不以新revision重建原请求。采用返回新的activityRevision，后续ExpressionBrief据此使用当前Activity CAS。
+
+choice保存continue_activity、observe、defer、decline、ask、communicate、learn、delegate、initiate_activity或rest，以及短原因、可选下一机会和明确任务/表达分量。ask/communicate需要expressionIntent；任意action都可以明确带伴随交流。没有expressionIntent就不自动生成客套回复。表达意图保存原intent/stance/限定、deception及event/cognition/priorClaim refs，后续brief必须从这个已采用来源派生，不能在renderer矛盾后补一个谎言动机。
+
+rest采用rest，defer采用wait；其他choice保留当前mode，交流不会顺便取消休息。显式下一点必须是同域未来；未给下一点时保留尚在未来的既有节点，已经到期的节点被本次采用消费。Life.progressIn在同一事务更新模式/下一点，progress.note与实际成果原样保留，决定本身不伪装为进展说明。
+
+delegation的goal、工具和来源是已采用任务约束，其来源/工具须在实际run范围，工具同时在当前Activity范围；源权限由可信Host复核，不能把message/conversation/world的读取规则简化为字符串前缀。newActivity只保存本次已采用方向和模式，实际Activity/WorkContext创建与worker执行由原Life/Host消费者继续，不能以DecisionCommit冒充任务已运行或已完成。该操作不改写Pursuit、认知或外发结果。
+
+## 原生生活与说法读取
+
+`heptalogos_life`在既有工厂/Host nativeLife边界增加lifeAt、claimsTo、explainStatement与epistemic只读动作。模型只给世界/区间、可选世界知情截点或某条消息引用，不填写Subject、Activity、role或audience。Host从实际nativeRun与最近admitted contact构造绑定，沿原工具权限guard执行。
+
+lifeAt固定Subject视角，并以实际世界来源根/exact event范围筛选；只回已正式释放或当前admitted输入明确带入的event，不借查询提前接触尚pending的场景。claimsTo与explainStatement只返回当前真实听众的本人Claim，内部无听众运行不能任意查询某个会话。explain支持实际平台message ID，或在同一听众内经Messaging owner解析canonical message引用，不向模型返回未读原文。epistemic仅展示这个运行实际admitted Projection内已有的EpistemicView，未提供时明确available=false，不合成一份新认识。
+
+Owner查询在nativeLife写事务外准备；发布前在原事务guard内复核同run、同admitted contact与当前Scope。读取保留world-event exact revision、Claim身份及官方知识投影引用。真实工具action与toolCallId确定这是retrieval/use；返回正文的retrievalOnly字段本身不授予这种归属。读取结果不作为新的独立外部证人或另一次世界realization，沿原Contact/native transcript保留实际使用。

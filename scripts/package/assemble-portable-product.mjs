@@ -19,6 +19,7 @@ import {
   readFile,
   readdir,
   readlink,
+  realpath,
   rm,
   writeFile,
 } from "node:fs/promises";
@@ -404,42 +405,99 @@ function runJson(command, args, cwd) {
 async function collectPackageLicenses(roots) {
   const packages = new Map();
   for (const root of roots) {
+    const installed = readYamlFile(join(root, "node_modules/.modules.yaml"));
+    if (
+      installed.nodeLinker !== artifactNodeLinker ||
+      typeof installed.hoistedLocations !== "object" ||
+      installed.hoistedLocations === null
+    ) {
+      fail(`Deployed artifact does not contain the required hoisted layout: ${root}`);
+    }
+    const deployedPackages = new Map();
+    const deployedFileVersions = new Map();
+    const deployedFileLicenses = new Map();
+    for (const [locator, locations] of Object.entries(installed.hoistedLocations)) {
+      if (!Array.isArray(locations)) fail("Invalid deployed hoisted package locations");
+      for (const location of locations) {
+        if (typeof location !== "string") fail("Invalid deployed package location");
+        const packagePath = await realpath(resolve(root, location));
+        if (!isInside(root, packagePath)) {
+          fail(`Deployed package location escapes the Product root: ${packagePath}`);
+        }
+        const packageJson = join(packagePath, "package.json");
+        await requireFile(packageJson, "deployed package manifest");
+        const metadata = JSON.parse(await readFile(packageJson, "utf8"));
+        if (typeof metadata.name !== "string" || typeof metadata.version !== "string") {
+          fail(`Deployed package identity is missing: ${packageJson}`);
+        }
+        const key = `${metadata.name}@${metadata.version}`;
+        if (locator.startsWith(`${metadata.name}@file:`)) {
+          const versions = deployedFileVersions.get(metadata.name) ?? new Set();
+          versions.add(metadata.version);
+          deployedFileVersions.set(metadata.name, versions);
+          deployedFileLicenses.set(key, metadata.license);
+        }
+        const paths = deployedPackages.get(key) ?? new Set();
+        paths.add(packagePath);
+        deployedPackages.set(key, paths);
+      }
+    }
     const byLicense = runJson(
       pnpmCommand,
       ["licenses", "list", "--prod", "--json"],
       root,
     );
     for (const [license, entries] of Object.entries(byLicense)) {
-      if (!Array.isArray(entries)) continue;
+      if (!Array.isArray(entries)) fail("Invalid deployed license entries");
       for (const entry of entries) {
         if (
           typeof entry !== "object" ||
           entry === null ||
           typeof entry.name !== "string" ||
           !Array.isArray(entry.versions) ||
+          entry.versions.length === 0 ||
           !Array.isArray(entry.paths)
         ) {
-          continue;
+          fail("Invalid deployed license package identity");
         }
-        for (let index = 0; index < entry.paths.length; index += 1) {
-          const packagePath = resolve(String(entry.paths[index]));
-          if (!isInside(root, packagePath)) {
+        // pnpm omits versions for file-directory dependencies. Their exact
+        // versions and licenses come from the deployed package manifests.
+        const versions = entry.versions.flatMap((version) => {
+          if (version !== null) return [String(version)];
+          const installedVersions = deployedFileVersions.get(entry.name);
+          if (installedVersions === undefined || installedVersions.size === 0) {
             fail(
-              `License metadata points outside the deployed Product root: ${packagePath}`,
+              `License metadata has no matching deployed file package: ${entry.name}`,
             );
           }
-          const version = String(
-            entry.versions[index] ?? entry.versions[0] ?? "unknown",
-          );
-          const packageJson = join(packagePath, "package.json");
-          await requireFile(packageJson, `deployed package manifest for ${entry.name}`);
+          return [...installedVersions].map((installedVersion) => {
+            const key = `${entry.name}@${installedVersion}`;
+            if (deployedFileLicenses.get(key) !== license) {
+              fail(`Deployed file package license does not match its metadata: ${key}`);
+            }
+            return installedVersion;
+          });
+        });
+        for (const version of versions) {
           const key = `${entry.name}@${version}`;
+          const paths = deployedPackages.get(key);
+          if (paths === undefined || paths.size === 0) {
+            fail(`License metadata has no matching deployed package identity: ${key}`);
+          }
+          // pnpm licenses can report a virtual-store path for a hoisted install.
+          // Resolve only the exact installed name/version, including nested copies.
+          const packageJsons = [...paths]
+            .sort((left, right) => left.localeCompare(right))
+            .map((path) =>
+              relative(root, join(path, "package.json")).split(sep).join("/"),
+            );
           if (!packages.has(key)) {
             packages.set(key, {
               name: entry.name,
-              version,
+              version: String(version),
               license,
-              packageJson: relative(root, packageJson).split(sep).join("/"),
+              packageJson: packageJsons[0],
+              packageJsons,
             });
           }
         }
@@ -500,6 +558,26 @@ async function main() {
   );
   if (!/18\.6/u.test(postgresVersion))
     fail("Expected PostgreSQL 18.6, observed " + postgresVersion);
+  const postgresLicenseMaterials =
+    process.platform === "win32"
+      ? [
+          ["server_license.txt", "postgresql-server-license.txt"],
+          [
+            "commandlinetools_3rd_party_licenses.txt",
+            "postgresql-commandline-third-party.txt",
+          ],
+        ]
+      : [
+          ["COPYRIGHT", "postgresql/COPYRIGHT"],
+          ["LICENSE", "postgresql/LICENSE"],
+          ["README.md", "postgresql/README.md"],
+        ];
+  for (const [source] of postgresLicenseMaterials) {
+    await requireFile(
+      join(options.postgresRoot, source),
+      `PostgreSQL distribution license material ${source}`,
+    );
+  }
   await requireFile(
     join(options.hostArtifact, "bin.js"),
     "built Product Host artifact",
@@ -604,14 +682,11 @@ async function main() {
       join(options.nodeRoot, "LICENSE"),
       join(options.target, "licenses/node-LICENSE.txt"),
     );
-    await cp(
-      join(options.postgresRoot, "server_license.txt"),
-      join(options.target, "licenses/postgresql-server-license.txt"),
-    );
-    await cp(
-      join(options.postgresRoot, "commandlinetools_3rd_party_licenses.txt"),
-      join(options.target, "licenses/postgresql-commandline-third-party.txt"),
-    );
+    for (const [source, destination] of postgresLicenseMaterials) {
+      const target = join(options.target, "licenses", destination);
+      await mkdir(dirname(target), { recursive: true });
+      await cp(join(options.postgresRoot, source), target);
+    }
   }
   await cp(
     join(repositoryRoot, "LICENSE"),

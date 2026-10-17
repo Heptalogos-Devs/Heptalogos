@@ -31,12 +31,12 @@ requirement IDs.
 
 ## System and Product prerequisites
 
-| Spec                                        | Read when                                                                                                          | Current contract covered                                                                                   | Primary owner                             | Prefix |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------- | ------ |
-| [Configuration](./system/configuration.md)  | Changing Product configuration definitions, revisions, activation, or effective-value resolution.                  | MANAGED_REVISION configuration, definition metadata, immutable revisions, and activation.                  | ConfigurationService and owning consumers | `CFG`  |
-| [Secret](./system/secret.md)                | Changing SecretRef, secret metadata, resolution, replacement, or revocation.                                       | Normal Product secret lifecycle, backend boundary, and no-plaintext handling.                              | SecretService                             | `SEC`  |
-| [NetworkAccess](./system/network-access.md) | Changing Host-originated outbound transport, destination policy, redirect handling, or body budgets.               | Managed network request policy, cancellation, streaming limits, and opaque-external boundary.              | NetworkAccessService                      | `NET`  |
-| [AI Runtime](./system/ai-runtime.md)        | Changing provider/model profiles, Subject bindings, InvocationSpec, structured generation, or provider provenance. | AIRuntime semantic state, subject.primary/subject.expression, schema validation, and invocation readiness. | AIRuntimeService                          | `AIR`  |
+| Spec                                        | Read when                                                                                            | Current contract covered                                                                      | Primary owner                               | Prefix |
+| ------------------------------------------- | ---------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- | ------------------------------------------- | ------ |
+| [Configuration](./system/configuration.md)  | Changing Product configuration definitions, revisions, activation, or effective-value resolution.    | MANAGED_REVISION configuration, definition metadata, immutable revisions, and activation.     | ConfigurationService and owning consumers   | `CFG`  |
+| [Secret](./system/secret.md)                | Changing SecretRef, secret metadata, resolution, replacement, or revocation.                         | Normal Product secret lifecycle, backend boundary, and no-plaintext handling.                 | SecretService                               | `SEC`  |
+| [NetworkAccess](./system/network-access.md) | Changing Host-originated outbound transport, destination policy, redirect handling, or body budgets. | Managed network request policy, cancellation, streaming limits, and opaque-external boundary. | NetworkAccessService                        | `NET`  |
+| [原生多角色执行](./system/ai-runtime.md)    | 修改职责绑定、用途/视角、独立renderer或原生调用边界。                                                | 原生role/purpose、可信输入、execution_only/subject_experience、表达与失败语义。               | Product Host / OpenClaw / Nous official SDK | `AIR`  |
 
 ## Management and System Authority
 
@@ -46,12 +46,22 @@ requirement IDs.
 
 ## Subject, Messaging, and current behavior
 
-| Spec                                                                   | Read when                                                                                                                                | Current contract covered                                                                                    | Primary owner          | Prefix  |
-| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | ---------------------- | ------- |
-| [Subject Base](./subject/subject-base.md)                              | Changing persistent Subject identity, Desired/Actual state, lifecycle, readiness, or authorityRevision.                                  | One logical Subject, current Subject prerequisites, and state-aware admission.                              | Subject Core           | `SUBJ`  |
-| [Messaging and Subject Chat](./messaging/messaging-subject-chat.md)    | Changing canonical MessageFact, direct Subject Chat, inbound idempotency, or catch-up.                                                   | heptalogos-subject-chat, text-only local messaging, durable inbound order, and local outbound projection.   | MessagingService       | `MSG`   |
-| [Reaction and Communication Authority](./subject/reaction-behavior.md) | Changing Reaction, mailbox revision, conversation proposals, Review, CommunicationCommit, expression, no-communication, or supersession. | Bounded Subject conversation cognition/communication spine and exactly-once local outbound materialization. | Subject/Reaction owner | `REACT` |
+| Spec                                                                   | Read when                                                                                                                                | Current contract covered                                                                                    | Primary owner              | Prefix       |
+| ---------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------- | -------------------------- | ------------ |
+| [Reactor与情境动作](./subject/reactor.md)                              | 修改全Subject前台、注意、机会、虚拟动作或角色交接。                                                                                      | 一条主观链、后台并行、正式感知、预算与让出。                                                                | Subject / Product Host     | `REACTOR`    |
+| [继续信息与原生历史](./subject/context-continuity.md)                  | 修改进展续接、固定前缀压缩、尾部或历史失效。                                                                                             | Activity/WorkContext同步继续信息、单原生compactor。                                                         | Life / Nous SDK / OpenClaw | `CONTINUITY` |
+| [WorldLife](./subject/world-life.md)                                   | 修改世界定义、规律、场景实现、主体视角或无会话机会。                                                                                     | 已采用虚拟生活、正式时钟、来源和离线连续性。                                                                | WorldLife / Product Host   | `WORLD`      |
+| [人格表达与 NarrativeCommit](./subject/narrative-claims.md)            | 修改表达意图、正文读回、Claim、承诺或原子采用。                                                                                          | 同 Subject 叙事事务、真实听众说法和唯一派发关联。                                                           | Subject / Agency           | `NARRATIVE`  |
+| [Subject Base](./subject/subject-base.md)                              | Changing persistent Subject identity, Desired/Actual state, lifecycle, readiness, or authorityRevision.                                  | One logical Subject, current Subject prerequisites, and state-aware admission.                              | Subject Core               | `SUBJ`       |
+| [Messaging and Subject Chat](./messaging/messaging-subject-chat.md)    | Changing canonical MessageFact, direct Subject Chat, inbound idempotency, or catch-up.                                                   | heptalogos-subject-chat, text-only local messaging, durable inbound order, and local outbound projection.   | MessagingService           | `MSG`        |
+| [Reaction and Communication Authority](./subject/reaction-behavior.md) | Changing Reaction, mailbox revision, conversation proposals, Review, CommunicationCommit, expression, no-communication, or supersession. | Bounded Subject conversation cognition/communication spine and exactly-once local outbound materialization. | Subject/Reaction owner     | `REACT`      |
 
 Spec paths define semantic owners, not package or workspace topology. Provider
 decisions, qualification evidence, current sequencing, and work authorization
 remain in their canonical Project Control documents.
+
+## 当前持续主体纠偏施工
+
+[唯一活动计划](../project/plans/qq-continuous-subject.md)授权完整世界与角色链；新增操作的实际范围见各Spec，不能以文档存在视为已交付。
+
+所属合同见上表 WorldLife、NarrativeCommit 和原生多角色执行。

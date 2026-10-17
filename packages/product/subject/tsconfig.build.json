@@ -19,6 +19,9 @@
       "path": "../../data/persistence/tsconfig.build.json"
     },
     {
+      "path": "../../system/management/tsconfig.build.json"
+    },
+    {
       "path": "../../foundation/foundation-contracts/tsconfig.build.json"
     }
   ]

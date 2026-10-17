@@ -14,6 +14,8 @@ import * as subject from "@heptalogos/subject";
 import {
   HOST_BRIDGE_PATHS,
   HOST_BRIDGE_JSON_SCHEMAS,
+  type HostRunTerminalRequest,
+  type HostRunTerminalResponse,
   type HostPrepareRequest,
   type HostPrepareResponse,
   type HostAdmittedRequest,
@@ -22,9 +24,14 @@ import {
   type HostFeedbackResponse,
   type HostToolExecutionRequest,
   type HostToolExecutionResponse,
+  type HostCompletionRequest,
+  type HostCompletionResponse,
+  type HostResultReleaseRequest,
+  type HostResultReleaseResponse,
 } from "@nous-wave/client/host-bridge";
 import { managementProblem, managementProblemSchema } from "@heptalogos/management";
 import { tokenFromRequest } from "./http-auth.js";
+import { registerGatewayPost } from "./gateway-route.js";
 import {
   activityDispatchInputSchema,
   activityDispatchResultSchema,
@@ -41,6 +48,10 @@ import {
   type NativeLifeResponse,
 } from "./native-life-contracts.js";
 import type { createActivityDispatcher } from "./activity-dispatch.js";
+import {
+  reactorOpportunityInputSchema,
+  reactorOpportunityResultSchema,
+} from "./subject-reactor.js";
 import * as contracts from "./gateway-contracts.js";
 import type { createArchiveStore } from "./archive-store.js";
 import { channelRouteSchema, type createChannelRouteStore } from "./channel-routes.js";
@@ -51,6 +62,12 @@ const ack = Type.Object(
 const empty = Type.Object({}, { additionalProperties: false });
 /** Managed cognition uses the official Client's public wire, with no parallel observation DTO. */
 export interface GatewayCognitionBridge {
+  /** Durable outer-native terminal means ready, never viewed or delivered. */
+  runTerminal(input: HostRunTerminalRequest): Promise<HostRunTerminalResponse>;
+  /** Required terminal/completion admission from the actual native durable child owner. */
+  completion(input: HostCompletionRequest): Promise<HostCompletionResponse>;
+  /** Selects bounded retained results for a new Subject contact; no model text replacement. */
+  releaseResult(input: HostResultReleaseRequest): Promise<HostResultReleaseResponse>;
   /** Native-context-bound Life inspect/progress; never a management getter. */
   life(input: NativeLifeRequest): Promise<NativeLifeResponse>;
   /** Admits actual Host-selected material to one native invocation. */
@@ -66,6 +83,9 @@ export interface GatewayCognitionBridge {
 }
 /** Service credential and semantic owners are resolved in the Host composition. */
 export interface GatewayHttpOptions {
+  readonly reactor: (
+    input: Static<typeof reactorOpportunityInputSchema>,
+  ) => Promise<Static<typeof reactorOpportunityResultSchema>>;
   readonly authenticate: (token: string | undefined) => Promise<void>;
   readonly runMutation: <T>(kind: string, operation: () => Promise<T>) => Promise<T>;
   readonly scope: () => Promise<contracts.GatewayScope>;
@@ -100,42 +120,23 @@ export function registerGatewayHttp(
     output: TSchema,
     operation: (value: Static<T>) => Promise<unknown>,
     mutation = false,
-  ) => {
-    app.post(
+  ) =>
+    registerGatewayPost(app, {
       path,
-      {
-        bodyLimit: 16 * 1024 * 1024,
-        onRequest: async (request) => {
-          await owners().authenticate(tokenFromRequest(request));
-        },
-        schema: {
-          operationId: name,
-          body: input,
-          security: [{ gatewayService: [] }],
-          response: {
-            200: output,
-            400: managementProblemSchema,
-            401: managementProblemSchema,
-            403: managementProblemSchema,
-            409: managementProblemSchema,
-            503: managementProblemSchema,
-            500: managementProblemSchema,
-          },
-        },
-      },
-      async (request, reply) => {
-        // The authenticated native call has its own Activity deadline. A quiet
-        // model/tool turn must not inherit the short upload inactivity timer.
+      operationId: name,
+      input,
+      output,
+      bodyLimit: 16 * 1024 * 1024,
+      authenticate: async (request) => owners().authenticate(tokenFromRequest(request)),
+      operation: async (input, _request, reply) => {
+        // Native model/tool calls retain their existing Activity deadline.
         if (name === "dispatchActivity" || name === "takeActivityOpportunity")
           reply.raw.setTimeout(0);
         return mutation
-          ? owners().runMutation("gateway." + name, () =>
-              operation(request.body as Static<T>),
-            )
-          : operation(request.body as Static<T>);
+          ? owners().runMutation("gateway." + name, () => operation(input))
+          : operation(input);
       },
-    );
-  };
+    });
   const receive = async (conversation: messaging.NativeConversation) => {
     const scope = await owners().scope();
     if (
@@ -538,8 +539,24 @@ export function registerGatewayHttp(
     subject.attentionResultSchema,
     (v) => owners().life.takeAttention(v),
   );
+  endpoint(
+    "subjectReactorOpportunity",
+    "/gateway/v1/reactor/opportunity",
+    reactorOpportunityInputSchema,
+    reactorOpportunityResultSchema,
+    (v) => owners().reactor(v),
+    true,
+  );
   // The original Client schemas own these JSON boundaries; no field list is copied here.
   const wire = HOST_BRIDGE_JSON_SCHEMAS;
+  endpoint(
+    "completeNativeRun",
+    HOST_BRIDGE_PATHS.runTerminal,
+    wire.runTerminalRequest as TSchema,
+    wire.runTerminalResponse as TSchema,
+    (v) => owners().cognition.runTerminal(v as HostRunTerminalRequest),
+    true,
+  );
   endpoint(
     "prepareCognition",
     HOST_BRIDGE_PATHS.prepare,
@@ -562,6 +579,22 @@ export function registerGatewayHttp(
     nativeLifeRequestSchema,
     nativeLifeResponseSchema,
     (v) => owners().cognition.life(v),
+    true,
+  );
+  endpoint(
+    "releaseNativeResult",
+    HOST_BRIDGE_PATHS.releaseResult,
+    wire.resultReleaseRequest as TSchema,
+    wire.resultReleaseResponse as TSchema,
+    (v) => owners().cognition.releaseResult(v as HostResultReleaseRequest),
+    true,
+  );
+  endpoint(
+    "completeNativeChild",
+    HOST_BRIDGE_PATHS.completion,
+    wire.completionRequest as TSchema,
+    wire.completionResponse as TSchema,
+    (v) => owners().cognition.completion(v as HostCompletionRequest),
     true,
   );
   endpoint(

@@ -8,6 +8,7 @@
 import { Type, type Static } from "@heptalogos/schema-runtime/typebox";
 import type { PersistenceService } from "@heptalogos/persistence";
 
+import type { PersistenceInternalTransaction } from "@heptalogos/persistence/repository";
 const key = Type.String({ minLength: 1, maxLength: 2048 });
 const id = Type.String({
   pattern:
@@ -428,6 +429,45 @@ export const pendingFactSchema = Type.Object(
   },
   object,
 );
+/** Metadata-only notifications retain canonical identity without exposing message text or media. */
+export const messageNoticesInputSchema = Type.Object(
+  {
+    conversations: Type.Array(
+      Type.Object(
+        {
+          conversationId: id,
+          afterSequence: Type.Optional(Type.String({ pattern: "^[0-9]+$" })),
+        },
+        object,
+      ),
+      { maxItems: 128 },
+    ),
+    selfAccountId: key,
+    perConversationLimit: Type.Integer({ minimum: 1, maximum: 64 }),
+  },
+  object,
+);
+/** A notice is still unread; classification uses protocol metadata only. */
+export const messageNoticeSchema = Type.Object(
+  {
+    pendingRef: id,
+    messageRef: id,
+    conversationId: id,
+    sequence: Type.String({ pattern: "^[0-9]+$" }),
+    receivedAt: timestamp,
+    direct: Type.Boolean(),
+    mention: Type.Boolean(),
+    reply: Type.Boolean(),
+    unreadCount: Type.Integer({ minimum: 0 }),
+    authorEntityRef: Type.Optional(key),
+  },
+  object,
+);
+/** Trusted Host collects globally eligible notifications before Subject perception. */
+export const messageNoticesResultSchema = Type.Object(
+  { notices: Type.Array(messageNoticeSchema) },
+  object,
+);
 /** Bounds pending-work enumeration, optionally to one authorized conversation. */
 export const listPendingInputSchema = Type.Object(
   {
@@ -500,10 +540,12 @@ export interface MessagingService {
   /** Resolves allowed source metadata without retrieving original message documents. */
   messageSources(
     input: Static<typeof messageSourcesInputSchema>,
+    transaction?: PersistenceInternalTransaction,
   ): Promise<Static<typeof messageSourcesResultSchema>>;
   /** Resolves only already-established conversation identities without creating or reading message facts. */
   resolveConversations(
     input: Static<typeof resolveConversationsInputSchema>,
+    transaction?: PersistenceInternalTransaction,
   ): Promise<Static<typeof resolveConversationsResultSchema>>;
   /** Reads durable native history coverage without treating missing messages as completeness. */
   readHistoryCoverage(
@@ -516,9 +558,16 @@ export interface MessagingService {
   /** Atomically accepts or deduplicates native facts and their durable pending references. */
   accept(input: AcceptFactsInput): Promise<AcceptFactsResult>;
   /** Returns authorized and budgeted materials without recording an Observation. */
-  prepareRead(input: PrepareReadInput): Promise<PrepareReadResult>;
+  prepareRead(
+    input: PrepareReadInput,
+    transaction?: PersistenceInternalTransaction,
+  ): Promise<PrepareReadResult>;
   /** Retains the stable identity and time of a consumer-reported actual encounter. */
   recordContact(input: RecordContactInput): Promise<void>;
+  /** Returns authorized notification metadata only; never records contact or completes pending. */
+  notices(
+    input: Static<typeof messageNoticesInputSchema>,
+  ): Promise<Static<typeof messageNoticesResultSchema>>;
   /** Lists durable accepted facts awaiting explicit consumer completion. */
   listPending(
     input: Static<typeof listPendingInputSchema>,

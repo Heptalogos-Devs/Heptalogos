@@ -87,14 +87,21 @@ async function generate(directory, apiPackages) {
         extends: relativeFrom(temporaryRoot, join(root, "tsconfig.base.json")),
         compilerOptions: {
           types: ["node"],
+          lib: ["ES2025", "DOM", "DOM.Iterable"],
           baseUrl: root,
           ignoreDeprecations: "6.0",
-          paths: Object.fromEntries(
-            apiPackages.map(({ packageName, entryPoint }) => [
-              packageName,
-              [relativeRepositoryPath(entryPoint)],
-            ]),
-          ),
+          paths: {
+            ...Object.fromEntries(
+              apiPackages.map(({ packageName, entryPoint }) => [
+                packageName,
+                [relativeRepositoryPath(entryPoint)],
+              ]),
+            ),
+            // Match the native plugin's actual development type dependency.
+            ws: [
+              "packages/application/openclaw-host/node_modules/@types/ws/index.d.ts",
+            ],
+          },
         },
         files: apiPackages.map(({ entryPoint }) =>
           relativeFrom(temporaryRoot, entryPoint),

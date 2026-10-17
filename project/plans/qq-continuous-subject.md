@@ -1,34 +1,41 @@
-# QQ 持续主体上线
+# Reactor、持续生活与 QQ 上线
 
-状态：ACTIVE。用户已授权完整系列实施和现有 Linux 部署。本计划替代已完成旧阶段对当前产品施工的限制；旧验证结果只证明其实际执行边界。
+状态：ACTIVE。本计划是本系列唯一活动授权。2026-10-16 完整 Reactor 集成包替代此前 Subject-World-Correction 与 QQ 包；保留既有有效实现、真实数据及付费成果，不回退作者快照。目标是完整产品与实际连续使用，任何单个 PR、CI 或首次回声均不结束本计划。
 
-## 目标与权威
+## Objective 与决定
 
-交付同一 Subject 在指定 QQ 群/私聊持续运行，保存消息和媒体，选择注意与活动，使用和发展 Nous Self、Social/LanguageConvention、Motivation，真实派发和回流，实际停止、补拉及跨日恢复。长期语义见 Architecture-Vault 的 [共享合同](https://github.com/Heptalogos-Devs/Architecture-Vault/blob/main/docs/integration/cognition-agency.md)与[目标设计](https://github.com/Heptalogos-Devs/Architecture-Vault/blob/main/docs/Heptalogos/TARGET_DESIGN.md)。本地施工包保全于同级 recovery/current-qq-live 指定目录，不复制为第三套活动 Specs。
+交付同一独立 Subject 的世界生活、全局注意、主观选择、专业执行、独立自然表达、认知成长和跨日连续。长期目标与共享分工由 Architecture-Vault [Heptalogos目标](https://github.com/Heptalogos-Devs/Architecture-Vault/blob/main/docs/Heptalogos/TARGET_DESIGN.md)、[Nous目标](https://github.com/Heptalogos-Devs/Architecture-Vault/blob/main/docs/Nous-Wave/TARGET_DESIGN.md)及[共享合同](https://github.com/Heptalogos-Devs/Architecture-Vault/blob/main/docs/integration/cognition-agency.md)维护。
 
-## 决定
+- 程序组织 Reactor：同 Subject 一条前台主观决定链，跨群共用焦点；后台世界、专业任务、压缩及 Nous 反思可并行。逻辑前台资格不等于跨模型数据库长锁，不另建通用 Runtime、Reactor DB 或租约框架。
+- 强审议选择参与、动作和表达意图；情境卡与对象目录来自真实 owner。手机/QQ/浏览器/世界动作执行正式读取、实现与交接；未读正文不提前进入主观输入。长 worker 开始后保存继续信息并让出，ready 只产生机会，具体查看才 release。
+- WorldProfile 与可选 Seed 独立。重复规律、例外、稳定实例、滚动计划和已实现事件共同构成日历；世界与内部活动不依赖 QQ。生活状态按已实现区间积分精力，真实费用/并发独立计量。
+- 所有 Subject 自然表达及人格动作经过独立 subject.render，输出自然文本、无需 FC；目标 doubao-seed-character-260628，操作者最新明确授权 Mini 临时用于产品角色及独立 renderer。后续切换沿实际原生profile，不以execution尾段代替。
+- render→一次窄review→NarrativeCommit 在原Host短事务采用兼容细节、Claim、承诺与唯一待派发身份；世界、认识、听众版本、实际效果分别保存。明确隐瞒必须事先采用，uncertain 不自动重发。
+- 关键进展同步存Activity/WorkContext，摘要沿唯一原生 compactor 后台处理固定完整前缀、CAS保留新尾部，硬超窗才等待。长期认知由唯一Nous及其已有反思维护，不双写人格或重建认知域。
+- 普通管理无需模型：完整CLI/生成ManagementClient支持课表、当前生活、注意理由、角色、历史及有限清理。主体与维护OpenClaw实例及秘密分离。
 
-- 原地替换 Product Host 组合、旧 AIRuntime/proposal-only 主体路径和固定二次 Expression；使用同一独立 Nous/OpenClaw 产物，原生模型/工具/浏览器/子 Agent 保留。
-- Management 独立于主体、模型、Nous 和 QQ 的可用性；OpenAPI/schema 生成 Client，CLI 消费它。首先实现并实际安装管理。
-- PostgreSQL 沿用现有技术与生命周期，保全既有数据；模型调用、网络和媒体处理不在写事务内。当前部署使用独立 database/role，不跨 Nous 私有表。
-- systemd 监督独立进程；OpenClaw 持有原生渠道 durable ingress/send 与调度，删除失去消费者的 DBOS/WorkQueue/通用运行图包装。Host 持有消息、活动、注意、行为、回执和待回流，不运行第二个 Agent Runtime 或网络重试 worker。
-- 认证管理、普通主体聊天与机器维护分别隔离。保留有效鉴权语义，删除无实际消费者的通用计划/资格机制。主体工具执行采用真实 OS/沙箱隔离，维护独立 profile/端口/状态/秘密。
-- 正式事实先保存，再产生待工作；唯一行为采纳和实际发送，unknown send 保持 uncertain，不自动重放。
-- QQ 原生 ID 无损，历史和实时共用去重，实际接触才进入 Nous；来源权限先于检索，不能复制第二份认知。
-- 各功能分支、提交、PR、既有检查、Squash Merge，随后继续下一单元；当前 Linux 使用不削弱既有 Windows 能力及检查。
+## 安全接续与现有资产
 
-## 实施单元
+先在安全停点暂缓新任务、合并和部署；不强杀在途工作、不擅停在线服务。保全staged/unstaged/untracked、未推送引用、原Subject/数据/密钥/付费成果及实际结果，再同步本计划和所属合同后继续，无需另一次笼统确认。不得reset/clean/删工作分支取得干净。
 
-1. 管理与 QQ 宿主：替换授权/依赖路由、确定性 API/CLI、独立安装、QQ Channel/身份/消息附件/唯一发送、安全依赖。
-2. 生活与成长：Activity/注意、时钟/日程、维护实例；Self 有界候选和批量读、共享 subject_reflection 及成果恢复。
-3. 社会与语言：Social owner 全生命周期、Query/投影、双向关系、作用域惯例理解与表达、真实学习和修复。
-4. 动机与追求：Motivation/有界 evaluator，Pursuit/Activity/真实结果与覆盖评价。
-5. 运行收口：发布和切换安装、旧路径停用、实际停止/历史补拉/跨日恢复、当前说明。
+复用Nous #47正式角色/视角/结果保管/预算与当前#48的域时间、world_realized、历史知识切面、domain_knowledge/EpistemicView；沿实际最终head检查，不回退包作者SHA，不重新声明平行DTO。复用H现有Messaging/媒体/actual-contact、Identity、Life/Pursuit、独立安装和唯一发送。当前分支已接通的独立角色、叙事与世界组件作为资产，直接按Reactor重组消费者；不保留三个相互竞争的主观调用路径。
 
-单元可按完整可独立交付能力拆 PR，不要求恰好五个。每项实际完成后维护当前 Spec/用法和状态，不以计划文本声称实现。
+## 完整能力次序
+
+1. 原位对齐Vault、共享合同、治理、所属Spec与本计划；代码、安装和目标分开记录。
+2. 承接#48与现有SDK，接通通用机会、唯一前台、全局注意、情境卡/动作、受限交接、晚到结果与真实采用。删除被替代的channel-only/每活动独立主观路径。
+3. 交付可定制WorldProfile与可选Seed流程、RRULE/RDATE/EXDATE/单实例及未来系列修改、范围日历、生活实现/精力、虚拟手机/QQ/浏览器动作、render/review/NarrativeCommit。
+4. 接通同步继续信息、原生固定前缀后台压缩、硬超窗、权限/历史失效及owner清理；让既有Self/Social/Language/Motivation消费真实生活和交往，不把摘要或worker原文当新经历。
+5. 完整CLI/API/Client与当前操作说明，隔离副本先验证数据升级/基本功能，再以匹配正式SDK/插件/Host独立安装切换；实际模型、QQ、工具与跨日继续。
+
+按完整功能提交PR、既有检查与Squash Merge，每单元完成后继续下一单元。现有必需检查不绕过；不新建资格平台、SHA门禁、覆盖率竞赛、双写或兼容shim。新增当前语义所需owner状态和成熟机制不受代码行数比例限制。
 
 ## 验证与结束
 
-沿用 pnpm verify 与必要聚焦检查、真实 PostgreSQL/进程及独立安装；受影响原生入口按实际安装源码验证。内部 fixture/CI/readyz 不证明 QQ 上线。用实际 QQ、模型和工具完成媒体协作、持续任务中来信、自然成长、社会语言修复及有结果 Pursuit。修复后继续原任务。实际执行停止、覆盖检查、跨日接续，保留未执行项。
+沿用pnpm verify与当前NoUS必需CI，脆弱逻辑用有价值的窄测试；真实产品从独立安装、公开CLI/API/帮助开始，不用私有SQL或内部脚本替代缺失操作。
 
-依赖审计包括开发树和全新独立安装，修复可用更新，不能只添加工作区 override。保护原主体、材料、密钥、未合入工作和付费成果；数据影响前验证可读备份。缺登录、扫码、验证码时只暂停相关操作并继续其他施工。只有安装实例真实可用且各项实际证据成立后结束完整系列。
+连续使用至少包含：无QQ生活；无Seed/有Seed及独立学生profile；今日/范围日历、单次改课与以后系列；两处真实会话的全局选择与不参与；正式手机读取和媒体；实际专业任务、让出与结果查看；自然文本renderer；相同生活时段重复追问与明确隐瞒/承认；实际学习及有来源的成长；后台压缩期间新增输入/完整tool pair保留、换小窗口硬等待、取消/来源失效；隔离副本有限清理后继续。
+
+最后实际正常停止并在下一实际运行日恢复同一Subject/任务，分别核对离线世界实现、真实QQ补拉/缺口、未完成物理任务、发送uncertain和听众历史。加速钟、mock、readyz或CI不能替代这个事实。扫码、授权或时间不足只暂停相关操作，准确留下未完成范围；不自动关机或扩大会话/费用授权。
+
+最终结果是基本正常生活交往的已安装实例、完整CLI/ManagementClient、当前说明及简短真实使用结果。Objective/Decisions/Current Work及昂贵的现场身份在任务现有WORK_STATE保存短接续，历史在保全副本/Git，不复制整包成为第四份长期权威。

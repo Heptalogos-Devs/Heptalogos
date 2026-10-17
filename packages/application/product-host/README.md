@@ -12,7 +12,7 @@ Fastify 路由消费管理 owner 的 schema，生成 `generated/management.opena
 
 ## Linux 独立安装
 
-构建需要 Node 24.21.0、pnpm 11.24.0，以及 Nous 发布的 Client tarball。当前开发依赖使用同级 `Nous-Wave/data/releases/client/` 中内容固定的正式 Client 归档，实际文件名由本包 `package.json` 与 lockfile 指定；它是正式构建输入。安装产物会内置该 tarball 及生产依赖，不依赖源仓目录。
+构建需要 Node 24.21.0、pnpm 11.24.0，以及 Nous 发布的 Client tarball。当前依赖使用仓内 `vendor/nous-wave/` 中未经改写的正式 Client 归档，来源提交和 SHA 见该目录 manifest，实际文件名由本包 `package.json` 与 lockfile 指定。安装产物会内置该 tarball 及生产依赖，不依赖源仓目录。
 
 ```sh
 pnpm nx run product-host:prune
@@ -50,8 +50,14 @@ QQ 插件使用独立的 `SECRET/channel-service-token` 访问同一 Host 的服
 
 Host 默认适配器读取本安装 `installation-services.json` 的 Subject 身份、根目录和显式 env 文件路径，调用同一独立原生包的 `heptalogos-qq-dispatch` SDK 入口。消息和调用参数走 stdin，Gateway 密码只进入子进程环境；Host 不另建模型循环。SDK 终态保留原始结果，`completed` 表示 RPC 已结束，实际发送以 Agency 和平台回执为准。
 
-逐 Activity 工具使用正式 native boundary v4 的模型集合过滤和强制执行前授权；实际能力仍受原生工具策略及 OS 沙箱限制。原生服务未配置时返回明确状态；SDK 失败或无法确认时保留 uncertain，重复 requestId 不再次调用。Host 停止或进程超时时终止本地调用进程。实际安装仍须核对模型输入、最终 QQ 回执和结果回流。
+逐 Activity 工具使用正式 native boundary v5 的模型集合过滤和强制执行前授权；实际能力仍受原生工具策略及 OS 沙箱限制。原生服务未配置时返回明确状态；SDK 失败或无法确认时保留 uncertain，重复 requestId 不再次调用。Host 停止或进程超时时终止本地调用进程。实际安装仍须核对模型输入、最终 QQ 回执和结果回流。
 
 ## 验证
 
 运行 product-host 构建、聚焦测试、OpenAPI 生成检查，以及安装后的公开 CLI/API。实际安装检查包括认领、登录、配置冲突、管理在依赖离线时可用、正常 stop、重启保持身份与配置、端口释放。QQ、媒体、模型和主体活动必须各自经过真实使用，不能由这些管理检查推定。
+
+Native cognition requires `captureObservedStamp(subjectId)` from the official Subject clock. It captures outside the write transaction and freezes the first actual message, tool/result-release or delivery encounter; retries reuse the stored observation. Realized-world contacts instead retain their typed `worldRealized.worldObserved`, with exact world/event/revision and actor-visible event scope checks.
+
+The single-connection owner integration test can also cross the actual Nous boundary when `HEPTALOGOS_TEST_NOUS_RUN_ROOT` names an independently started temporary official Core installation. It checks canonical WorldLife events, first-contact clock capture, real Observation ingestion and replay after clock advancement; it makes no model or channel call.
+
+Host按正式RoleBinding调用独立原生world/deliberation/execution/render/review，使用官方Nous投影；Activity dispatch先采用主观选择，只有明确表达意图才建立renderer brief。无QQ的世界机会和新学习Activity使用内部audience；工具和发送权限由实际Activity及当前安装配置决定。重入优先读取保留的付费结果和release receipt，执行结果须显式释放后才成为主体接触。角色工具、完整输入/输出token及连续阶段期限经过正式native控制。

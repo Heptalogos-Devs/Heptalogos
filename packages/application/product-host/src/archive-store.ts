@@ -78,7 +78,7 @@ export function createArchiveStore(root: string, maxBytes = 64 * 1024 * 1024) {
           bound,
           createWriteStream(temporary, { flags: "wx", mode: 0o600 }),
         );
-        const file = await open(temporary, "r");
+        const file = await open(temporary, "r+");
         try {
           await file.sync();
         } finally {

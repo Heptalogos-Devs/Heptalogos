@@ -9,7 +9,7 @@ import {
   digestCanonicalJson,
   type CanonicalJsonValue,
 } from "@heptalogos/foundation-contracts";
-import { compileSchema } from "@heptalogos/schema-runtime";
+import { createSubjectSchemaReader } from "./checked-schema.js";
 import type { Static } from "@heptalogos/schema-runtime/typebox";
 import {
   executeRepositorySql as sql,
@@ -39,11 +39,9 @@ function fail(detail: string): never {
     detail,
   );
 }
-function checked<T>(schema: Parameters<typeof compileSchema<T>>[0], value: unknown): T {
-  const result = compileSchema<T>(schema).validate(value);
-  if (!result.ok) fail("Inspect the official Pursuit input schema");
-  return result.value;
-}
+const checked = createSubjectSchemaReader(() =>
+  fail("Inspect the official Pursuit input schema"),
+);
 const digest = (value: unknown) =>
   digestCanonicalJson("pursuit.operation.v1", value as CanonicalJsonValue).hex;
 /** Mutations are called by the Host's existing runActivity; all network reads occur before short fenced writes. */

@@ -10,14 +10,34 @@ import { isAbsolute, join } from "node:path";
 import type { InstallationId } from "@heptalogos/foundation-contracts";
 import type { NativeActivityDispatch } from "./activity-dispatch-contracts.js";
 
-/** Resolves the current installed Subject and invokes its SDK once over stdin. */
-export function createInstalledNativeDispatcher(options: {
+/** Installed Subject execution is shared by agent invocation and native cron projection. */
+export interface InstalledNativeOptions {
   readonly anchorRoot: string;
   readonly configurationRoot: string;
   readonly installationId: InstallationId;
   readonly signal: AbortSignal;
-}): NativeActivityDispatch {
-  return async (params) => {
+}
+/** One real projection into the existing native scheduler. */
+interface NativeWorldScheduleInput {
+  readonly realAt: string | null;
+  readonly subjectId: string;
+  readonly worldId?: string;
+  readonly activityId?: string;
+  readonly requestId: string;
+}
+/** No Host timer or secondary scheduler exists behind this operation. */
+export type NativeWorldSchedule = (input: NativeWorldScheduleInput) => Promise<void>;
+function installedCommand(
+  options: InstalledNativeOptions,
+  entryName: "dispatch" | "world-schedule" | "agent-catalog",
+) {
+  return async (
+    params: unknown,
+    timeoutSeconds: number,
+  ): Promise<
+    | { status: "resolved"; response: { status?: unknown; result?: unknown } }
+    | { status: "unresolved"; code: string }
+  > => {
     const descriptor = JSON.parse(
       await readFile(
         join(options.configurationRoot, "installation-services.json"),
@@ -47,7 +67,7 @@ export function createInstalledNativeDispatcher(options: {
     if (!password) throw Error("The installed native credential is empty");
     const entry = join(
       options.anchorRoot,
-      "runtime/openclaw-subject/node_modules/@heptalogos/openclaw-host/dist/dispatch.js",
+      `runtime/openclaw-subject/node_modules/@heptalogos/openclaw-host/dist/${entryName}.js`,
     );
     const args = [
       ...(subject.environmentFile ? ["--env-file=" + subject.environmentFile] : []),
@@ -76,7 +96,7 @@ export function createInstalledNativeDispatcher(options: {
         killTimer = setTimeout(() => child.kill("SIGKILL"), 5_000);
       };
       // Matches the public CLI's RPC timeout, plus process shutdown allowance.
-      const timer = setTimeout(stop, params.timeout * 1000 + 45_000);
+      const timer = setTimeout(stop, timeoutSeconds * 1000 + 45_000);
       options.signal.addEventListener("abort", stop, { once: true });
       if (options.signal.aborted) stop();
       child.stdout.on("data", (chunk: Buffer) => {
@@ -98,9 +118,16 @@ export function createInstalledNativeDispatcher(options: {
         clearTimeout(killTimer);
         options.signal.removeEventListener("abort", stop);
         try {
-          const result = JSON.parse(Buffer.concat(chunks).toString("utf8"));
-          if (!stopping && !exceeded && code === 0 && result.status === "terminal")
-            resolve({ status: "terminal", result: result.result });
+          const value: unknown = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+          if (
+            !stopping &&
+            !exceeded &&
+            code === 0 &&
+            value &&
+            typeof value === "object" &&
+            !Array.isArray(value)
+          )
+            resolve({ status: "resolved", response: value });
           else unresolved();
         } catch {
           unresolved();
@@ -108,5 +135,77 @@ export function createInstalledNativeDispatcher(options: {
       });
       child.stdin.end(JSON.stringify(params));
     });
+  };
+}
+
+/** Resolves the actual installation and invokes the existing public agent SDK entry once. */
+export function createInstalledNativeDispatcher(
+  options: InstalledNativeOptions,
+): NativeActivityDispatch {
+  const invoke = installedCommand(options, "dispatch");
+  return async (params) => {
+    const result = await invoke(params, params.timeout);
+    return result.status === "resolved" &&
+      ["terminal", "accepted"].includes(String(result.response.status))
+      ? result.response.status === "accepted"
+        ? { status: "accepted", result: result.response.result }
+        : { status: "terminal", result: result.response.result }
+      : {
+          status: "unresolved",
+          code: result.status === "unresolved" ? result.code : "native_dispatch_failed",
+        };
+  };
+}
+/** Reuses the same descriptor, credential, Node process, stdin and abort boundary for the public cron entry. */
+export function createInstalledWorldScheduler(
+  options: InstalledNativeOptions & { readonly serviceCredentialFile: string },
+): NativeWorldSchedule {
+  const invoke = installedCommand(options, "world-schedule");
+  return async (input) => {
+    const result = await invoke(
+      {
+        realAt: input.realAt,
+        wake: {
+          hostAnchorRoot: options.anchorRoot,
+          installationId: options.installationId,
+          credentialFile: options.serviceCredentialFile,
+          request: {
+            subjectId: input.subjectId,
+            worldId: input.worldId,
+            activityId: input.activityId,
+            requestId: input.requestId,
+          },
+        },
+      },
+      30,
+    );
+    if (
+      result.status !== "resolved" ||
+      !["scheduled", "disabled"].includes(String(result.response.status))
+    )
+      throw Error("native_world_schedule_unavailable");
+  };
+}
+
+/** Selects only an explicitly bound profile present before the first native execution. */
+export type NativeAgentSelect = (candidates: readonly string[]) => Promise<string>;
+/** Public agents.list is read once before invocation; failed paid runs never switch profiles. */
+export function createInstalledAgentSelector(
+  options: InstalledNativeOptions,
+): NativeAgentSelect {
+  const invoke = installedCommand(options, "agent-catalog");
+  return async (candidates) => {
+    const value = await invoke({}, 30);
+    if (
+      value.status !== "resolved" ||
+      value.response.status !== "catalog" ||
+      !Array.isArray(value.response.result) ||
+      value.response.result.some((id) => typeof id !== "string")
+    )
+      throw Error("native_agent_catalog_unavailable");
+    const present = new Set(value.response.result);
+    const selected = candidates.find((id) => present.has(id));
+    if (!selected) throw Error("native_bound_agent_unavailable");
+    return selected;
   };
 }

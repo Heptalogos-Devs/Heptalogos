@@ -11,7 +11,7 @@ import { createNativeEnvelope } from "../../src/parser.js";
 import { QqScopePolicy } from "../../src/policy.js";
 it("uses the installed native SQLite ingress queue and completes only after Host acceptance", async () => {
   const root = await mkdtemp(join(tmpdir(), "qq-native-ingress-isolated-"));
-  const queue = await nativeQueue(root);
+  const { queue, close } = await nativeQueue(root);
   const controller = new AbortController();
   let committed = 0;
   let started = false;
@@ -67,6 +67,7 @@ it("uses the installed native SQLite ingress queue and completes only after Host
     release();
     controller.abort();
     await monitor.stop();
+    expect(close()).toBe(true);
     await rm(root, { recursive: true, force: true });
   }
 });

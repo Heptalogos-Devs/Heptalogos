@@ -6,6 +6,9 @@
  * @module gateway-client
  */
 export { nativeLifeActionSchema } from "./generated/native-life-schema.gen.js";
+import { createNarrativeOperations } from "./narrative-operations.js";
+import { createReactorOperations } from "./reactor-operations.js";
+import { createWorldOperations } from "./world-operations.js";
 import { createPursuitOperations } from "./pursuit-operations.js";
 import * as api from "./generated/index.js";
 import type * as wire from "./generated/types.gen.js";
@@ -46,6 +49,9 @@ export function createGatewayHostClient(options: GatewayHostClientOptions) {
   };
   return Object.freeze({
     ...createPursuitOperations(requestGateway),
+    ...createWorldOperations(requestGateway),
+    ...createNarrativeOperations(requestGateway),
+    ...createReactorOperations(requestGateway),
     nativeLife: (body: wire.NativeLifeData["body"]) =>
       requestGateway((base) => api.nativeLife({ ...base, body })),
     registerChannelRoute: (body: wire.RegisterChannelRouteData["body"]) =>

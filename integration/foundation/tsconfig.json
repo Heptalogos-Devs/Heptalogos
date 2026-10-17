@@ -76,6 +76,9 @@
   "include": ["test/**/*.ts", "support/**/*.ts"],
   "references": [
     {
+      "path": "../../packages/system/configuration"
+    },
+    {
       "path": "../../packages/system/management"
     },
     {

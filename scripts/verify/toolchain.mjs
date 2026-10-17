@@ -190,11 +190,6 @@ expectEqual(
 const expectedAllowBuilds = {
   esbuild: true,
   nx: true,
-  openclaw: true,
-  "@google/genai": false,
-  koffi: false,
-  protobufjs: false,
-  "tree-sitter-bash": false,
 };
 if (
   JSON.stringify(workspaceDocument.allowBuilds) !== JSON.stringify(expectedAllowBuilds)

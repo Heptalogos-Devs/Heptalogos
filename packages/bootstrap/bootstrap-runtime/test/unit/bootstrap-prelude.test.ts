@@ -594,26 +594,28 @@ describe("pre-PostgreSQL bootstrap prelude", () => {
       (result): result is PromiseRejectedResult => result.status === "rejected",
     );
 
-    expect(ownedResult).toBeDefined();
-    expect(blockedResult).toMatchObject({
-      reason: { problem: { problemCode: "bootstrap.ownership.lock_present" } },
-    });
-    expect(
-      await readFile(
-        join(fixture.instanceRoot, "bootstrap-state", "bootstrap-state.json"),
-        "utf8",
-      ),
-    ).toBe(before);
-    const firstStages = await stages(first.journal, first.bootId);
-    const secondStages = await stages(second.journal, second.bootId);
-    expect(
-      [firstStages, secondStages].filter((value) =>
-        value.includes("bootstrap.ownership.blocked"),
-      ),
-    ).toHaveLength(1);
-
-    await ownedResult?.value.close();
-  });
+    try {
+      expect(ownedResult).toBeDefined();
+      expect(blockedResult).toMatchObject({
+        reason: { problem: { problemCode: "bootstrap.ownership.lock_present" } },
+      });
+      expect(
+        await readFile(
+          join(fixture.instanceRoot, "bootstrap-state", "bootstrap-state.json"),
+          "utf8",
+        ),
+      ).toBe(before);
+      const firstStages = await stages(first.journal, first.bootId);
+      const secondStages = await stages(second.journal, second.bootId);
+      expect(
+        [firstStages, secondStages].filter((value) =>
+          value.includes("bootstrap.ownership.blocked"),
+        ),
+      ).toHaveLength(1);
+    } finally {
+      await ownedResult?.value.close();
+    }
+  }, 30_000);
 
   it("allows concurrent owners for different resolved instance roots", async () => {
     const anchor = await makeDirectory("heptalogos-prelude-shared-program-");

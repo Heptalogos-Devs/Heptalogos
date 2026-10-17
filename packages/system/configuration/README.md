@@ -37,3 +37,5 @@ Host integration when activation persistence or restart behavior changes.
 - [Configuration Spec](../../../specs/system/configuration.md)
 - [Persistence Transactions](../../../specs/data/persistence-transactions.md)
 - [System Authority Spec](../../../specs/management/system-authority.md)
+
+`getEffectiveRevision`, `getActivation` and `getRevision` accept an optional caller transaction as the final argument. An in-transaction effective read holds a shared lock on the current activation through the caller's commit, while reusing the ordinary canonical revision parser.

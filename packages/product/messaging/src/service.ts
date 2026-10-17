@@ -26,6 +26,7 @@ import {
   prepareReadInputSchema,
   recordContactInputSchema,
   listPendingInputSchema,
+  messageNoticesInputSchema,
   completePendingInputSchema,
   pendingAttachmentsInputSchema,
   updateAttachmentInputSchema,
@@ -78,6 +79,9 @@ const validators = {
   ),
   contact: compileSchema<Parameters<MessagingService["recordContact"]>[0]>(
     recordContactInputSchema,
+  ),
+  notices: compileSchema<Parameters<MessagingService["notices"]>[0]>(
+    messageNoticesInputSchema,
   ),
   pending:
     compileSchema<Parameters<MessagingService["listPending"]>[0]>(
@@ -149,8 +153,15 @@ export function createMessagingService(
     options.persistence.mutate((context) =>
       useRepositoryMutationTransaction(context, (tx) => fn(tx, context)),
     );
-  const read = <T>(fn: (tx: PersistenceInternalTransaction) => Promise<T>) =>
-    options.persistence.read((context) => useRepositoryReadTransaction(context, fn));
+  const read = <T>(
+    fn: (tx: PersistenceInternalTransaction) => Promise<T>,
+    transaction?: PersistenceInternalTransaction,
+  ) =>
+    transaction
+      ? fn(transaction)
+      : options.persistence.read((context) =>
+          useRepositoryReadTransaction(context, fn),
+        );
 
   const accept: MessagingService["accept"] = async (input) => {
     check(validators.accept, input);
@@ -349,7 +360,7 @@ export function createMessagingService(
     });
   };
 
-  const prepareRead: MessagingService["prepareRead"] = async (input) => {
+  const prepareRead: MessagingService["prepareRead"] = async (input, transaction) => {
     check(validators.read, input);
     if ((input.messageRefs === undefined) === (input.window === undefined))
       invalid("Choose exactly one of messageRefs or window");
@@ -464,41 +475,47 @@ export function createMessagingService(
         omitted,
         ...(input.window ? { nextSequence } : {}),
       };
-    });
+    }, transaction);
   };
 
   return {
-    async messageSources(input) {
+    async messageSources(input, transaction) {
       check(validators.sources, input);
-      return read(async (tx) => ({
-        sources: (
-          await sql<{
-            message_id: string;
-            conversation_id: string;
-            lifecycle: "present" | "retracted";
-          }>(
-            tx,
-            `SELECT message_id,conversation_id,lifecycle FROM heptalogos.message_fact WHERE message_id=ANY($1::uuid[]) AND conversation_id=ANY($2::uuid[]) ORDER BY conversation_id,sequence`,
-            [input.messageRefs, input.conversationIds],
-          )
-        ).map((row) => ({
-          messageRef: row.message_id,
-          conversationId: row.conversation_id,
-          lifecycle: row.lifecycle,
-        })),
-      }));
+      return read(
+        async (tx) => ({
+          sources: (
+            await sql<{
+              message_id: string;
+              conversation_id: string;
+              lifecycle: "present" | "retracted";
+            }>(
+              tx,
+              `SELECT message_id,conversation_id,lifecycle FROM heptalogos.message_fact WHERE message_id=ANY($1::uuid[]) AND conversation_id=ANY($2::uuid[]) ORDER BY conversation_id,sequence`,
+              [input.messageRefs, input.conversationIds],
+            )
+          ).map((row) => ({
+            messageRef: row.message_id,
+            conversationId: row.conversation_id,
+            lifecycle: row.lifecycle,
+          })),
+        }),
+        transaction,
+      );
     },
-    async resolveConversations(input) {
+    async resolveConversations(input, transaction) {
       check(validators.conversations, input);
-      return read(async (tx) => ({
-        conversationIds: (
-          await sql<{ conversation_id: string }>(
-            tx,
-            `SELECT DISTINCT c.conversation_id FROM heptalogos.messaging_conversation c JOIN jsonb_to_recordset($1::jsonb) AS requested(platform text,"accountId" text,"conversationId" text,kind text) ON c.platform_id=requested.platform AND c.native_account_id=requested."accountId" AND c.native_conversation_id=requested."conversationId" AND c.conversation_kind=requested.kind ORDER BY c.conversation_id`,
-            [JSON.stringify(input.conversations)],
-          )
-        ).map((row) => row.conversation_id),
-      }));
+      return read(
+        async (tx) => ({
+          conversationIds: (
+            await sql<{ conversation_id: string }>(
+              tx,
+              `SELECT DISTINCT c.conversation_id FROM heptalogos.messaging_conversation c JOIN jsonb_to_recordset($1::jsonb) AS requested(platform text,"accountId" text,"conversationId" text,kind text) ON c.platform_id=requested.platform AND c.native_account_id=requested."accountId" AND c.native_conversation_id=requested."conversationId" AND c.conversation_kind=requested.kind ORDER BY c.conversation_id`,
+              [JSON.stringify(input.conversations)],
+            )
+          ).map((row) => row.conversation_id),
+        }),
+        transaction,
+      );
     },
     async readHistoryCoverage(input) {
       check(validators.historyRead, input);
@@ -574,6 +591,57 @@ export function createMessagingService(
           `UPDATE heptalogos.messaging_pending SET completed=true WHERE kind='message' AND fact_id=ANY($1::uuid[])`,
           [input.messageRefs],
         );
+      });
+    },
+    async notices(input) {
+      check(validators.notices, input);
+      return read(async (tx) => {
+        const rows = await sql<{
+          pending_id: string;
+          message_id: string;
+          conversation_id: string;
+          sequence: string;
+          received_at: string | Date;
+          direct: boolean;
+          mention: boolean;
+          reply: boolean;
+          unread_count: string;
+          author_entity_ref: string | null;
+        }>(
+          tx,
+          `WITH allowed AS (SELECT * FROM jsonb_to_recordset($1::jsonb) AS x("conversationId" uuid,"afterSequence" text))
+SELECT q.*,c.conversation_id,c.conversation_kind='direct' AS direct,
+ (SELECT count(*)::text FROM heptalogos.messaging_pending p JOIN heptalogos.message_fact m ON p.fact_id=m.message_id AND p.kind='message' WHERE p.conversation_id=c.conversation_id AND NOT p.completed AND m.direction='INBOUND' AND m.lifecycle='present') AS unread_count
+FROM allowed a JOIN heptalogos.messaging_conversation c ON c.conversation_id=a."conversationId"
+CROSS JOIN LATERAL (SELECT p.pending_id,m.message_id,m.sequence::text AS sequence,(m.document->>'receivedAt')::timestamptz AS received_at,
+ m.document#>>'{author,entityRef}' AS author_entity_ref,
+ EXISTS(SELECT 1 FROM jsonb_array_elements(m.document->'parts') part WHERE part->>'kind'='at' AND (part->>'targetId'=$2 OR part->>'atAll'='true')) AS mention,
+ EXISTS(SELECT 1 FROM jsonb_array_elements(m.document->'references') r JOIN heptalogos.message_fact original ON original.conversation_id=m.conversation_id AND original.native_message_id=r->>'nativeId' WHERE r->>'kind'='reply' AND original.direction='OUTBOUND') AS reply
+ FROM heptalogos.messaging_pending p JOIN heptalogos.message_fact m ON m.message_id=p.fact_id AND p.kind='message'
+ WHERE p.conversation_id=c.conversation_id AND NOT p.completed AND m.direction='INBOUND' AND m.lifecycle='present' AND m.sequence>COALESCE(a."afterSequence"::bigint,0)
+ ORDER BY m.sequence LIMIT $3) q ORDER BY c.conversation_id,q.sequence::bigint`,
+          [
+            JSON.stringify(input.conversations),
+            input.selfAccountId,
+            input.perConversationLimit,
+          ],
+        );
+        return {
+          notices: rows.map((row) => ({
+            pendingRef: row.pending_id,
+            messageRef: row.message_id,
+            conversationId: row.conversation_id,
+            sequence: row.sequence,
+            receivedAt: new Date(row.received_at).toISOString(),
+            direct: row.direct,
+            mention: row.mention,
+            reply: row.reply,
+            unreadCount: Number(row.unread_count),
+            ...(row.author_entity_ref
+              ? { authorEntityRef: row.author_entity_ref }
+              : {}),
+          })),
+        };
       });
     },
     async listPending(input) {

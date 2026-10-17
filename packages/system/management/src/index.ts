@@ -47,6 +47,8 @@ export {
   ProductManagement,
   PRODUCT_SETTINGS_ID,
   productSettingsSchema,
+  reactorPolicySchema,
+  effectiveReactorPolicy,
   productSettingsDefinition,
   productStatusSchema,
   productConfigurationSchema,
@@ -54,6 +56,7 @@ export {
 } from "./product.js";
 export type {
   ProductSettings,
+  ReactorPolicy,
   DependencyStatus,
   ProductStatus,
   ProductManagementOptions,
@@ -70,3 +73,6 @@ export {
 export type { ManagedSubject, CreateProductSubject, BoundSubject } from "./product.js";
 
 export { qqAuthorizationSchema } from "./product.js";
+
+export { subjectRoleBindingSchema } from "./product.js";
+export type { SubjectRoleBinding } from "./product.js";

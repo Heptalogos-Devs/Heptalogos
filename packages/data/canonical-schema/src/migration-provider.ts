@@ -20,6 +20,23 @@ import { nativeDispatchMigration } from "./migrations/0006-native-dispatch.js";
 
 import { pursuitMigration } from "./migrations/0007-pursuit.js";
 
+import { worldLifeMigration } from "./migrations/0008-world-life.js";
+
+import { narrativeMigration } from "./migrations/0010-narrative.js";
+import { observationDomainTimeMigration } from "./migrations/0011-observation-domain-time.js";
+import { roleResultsMigration } from "./migrations/0009-role-results.js";
+import { subjectDecisionsMigration } from "./migrations/0012-subject-decisions.js";
+
+import { worldHostLifecycleMigration } from "./migrations/0013-world-host-lifecycle.js";
+
+import { worldContactSelectionMigration } from "./migrations/0014-world-contact-selection.js";
+
+import { subjectAttentionMigration } from "./migrations/0017-subject-attention.js";
+
+import { subjectReactorMigration } from "./migrations/0015-subject-reactor.js";
+
+import { worldProfileLivingMigration } from "./migrations/0016-world-profile-living.js";
+
 const migrations: Readonly<Record<string, Migration>> = Object.freeze({
   "0001_foundation_baseline": foundationBaselineMigration,
   "0002_product_gateway_prerequisites": productGatewayPrerequisitesMigration,
@@ -28,6 +45,16 @@ const migrations: Readonly<Record<string, Migration>> = Object.freeze({
   "0005_life_agency": lifeAgencyMigration,
   "0006_native_dispatch": nativeDispatchMigration,
   "0007_pursuit": pursuitMigration,
+  "0008_world_life": worldLifeMigration,
+  "0009_role_results": roleResultsMigration,
+  "0010_narrative": narrativeMigration,
+  "0011_observation_domain_time": observationDomainTimeMigration,
+  "0012_subject_decisions": subjectDecisionsMigration,
+  "0013_world_host_lifecycle": worldHostLifecycleMigration,
+  "0014_world_contact_selection": worldContactSelectionMigration,
+  "0015_subject_reactor": subjectReactorMigration,
+  "0016_world_profile_living": worldProfileLivingMigration,
+  "0017_subject_attention": subjectAttentionMigration,
 });
 
 /** Provides the current canonical migration set to Kysely's Migrator. */
@@ -46,4 +73,14 @@ export const canonicalMigrationNames = Object.freeze([
   "0005_life_agency",
   "0006_native_dispatch",
   "0007_pursuit",
+  "0008_world_life",
+  "0009_role_results",
+  "0010_narrative",
+  "0011_observation_domain_time",
+  "0012_subject_decisions",
+  "0013_world_host_lifecycle",
+  "0014_world_contact_selection",
+  "0015_subject_reactor",
+  "0016_world_profile_living",
+  "0017_subject_attention",
 ] as const);

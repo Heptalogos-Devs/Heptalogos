@@ -105,18 +105,33 @@ export function managementHttpStatus(problemCode: string): number {
   if (problemCode === "management.first_claim_invalid") return 400;
   if (problemCode.endsWith("forbidden")) return 403;
   if (problemCode === "gateway.service_invalid") return 401;
-  if (problemCode === "gateway.unconfigured") return 503;
+  if (
+    ["gateway.unconfigured", "world.unconfigured", "narrative.unconfigured"].includes(
+      problemCode,
+    )
+  )
+    return 503;
   if (
     problemCode === "gateway.scope_denied" ||
     problemCode === "agency.scope_denied" ||
     problemCode === "agency.source_denied" ||
-    problemCode === "life.scope_denied"
+    problemCode === "life.scope_denied" ||
+    problemCode === "world.scope_denied" ||
+    problemCode === "narrative.scope_denied" ||
+    problemCode === "deliberation.scope_denied"
   )
     return 403;
   if (
-    ["gateway.", "agency.", "life.", "messaging.", "identity."].some((prefix) =>
-      problemCode.startsWith(prefix),
-    )
+    [
+      "gateway.",
+      "agency.",
+      "life.",
+      "messaging.",
+      "identity.",
+      "world.",
+      "narrative.",
+      "deliberation.",
+    ].some((prefix) => problemCode.startsWith(prefix))
   ) {
     if (problemCode.endsWith("not_found")) return 404;
     if (problemCode.includes("invalid") || problemCode.includes("unavailable"))

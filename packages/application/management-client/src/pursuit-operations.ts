@@ -6,17 +6,9 @@
  */
 import * as api from "./generated/index.js";
 import type * as wire from "./generated/types.gen.js";
-import type { createClient } from "./generated/client/index.js";
-type Base = {
-  readonly client: ReturnType<typeof createClient>;
-  readonly throwOnError: true;
-  readonly responseStyle: "fields";
-  readonly signal?: AbortSignal;
-};
+import type { GatewayOperationRequest } from "./gateway-operation.js";
 /** Extends the one Gateway client without copying DTOs, authentication or endpoint discovery. */
-export function createPursuitOperations(
-  request: <T>(operation: (base: Base) => Promise<{ readonly data: T }>) => Promise<T>,
-) {
+export function createPursuitOperations(request: GatewayOperationRequest) {
   return {
     listPursuits: (body: wire.ListPursuitsData["body"]) =>
       request((base) => api.listPursuits({ ...base, body })),

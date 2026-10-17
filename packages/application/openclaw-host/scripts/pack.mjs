@@ -44,6 +44,9 @@ try {
     "policy.d.ts",
     "prepare-gateway.js",
     "dispatch.js",
+    "agent-catalog.js",
+    "world-schedule.js",
+    "world-wake-cli.js",
   ]) {
     const contents = await readFile(join(root, "dist", file), "utf8");
     await writeFile(

@@ -2,7 +2,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { spawn } from "node:child_process";
-import { copyFile, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  copyFile,
+  mkdir,
+  mkdtemp,
+  readFile,
+  realpath,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { afterEach, expect, it } from "vitest";
@@ -13,7 +21,8 @@ afterEach(async () => {
 });
 
 it("delegates portable initialization to the installed product and preserves CLI stdin", async () => {
-  root = await mkdtemp(join(tmpdir(), "heptalogos-portable-launcher-"));
+  // Node resolves the launcher module through macOS temporary-directory aliases.
+  root = await realpath(await mkdtemp(join(tmpdir(), "heptalogos-portable-launcher-")));
   const generation = "a".repeat(64);
   const product = join(root, "program", "product", generation);
   const bin = join(root, "bin");

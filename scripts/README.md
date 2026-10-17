@@ -14,3 +14,9 @@ the current tree. `release/`, `generate/`, and `i18n/` directories appear only
 when current work has a real owner and consumer.
 
 Scripts contain repository control-plane behavior, never product runtime logic.
+
+`package/sdk-inputs.mjs` verifies the unchanged official archives recorded in
+[vendor/nous-wave](../vendor/nous-wave/README.md).
+`package/prepare-native-sdk.mjs` uses that same selected installer to prepare the
+checkout-local development SDK; Nx build, lint and test prerequisites reuse
+this entrypoint. It does not read an operator installation.

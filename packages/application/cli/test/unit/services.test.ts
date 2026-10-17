@@ -14,6 +14,7 @@ vi.mock("@heptalogos/management-client/node", () => ({
 }));
 const installationId = "0199e800-0000-7000-8000-000000000001";
 const directories: string[] = [];
+const actualPlatform = Object.getOwnPropertyDescriptor(process, "platform")!;
 async function fixture(hostUnit = `heptalogos-${installationId}-host.service`) {
   const root = await mkdtemp(join(tmpdir(), "heptalogos-services-"));
   directories.push(root);
@@ -48,6 +49,8 @@ async function fixture(hostUnit = `heptalogos-${installationId}-host.service`) {
   return root;
 }
 beforeEach(() => {
+  // These tests exercise the Linux systemd adapter through a mocked command.
+  Object.defineProperty(process, "platform", { ...actualPlatform, value: "linux" });
   vi.clearAllMocks();
   mocks.discovery.mockResolvedValue({});
   mocks.systemctl.mockImplementation(async (_command, args) => ({
@@ -59,12 +62,29 @@ beforeEach(() => {
   }));
 });
 afterEach(async () => {
+  Object.defineProperty(process, "platform", actualPlatform);
   await Promise.all(
     directories.splice(0).map((root) => rm(root, { recursive: true, force: true })),
   );
 });
 
 describe("installed service lifecycle", () => {
+  it.each(["darwin", "win32"])(
+    "rejects systemd operations on %s before reading descriptors or invoking commands",
+    async (platform) => {
+      Object.defineProperty(process, "platform", {
+        ...actualPlatform,
+        value: platform,
+      });
+      await expect(
+        operateInstalledService("unread-descriptor", "host", "start"),
+      ).rejects.toMatchObject({
+        problemCode: "installation.service_platform_unsupported",
+      });
+      expect(mocks.systemctl).not.toHaveBeenCalled();
+      expect(mocks.discovery).not.toHaveBeenCalled();
+    },
+  );
   it("rejects unrelated unit names even in a modified descriptor", async () => {
     await expect(
       readInstalledServices(await fixture("some-other-service.service")),

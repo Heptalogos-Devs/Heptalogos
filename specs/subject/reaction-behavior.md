@@ -4,7 +4,7 @@
 
 Agency 接收当前原生 producer run、账号、受众、引用和线程，以及通过原生 policy/hook 后的完整 prepared batch。每个 accepted payload 保留原始 sourceIndex；相同正文的两项也是不同的 payload，不能靠文本匹配关联。正式输入及结果见 [agency-contracts.ts](../../packages/product/subject/src/agency-contracts.ts)。
 
-Host 保存完整采纳事实与稳定 nativeIntentId，重复同一 intent 只能得到同一行为；改变内容或受众会被拒绝。只有实际采用范围内的 main Activity 能取得新的发送许可；worker 不能借用主线程账号直接发言。
+Host 保存完整采纳事实与稳定 nativeIntentId，重复同一 intent 只能得到同一行为；改变内容或受众会被拒绝。新的发送许可必须绑定实际采用的主观决定、renderer/review结果和当前RoleRun权限；main/worker机械标签不授予产品发言权。专业执行者不能借用主线程账号直接发言。
 
 当前 QQ 发送每个完整采纳的 source payload 为一段。实际正文和媒体必须与采纳内容一致，不接受 substring 许可。引用和线程按原生 first/all 与逐 payload 显式引用语义核对。
 
@@ -35,3 +35,9 @@ accepted 保留首次可靠回执的本机 `acceptedAt`，用于原生 receipt �
 来源包含实际作者、时间、generated/external 归属和原始来源范围。选入上下文不等于 acted_on；模型自行列出的引用不能证明行为因果。普通群成员不能通过聊天获得管理连接。
 
 真实 PostgreSQL 测试保护采纳幂等、原始索引、引用/线程、已知结果、uncertain、取消锁交错和受限 worker。上线还须操作独立安装的 OpenClaw、实际 QQ 与收件客户端，确认没有重复发送或误报成功。
+
+## 人格与叙事采用
+
+所有Subject自然文字及人格表现动作经[原生renderer](../system/ai-runtime.md)和一次窄正文读回，由[NarrativeCommit](narrative-claims.md)统一采用兼容世界细化、Claim、承诺与唯一待派发意图。Host已将该链注册为正式采用入口；部署及真实收件端仍按活动计划验证。world/worker/child结果仅作为任务资料，不能原生announce到QQ。系统机械通知保持系统归属。
+
+原生producer使用的派生来源（正式world-event、精确RoleResult release）须由Host沿原Activity、canonical owner记录和当前权限核验，再以authorizedDerivedSourceRefs交Agency。字符串前缀本身不能授予读取或发送权。普通消息仍沿实际听众的Messaging来源检查。

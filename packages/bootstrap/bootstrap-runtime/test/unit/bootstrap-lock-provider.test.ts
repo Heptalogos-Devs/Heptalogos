@@ -30,7 +30,8 @@ const FIXTURE = fileURLToPath(
   new URL("../support/fixtures/stale-reclaim-race.mjs", import.meta.url),
 );
 const STALE_MS = 2_000;
-const ACTIVE_OWNER_TEST_TIMEOUT_MS = 30_000;
+// The 3.5-second stale observation also needs time for actual child-process startup.
+const STALE_OWNER_TEST_TIMEOUT_MS = 30_000;
 const children: ChildController[] = [];
 const temporaryRoots: string[] = [];
 
@@ -225,25 +226,34 @@ describe("bootstrap stale-reclaim provider qualification", () => {
       });
       expect((await stat(lockfilePath)).isDirectory()).toBe(true);
     },
-    ACTIVE_OWNER_TEST_TIMEOUT_MS,
+    STALE_OWNER_TEST_TIMEOUT_MS,
   );
 
-  it("reclaims a lock left by a killed owner and reports the reclaim", async () => {
-    const { target, lockfilePath } = await makeTarget();
-    const holder = start("@bybrave/proper-lockfile2", "hold", target, lockfilePath);
-    await holder.waitFor("acquired");
-    holder.process.kill("SIGKILL");
-    await once(holder.process, "exit");
-    await new Promise((resolve) => setTimeout(resolve, STALE_MS + 1_500));
+  it(
+    "reclaims a lock left by a killed owner and reports the reclaim",
+    async () => {
+      const { target, lockfilePath } = await makeTarget();
+      const holder = start("@bybrave/proper-lockfile2", "hold", target, lockfilePath);
+      await holder.waitFor("acquired");
+      holder.process.kill("SIGKILL");
+      await once(holder.process, "exit");
+      await new Promise((resolve) => setTimeout(resolve, STALE_MS + 1_500));
 
-    const recovered = start("@bybrave/proper-lockfile2", "hold", target, lockfilePath);
-    await expect(recovered.waitFor("reclaimed")).resolves.toMatchObject({
-      type: "reclaimed",
-    });
-    await expect(recovered.waitFor("acquired")).resolves.toMatchObject({
-      type: "acquired",
-    });
-  });
+      const recovered = start(
+        "@bybrave/proper-lockfile2",
+        "hold",
+        target,
+        lockfilePath,
+      );
+      await expect(recovered.waitFor("reclaimed")).resolves.toMatchObject({
+        type: "reclaimed",
+      });
+      await expect(recovered.waitFor("acquired")).resolves.toMatchObject({
+        type: "acquired",
+      });
+    },
+    STALE_OWNER_TEST_TIMEOUT_MS,
+  );
 
   it("keeps a compromised acquired lease fenced", async () => {
     const { target, lockfilePath } = await makeTarget();

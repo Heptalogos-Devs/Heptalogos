@@ -86,6 +86,16 @@ describe("canonical schema adapter", () => {
       "0005_life_agency",
       "0006_native_dispatch",
       "0007_pursuit",
+      "0008_world_life",
+      "0009_role_results",
+      "0010_narrative",
+      "0011_observation_domain_time",
+      "0012_subject_decisions",
+      "0013_world_host_lifecycle",
+      "0014_world_contact_selection",
+      "0015_subject_reactor",
+      "0016_world_profile_living",
+      "0017_subject_attention",
     ]);
     await expect(canonicalMigrationProvider.getMigrations()).resolves.toEqual(
       expect.objectContaining({

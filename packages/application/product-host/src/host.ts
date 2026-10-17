@@ -21,12 +21,15 @@ import {
   type ExecutionContext,
 } from "@heptalogos/execution-lineage";
 import { createEvidenceService } from "@heptalogos/evidence";
+import { join } from "node:path";
 import { createSystemTimeService } from "@heptalogos/time-service";
 import { createConfigurationService } from "@heptalogos/configuration";
 import {
   createManagementAuthentication,
   ProductManagement,
   productSettingsDefinition,
+  managementProblem,
+  type ProductSettings,
 } from "@heptalogos/management";
 import type {
   BootId,
@@ -48,11 +51,19 @@ import {
   writeManagementEndpointDescriptor,
 } from "./files.js";
 import { createProductHttpApp, closeProductHttpApp } from "./product-http.js";
-import { getNousSubject, createNousSubject } from "./nous.js";
+import { getNousSubject, createNousSubject, connectProductNous } from "./nous.js";
+import { createWorldClockManagement } from "./world-clock.js";
+import type { ReactorProjection } from "./reactor-http.js";
 import { inspectProductDependencies } from "./dependencies.js";
 import { createGatewayRuntime } from "./gateway-runtime.js";
 import { parseProductHostInputs, type ProductHostInputs } from "./inputs.js";
-import { createInstalledNativeDispatcher } from "./native-dispatch.js";
+import {
+  createInstalledWorldScheduler,
+  createInstalledAgentSelector,
+  type NativeAgentSelect,
+  type NativeWorldSchedule,
+  createInstalledNativeDispatcher,
+} from "./native-dispatch.js";
 
 /** Handle to the independently usable management process. */
 export interface ProductHostHandle {
@@ -68,6 +79,8 @@ export interface ProductHostHandle {
 /** Installed lifecycle roots and private PostgreSQL location. */
 export type ProductHostStartOptions = ProductHostInputs & {
   readonly dispatchNativeActivity?: import("./activity-dispatch-contracts.js").NativeActivityDispatch;
+  readonly scheduleWorld?: NativeWorldSchedule;
+  readonly selectNativeAgent?: NativeAgentSelect;
 };
 
 async function runRetainedManagementMutation<T>(
@@ -146,6 +159,7 @@ export async function startProductHost(
   let claim: Awaited<ReturnType<typeof startFirstClaimMaintenance>> | undefined;
   let runRoot: string | undefined;
   let closing: Promise<void> | undefined;
+  let stopWorldClock: (() => Promise<void>) | undefined;
   const dispatchController = new AbortController();
   const close = (): Promise<void> => {
     if (closing) return closing;
@@ -163,6 +177,7 @@ export async function startProductHost(
       await settle(async () => {
         if (app) await closeProductHttpApp(app);
       });
+      await settle(async () => stopWorldClock?.());
       if (runRoot && host)
         await settle(() => removeCurrentEndpointDescriptor(runRoot!, host!.bootId));
       await settle(async () => persistence?.close());
@@ -300,6 +315,26 @@ export async function startProductHost(
       dataRoot: locations.stateRoot,
       now: () => new Date().toISOString(),
       runMutation: runMutationActivity,
+      selectNativeAgent:
+        options.selectNativeAgent ??
+        createInstalledAgentSelector({
+          anchorRoot: options.anchorRoot,
+          configurationRoot: owned.paths.resolve("CONFIGURATION").canonicalPath,
+          installationId: owned.installationId,
+          signal: AbortSignal.any([host.signal, dispatchController.signal]),
+        }),
+      scheduleWorld:
+        options.scheduleWorld ??
+        createInstalledWorldScheduler({
+          anchorRoot: options.anchorRoot,
+          configurationRoot: owned.paths.resolve("CONFIGURATION").canonicalPath,
+          installationId: owned.installationId,
+          serviceCredentialFile: join(
+            secretPaths.resolve("SECRET").canonicalPath,
+            "channel-service-token",
+          ),
+          signal: AbortSignal.any([host.signal, dispatchController.signal]),
+        }),
       dispatchNativeActivity:
         options.dispatchNativeActivity ??
         createInstalledNativeDispatcher({
@@ -311,16 +346,126 @@ export async function startProductHost(
     });
     const recoveryConfiguration = await product.configuration();
     const recoverySubjectId = recoveryConfiguration.settings?.subject?.id;
-    if (recoverySubjectId)
+    if (recoverySubjectId) {
+      stopWorldClock = () =>
+        runMutationActivity("subject.world.host_stop", () =>
+          gateway.worldHostLifecycle.stop(),
+        );
+      // Management remains available when its external clock cannot currently be reached.
+      await runMutationActivity("subject.world.host_start", () =>
+        gateway.worldHostLifecycle.start(),
+      ).catch(() => {});
       await runMutationActivity("subject.life.recover", () =>
         gateway.life.recover(recoverySubjectId),
       );
+    }
     const currentRunRoot = runRoot;
+    const configuredSettings = async (): Promise<ProductSettings> => {
+      const configuration = await product.configuration();
+      if (!configuration.settings)
+        throw managementProblem(
+          "management.unconfigured",
+          "Product settings are unavailable",
+          "Configure the current installation",
+          "unavailable",
+        );
+      return configuration.settings;
+    };
+    let opportunityProjection: ReactorProjection = { state: "not_requested" };
+    const projectOpportunity = async (input: {
+      subjectId: string;
+      operationRef: string;
+    }) => {
+      const attempt = {
+        operationRef: input.operationRef,
+        attemptedAt: new Date().toISOString(),
+      };
+      try {
+        await runMutationActivity("subject.reactor.schedule", () =>
+          gateway.requestReactorOpportunity(input),
+        );
+        opportunityProjection = { ...attempt, state: "projected" };
+      } catch (error) {
+        opportunityProjection = { ...attempt, state: "unavailable" };
+        throw error;
+      }
+    };
+    const projectConfiguration = async (
+      configuration: Awaited<ReturnType<typeof product.configuration>>,
+    ): Promise<ReactorProjection> => {
+      const settings = configuration.settings;
+      if (!settings?.subject.id || !settings.subject.enabled)
+        return (opportunityProjection = { state: "disabled" });
+      const operationRef = "configuration:" + configuration.revision;
+      try {
+        await projectOpportunity({ subjectId: settings.subject.id, operationRef });
+        return { state: "projected", operationRef };
+      } catch {
+        return { state: "unavailable", operationRef };
+      }
+    };
     app = await createProductHttpApp({
       authentication,
       product,
+      onConfigurationActivated: projectConfiguration,
       gateway: gateway.http,
       pursuit: gateway.pursuitHttp,
+      world: {
+        ...gateway.worldHttp,
+        clock: createWorldClockManagement({
+          nous: async () => connectProductNous(await configuredSettings()),
+        }),
+        onProfileAdopted: async (profile) => {
+          const configuration = await product.configuration();
+          if (
+            !configuration.settings ||
+            configuration.settings.subject.id !== profile.subjectId
+          )
+            throw managementProblem(
+              "world.profile_binding_changed",
+              "Subject binding changed",
+              "Read the current binding before activating this profile",
+              "conflict",
+            );
+          if (configuration.settings.subject.worldId !== profile.worldId)
+            await product.configure(
+              {
+                ...configuration.settings,
+                subject: {
+                  ...configuration.settings.subject,
+                  worldId: profile.worldId,
+                },
+              },
+              configuration.revision,
+            );
+          await projectOpportunity({
+            subjectId: profile.subjectId,
+            operationRef: "world-profile:" + profile.operationId,
+          }).catch(() => {});
+        },
+      },
+      worldOpportunity: gateway.worldOpportunityHttp,
+      narrative: gateway.narrativeHttp,
+      reactor: {
+        authenticate: gateway.http.authenticate,
+        currentSubject: async () => {
+          const settings = await configuredSettings();
+          if (!settings.subject.id)
+            throw managementProblem(
+              "management.subject_unbound",
+              "Subject is not bound",
+              "Bind a Subject before reading Reactor state",
+              "conflict",
+            );
+          return settings.subject.id;
+        },
+        settings: configuredSettings,
+        foreground: gateway.foreground,
+        attention: gateway.attention,
+        runMutation: runMutationActivity,
+        wake: projectOpportunity,
+        projection: () => opportunityProjection,
+      },
       identity: {
         installationId: currentHost.installationId,
         bootId: currentHost.bootId,
@@ -338,6 +483,11 @@ export async function startProductHost(
       bootId: host.bootId,
       origin,
     });
+    if (recoverySubjectId && recoveryConfiguration.settings?.subject.enabled)
+      await projectOpportunity({
+        subjectId: recoverySubjectId,
+        operationRef: "host-ready:" + currentHost.bootId,
+      }).catch(() => {});
     claim = await startFirstClaimMaintenance({
       readLocalClaim: () => readFirstClaimMaterial(currentRunRoot),
       ensureClaim: (local) => authentication.ensureFirstAdministratorClaim(local),

@@ -16,5 +16,6 @@ Long-term product design is maintained in [Architecture-Vault](https://github.co
 | Verification scripts                | [scripts/README.md](scripts/README.md)                             | Repository and documentation checks                           |
 | Cross-project tests                 | [tests/toolchain/ts6-api-lane.ts](tests/toolchain/ts6-api-lane.ts) | Test support outside package ownership                        |
 | Repository tooling                  | [tools/repo-kit/README.md](tools/repo-kit/README.md)               | Shared repository validation and maintenance tools            |
+| Official SDK inputs                 | [vendor/nous-wave/README.md](vendor/nous-wave/README.md)           | Unchanged sealed Nous archives, provenance and integrity      |
 
 Target design and rationale are not duplicated here. Historical implementation plans remain under `project/plans/completed/` when they are retained as execution evidence.

@@ -10,7 +10,15 @@ import {
 } from "@nous-wave/client/host-bridge";
 import type { MessagingService } from "@heptalogos/messaging";
 import type { LifeActivity } from "@heptalogos/subject";
+import type { PersistenceInternalTransaction } from "@heptalogos/persistence/repository";
 import type { Registration } from "./native-cognition.js";
+const uuid =
+  "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}";
+const worldContactPattern = new RegExp(
+  `^world-event:(${uuid}):(${uuid}):([1-9][0-9]*)(?::perception:(0|[1-9][0-9]*))?$`,
+);
+const timestampValue = (value: { seconds: bigint; nanos: number }) =>
+  value.seconds * 1_000_000_000n + BigInt(value.nanos);
 /** Future messages use the already adopted observe grant; other anchors remain explicitly scoped. */
 export function hasAuthorizedNativeSources(
   activity: LifeActivity,
@@ -21,19 +29,100 @@ export function hasAuthorizedNativeSources(
   const usage = decodeCognitionUsage(registration.usage);
   const target = usage.audience?.conversationRef;
   if (
-    !target ||
-    !scope.conversations.some(
-      (c) => c.conversationRef === target && c.operations.includes("observe"),
-    )
+    (!target && usage.audience?.visibility !== "internal") ||
+    (target &&
+      !scope.conversations.some(
+        (c) => c.conversationRef === target && c.operations.includes("observe"),
+      ))
   )
     return false;
   const selected = new Set(registration.messageRefs);
   if (selected.size !== registration.messageRefs.length) return false;
   const seen = new Set<string>();
+  const worldEvents = new Set<string>();
   for (const contact of registration.contacts) {
     const ref = contact.contactRef;
     if (seen.has(ref)) return false;
     const observation = decodeObservationInput(contact.observation);
+    if (ref.startsWith("role-result-release:")) {
+      if (
+        observation.subjectId !== registration.subjectId ||
+        observation.sourceClass !== "host_event" ||
+        typeof observation.context?.child_run_id !== "string" ||
+        !observation.externalObjectRef?.startsWith(
+          "object:heptalogos:role-result:" + observation.context.child_run_id + ":",
+        ) ||
+        observation.requestId !== ref.slice("role-result-release:".length) ||
+        observation.context?.source_nature !== "execution_result_release"
+      )
+        return false;
+      seen.add(ref);
+      continue;
+    }
+    if (ref.startsWith("world-profile:")) {
+      const match = /^world-profile:([0-9a-f-]{36}):1$/i.exec(ref);
+      if (
+        !match ||
+        observation.subjectId !== registration.subjectId ||
+        observation.actorEntityRef !== registration.actorEntityRef ||
+        observation.sourceClass !== "initial_setting" ||
+        observation.externalObjectRef !== "object:" + ref ||
+        observation.worldRealized ||
+        observation.occurredTime?.extent?.value.case ||
+        !registration.sourceRefs.includes(ref) ||
+        ![ref, `world:${match[1]}`].some((root) => scope.sourceRefs.includes(root))
+      )
+        return false;
+      seen.add(ref);
+      worldEvents.add(ref);
+      continue;
+    }
+    // Host registration and canonical WorldLife resolution supply this source;
+    // a contact prefix alone grants no world or hidden-event permission.
+    if (ref.startsWith("world-event:")) {
+      const match = worldContactPattern.exec(ref);
+      const source = observation.worldRealized;
+      const perceived = source?.worldObserved;
+      const extent = observation.occurredTime?.extent?.value;
+      if (
+        !match ||
+        observation.subjectId !== registration.subjectId ||
+        observation.actorEntityRef !== registration.actorEntityRef ||
+        observation.sourceClass !== "world_realized" ||
+        !source ||
+        source.worldId !== match[1] ||
+        source.eventId !== match[2] ||
+        source.eventRevision !== match[3] ||
+        !perceived?.at ||
+        !perceived.recordedAt ||
+        perceived.timeDomainRef !== observation.occurredTime?.timeDomainRef ||
+        observation.observedStamp
+      )
+        return false;
+      const root = `world-event:${match[1]}:${match[2]}:${match[3]}`;
+      if (
+        !registration.sourceRefs.includes(root) ||
+        ![root, `world:${match[1]}`].some((sourceRef) =>
+          scope.sourceRefs.includes(sourceRef),
+        ) ||
+        observation.externalObjectRef !== "object:heptalogos:" + root
+      )
+        return false;
+      const at = timestampValue(perceived.at);
+      if (extent?.case === "interval") {
+        if (
+          !extent.value.start ||
+          !extent.value.end ||
+          at < timestampValue(extent.value.start) ||
+          at > timestampValue(extent.value.end)
+        )
+          return false;
+      } else if (extent?.case !== "instant" || at !== timestampValue(extent.value))
+        return false;
+      seen.add(ref);
+      worldEvents.add(root);
+      continue;
+    }
     if (
       observation.subjectId !== registration.subjectId ||
       observation.externalObjectRef !== "object:heptalogos:" + ref ||
@@ -61,14 +150,38 @@ export function hasAuthorizedNativeSources(
     } else return false;
     seen.add(ref);
   }
-  const inherited = new Set(
-    registration.role === "worker" ? (registration.inheritedMessageSources ?? []) : [],
-  );
+  const inherited = new Set(registration.inheritedMessageSources ?? []);
   return (
     registration.sourceRefs.every((ref) =>
-      ref.startsWith("message:")
-        ? (selected.has(ref.slice(8)) && seen.has(ref)) || inherited.has(ref)
-        : scope.sourceRefs.includes(ref),
+      ref.startsWith("world-event:")
+        ? (() => {
+            const match = worldContactPattern.exec(ref);
+            return (
+              !!match &&
+              !match[4] &&
+              (scope.sourceRefs.includes(ref) ||
+                scope.sourceRefs.includes(`world:${match[1]}`)) &&
+              (worldEvents.has(ref) ||
+                (registration.inheritedSourceRefs ?? []).includes(ref))
+            );
+          })()
+        : ref.startsWith("world-profile:")
+          ? (() => {
+              const match = /^world-profile:([0-9a-f-]{36}):1$/i.exec(ref);
+              return (
+                !!match &&
+                (worldEvents.has(ref) ||
+                  (registration.inheritedSourceRefs ?? []).includes(ref)) &&
+                [ref, `world:${match[1]}`].some((root) =>
+                  scope.sourceRefs.includes(root),
+                )
+              );
+            })()
+          : ref.startsWith("message:")
+            ? (selected.has(ref.slice(8)) && seen.has(ref)) || inherited.has(ref)
+            : scope.sourceRefs.includes(ref) ||
+              (registration.inheritedSourceRefs ?? []).includes(ref) ||
+              (ref.startsWith("role-result-release:") && seen.has(ref)),
     ) &&
     [...selected].every(
       (ref) =>
@@ -82,6 +195,7 @@ export function hasAuthorizedNativeSources(
 export async function hasCanonicalNativeMessages(
   registration: Registration,
   messaging: Pick<MessagingService, "messageSources" | "prepareRead">,
+  transaction?: PersistenceInternalTransaction,
 ): Promise<boolean> {
   const usage = decodeCognitionUsage(registration.usage);
   const target = usage.audience?.conversationRef;
@@ -91,17 +205,23 @@ export async function hasCanonicalNativeMessages(
   const messageRefs = [
     ...new Set([
       ...registration.messageRefs,
-      ...(registration.role === "worker"
-        ? (registration.inheritedMessageSources ?? [])
-        : []
-      ).map((ref) => ref.slice(8)),
+      ...(registration.inheritedMessageSources ?? []).map((ref) => ref.slice(8)),
     ]),
   ];
-  if (!messageRefs.length) return registration.contacts.length === 0;
-  const result = await messaging.messageSources({
-    messageRefs,
-    conversationIds: [conversationId],
-  });
+  if (!messageRefs.length)
+    return registration.contacts.every(
+      (contact) =>
+        contact.contactRef.startsWith("world-event:") ||
+        contact.contactRef.startsWith("world-profile:") ||
+        contact.contactRef.startsWith("role-result-release:"),
+    );
+  const result = await messaging.messageSources(
+    {
+      messageRefs,
+      conversationIds: [conversationId],
+    },
+    transaction,
+  );
   const canonical =
     result.sources.length === messageRefs.length &&
     result.sources.every(
@@ -113,11 +233,17 @@ export async function hasCanonicalNativeMessages(
     c.contactRef.startsWith("attachment:"),
   );
   if (!media.length) return true;
-  const read = await messaging.prepareRead({
-    messageRefs: [...registration.messageRefs],
-    audience: { subjectId: registration.subjectId, conversationIds: [conversationId] },
-    budget: { maxMessages: 64, maxBytes: 1024 * 1024 },
-  });
+  const read = await messaging.prepareRead(
+    {
+      messageRefs: [...registration.messageRefs],
+      audience: {
+        subjectId: registration.subjectId,
+        conversationIds: [conversationId],
+      },
+      budget: { maxMessages: 64, maxBytes: 1024 * 1024 },
+    },
+    transaction,
+  );
   if (read.omitted.length) return false;
   return media.every((contact) => {
     const context = decodeObservationInput(contact.observation).context;

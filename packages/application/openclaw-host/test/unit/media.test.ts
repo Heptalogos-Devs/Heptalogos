@@ -2,7 +2,15 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 
 import { expect, it } from "vitest";
-import { mkdtemp, mkdir, writeFile, stat, readdir, rm } from "node:fs/promises";
+import {
+  mkdtemp,
+  mkdir,
+  writeFile,
+  readFile,
+  stat,
+  readdir,
+  rm,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { WebSocketServer } from "ws";
@@ -79,7 +87,11 @@ it("acquires a protocol-confirmed controlled export with byte quota, private tem
     expect(acquired.mediaType).toBe("image/png");
     expect(acquired.bytes).toBe(bytes.length);
     expect(charged).toBe(bytes.length);
-    expect((await stat(acquired.path)).mode & 0o777).toBe(0o600);
+    const file = await stat(acquired.path);
+    expect(file.isFile()).toBe(true);
+    await expect(readFile(acquired.path)).resolves.toEqual(bytes);
+    // Windows reports synthesized mode bits; POSIX owner-only modes are enforced where supported.
+    if (process.platform !== "win32") expect(file.mode & 0o777).toBe(0o600);
     expect(acquired.path).not.toMatch(/\.jpg$/);
     await acquired.dispose();
     await expect(

@@ -35,5 +35,7 @@ jobs:
           node-version-file: .node-version
           cache: pnpm
 
+      - run: node scripts/package/sdk-inputs.mjs
       - run: pnpm install --frozen-lockfile
-      - run: pnpm verify
+      - run: pnpm prepare:native-sdk
+      - run: pnpm verify --show-output
