@@ -71,7 +71,13 @@ export function allowsUntargetedSituationAction(
   return ["inspect", "continue", "wait", "rest", "communicate"].includes(action);
 }
 /** Project current resolver-approved choices into model input; owner authorization remains unchanged. */
-export function currentSituationDecisionInput(frame: SituationFrame) {
+export function currentSituationDecisionInput(
+  frame: SituationFrame,
+  references: { eventRefs: readonly string[]; priorClaimRefs: readonly string[] } = {
+    eventRefs: [],
+    priorClaimRefs: [],
+  },
+) {
   const candidates = [
     ...new Set(frame.objects.flatMap((object) => [object.handle, object.sourceRef])),
   ];
@@ -110,7 +116,26 @@ export function currentSituationDecisionInput(frame: SituationFrame) {
     actionTargets,
     outputContract: Type.Intersect([
       deliberationDecisionSchema,
+      Type.Object({
+        expressionIntent: Type.Optional(
+          Type.Object({
+            ...deliberationDecisionSchema.properties.expressionIntent.properties,
+            eventRefs: allowedReferencesSchema(references.eventRefs),
+            priorClaimRefs: allowedReferencesSchema(references.priorClaimRefs),
+          }),
+        ),
+      }),
       Type.Union(alternatives),
     ]),
   };
+}
+/** Exact owner-provided reference choices keep unavailable categories empty. */
+export function allowedReferencesSchema(values: readonly string[]) {
+  const choices = [...new Set(values)];
+  return Type.Array(
+    choices.length
+      ? Type.Union(choices.map((value) => Type.Literal(value)))
+      : Type.String(),
+    { maxItems: choices.length ? 128 : 0, uniqueItems: true },
+  );
 }

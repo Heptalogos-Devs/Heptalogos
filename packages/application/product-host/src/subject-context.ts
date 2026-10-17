@@ -43,7 +43,7 @@ export async function currentSubjectContext(
     >;
     life: Pick<ReturnType<typeof createLifeService>, "worldNow">;
   },
-  input: RoleInvocation,
+  input: Pick<RoleInvocation, "usage" | "subjectId" | "activityId">,
   sourceRefs: readonly string[],
 ) {
   const usage = decodeCognitionUsage(input.usage),

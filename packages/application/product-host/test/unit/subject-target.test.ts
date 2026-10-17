@@ -249,6 +249,45 @@ describe("one current Situation target resolver", () => {
     ).toBe(false);
     expect(dispatch).not.toHaveBeenCalled();
   });
+  it("limits world and prior-claim citations to the current owners' supplied records", () => {
+    const intent = {
+      intent: "Describe actual media",
+      stance: "neutral",
+      qualifications: [],
+      deception: "none",
+      eventRefs: [],
+      cognitionRefs: [],
+      priorClaimRefs: [],
+    };
+    const base = {
+      action: "communicate",
+      target: conversationRef,
+      reason: "Reply",
+      expressionIntent: intent,
+    };
+    const empty = compileSchema(currentSituationDecisionInput(frame()).outputContract);
+    expect(empty.validate(base).ok).toBe(true);
+    expect(
+      empty.validate({
+        ...base,
+        expressionIntent: { ...intent, eventRefs: ["message:visible"] },
+      }).ok,
+    ).toBe(false);
+    const event = "world-event:current:event:1",
+      prior = randomUUID();
+    const known = compileSchema(
+      currentSituationDecisionInput(frame(), {
+        eventRefs: [event],
+        priorClaimRefs: [prior],
+      }).outputContract,
+    );
+    expect(
+      known.validate({
+        ...base,
+        expressionIntent: { ...intent, eventRefs: [event], priorClaimRefs: [prior] },
+      }).ok,
+    ).toBe(true);
+  });
   it("omits ambiguous public aliases using the same canonical resolver", () => {
     const other = { ...conversation, owner: "world" as const, handle: "object:other" };
     const view = frame([conversation, other]);
