@@ -33,7 +33,10 @@ import {
   type BootstrapStateBodyV1,
   type MaintenanceJournalBodyV1,
 } from "@heptalogos/bootstrap-state";
-import { prepareBootstrapPrelude } from "../../src/bootstrap/prelude.js";
+import {
+  prepareBootstrapPrelude,
+  type OwnedBootstrapPrelude,
+} from "../../src/bootstrap/prelude.js";
 import type { BootstrapOwnershipLease } from "../../src/bootstrap/ownership.js";
 import { acquireBootstrapOwnership } from "../../src/bootstrap/ownership.js";
 import type { BootstrapLocatorV1 } from "../../src/bootstrap/locator.js";
@@ -174,6 +177,24 @@ async function stages(
   return (await journal.read(bootId)).map((entry) => entry.stage);
 }
 
+/** The mock has no child process; quiesce its recorded session before releasing the real filesystem lease. */
+async function closeWithMockPostgres(owned: OwnedBootstrapPrelude) {
+  const context = preparePrivatePostgresForOwnedPreludeMock.mock.calls.at(-1)?.[0];
+  if (context) {
+    const session =
+      context.privatePostgresSession as typeof context.privatePostgresSession & {
+        __testSessionToken?: PrivatePostgresSessionToken;
+      };
+    const token = session.__testSessionToken;
+    if (token) {
+      if (session.state === "READY" || session.state === "UNCERTAIN")
+        session.beginStop(token);
+      if (session.state === "TRANSITIONING") session.markQuiescent(token);
+    }
+  }
+  await owned.close();
+}
+
 afterEach(async () => {
   await Promise.all(
     directories
@@ -182,79 +203,94 @@ afterEach(async () => {
   );
 });
 
-describe("pre-PostgreSQL bootstrap prelude", () => {
+// Real durable filesystem initialization and platform process probes share one bounded fixture budget.
+// This does not change any bootstrap, heartbeat, lock or PostgreSQL deadline under test.
+describe("pre-PostgreSQL bootstrap prelude", { timeout: 30_000 }, () => {
   it("creates exactly one continuity epoch for an empty logical Instance", async () => {
     const fixture = await makeFixture(undefined, false);
     const prepared = await prepareBootstrapPrelude(fixture.anchorRoot);
     const owned = await prepared.acquireOwnership({ heartbeatMs: 1000 });
-    const seed = makeState(1);
+    try {
+      const seed = makeState(1);
 
-    const initialized = await owned.ensureBootstrapStateInitialized({
-      activeBootstrapRuntimeGeneration: seed.activeBootstrapRuntimeGeneration,
-      activeProductGeneration: seed.activeProductGeneration,
-    });
+      const initialized = await owned.ensureBootstrapStateInitialized({
+        activeBootstrapRuntimeGeneration: seed.activeBootstrapRuntimeGeneration,
+        activeProductGeneration: seed.activeProductGeneration,
+      });
 
-    expect(initialized.state.schemaVersion).toBe(1);
-    expect(initialized.state.revision).toBe(1);
-    expect(initialized.state.continuityEpochId).toMatch(
-      /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
-    );
-    await expect(owned.state.load()).resolves.toMatchObject({
-      status: "CURRENT",
-      value: { state: { continuityEpochId: initialized.state.continuityEpochId } },
-    });
-    await owned.close();
+      expect(initialized.state.schemaVersion).toBe(1);
+      expect(initialized.state.revision).toBe(1);
+      expect(initialized.state.continuityEpochId).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i,
+      );
+      await expect(owned.state.load()).resolves.toMatchObject({
+        status: "CURRENT",
+        value: { state: { continuityEpochId: initialized.state.continuityEpochId } },
+      });
+    } finally {
+      await owned.close();
+    }
   });
 
   it("reuses the committed continuity epoch on an ensure retry", async () => {
     const fixture = await makeFixture(undefined, false);
     const prepared = await prepareBootstrapPrelude(fixture.anchorRoot);
     const owned = await prepared.acquireOwnership({ heartbeatMs: 1000 });
-    const commit = vi.spyOn(owned.state, "commit");
-    const seed = makeState(1);
+    try {
+      const commit = vi.spyOn(owned.state, "commit");
+      const seed = makeState(1);
 
-    const first = await owned.ensureBootstrapStateInitialized({
-      activeBootstrapRuntimeGeneration: seed.activeBootstrapRuntimeGeneration,
-      activeProductGeneration: seed.activeProductGeneration,
-    });
-    const differentSelection = makeState(2);
-    const second = await owned.ensureBootstrapStateInitialized({
-      activeBootstrapRuntimeGeneration:
-        differentSelection.activeBootstrapRuntimeGeneration,
-      activeProductGeneration: differentSelection.activeProductGeneration,
-    });
+      const first = await owned.ensureBootstrapStateInitialized({
+        activeBootstrapRuntimeGeneration: seed.activeBootstrapRuntimeGeneration,
+        activeProductGeneration: seed.activeProductGeneration,
+      });
+      const differentSelection = makeState(2);
+      const second = await owned.ensureBootstrapStateInitialized({
+        activeBootstrapRuntimeGeneration:
+          differentSelection.activeBootstrapRuntimeGeneration,
+        activeProductGeneration: differentSelection.activeProductGeneration,
+      });
 
-    expect(second.state.continuityEpochId).toBe(first.state.continuityEpochId);
-    expect(second.state.activeProductGeneration).toBe(
-      first.state.activeProductGeneration,
-    );
-    expect(second.state.revision).toBe(1);
-    expect(commit).toHaveBeenCalledTimes(1);
-    await owned.close();
+      expect(second.state.continuityEpochId).toBe(first.state.continuityEpochId);
+      expect(second.state.activeProductGeneration).toBe(
+        first.state.activeProductGeneration,
+      );
+      expect(second.state.revision).toBe(1);
+      expect(commit).toHaveBeenCalledTimes(1);
+    } finally {
+      await owned.close();
+    }
   });
 
   it("reuses the committed continuity epoch after a later boot", async () => {
     const fixture = await makeFixture(undefined, false);
     const firstPrepared = await prepareBootstrapPrelude(fixture.anchorRoot);
     const firstOwned = await firstPrepared.acquireOwnership({ heartbeatMs: 1000 });
-    const seed = makeState(1);
-    const first = await firstOwned.ensureBootstrapStateInitialized({
-      activeBootstrapRuntimeGeneration: seed.activeBootstrapRuntimeGeneration,
-      activeProductGeneration: seed.activeProductGeneration,
-    });
-    const firstBootId = firstOwned.bootId;
-    await firstOwned.close();
+    try {
+      const seed = makeState(1);
+      const first = await firstOwned.ensureBootstrapStateInitialized({
+        activeBootstrapRuntimeGeneration: seed.activeBootstrapRuntimeGeneration,
+        activeProductGeneration: seed.activeProductGeneration,
+      });
+      const firstBootId = firstOwned.bootId;
+      await firstOwned.close();
 
-    const secondPrepared = await prepareBootstrapPrelude(fixture.anchorRoot);
-    const secondOwned = await secondPrepared.acquireOwnership({ heartbeatMs: 1000 });
-    const second = await secondOwned.ensureBootstrapStateInitialized({
-      activeBootstrapRuntimeGeneration: seed.activeBootstrapRuntimeGeneration,
-      activeProductGeneration: seed.activeProductGeneration,
-    });
+      const secondPrepared = await prepareBootstrapPrelude(fixture.anchorRoot);
+      const secondOwned = await secondPrepared.acquireOwnership({ heartbeatMs: 1000 });
+      try {
+        const second = await secondOwned.ensureBootstrapStateInitialized({
+          activeBootstrapRuntimeGeneration: seed.activeBootstrapRuntimeGeneration,
+          activeProductGeneration: seed.activeProductGeneration,
+        });
 
-    expect(secondOwned.bootId).not.toBe(firstBootId);
-    expect(second.state.continuityEpochId).toBe(first.state.continuityEpochId);
-    await secondOwned.close();
+        expect(secondOwned.bootId).not.toBe(firstBootId);
+        expect(second.state.continuityEpochId).toBe(first.state.continuityEpochId);
+      } finally {
+        await secondOwned.close();
+      }
+    } finally {
+      await firstOwned.close();
+    }
   });
 
   it("does not genesis a new epoch from recovered previous state", async () => {
@@ -314,24 +350,28 @@ describe("pre-PostgreSQL bootstrap prelude", () => {
     ]);
 
     const owned = await prepared.acquireOwnership({ heartbeatMs: 1000 });
-    expect("preparePrivatePostgres" in owned).toBe(true);
-    expect(owned.authoritativeState).toMatchObject({
-      status: "CURRENT",
-      value: { state: { revision: 1 } },
-    });
-    await owned.state.commit(makeState(2));
-    await owned.close();
+    try {
+      expect("preparePrivatePostgres" in owned).toBe(true);
+      expect(owned.authoritativeState).toMatchObject({
+        status: "CURRENT",
+        value: { state: { revision: 1 } },
+      });
+      await owned.state.commit(makeState(2));
+      await owned.close();
 
-    await expect(stages(prepared.journal, prepared.bootId)).resolves.toEqual([
-      "bootstrap.prelude.started",
-      "bootstrap.locator.resolved",
-      "bootstrap.roots.resolved",
-      "bootstrap.state.preliminary_read",
-      "bootstrap.ownership.acquired",
-      "bootstrap.state.authoritative_reload",
-      "bootstrap.prelude.owned",
-      "bootstrap.prelude.released",
-    ]);
+      await expect(stages(prepared.journal, prepared.bootId)).resolves.toEqual([
+        "bootstrap.prelude.started",
+        "bootstrap.locator.resolved",
+        "bootstrap.roots.resolved",
+        "bootstrap.state.preliminary_read",
+        "bootstrap.ownership.acquired",
+        "bootstrap.state.authoritative_reload",
+        "bootstrap.prelude.owned",
+        "bootstrap.prelude.released",
+      ]);
+    } finally {
+      await owned.close();
+    }
   });
 
   it("blocks normal bootstrap when only RECOVERED_PREVIOUS state is available", async () => {
@@ -442,25 +482,29 @@ describe("pre-PostgreSQL bootstrap prelude", () => {
       heartbeatMs: 1000,
       bootId: createBootId(),
     });
-    const preludeModule = (await import("../../src/bootstrap/prelude.js")) as Record<
-      string,
-      unknown
-    >;
-    const adopt = preludeModule.adoptRecoveredBootstrapOwnershipForPrelude as (
-      anchorRoot: string,
-      lease: BootstrapOwnershipLease,
-      identity: { bootId: BootId; bootstrapActivityId: string },
-    ) => Promise<unknown>;
+    try {
+      const preludeModule = (await import("../../src/bootstrap/prelude.js")) as Record<
+        string,
+        unknown
+      >;
+      const adopt = preludeModule.adoptRecoveredBootstrapOwnershipForPrelude as (
+        anchorRoot: string,
+        lease: BootstrapOwnershipLease,
+        identity: { bootId: BootId; bootstrapActivityId: string },
+      ) => Promise<unknown>;
 
-    await expect(
-      adopt(fixture.anchorRoot, ownership, {
-        bootId: createBootId(),
-        bootstrapActivityId: createUuidV7Id("ActivityId"),
-      }),
-    ).rejects.toMatchObject({
-      problem: { problemCode: "bootstrap.state.current_authority_required" },
-    });
-    expect(ownership.state).toBe("RELEASED");
+      await expect(
+        adopt(fixture.anchorRoot, ownership, {
+          bootId: createBootId(),
+          bootstrapActivityId: createUuidV7Id("ActivityId"),
+        }),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "bootstrap.state.current_authority_required" },
+      });
+      expect(ownership.state).toBe("RELEASED");
+    } finally {
+      await ownership.release();
+    }
   });
 
   it("materializes one normal owned prelude from one held ownership generation", async () => {
@@ -469,18 +513,22 @@ describe("pre-PostgreSQL bootstrap prelude", () => {
     const ownershipWitnesses = new BootstrapOwnerWitnessStore(fixture.instanceRoot);
 
     const owned = await prepared.acquireOwnership({ heartbeatMs: 1000 });
-    const ownerBeforeClose = await ownershipWitnesses.readOwner();
-    expect(ownerBeforeClose?.witness.bootId).toBe(prepared.bootId);
-    expect(owned.ownershipState).toBe("HELD");
-    expect(owned.authoritativeState).toMatchObject({
-      status: "CURRENT",
-      value: { state: { revision: 1 } },
-    });
+    try {
+      const ownerBeforeClose = await ownershipWitnesses.readOwner();
+      expect(ownerBeforeClose?.witness.bootId).toBe(prepared.bootId);
+      expect(owned.ownershipState).toBe("HELD");
+      expect(owned.authoritativeState).toMatchObject({
+        status: "CURRENT",
+        value: { state: { revision: 1 } },
+      });
 
-    await owned.close();
+      await owned.close();
 
-    await expect(ownershipWitnesses.readOwner()).resolves.toBeUndefined();
-    expect(owned.ownershipState).toBe("RELEASED");
+      await expect(ownershipWitnesses.readOwner()).resolves.toBeUndefined();
+      expect(owned.ownershipState).toBe("RELEASED");
+    } finally {
+      await owned.close();
+    }
   });
 
   it("adopts a held lease without creating a second owner generation", async () => {
@@ -492,42 +540,46 @@ describe("pre-PostgreSQL bootstrap prelude", () => {
       heartbeatMs: 1000,
       bootId: recoveryBootId,
     });
-    const witnesses = new BootstrapOwnerWitnessStore(fixture.instanceRoot);
-    const ownerBefore = await witnesses.readOwner();
+    try {
+      const witnesses = new BootstrapOwnerWitnessStore(fixture.instanceRoot);
+      const ownerBefore = await witnesses.readOwner();
 
-    const preludeModule = (await import("../../src/bootstrap/prelude.js")) as Record<
-      string,
-      unknown
-    >;
-    expect(typeof preludeModule.adoptRecoveredBootstrapOwnershipForPrelude).toBe(
-      "function",
-    );
-    if (
-      typeof preludeModule.adoptRecoveredBootstrapOwnershipForPrelude !== "function"
-    ) {
+      const preludeModule = (await import("../../src/bootstrap/prelude.js")) as Record<
+        string,
+        unknown
+      >;
+      expect(typeof preludeModule.adoptRecoveredBootstrapOwnershipForPrelude).toBe(
+        "function",
+      );
+      if (
+        typeof preludeModule.adoptRecoveredBootstrapOwnershipForPrelude !== "function"
+      ) {
+        await ownership.release();
+        return;
+      }
+      const adopt = preludeModule.adoptRecoveredBootstrapOwnershipForPrelude as (
+        anchorRoot: string,
+        lease: BootstrapOwnershipLease,
+        identity: { bootId: BootId; bootstrapActivityId: string },
+      ) => Promise<{ ownershipState: string; close(): Promise<void> }>;
+      const owned = await adopt(fixture.anchorRoot, ownership, {
+        bootId: recoveryBootId,
+        bootstrapActivityId,
+      });
+      const ownerAfter = await witnesses.readOwner();
+
+      expect(ownerAfter?.witness.lockGenerationId).toBe(
+        ownerBefore?.witness.lockGenerationId,
+      );
+      expect(await witnesses.listAttempts()).toHaveLength(0);
+      expect(await witnesses.listReleasing()).toHaveLength(0);
+      expect(owned.ownershipState).toBe("HELD");
+
+      await owned.close();
+      await expect(witnesses.readOwner()).resolves.toBeUndefined();
+    } finally {
       await ownership.release();
-      return;
     }
-    const adopt = preludeModule.adoptRecoveredBootstrapOwnershipForPrelude as (
-      anchorRoot: string,
-      lease: BootstrapOwnershipLease,
-      identity: { bootId: BootId; bootstrapActivityId: string },
-    ) => Promise<{ ownershipState: string; close(): Promise<void> }>;
-    const owned = await adopt(fixture.anchorRoot, ownership, {
-      bootId: recoveryBootId,
-      bootstrapActivityId,
-    });
-    const ownerAfter = await witnesses.readOwner();
-
-    expect(ownerAfter?.witness.lockGenerationId).toBe(
-      ownerBefore?.witness.lockGenerationId,
-    );
-    expect(await witnesses.listAttempts()).toHaveLength(0);
-    expect(await witnesses.listReleasing()).toHaveLength(0);
-    expect(owned.ownershipState).toBe("HELD");
-
-    await owned.close();
-    await expect(witnesses.readOwner()).resolves.toBeUndefined();
   });
 
   it("rejects recovered-lease adoption when the held lease belongs to another root", async () => {
@@ -540,34 +592,38 @@ describe("pre-PostgreSQL bootstrap prelude", () => {
       heartbeatMs: 1000,
       bootId: createBootId(),
     });
-    const preludeModule = (await import("../../src/bootstrap/prelude.js")) as Record<
-      string,
-      unknown
-    >;
-    expect(typeof preludeModule.adoptRecoveredBootstrapOwnershipForPrelude).toBe(
-      "function",
-    );
-    if (
-      typeof preludeModule.adoptRecoveredBootstrapOwnershipForPrelude !== "function"
-    ) {
-      await ownership.release();
-      return;
-    }
-    const adopt = preludeModule.adoptRecoveredBootstrapOwnershipForPrelude as (
-      anchorRoot: string,
-      lease: BootstrapOwnershipLease,
-      identity: { bootId: BootId; bootstrapActivityId: string },
-    ) => Promise<unknown>;
+    try {
+      const preludeModule = (await import("../../src/bootstrap/prelude.js")) as Record<
+        string,
+        unknown
+      >;
+      expect(typeof preludeModule.adoptRecoveredBootstrapOwnershipForPrelude).toBe(
+        "function",
+      );
+      if (
+        typeof preludeModule.adoptRecoveredBootstrapOwnershipForPrelude !== "function"
+      ) {
+        await ownership.release();
+        return;
+      }
+      const adopt = preludeModule.adoptRecoveredBootstrapOwnershipForPrelude as (
+        anchorRoot: string,
+        lease: BootstrapOwnershipLease,
+        identity: { bootId: BootId; bootstrapActivityId: string },
+      ) => Promise<unknown>;
 
-    await expect(
-      adopt(requestedFixture.anchorRoot, ownership, {
-        bootId: createBootId(),
-        bootstrapActivityId: createUuidV7Id("ActivityId"),
-      }),
-    ).rejects.toMatchObject({
-      problem: { problemCode: "bootstrap.ownership.scope_mismatch" },
-    });
-    expect(ownership.state).toBe("RELEASED");
+      await expect(
+        adopt(requestedFixture.anchorRoot, ownership, {
+          bootId: createBootId(),
+          bootstrapActivityId: createUuidV7Id("ActivityId"),
+        }),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "bootstrap.ownership.scope_mismatch" },
+      });
+      expect(ownership.state).toBe("RELEASED");
+    } finally {
+      await ownership.release();
+    }
   });
 
   it("allows competing attempts to keep separate journals while only one mutates state", async () => {
@@ -615,7 +671,7 @@ describe("pre-PostgreSQL bootstrap prelude", () => {
     } finally {
       await ownedResult?.value.close();
     }
-  }, 30_000);
+  });
 
   it("allows concurrent owners for different resolved instance roots", async () => {
     const anchor = await makeDirectory("heptalogos-prelude-shared-program-");
@@ -627,53 +683,63 @@ describe("pre-PostgreSQL bootstrap prelude", () => {
       firstPrepared.acquireOwnership({ heartbeatMs: 1000 }),
       secondPrepared.acquireOwnership({ heartbeatMs: 1000 }),
     ]);
-
-    expect(first.instanceRoot).not.toBe(second.instanceRoot);
-    expect(firstOwned.instanceId).not.toBe(secondOwned.instanceId);
-    await Promise.all([firstOwned.close(), secondOwned.close()]);
+    try {
+      expect(first.instanceRoot).not.toBe(second.instanceRoot);
+      expect(firstOwned.instanceId).not.toBe(secondOwned.instanceId);
+    } finally {
+      await Promise.all([firstOwned.close(), secondOwned.close()]);
+    }
   });
 
   it("blocks close while private PostgreSQL is ready and retries after a clean stop", async () => {
     const fixture = await makeFixture();
     const prepared = await prepareBootstrapPrelude(fixture.anchorRoot);
     const owned = await prepared.acquireOwnership({ heartbeatMs: 1000 });
+    try {
+      await owned.preparePrivatePostgres({} as never);
 
-    await owned.preparePrivatePostgres({} as never);
+      await expect(owned.close()).rejects.toMatchObject({
+        problem: { problemCode: "bootstrap.private_postgres.release_blocked" },
+      });
+      expect(owned.ownershipState).toBe("HELD");
 
-    await expect(owned.close()).rejects.toMatchObject({
-      problem: { problemCode: "bootstrap.private_postgres.release_blocked" },
-    });
-    expect(owned.ownershipState).toBe("HELD");
+      const context = preparePrivatePostgresForOwnedPreludeMock.mock.calls.at(-1)?.[0];
+      expect(context).toBeDefined();
+      if (context === undefined)
+        throw new Error("Private PostgreSQL context was not prepared");
+      const token = (
+        context.privatePostgresSession as unknown as {
+          __testSessionToken?: PrivatePostgresSessionToken;
+        }
+      ).__testSessionToken;
+      context.privatePostgresSession.beginStop(token as PrivatePostgresSessionToken);
+      context.privatePostgresSession.markQuiescent(
+        token as PrivatePostgresSessionToken,
+      );
 
-    const context = preparePrivatePostgresForOwnedPreludeMock.mock.calls.at(-1)?.[0];
-    expect(context).toBeDefined();
-    if (context === undefined)
-      throw new Error("Private PostgreSQL context was not prepared");
-    const token = (
-      context.privatePostgresSession as unknown as {
-        __testSessionToken?: PrivatePostgresSessionToken;
-      }
-    ).__testSessionToken;
-    context.privatePostgresSession.beginStop(token as PrivatePostgresSessionToken);
-    context.privatePostgresSession.markQuiescent(token as PrivatePostgresSessionToken);
-
-    await expect(owned.close()).resolves.toBeUndefined();
-    expect(owned.ownershipState).toBe("RELEASED");
+      await expect(owned.close()).resolves.toBeUndefined();
+      expect(owned.ownershipState).toBe("RELEASED");
+    } finally {
+      await closeWithMockPostgres(owned);
+    }
   });
 
   it("does not expose a raw ownership release capability from an owned prelude", async () => {
     const fixture = await makeFixture();
     const prepared = await prepareBootstrapPrelude(fixture.anchorRoot);
     const owned = await prepared.acquireOwnership({ heartbeatMs: 1000 });
-    const view = owned as unknown as {
-      readonly ownershipState: string;
-      readonly ownershipSignal: AbortSignal;
-    };
+    try {
+      const view = owned as unknown as {
+        readonly ownershipState: string;
+        readonly ownershipSignal: AbortSignal;
+      };
 
-    expect("ownership" in owned).toBe(false);
-    expect(view.ownershipState).toBe("HELD");
-    expect(view.ownershipSignal.aborted).toBe(false);
-    await owned.close();
+      expect("ownership" in owned).toBe(false);
+      expect(view.ownershipState).toBe("HELD");
+      expect(view.ownershipSignal.aborted).toBe(false);
+    } finally {
+      await owned.close();
+    }
   });
 
   it.each([
@@ -703,30 +769,33 @@ describe("pre-PostgreSQL bootstrap prelude", () => {
       const fixture = await makeFixture();
       const prepared = await prepareBootstrapPrelude(fixture.anchorRoot);
       const owned = await prepared.acquireOwnership({ heartbeatMs: 1000 });
-
-      await owned.preparePrivatePostgres({} as never);
-      const context = preparePrivatePostgresForOwnedPreludeMock.mock.calls.at(-1)?.[0];
-      expect(context).toBeDefined();
-      arrange(context!.privatePostgresSession);
-      await expect(owned.close()).rejects.toMatchObject({
-        problem: { problemCode: "bootstrap.private_postgres.release_blocked" },
-      });
-      expect(owned.ownershipState).toBe("HELD");
-      if (context!.privatePostgresSession.state === "UNCERTAIN") {
+      try {
+        await owned.preparePrivatePostgres({} as never);
+        const context =
+          preparePrivatePostgresForOwnedPreludeMock.mock.calls.at(-1)?.[0];
+        expect(context).toBeDefined();
+        arrange(context!.privatePostgresSession);
+        await expect(owned.close()).rejects.toMatchObject({
+          problem: { problemCode: "bootstrap.private_postgres.release_blocked" },
+        });
+        expect(owned.ownershipState).toBe("HELD");
+        if (context!.privatePostgresSession.state === "UNCERTAIN") {
+          const token = (
+            context!.privatePostgresSession as unknown as {
+              __testSessionToken?: PrivatePostgresSessionToken;
+            }
+          ).__testSessionToken as PrivatePostgresSessionToken;
+          context!.privatePostgresSession.beginStop(token);
+        }
         const token = (
           context!.privatePostgresSession as unknown as {
             __testSessionToken?: PrivatePostgresSessionToken;
           }
         ).__testSessionToken as PrivatePostgresSessionToken;
-        context!.privatePostgresSession.beginStop(token);
+        context!.privatePostgresSession.markQuiescent(token);
+      } finally {
+        await closeWithMockPostgres(owned);
       }
-      const token = (
-        context!.privatePostgresSession as unknown as {
-          __testSessionToken?: PrivatePostgresSessionToken;
-        }
-      ).__testSessionToken as PrivatePostgresSessionToken;
-      context!.privatePostgresSession.markQuiescent(token);
-      await owned.close();
     },
   );
 

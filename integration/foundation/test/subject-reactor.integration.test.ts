@@ -414,6 +414,11 @@ real("One Subject foreground on real PostgreSQL", () => {
           explanationRef: lastSelection.explanationRef,
         }),
       );
+      expect(await reactor.history({ subjectId: randomUUID(), limit: 3 })).toEqual({
+        reactions: [],
+        more: false,
+        nextReactionId: null,
+      });
       const history = await reactor.history({ subjectId, limit: 1 });
       expect(history.reactions[0]!.reactionId).toBe(last.reaction.reactionId);
       const older = await reactor.history({
@@ -422,6 +427,8 @@ real("One Subject foreground on real PostgreSQL", () => {
         afterReactionId: history.nextReactionId!,
       });
       expect(older.reactions).toHaveLength(2);
+      expect(older.more).toBe(false);
+      expect(older.nextReactionId).toBeNull();
       expect(
         new Set(
           [...history.reactions, ...older.reactions].map((value) => value.reactionId),

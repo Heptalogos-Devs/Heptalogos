@@ -3,6 +3,9 @@
 
 import { describe, expect, it } from "vitest";
 import { createConnection } from "node:net";
+import { randomUUID } from "node:crypto";
+import fastify from "fastify";
+import { registerReactorHttp } from "../../src/reactor-http.js";
 import {
   managementProblem,
   type ManagementAuthentication,
@@ -117,3 +120,45 @@ it("bounds shutdown when an unauthenticated peer withholds its request body", as
     await app.close();
   }
 }, 15_000);
+
+it("serializes a read-only empty Reactor history page with an explicit terminal cursor", async () => {
+  const subjectId = randomUUID();
+  let reads = 0;
+  const app = fastify();
+  registerReactorHttp(app, {
+    authenticate: async () => {},
+    currentSubject: async () => subjectId,
+    settings: async () => {
+      throw Error("History does not read configuration");
+    },
+    foreground: {
+      current: async () => undefined,
+      readReaction: async () => undefined,
+      lastAction: async () => undefined,
+      history: async () => {
+        reads++;
+        return { reactions: [], more: false, nextReactionId: null };
+      },
+    },
+    attention: { explain: async () => undefined },
+    runMutation: async (_kind, operation) => operation(),
+    wake: async () => {},
+    projection: () => ({ state: "not_requested" }),
+  });
+  try {
+    const response = await app.inject({
+      method: "POST",
+      url: "/gateway/v1/reactor/history",
+      payload: { subjectId, limit: 3 },
+    });
+    expect(response.statusCode).toBe(200);
+    expect(response.json()).toEqual({
+      reactions: [],
+      more: false,
+      nextReactionId: null,
+    });
+    expect(reads).toBe(1);
+  } finally {
+    await app.close();
+  }
+});
