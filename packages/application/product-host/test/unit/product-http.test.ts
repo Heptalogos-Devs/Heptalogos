@@ -4,6 +4,8 @@
 import { describe, expect, it } from "vitest";
 import { createConnection } from "node:net";
 import { randomUUID } from "node:crypto";
+import { setTimeout as delay } from "node:timers/promises";
+import type { GatewayHttpOptions } from "../../src/gateway-http.js";
 import fastify from "fastify";
 import { registerReactorHttp } from "../../src/reactor-http.js";
 import {
@@ -160,5 +162,62 @@ it("serializes a read-only empty Reactor history page with an explicit terminal 
     expect(reads).toBe(1);
   } finally {
     await app.close();
+  }
+});
+
+it("keeps authenticated Reactor operations alive while ordinary Management retains its socket bound", async () => {
+  const subjectId = randomUUID(),
+    reactionId = randomUUID();
+  const app = await createProductHttpApp({
+    identity: { installationId: "fixture", bootId: "fixture" },
+    onAdministratorClaimed: async () => {},
+    authentication: {
+      authenticate: async () => {},
+    } as unknown as ManagementAuthentication,
+    product: {
+      configuration: async () => {
+        await delay(250);
+        return { revision: null, settings: null };
+      },
+    } as unknown as ProductManagement,
+    gateway: {
+      authenticate: async (token: string | undefined) => {
+        expect(token).toBe("service-only");
+      },
+      runMutation: async <T>(_kind: string, operation: () => Promise<T>) => operation(),
+      reactor: async () => {
+        await delay(250);
+        return { status: "yielded", reactionId };
+      },
+    } as unknown as GatewayHttpOptions,
+  });
+  try {
+    expect(app.server.timeout).toBe(15000);
+    // Keep the production separation between short idle sockets and long owner
+    // work, using a short real TCP interval without a model or a fake clock.
+    app.server.setTimeout(100);
+    await app.listen({ host: "127.0.0.1", port: 0 });
+    const address = app.server.address();
+    if (!address || typeof address === "string") throw Error("missing test listener");
+    const origin = "http://127.0.0.1:" + address.port;
+    const response = await fetch(origin + "/gateway/v1/reactor/opportunity", {
+      method: "POST",
+      headers: {
+        authorization: "Bearer service-only",
+        "content-type": "application/json",
+        connection: "close",
+      },
+      body: JSON.stringify({ subjectId, requestId: randomUUID() }),
+    });
+    expect(response.status).toBe(200);
+    expect(await response.json()).toEqual({ status: "yielded", reactionId });
+    expect(app.server.timeout).toBe(100);
+    await expect(
+      fetch(origin + "/v1/config", {
+        headers: { authorization: "Bearer administrator", connection: "close" },
+      }),
+    ).rejects.toMatchObject({ cause: { code: "UND_ERR_SOCKET" } });
+  } finally {
+    await closeProductHttpApp(app);
   }
 });
