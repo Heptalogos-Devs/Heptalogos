@@ -82,6 +82,17 @@ export const subjectReactionSchema = Type.Object(
 );
 /** A foreground run can be retained after losing adoption qualification. */
 export type SubjectReaction = Static<typeof subjectReactionSchema>;
+/** Bounded pre-effect rejection metadata; these references confer no authority or new observation. */
+export const reactorActionProblemSchema = Type.Object(
+  {
+    code: Type.String({ minLength: 1, maxLength: 128 }),
+    detail: Type.String({ minLength: 1, maxLength: 512 }),
+    availableCognitionRefs: Type.Optional(
+      Type.Array(ref, { maxItems: 16, uniqueItems: true }),
+    ),
+  },
+  object,
+);
 /** Only actual owner status is saved; ready task outputs are not marked viewed. */
 export const reactorActionReceiptSchema = Type.Object(
   {
@@ -98,6 +109,7 @@ export const reactorActionReceiptSchema = Type.Object(
     ]),
     resultRefs: Type.Array(ref, { maxItems: 128, uniqueItems: true }),
     recordedAt: activitySchema.properties.createdAt,
+    problem: Type.Optional(reactorActionProblemSchema),
   },
   object,
 );

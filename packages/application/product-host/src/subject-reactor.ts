@@ -71,6 +71,7 @@ export interface ReactorPreparedView {
 export interface ReactorActionOutcome {
   readonly state: Exclude<ReactorActionReceipt["state"], "started">;
   readonly resultRefs: readonly string[];
+  readonly problem?: ReactorActionReceipt["problem"];
   readonly view?: ReactorPreparedView;
   readonly yield?: boolean;
   readonly continuationRef: string;
@@ -425,6 +426,7 @@ export function createSubjectReactor(options: {
           actionId,
           state: actual.state,
           resultRefs: actual.resultRefs,
+          ...(actual.problem ? { problem: actual.problem } : {}),
         });
         reaction = (await options.foreground.current(input.subjectId))!;
         if (!reaction || reaction.reactionId !== reservation.receipt.reactionId)

@@ -301,14 +301,32 @@ real("One Subject foreground on real PostgreSQL", () => {
           action: { action: "continue" },
         }),
       );
-      await c.run(() =>
-        reactor.finishAction({
-          subjectId,
-          actionId: secondAction,
-          state: "completed",
-          resultRefs: ["activity:" + activity.activityId],
-        }),
+      const rejected = {
+        subjectId,
+        actionId: secondAction,
+        state: "rejected" as const,
+        resultRefs: [],
+        problem: {
+          code: "subject.expression_source_denied",
+          detail: "Use exact admitted references.",
+          availableCognitionRefs: ["work_context:actual"],
+        },
+      };
+      await c.run(() => reactor.finishAction(rejected));
+      expect((await reactor.readAction(subjectId, secondAction))?.problem).toEqual(
+        rejected.problem,
       );
+      expect(await c.run(() => reactor.finishAction(rejected))).toEqual(
+        await reactor.readAction(subjectId, secondAction),
+      );
+      await expect(
+        c.run(() =>
+          reactor.finishAction({
+            ...rejected,
+            problem: { ...rejected.problem, detail: "Changed problem" },
+          }),
+        ),
+      ).rejects.toThrow();
       await expect(
         c.run(() =>
           reactor.beginAction({
