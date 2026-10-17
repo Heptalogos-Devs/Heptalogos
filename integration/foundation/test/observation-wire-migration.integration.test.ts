@@ -18,6 +18,14 @@ import {
   RUNTIME_PASSWORD,
 } from "../support/canonical-postgres.js";
 
+const sdkMetaUrl = new URL(
+  "../../../packages/application/product-host/node_modules/@nous-wave/client/package.json",
+  import.meta.url,
+);
+const sdkMeta = JSON.parse(await readFile(sdkMetaUrl, "utf8"));
+const sdk = await import(
+  new URL(sdkMeta.exports["./host-bridge"].import, sdkMetaUrl).href
+);
 type Document = Record<string, CanonicalJsonValue>;
 const real = qualifiedPgBin ? describe : describe.skip;
 afterEach(cleanupCanonicalPostgresFixtures);
@@ -52,12 +60,12 @@ real("stored ObservationInput wire migration", () => {
     const activity = randomUUID();
     const operation = randomUUID();
     const contact = randomUUID();
-    const result = randomUUID();
     const release = randomUUID();
     const request = original.requestId;
     const subject = original.subjectId;
     if (typeof request !== "string" || typeof subject !== "string")
       throw new Error("The captured SDK fixture requires exact string identities");
+    const result = request;
     const run = `run:${randomUUID()}`;
     const entry = { contactRef: "message:original", observation: original };
     const unknown = { ...original, requestId: randomUUID(), occurredTime: {} };
@@ -132,7 +140,7 @@ real("stored ObservationInput wire migration", () => {
       await sql`INSERT INTO heptalogos.cognition_pending_feedback(request_id,subject_id,run_id,document,receipt,recorded_at,delivered_at) VALUES(${request}::uuid,${subject}::uuid,${run},${JSON.stringify(pending)}::jsonb,'{"occurrenceId":"exact-original-receipt"}',now(),now())`.execute(
         db,
       );
-      await sql`INSERT INTO heptalogos.role_run_result(result_id,subject_id,run_id,document,recorded_at) VALUES(${result}::uuid,${subject}::uuid,${run},${JSON.stringify({ observation: original, providerRaw: raw })}::jsonb,now())`.execute(
+      await sql`INSERT INTO heptalogos.role_run_result(result_id,subject_id,run_id,document,recorded_at) VALUES(${result}::uuid,${subject}::uuid,${run},${JSON.stringify({ ...pending, providerRaw: raw })}::jsonb,now())`.execute(
         db,
       );
       await sql`INSERT INTO heptalogos.role_result_release(request_id,subject_id,child_run_id,document,recorded_at) VALUES(${release}::uuid,${subject}::uuid,${run},${JSON.stringify({ response: { contacts: [entry] }, raw })}::jsonb,now())`.execute(
@@ -144,6 +152,26 @@ real("stored ObservationInput wire migration", () => {
         factsDigest: "current-digest-is-not-a-migration-target",
       };
       await sql`INSERT INTO heptalogos.cognition_pending_feedback(request_id,subject_id,run_id,document,recorded_at) VALUES(${currentId}::uuid,${subject}::uuid,${run},${JSON.stringify(current)}::jsonb,now())`.execute(
+        db,
+      );
+      const knownDomainResult = randomUUID();
+      const knownDomain = {
+        ...current,
+        observation: {
+          ...upgraded,
+          requestId: knownDomainResult,
+          occurredTime: {
+            timeDomainRef: "time:known-world",
+            extent: original.occurredTime!,
+          },
+          observedStamp: {
+            timeDomainRef: "time:known-world",
+            at: "2025-10-09T08:53:21Z",
+            recordedAt: "2025-10-09T09:00:00Z",
+          },
+        },
+      };
+      await sql`INSERT INTO heptalogos.role_run_result(result_id,subject_id,run_id,document,recorded_at) VALUES(${knownDomainResult}::uuid,${subject}::uuid,${run},${JSON.stringify(knownDomain)}::jsonb,now())`.execute(
         db,
       );
       await db
@@ -215,13 +243,51 @@ real("stored ObservationInput wire migration", () => {
           )
         ).rows[0]!.document,
       ).toEqual(current);
+      const savedRoleResult = (
+        await sql<{
+          result_id: string;
+          document: Document;
+        }>`SELECT result_id,document FROM heptalogos.role_run_result WHERE result_id=${result}::uuid`.execute(
+          db,
+        )
+      ).rows[0]!;
+      expect(savedRoleResult).toEqual({
+        result_id: request,
+        document: {
+          ...pending,
+          providerRaw: raw,
+          observation: upgraded,
+          factsDigest: digestCanonicalJson("host.native-cognition.v1", facts).hex,
+        },
+      });
+      // The migrated custody envelope is read by the strict public SDK; raw
+      // provider output and text containing old field names remain byte-exact.
+      expect(
+        sdk.encodeObservationInput(
+          sdk.decodeObservationInput(savedRoleResult.document.observation),
+        ),
+      ).toEqual(upgraded);
+      expect(savedRoleResult.document.observation).not.toHaveProperty("observedStamp");
+      expect((savedRoleResult.document.observation as Document).inlineText).toEqual(
+        sourceText,
+      );
       expect(
         (
           await sql<{
             document: Document;
-          }>`SELECT document FROM heptalogos.role_run_result`.execute(db)
+          }>`SELECT document FROM heptalogos.role_run_result WHERE result_id=${knownDomainResult}::uuid`.execute(
+            db,
+          )
         ).rows[0]!.document,
-      ).toEqual({ observation: original, providerRaw: raw });
+      ).toEqual(knownDomain);
+      const roleRowsBeforeReplay = (
+        await sql<{
+          result_id: string;
+          document: Document;
+        }>`SELECT result_id,document FROM heptalogos.role_run_result ORDER BY result_id`.execute(
+          db,
+        )
+      ).rows;
       expect(
         (
           await sql<{
@@ -246,6 +312,16 @@ real("stored ObservationInput wire migration", () => {
           )
         ).rows,
       ).toEqual(before.rows);
+      expect(
+        (
+          await sql<{
+            result_id: string;
+            document: Document;
+          }>`SELECT result_id,document FROM heptalogos.role_run_result ORDER BY result_id`.execute(
+            db,
+          )
+        ).rows,
+      ).toEqual(roleRowsBeforeReplay);
       expect(
         (
           await sql<{

@@ -113,27 +113,35 @@ export const observationDomainTimeMigration: Migration = {
           db,
         );
     }
-    const pending = await sql<{
-      request_id: string;
-      document: Document;
-    }>`SELECT request_id,document FROM heptalogos.cognition_pending_feedback WHERE document ? 'observation'`.execute(
-      db,
-    );
-    for (const row of pending.rows) {
-      const previous = row.document.observation!;
-      const upgraded = observation(previous);
-      if (JSON.stringify(upgraded) === JSON.stringify(previous)) continue;
-      if (!object(upgraded)) continue;
-      const facts = { ...upgraded };
-      delete facts.observedAt;
-      const document = {
-        ...row.document,
-        observation: upgraded,
-        factsDigest: digestCanonicalJson("host.native-cognition.v1", facts).hex,
-      };
-      await sql`UPDATE heptalogos.cognition_pending_feedback SET document=${JSON.stringify(document)}::jsonb WHERE request_id=${row.request_id}::uuid`.execute(
+    // 0009 promotes old execution feedback into RoleRun custody before this
+    // migration. Both owners persist the same canonical ObservationInput wire.
+    for (const [table, key] of [
+      ["cognition_pending_feedback", "request_id"],
+      ["role_run_result", "result_id"],
+    ] as const) {
+      const rows = await sql<{
+        record_id: string;
+        document: Document;
+      }>`SELECT ${sql.ref(key)} AS record_id,document FROM ${sql.table(`heptalogos.${table}`)} WHERE document ? 'observation'`.execute(
         db,
       );
+      for (const row of rows.rows) {
+        const previous = row.document.observation!;
+        const upgraded = observation(previous);
+        if (JSON.stringify(upgraded) === JSON.stringify(previous)) continue;
+        if (!object(upgraded)) continue;
+        const facts = { ...upgraded };
+        delete facts.observedAt;
+        delete facts.observedStamp;
+        const document = {
+          ...row.document,
+          observation: upgraded,
+          factsDigest: digestCanonicalJson("host.native-cognition.v1", facts).hex,
+        };
+        await sql`UPDATE ${sql.table(`heptalogos.${table}`)} SET document=${JSON.stringify(document)}::jsonb WHERE ${sql.ref(key)}=${row.record_id}::uuid`.execute(
+          db,
+        );
+      }
     }
   },
 };
