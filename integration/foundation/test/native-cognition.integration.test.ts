@@ -1397,6 +1397,9 @@ real("native child completion causality", () => {
           ),
         ),
       );
+      expect(
+        await f.bridge.readResultParent(f.input.subjectId, direct.release.childRunId),
+      ).toBe(f.input.native.runId);
       const released = await f.c.run(() => f.bridge.releaseResult(direct.release));
       expect(
         (
@@ -1623,6 +1626,38 @@ real("native child completion causality", () => {
           [childRunId],
         ),
       ).toEqual([]);
+      // A retained pre-registration-parent worker keeps its immutable handoff,
+      // results and missing provider policy. Recovery must not admit another attempt.
+      await f.c.run(() =>
+        f.c.persistence.mutate((context) =>
+          useRepositoryMutationTransaction(context, async (tx) => {
+            await executeRepositorySql(
+              tx,
+              "UPDATE heptalogos.life_handoff SET document=document #- '{registration,parentRunId}' WHERE child_session_key=$1",
+              [childSessionKey],
+            );
+            await executeRepositorySql(
+              tx,
+              "UPDATE heptalogos.life_native_run SET document=jsonb_set(document #- '{registration,parentRunId}' #- '{registration,tokenBudget}' #- '{registration,allowedToolNames}', '{registration,providerPolicyState}', '\"unconfigured\"'::jsonb) WHERE run_id=$1",
+              [childRunId],
+            );
+          }),
+        ),
+      );
+      await f.c.run(() => f.bridge.finishRun(childRunId, "uncertain"));
+      const retainedBefore = await f.bridge.readRoleResults(
+        f.input.subjectId,
+        childRunId,
+      );
+      expect(retainedBefore.run.registration.parentRunId).toBeUndefined();
+      expect(await f.bridge.readResultParent(f.input.subjectId, childRunId)).toBe(
+        f.input.native.runId,
+      );
+      await expect(
+        f.bridge.readResultParent(randomUUID(), childRunId),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_result_release_denied" },
+      });
       // Recovery of the pre-fix durable child uses only the exact existing handoff; no latest-run lookup.
       const completion = {
         version: 1 as const,
@@ -1635,10 +1670,68 @@ real("native child completion causality", () => {
         outcome: "completed" as const,
         endedAt: new Date().toISOString(),
       };
-      const ack = await f.c.run(() => f.bridge.completion(completion));
+      await expect(
+        f.c.run(() => f.bridge.completion(completion)),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_completion_changed" },
+      });
+      const recoveredCompletion = {
+        ...completion,
+        parentRunId: f.input.native.runId,
+        recover: true,
+      };
+      for (const changed of [
+        { subjectId: randomUUID() },
+        { childSessionId: randomUUID() },
+        { parentSessionId: randomUUID() },
+        { childSessionKey: "agent:other:subagent:" + randomUUID() },
+        { parentRunId: randomUUID() },
+        { childNousSessionId: randomUUID() },
+      ])
+        await expect(
+          f.c.run(() => f.bridge.completion({ ...recoveredCompletion, ...changed })),
+        ).rejects.toMatchObject({
+          problem: { problemCode: "gateway.native_completion_changed" },
+        });
+      expect((await f.bridge.readRun(childRunId))?.state).toBe("uncertain");
+      const ack = await f.c.run(() => f.bridge.completion(recoveredCompletion));
+      expect(
+        await f.bridge.readRoleResults(f.input.subjectId, childRunId),
+      ).toMatchObject({ results: retainedBefore.results });
+      await expect(
+        f.c.run(() =>
+          f.bridge.prepare({
+            ...child,
+            contactRequestId: randomUUID(),
+            invocationId: "must-not-rerun-paid",
+          }),
+        ),
+      ).rejects.toBeDefined();
+      await expect(
+        f.c.run(() =>
+          f.bridge.completion({
+            ...recoveredCompletion,
+            endedAt: new Date(Date.parse(completion.endedAt) + 1000).toISOString(),
+          }),
+        ),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_completion_changed" },
+      });
+      await expect(
+        f.c.run(() =>
+          f.bridge.completion({ ...recoveredCompletion, outcome: "failed" }),
+        ),
+      ).rejects.toMatchObject({
+        problem: { problemCode: "gateway.native_completion_changed" },
+      });
+
       expect(ack.parentRunId).toBe(f.input.native.runId);
       expect((await f.bridge.readRun(childRunId))?.state).toBe("completed");
-      await f.c.run(() => f.bridge.completion(completion));
+      expect(
+        (await f.bridge.readyResults({ subjectId: f.input.subjectId, limit: 128 }))
+          .runs,
+      ).toContainEqual(expect.objectContaining({ runId: childRunId, resultCount: 1 }));
+      await f.c.run(() => f.bridge.completion(recoveredCompletion));
       await expect(
         f.c.run(() =>
           f.bridge.completion({ ...completion, parentRunId: randomUUID() }),

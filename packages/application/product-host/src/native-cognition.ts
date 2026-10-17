@@ -553,6 +553,88 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         );
     return rows[0] ? { ...rows[0].document, state: rows[0].state } : undefined;
   };
+  const readResultParent = async (
+    subjectId: string,
+    childRunId: string,
+    transaction?: PersistenceInternalTransaction,
+  ): Promise<string> => {
+    const child = await readRun(childRunId, transaction);
+    if (
+      !child ||
+      child.registration.subjectId !== subjectId ||
+      !child.consumerId ||
+      roleScope(child.registration).role !== "subject.execution" ||
+      roleScope(child.registration).contactNature !== "execution_only"
+    )
+      deny(
+        "native_result_release_denied",
+        "An execution result requires its exact Subject and retained native binding",
+      );
+    const read = <T>(statement: string, parameters: readonly unknown[]) =>
+      transaction
+        ? sql<T>(transaction, statement, parameters)
+        : readRepositorySql<T>(options.persistence, statement, parameters);
+    const links = await read<{ parent_run_id: string; document: Handoff }>(
+      "SELECT parent_run_id,document FROM heptalogos.life_handoff WHERE child_session_key=$1" +
+        (transaction ? " FOR SHARE" : ""),
+      [child.native.sessionKey],
+    );
+    const link = links[0];
+    const parentRunId = link?.parent_run_id ?? child.registration.parentRunId;
+    const parent = parentRunId ? await readRun(parentRunId, transaction) : undefined;
+    if (
+      !parent ||
+      parent.registration.subjectId !== subjectId ||
+      parent.registration.activityId !== child.registration.activityId ||
+      !parent.consumerId
+    )
+      deny(
+        "native_result_release_denied",
+        "The execution result must retain its exact same-Subject Activity parent",
+      );
+    if (link) {
+      const handoff = link.document.request;
+      if (
+        child.registration.role !== "worker" ||
+        handoff.subjectId !== subjectId ||
+        link.document.registration.subjectId !== subjectId ||
+        link.document.registration.activityId !== child.registration.activityId ||
+        (child.registration.parentRunId !== undefined &&
+          child.registration.parentRunId !== parent.runId) ||
+        link.parent_run_id !== parent.runId ||
+        handoff.parentRunId !== parent.runId ||
+        handoff.parentSessionKey !== parent.native.sessionKey ||
+        handoff.parentSessionId !== parent.native.sessionId ||
+        handoff.parentNousSessionId !== parent.nousSessionId ||
+        handoff.childSessionKey !== child.native.sessionKey ||
+        handoff.childSessionId !== child.native.sessionId ||
+        handoff.childNousSessionId !== child.nousSessionId ||
+        handoff.childNativeAgentId !== child.native.agentId ||
+        child.native.parentSessionKey !== parent.native.sessionKey
+      )
+        deny(
+          "native_result_release_denied",
+          "The worker must retain its exact immutable native handoff",
+        );
+    } else {
+      const selected = await read<{ document: StoredInput }>(
+        "SELECT document FROM heptalogos.life_native_input WHERE session_key=$1 AND native_run_id=$2" +
+          (transaction ? " FOR SHARE" : ""),
+        [child.native.sessionKey, child.runId],
+      );
+      if (
+        child.native.parentSessionKey ||
+        child.registration.parentRunId !== parent.runId ||
+        !selected[0] ||
+        digest(selected[0].document.registration) !== digest(child.registration)
+      )
+        deny(
+          "native_result_release_denied",
+          "A direct execution RoleRun requires its original exact registered parent",
+        );
+    }
+    return parent.runId;
+  };
   const service: GatewayCognitionBridge & {
     registerInput(
       input: Omit<
@@ -606,6 +688,8 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
       more: boolean;
       nextRunId?: string;
     }>;
+    /** Resolves a worker handoff or direct RoleRun parent without rewriting its registration. */
+    readResultParent: typeof readResultParent;
     /** Trusted Host reads execution output; this operation creates no Subject contact. */
     readRoleResults(subjectId: string, runId: string): Promise<NativeRoleResults>;
     /** Reads the immutable release receipt before a retry selects any newly arrived output. */
@@ -1436,48 +1520,14 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           activity,
           tx,
         );
-        const links = await sql<{ parent_run_id: string; document: Handoff }>(
-          tx,
-          "SELECT parent_run_id,document FROM heptalogos.life_handoff WHERE child_session_key=$1 FOR SHARE",
-          [actualChild.native.sessionKey],
-        );
-        const link = links[0];
-        if (link) {
-          const handoff = link.document.request;
-          if (
-            link.parent_run_id !== input.parentRunId ||
-            handoff.parentRunId !== input.parentRunId ||
-            handoff.parentSessionKey !== actualParent.native.sessionKey ||
-            handoff.parentSessionId !== actualParent.native.sessionId ||
-            handoff.parentNousSessionId !== actualParent.nousSessionId ||
-            handoff.childSessionKey !== actualChild.native.sessionKey ||
-            handoff.childSessionId !== actualChild.native.sessionId ||
-            handoff.childNousSessionId !== actualChild.nousSessionId ||
-            handoff.childNativeAgentId !== actualChild.native.agentId ||
-            actualChild.native.parentSessionKey !== actualParent.native.sessionKey
-          )
-            deny(
-              "native_result_release_denied",
-              "The worker must retain its exact immutable native handoff",
-            );
-        } else {
-          const selected = await sql<{ document: StoredInput }>(
-            tx,
-            "SELECT document FROM heptalogos.life_native_input WHERE session_key=$1 AND native_run_id=$2 FOR SHARE",
-            [actualChild.native.sessionKey, input.childRunId],
+        if (
+          (await readResultParent(input.subjectId, input.childRunId, tx)) !==
+          input.parentRunId
+        )
+          deny(
+            "native_result_release_denied",
+            "The selected parent must be the exact retained execution parent",
           );
-          if (
-            actualChild.native.parentSessionKey ||
-            actualChild.registration.parentRunId !== input.parentRunId ||
-            !selected[0] ||
-            digest(selected[0].document.registration) !==
-              digest(actualChild.registration)
-          )
-            deny(
-              "native_result_release_denied",
-              "A direct execution RoleRun requires its original exact registered parent",
-            );
-        }
         const existing = await sql<{
           document: { input: typeof input; response: HostResultReleaseResponse };
         }>(
@@ -1631,8 +1681,14 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           !p ||
           !c ||
           digest(p.document.registration) !== digest(parent.registration) ||
+          digest(p.document.native) !== digest(parent.native) ||
+          p.document.nousSessionId !== parent.nousSessionId ||
+          digest(c.document.registration) !== digest(child.registration) ||
+          c.document.nousSessionId !== child.nousSessionId ||
           digest(c.document.native) !== digest(child.native) ||
-          (c.state !== "running" && c.state !== input.outcome)
+          (c.state !== "running" &&
+            c.state !== input.outcome &&
+            !(input.recover === true && c.state === "uncertain"))
         )
           deny(
             "native_completion_changed",
@@ -2463,6 +2519,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         ...(rows.length > input.limit ? { nextRunId: selected.at(-1)!.run_id } : {}),
       };
     },
+    readResultParent,
     async readRoleResults(subjectId, runId) {
       const run = await readRun(runId);
       if (
