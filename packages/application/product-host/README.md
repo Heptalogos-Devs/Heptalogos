@@ -63,3 +63,5 @@ The single-connection owner integration test can also cross the actual Nous boun
 Host按正式RoleBinding调用独立原生world/deliberation/execution/render/review，使用官方Nous投影；Activity dispatch先采用主观选择，只有明确表达意图才建立renderer brief。无QQ的世界机会和新学习Activity使用内部audience；工具和发送权限由实际Activity及当前安装配置决定。重入优先读取保留的付费结果和release receipt，执行结果须显式释放后才成为主体接触。角色工具、完整输入/输出token及连续阶段期限经过正式native控制。
 
 Reactor 的目标解析只接受当前 SituationFrame 列出的精确对象 handle 或公开 sourceRef，随后核对对象动作及现有 owner 权限。只观察会话不展示 communicate；未知目标和歧义将具体问题与可选动作保存在既有 Activity 继续信息中，供下一正常机会考虑，参见 [Reactor 合同](../../../specs/subject/reactor.md)。
+
+已采纳 Task 在自身获准会话内打开和读取材料会保留原 Activity、WorkContext、目的、来源和工具范围。当前听众取自仍获准的打开视图或唯一观察会话；多会话未打开时为 internal，不从 WorkContext 的隐式约束键取得听众或权限。

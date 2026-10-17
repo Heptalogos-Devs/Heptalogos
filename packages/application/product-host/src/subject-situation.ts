@@ -4,7 +4,7 @@
  * @module subject-situation
  */
 import type { NousClient } from "@nous-wave/client";
-import { v5 as uuidv5 } from "uuid";
+import { v5 as uuidv5, validate as isUuid } from "uuid";
 import { digestCanonicalJson } from "@heptalogos/foundation-contracts";
 import type { PersistenceService } from "@heptalogos/persistence";
 import { useRepositoryMutationTransaction } from "@heptalogos/persistence/repository";
@@ -25,10 +25,10 @@ import {
   type createSubjectReactorService,
   type ReactorActionReceipt,
   type DecisionCommit,
+  type LifeActivity,
 } from "@heptalogos/subject";
 import {
   encodeCognitionUsage,
-  decodeCognitionUsage,
   decodeObservationInput,
   encodeObservationInput,
 } from "@nous-wave/client/host-bridge";
@@ -52,6 +52,17 @@ function denied(detail: string): never {
     detail,
     "conflict",
     "after-change",
+  );
+}
+/** Intentional Task materials remain distinct from a generic conversation's unread notices. */
+function adoptedMessageRoots(activity: LifeActivity): Set<string> {
+  return new Set(
+    activity.sourceRefs.filter(
+      (ref) =>
+        ref.startsWith("message:") &&
+        isUuid(ref.slice(8)) &&
+        activity.scope?.sourceRefs.includes(ref),
+    ),
   );
 }
 /** The adapter reads a body only for a chosen read action; all other directories are metadata. */
@@ -82,7 +93,10 @@ export interface SubjectSituationOptions {
     ReturnType<typeof createSubjectDecisionHandler>,
     "express" | "startActivity"
   >;
-  messaging: Pick<MessagingService, "resolveConversations" | "notices">;
+  messaging: Pick<
+    MessagingService,
+    "resolveConversations" | "notices" | "messageSources"
+  >;
   activities: Pick<ReturnType<typeof createActivityDispatcher>, "prepare">;
   nous: () => Promise<Pick<NousClient, "runtime">>;
   now: () => string;
@@ -169,6 +183,24 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
     conversationRef: string,
     actionId: string,
   ) => {
+    const current = await options.life.get(reaction.subjectId, reaction.activityId);
+    if (
+      !current ||
+      current.state !== "active" ||
+      !current.adoptedBy ||
+      !current.scope ||
+      !current.workContextId
+    )
+      denied("The actual adopted conversation Activity is unavailable");
+    const grant = current.scope.conversations.find(
+      (value) => value.conversationRef === conversationRef,
+    );
+    if (grant && !grant.operations.includes("observe"))
+      denied("The current Activity does not permit observing this conversation");
+    if (!(await audienceFor(conversationRef)))
+      denied("The actual conversation observe grant changed");
+    // Opening an already adopted Task audience is navigation, not adoption of a wider own-life task.
+    if (grant) return current;
     const candidate: SubjectAttentionCandidate = {
       subjectId: reaction.subjectId,
       candidateRef: "subject-open:" + actionId,
@@ -201,6 +233,7 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
           worldId: settings.subject.worldId,
         })
       : undefined;
+    const taskRoots = adoptedMessageRoots(activity);
     const bindings = [
       ...new Map(
         [reaction.candidate, ...input.candidates].map((value) => [
@@ -208,7 +241,10 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
           value,
         ]),
       ).values(),
-    ];
+    ].filter(
+      (candidate) =>
+        candidate.sourceOwner !== "messaging" || !taskRoots.has(candidate.sourceRef),
+    );
     const objects: SituationObject[] = [];
     for (const candidate of bindings) {
       if (candidate.subjectId !== reaction.subjectId)
@@ -253,6 +289,51 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
                 ? ["inspect", "open", "read"]
                 : ["inspect", "continue", "wait", "rest", "search"],
       });
+    }
+    if (taskRoots.size) {
+      const metadata = await options.messaging.messageSources({
+        messageRefs: [...taskRoots].map((ref) => ref.slice(8)),
+        conversationIds: activity.scope.conversations
+          .filter((grant) => grant.operations.includes("observe"))
+          .map((grant) =>
+            grant.conversationRef.slice("conversation:heptalogos:".length),
+          ),
+      });
+      for (const source of metadata.sources.filter(
+        (value) => value.lifecycle === "present",
+      )) {
+        const ref = "message:" + source.messageRef;
+        const revision = source.lifecycle;
+        const candidate: SubjectAttentionCandidate = {
+          subjectId: reaction.subjectId,
+          activityId: activity.activityId,
+          candidateRef: `task-material:${activity.activityId}:${source.messageRef}`,
+          sourceOwner: "messaging",
+          sourceKey: "messaging:" + source.conversationId,
+          sourceRef: ref,
+          sourceRevision: revision,
+          kind: "explicit_subject_intent",
+          priorityClass: "important",
+          availableAt: options.now(),
+          related: true,
+          metadata: {
+            label: "Task 已明确采用的消息材料",
+            conversationRef: "conversation:heptalogos:" + source.conversationId,
+            messageRefs: [source.messageRef],
+          },
+        };
+        bindings.push(candidate);
+        objects.push({
+          handle: handle("messaging", ref, revision),
+          owner: "messaging",
+          kind: "message",
+          sourceRef: ref,
+          sourceRevision: revision,
+          label: candidate.metadata.label,
+          state: "available",
+          actions: ["read"],
+        });
+      }
     }
     if (settings.subject.worldId && living) {
       const state = await options.worlds.read(
@@ -366,14 +447,15 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
       actualWork.state !== "open"
     )
       denied("The actual WorkContext changed");
-    const boundAudience = actualWork.constraints?.audience_ref;
-    const conversation =
-      typeof boundAudience === "string" &&
-      boundAudience !== "internal" &&
-      activity.scope.conversations.length === 1 &&
-      activity.scope.conversations[0]!.conversationRef === boundAudience
-        ? boundAudience
-        : undefined;
+    const observedConversations = activity.scope.conversations.filter((grant) =>
+      grant.operations.includes("observe"),
+    );
+    const selectedConversation =
+      observedConversations.find((grant) => grant.conversationRef === currentRef)
+        ?.conversationRef ??
+      (observedConversations.length === 1
+        ? observedConversations[0]!.conversationRef
+        : undefined);
     const frame: SituationFrame = {
       subjectId: reaction.subjectId,
       activityId: reaction.activityId,
@@ -401,7 +483,10 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
           }
         : {}),
     };
-    const audience = conversation ? await audienceFor(conversation) : undefined;
+    const audience = selectedConversation
+      ? await audienceFor(selectedConversation)
+      : undefined;
+    const conversation = audience?.conversationRef;
     const view: ReactorPreparedView = {
       frame,
       candidates: bindings,
@@ -670,7 +755,10 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
                 ),
               })),
           });
-          for (const notice of notices.notices)
+          const taskRoots = adoptedMessageRoots(activity);
+          for (const notice of notices.notices) {
+            if (taskRoots.size && !taskRoots.has("message:" + notice.messageRef))
+              continue;
             additional.push({
               subjectId: reaction.subjectId,
               activityId: reaction.activityId,
@@ -697,6 +785,7 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
                 reply: notice.reply,
               },
             });
+          }
         }
         const ready = await options.native.readyResults({
           subjectId: reaction.subjectId,
@@ -740,11 +829,11 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
               )?.metadata.conversationRef;
         if (!candidate || !conversation)
           denied("Open the actual notification's canonical conversation");
+        const target = await activateConversation(reaction, conversation, actionId);
         await adoptView(reaction, actionId, {
           kind: "conversation",
           conversationRef: conversation,
         });
-        const target = await activateConversation(reaction, conversation, actionId);
         return result("completed", [conversation, "activity:" + target.activityId], {
           yield: target.activityId !== reaction.activityId,
         });
@@ -766,25 +855,35 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
             !candidate.metadata.messageRefs?.length
           )
             denied("Choose the exact bounded current notification batch");
-          const audience = decodeCognitionUsage(input.view.usage).audience
-            ?.conversationRef;
           const currentActivity = await options.life.get(
             reaction.subjectId,
             reaction.activityId,
           );
-          if (
-            audience !== candidate.metadata.conversationRef ||
-            currentActivity?.scope?.conversations.length !== 1
-          ) {
-            await adoptView(reaction, actionId, {
-              kind: "conversation",
-              conversationRef: candidate.metadata.conversationRef,
-            });
+          const grant = currentActivity?.scope?.conversations.find(
+            (value) => value.conversationRef === candidate.metadata.conversationRef,
+          );
+          if (grant && !grant.operations.includes("observe"))
+            denied("The current Activity does not permit observing this conversation");
+          if (grant && currentActivity) {
+            const taskRoots = adoptedMessageRoots(currentActivity);
+            if (
+              taskRoots.size &&
+              candidate.metadata.messageRefs.some(
+                (ref) => !taskRoots.has("message:" + ref),
+              )
+            )
+              denied("Choose only this Task's explicitly adopted message materials");
+          }
+          if (!grant) {
             const target = await activateConversation(
               reaction,
               candidate.metadata.conversationRef,
               actionId,
             );
+            await adoptView(reaction, actionId, {
+              kind: "conversation",
+              conversationRef: candidate.metadata.conversationRef,
+            });
             return result(
               "pending",
               ["activity:" + target.activityId, candidate.sourceRef],

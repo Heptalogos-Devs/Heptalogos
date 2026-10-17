@@ -1,6 +1,7 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
 import { randomUUID } from "node:crypto";
+import { decodeCognitionUsage } from "@nous-wave/client/host-bridge";
 import { describe, expect, it, vi } from "vitest";
 import type { SituationFrame, SituationObject } from "@heptalogos/subject";
 import { resolveSituationTarget } from "../../src/subject-target.js";
@@ -191,32 +192,304 @@ describe("one current Situation target resolver", () => {
       }
     },
   );
-  it("passes the resolved actual open decision through the Messaging conversation owner", async () => {
-    const view = frame();
-    const activity = { activityId: view.activityId };
-    const resolveActivity = vi.fn(async (_candidate: unknown) => activity);
+  it("keeps the adopted Task identity, WorkContext, purpose and exact scope through open, prepare and read without a magic audience constraint", async () => {
+    const initial = frame(),
+      messageId = randomUUID(),
+      workContextId = randomUUID();
+    const activity = {
+      activityId: initial.activityId,
+      subjectId: initial.subjectId,
+      revision: 1,
+      state: "active",
+      adoptedBy: "actual:actor",
+      workContextId,
+      sourceRefs: ["message:" + messageId],
+      purpose: "View only this exact animation and reply once",
+      scope: {
+        conversations: [{ conversationRef, operations: ["observe", "send"] }],
+        sourceRefs: ["message:" + messageId],
+        tools: [],
+        maxRunMs: 600000,
+      },
+    };
+    const snapshot = structuredClone(activity);
+    const resolveActivity = vi.fn(async (_candidate: unknown) => {
+      throw Error("must not replace the Task");
+    });
+    const material = {
+      contacts: [],
+      sourceRefs: ["message:" + messageId],
+      messageRefs: [messageId],
+      usage: {},
+      context: {},
+    };
+    const prepareRead = vi.fn(async (_input: unknown) => material);
+    const reaction = {
+      ...initial,
+      stepCount: 0,
+      candidate: {
+        subjectId: initial.subjectId,
+        sourceOwner: "cognition",
+        candidateRef: "current",
+        sourceRevision: "1",
+      },
+      policy: { maxInteractionSteps: 8 },
+    };
+    const candidate = {
+      subjectId: initial.subjectId,
+      sourceOwner: "messaging",
+      candidateRef: "notice:exact",
+      sourceRevision: "1",
+      sourceRef: "message:" + messageId,
+      kind: "message",
+      metadata: {
+        label: "One unread message",
+        conversationRef,
+        messageRefs: [messageId],
+      },
+    };
+    const messageSources = vi.fn(async (_input: unknown) => ({
+      sources: [
+        {
+          messageRef: messageId,
+          conversationId: conversationRef.slice("conversation:heptalogos:".length),
+          lifecycle: "present",
+        },
+      ],
+    }));
     const runtime = createSubjectSituationRuntime({
-      settings: async () => ({ subject: {} }),
+      life: { get: async () => activity, worldNow: async () => initial.world },
+      settings: async () => ({
+        subject: {},
+        qq: {
+          accountId: "bot",
+          conversations: [
+            {
+              receive: true,
+              observe: true,
+              kind: "group",
+              conversationId: "1101497265",
+            },
+          ],
+        },
+      }),
+      messaging: {
+        messageSources,
+        notices: async () => ({
+          notices: [{ messageRef: "neighbor-unread-not-adopted" }],
+        }),
+        resolveConversations: async () => ({
+          conversationIds: [conversationRef.slice("conversation:heptalogos:".length)],
+        }),
+      },
+      resolveActivity,
+      foreground: { current: async () => reaction },
+      native: { readyResults: async () => ({ runs: [] }) },
+      activities: { prepare: prepareRead },
+      now: () => initial.world.at,
+      nous: async () => ({
+        runtime: {
+          getWorkContext: async () => ({
+            workContext: {
+              subjectId: initial.subjectId,
+              workContextId,
+              state: "open",
+              constraints: { conversation_ref: conversationRef },
+            },
+          }),
+        },
+      }),
+    } as unknown as Parameters<typeof createSubjectSituationRuntime>[0]);
+    const prepared = await runtime.prepare({
+      reaction,
+      candidates: [],
+    } as unknown as Parameters<typeof runtime.prepare>[0]);
+    expect(decodeCognitionUsage(prepared.usage).audience?.conversationRef).toBe(
+      conversationRef,
+    );
+    expect(messageSources.mock.calls[0]?.[0]).toEqual({
+      messageRefs: [messageId],
+      conversationIds: [conversationRef.slice("conversation:heptalogos:".length)],
+    });
+    expect(
+      prepared.frame.objects.find((object) => object.sourceRef === candidate.sourceRef),
+    ).toMatchObject({ kind: "message", state: "available", actions: ["read"] });
+    const inspected = await runtime.act({
+      reaction,
+      frame: prepared.frame,
+      adopted: { decisionId: randomUUID(), decision: { action: "inspect" } },
+      view: prepared,
+      actionId: randomUUID(),
+    } as unknown as Parameters<typeof runtime.act>[0]);
+    expect(
+      inspected.view?.candidates.some(
+        (value) => value.sourceRef === "message:neighbor-unread-not-adopted",
+      ),
+    ).toBe(false);
+    const opened = await runtime.act({
+      reaction,
+      frame: prepared.frame,
+      object: resolveSituationTarget(prepared.frame, {
+        action: "open",
+        target: conversationRef,
+      }).object!,
+      adopted: {
+        decisionId: randomUUID(),
+        decision: { action: "open", target: conversationRef },
+      },
+      view: prepared,
+      actionId: randomUUID(),
+    } as unknown as Parameters<typeof runtime.act>[0]);
+    expect(opened).toMatchObject({
+      state: "completed",
+      yield: false,
+      resultRefs: [conversationRef, "activity:" + activity.activityId],
+    });
+    const afterOpen = await runtime.prepare({
+      reaction,
+      candidates: [],
+      lastAction: {
+        state: "completed",
+        action: { action: "open", target: conversationRef },
+        resultRefs: opened.resultRefs,
+      },
+    } as unknown as Parameters<typeof runtime.prepare>[0]);
+    expect(afterOpen.frame.activityId).toBe(activity.activityId);
+    expect(afterOpen.frame.currentHandle).toBe(
+      afterOpen.frame.objects.find((object) => object.sourceRef === conversationRef)
+        ?.handle,
+    );
+    expect(decodeCognitionUsage(afterOpen.usage).audience?.conversationRef).toBe(
+      conversationRef,
+    );
+    const read = await runtime.act({
+      reaction,
+      frame: afterOpen.frame,
+      object: afterOpen.frame.objects.find(
+        (object) => object.sourceRef === candidate.sourceRef,
+      ),
+      adopted: {
+        decisionId: randomUUID(),
+        decision: { action: "read", target: candidate.sourceRef },
+      },
+      view: afterOpen,
+      actionId: randomUUID(),
+    } as unknown as Parameters<typeof runtime.act>[0]);
+    expect(read.state).toBe("completed");
+    expect(prepareRead.mock.calls[0]?.[0]).toMatchObject({
+      subjectId: activity.subjectId,
+      activityId: activity.activityId,
+      conversationRef,
+      messageRefs: [messageId],
+    });
+    expect(read.view?.sourceRefs).toEqual(activity.scope.sourceRefs);
+    await expect(
+      runtime.act({
+        reaction,
+        frame: afterOpen.frame,
+        object: {
+          ...conversation,
+          kind: "notification",
+          sourceRef: "message:neighbor",
+          sourceRevision: "1",
+        },
+        adopted: { decisionId: randomUUID(), decision: { action: "read" } },
+        view: {
+          ...afterOpen,
+          candidates: [
+            {
+              ...candidate,
+              sourceRef: "message:neighbor",
+              metadata: { ...candidate.metadata, messageRefs: ["neighbor"] },
+            },
+          ],
+        },
+        actionId: randomUUID(),
+      } as unknown as Parameters<typeof runtime.act>[0]),
+    ).rejects.toThrow("Choose only this Task's explicitly adopted message materials");
+    expect(prepareRead).toHaveBeenCalledOnce();
+    expect(resolveActivity).not.toHaveBeenCalled();
+    expect(activity).toEqual(snapshot);
+    activity.scope.conversations.push({
+      conversationRef: "conversation:heptalogos:" + randomUUID(),
+      operations: ["observe"],
+    });
+    const unopened = await runtime.prepare({
+      reaction,
+      candidates: [],
+    } as unknown as Parameters<typeof runtime.prepare>[0]);
+    expect(decodeCognitionUsage(unopened.usage).audience?.visibility).toBe("internal");
+    const openedAgain = await runtime.prepare({
+      reaction,
+      candidates: [],
+      lastAction: {
+        state: "completed",
+        action: { action: "open", target: conversationRef },
+        resultRefs: opened.resultRefs,
+      },
+    } as unknown as Parameters<typeof runtime.prepare>[0]);
+    expect(decodeCognitionUsage(openedAgain.usage).audience?.conversationRef).toBe(
+      conversationRef,
+    );
+  });
+  it("rejects a current Task's missing observe grant and uses the separate resolver only for a truly different audience", async () => {
+    const view = frame();
+    const activity = {
+      activityId: view.activityId,
+      subjectId: view.subjectId,
+      state: "active",
+      adoptedBy: "actual:actor",
+      workContextId: randomUUID(),
+      scope: {
+        conversations: [{ conversationRef, operations: ["send"] }],
+        sourceRefs: [],
+        tools: [],
+      },
+    };
+    const resolveActivity = vi.fn(async (_candidate: unknown) => {
+      throw Error("separate audience resolver");
+    });
+    const runtime = createSubjectSituationRuntime({
+      life: { get: async () => activity },
+      settings: async () => ({
+        subject: {},
+        qq: {
+          accountId: "bot",
+          conversations: [
+            {
+              receive: true,
+              observe: true,
+              kind: "group",
+              conversationId: "1101497265",
+            },
+          ],
+        },
+      }),
+      messaging: {
+        resolveConversations: async () => ({
+          conversationIds: [conversationRef.slice("conversation:heptalogos:".length)],
+        }),
+      },
       resolveActivity,
       now: () => view.world.at,
     } as unknown as Parameters<typeof createSubjectSituationRuntime>[0]);
-    const object = resolveSituationTarget(view, {
-      action: "open",
-      target: conversationRef,
-    }).object!;
-    const result = await runtime.act({
+    const input = {
       reaction: { subjectId: view.subjectId, activityId: view.activityId },
       frame: view,
-      object,
+      object: conversation,
       adopted: {
         decisionId: randomUUID(),
         decision: { action: "open", target: conversationRef },
       },
       view: { candidates: [] },
       actionId: randomUUID(),
-    } as unknown as Parameters<typeof runtime.act>[0]);
-    expect(result.state).toBe("completed");
-    expect(result.resultRefs).toContain(conversationRef);
+    } as unknown as Parameters<typeof runtime.act>[0];
+    await expect(runtime.act(input)).rejects.toThrow(
+      "The current Activity does not permit observing this conversation",
+    );
+    expect(resolveActivity).not.toHaveBeenCalled();
+    activity.scope.conversations = [];
+    await expect(runtime.act(input)).rejects.toThrow("separate audience resolver");
     expect(resolveActivity.mock.calls[0]?.[0]).toMatchObject({
       metadata: { conversationRef },
     });
@@ -228,6 +501,7 @@ describe("one current Situation target resolver", () => {
       activityId: view.activityId,
       subjectId: view.subjectId,
       revision: 1,
+      sourceRefs: [],
       purpose: "Read only the exact granted materials",
       workContextId: randomUUID(),
       scope: {
