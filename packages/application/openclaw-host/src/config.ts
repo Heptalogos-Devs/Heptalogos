@@ -10,8 +10,16 @@ import { isAbsolute } from "node:path";
 import { Type, type Static } from "@heptalogos/schema-runtime/typebox";
 import { compileSchema } from "@heptalogos/schema-runtime";
 import { parseOneBotJson, record, nativeId } from "./lossless.js";
+/** Shared Host integration exists without a QQ account or transport. */
+const hostPluginConfigSchema = Type.Object(
+  {
+    hostAnchorRoot: Type.String({ minLength: 1 }),
+    serviceTokenFile: Type.String({ minLength: 1 }),
+  },
+  { additionalProperties: false },
+);
 /** Operational plugin configuration contains no recipient authorization or model-facing raw API. */
-export const qqPluginConfigSchema = Type.Object(
+const qqPluginConfigSchema = Type.Object(
   {
     connectionFile: Type.String({ minLength: 1 }),
     hostAnchorRoot: Type.String({ minLength: 1 }),
@@ -39,7 +47,7 @@ export const qqPluginConfigSchema = Type.Object(
 export type QqPluginConfig = Static<typeof qqPluginConfigSchema>;
 const validator = compileSchema<QqPluginConfig>(qqPluginConfigSchema);
 /** Validates actual bounded settings before transport, filesystem or SDK lifecycle work. */
-export function parsePluginConfig(value: unknown): QqPluginConfig {
+function parsePluginConfig(value: unknown): QqPluginConfig {
   const result = validator.validate(value);
   if (!result.ok) throw Error("QQ plugin operational configuration is invalid");
   const config = result.value;
@@ -54,6 +62,23 @@ export function parsePluginConfig(value: unknown): QqPluginConfig {
   if (config.reconnectMaxMs < config.reconnectMinMs)
     throw Error("QQ reconnect budgets are invalid");
   return config;
+}
+/** One plugin accepts either Host-only input or the complete explicit QQ contract. */
+export const nativePluginConfigSchema = Type.Union([
+  hostPluginConfigSchema,
+  qqPluginConfigSchema,
+]);
+/** Validated common Host or explicit QQ operational input. */
+export type NativePluginConfig = Static<typeof nativePluginConfigSchema>;
+const nativeValidator = compileSchema<NativePluginConfig>(nativePluginConfigSchema);
+/** Partial or malformed QQ settings never silently become a Host-only setup. */
+export function parseNativePluginConfig(value: unknown): NativePluginConfig {
+  const result = nativeValidator.validate(value);
+  if (!result.ok) throw Error("Host plugin operational configuration is invalid");
+  const config = result.value;
+  if (!isAbsolute(config.hostAnchorRoot) || !isAbsolute(config.serviceTokenFile))
+    throw Error("Host operational paths must be absolute");
+  return "connectionFile" in config ? parsePluginConfig(config) : config;
 }
 function readPrivate(path: string): string {
   const stat = lstatSync(path);

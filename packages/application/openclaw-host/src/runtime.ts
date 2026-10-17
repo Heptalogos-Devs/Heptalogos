@@ -10,7 +10,11 @@ import type { OpenClawPluginApi } from "openclaw/plugin-sdk/channel-plugin-commo
 import { defineChannelPluginEntry } from "openclaw/plugin-sdk/core";
 import { createQqAccountRuntime } from "./account-runtime.js";
 import { createQqChannel, type QqChannelOptions } from "./channel.js";
-import { parsePluginConfig, readConnectionFile, readServiceToken } from "./config.js";
+import {
+  parseNativePluginConfig,
+  readConnectionFile,
+  readServiceToken,
+} from "./config.js";
 import { createQqMessageAdapter } from "./delivery.js";
 import { createQqIngress } from "./ingress.js";
 import { createNativeEnvelope, inspectNativeEnvelope } from "./parser.js";
@@ -24,15 +28,16 @@ import { resolveQqNativeRoute } from "./routing.js";
 
 type StartContext = Parameters<QqChannelOptions["startAccount"]>[0];
 
-/** Registers one account from protected existing files; scopes come only from the Host. */
+/** Host tools are unconditional; a configured QQ account retains its strict transport boundary. */
 export function registerQqChannel(api: OpenClawPluginApi): void {
-  const config = parsePluginConfig(api.pluginConfig);
-  const connection = readConnectionFile(config.connectionFile);
+  const config = parseNativePluginConfig(api.pluginConfig);
   const host = createGatewayHostClient({
     hostAnchorRoot: config.hostAnchorRoot,
     serviceToken: readServiceToken(config.serviceTokenFile),
   });
   registerLifeTool(api, host);
+  if (!("connectionFile" in config)) return;
+  const connection = readConnectionFile(config.connectionFile);
   const report = (code: string) => api.logger.warn(`QQ channel: ${code}`);
   const receivePolicy = (scope: Awaited<ReturnType<typeof host.gatewayScope>>) =>
     new QqScopePolicy(

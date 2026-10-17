@@ -7,16 +7,16 @@
  * @module prepare-gateway
  */
 import { readFile, writeFile, rename, lstat } from "node:fs/promises";
-import { resolve } from "node:path";
+import { isAbsolute, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { createLocalManagementEndpointReader } from "@heptalogos/management-client/discovery";
-import { parsePluginConfig } from "./config.js";
+import { parseNativePluginConfig, readServiceToken } from "./config.js";
 function object(value: unknown): Record<string, unknown> {
   if (typeof value !== "object" || !value || Array.isArray(value))
     throw Error("Native Subject Gateway profile is invalid");
   return value as Record<string, unknown>;
 }
-/** Synchronizes only the existing Nous bridge destination; credentials, models and durable state stay untouched. */
+/** Prepares the same real Host bridge for QQ and Host-only installations. */
 export async function prepareQqGateway(
   profilePath: string,
 ): Promise<{ installationId: string; bootId: string; origin: string }> {
@@ -31,15 +31,16 @@ export async function prepareQqGateway(
   const profile = object(JSON.parse(await readFile(path, "utf8")) as unknown);
   const plugins = object(profile.plugins);
   const entries = object(plugins.entries);
-  const config = parsePluginConfig(object(entries["heptalogos-qq"]).config);
+  const config = parseNativePluginConfig(object(entries["heptalogos-qq"]).config);
   const current = await createLocalManagementEndpointReader({
     anchorRoot: config.hostAnchorRoot,
   }).read();
   const bridge = object(object(object(entries["nous-cognition"]).config).hostBridge);
-  if (typeof bridge.credentialFile !== "string")
+  if (typeof bridge.credentialFile !== "string" || !isAbsolute(bridge.credentialFile))
     throw Error(
       "Native Subject Gateway requires its configured Nous Host bridge credential file",
     );
+  readServiceToken(bridge.credentialFile);
   if (bridge.origin !== current.endpoint.origin) {
     bridge.origin = current.endpoint.origin;
     const temporary = path + ".prepared";
