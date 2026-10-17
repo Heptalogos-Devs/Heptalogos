@@ -29,14 +29,22 @@ Windows 保留 portable 初始化及前台 Host 入口。Linux 的 systemd 运�
 
 ## 更新既有 Linux 安装
 
-先构建同样的 Host/CLI 安装闭包，再运行更新器：
+所有源码检查完成后，最后一次构建/剪枝并装配到独立 candidate 目录；核验后保持该目录不变，再运行更新器：
 
 ```sh
-node scripts/package/update-linux-product.mjs --target /absolute/path/heptalogos
+pnpm nx run product-host:prune
+pnpm nx run cli:prune
+node scripts/package/assemble-portable-product.mjs \
+  --target /absolute/path/frozen-portable-product \
+  --node-root /absolute/path/node-v24.21.0 \
+  --postgres-root /absolute/path/postgresql-18.6
+node scripts/package/update-linux-product.mjs \
+  --target /absolute/path/heptalogos \
+  --candidate /absolute/path/frozen-portable-product
 /absolute/path/heptalogos/bin/heptalogos start
 ```
 
-更新器先准备独立程序代际，再停止原 Host 和其 PostgreSQL，将现有状态、配置、秘密及材料复制到本安装 BACKUP 并检查数据库控制文件，最后选择新程序。安装身份、Subject 绑定、私有运行时和 OS keyring 会话继续使用。更新完成保持停止，由公开 CLI 启动后核对实际管理与渠道状态。替换程序和保存备份不能代替数据库及渠道的实际恢复验证。
+更新器只消费已完成装配与核验的冻结 candidate：artifact manifest v2 中的 Host/CLI component digest 绑定实际依赖闭包，复制前后均核对；不重新读取 Nx/pruned dist 或执行 pnpm；v1 candidate 保全后从正式输入重新装配，不猜测旧 digest。Linux installation manifest 同步前向更新为 v2，Bootstrap locator 与 service descriptor 的 v1 身份合同不变。相同源码 generation 的错误安装字节也经正常冷备份修复，原 payload 一并保全。更新器先准备独立程序代际，再停止原 Host 和其 PostgreSQL，将现有状态、配置、秘密及材料复制到本安装 BACKUP 并检查数据库控制文件，最后选择新程序。安装身份、Subject 绑定、私有运行时和 OS keyring 会话继续使用。更新完成保持停止，由公开 CLI 启动后核对实际管理与渠道状态。替换程序和保存备份不能代替数据库及渠道的实际恢复验证。
 
 ## 渠道服务
 

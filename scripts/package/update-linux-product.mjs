@@ -5,16 +5,11 @@
  * @module update-linux-product
  */
 import { cp, mkdir, readFile, rename, rm, writeFile, lstat } from "node:fs/promises";
-import { join, resolve, dirname } from "node:path";
+import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { runProcessSync, runProcessSyncChecked } from "@heptalogos/repo-kit";
-import {
-  ensureArtifactDependencies,
-  normalizeCliArtifactManifest,
-  verifyPortableLinks,
-} from "./assemble-portable-product.mjs";
-const repositoryRoot = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
+import { digestTree, verifyPortableLinks } from "./assemble-portable-product.mjs";
 const run = (command, args) =>
   runProcessSyncChecked(command, args, {
     timeout: 120000,
@@ -27,9 +22,57 @@ async function atomic(path, text, mode = 0o600) {
   await writeFile(staged, text, { mode });
   await rename(staged, path);
 }
+/** Stages only a manifest-bound frozen payload; it never rebuilds dependencies. */
+async function stageFrozenProduct(candidate, stage, platform) {
+  const artifact = await json(join(resolve(candidate), "manifest.json"));
+  const generation = artifact.productGeneration;
+  if (artifact.schemaVersion !== 2)
+    throw Error("Frozen candidate must use artifact manifest schemaVersion 2");
+  if (
+    artifact.target?.os !== platform.os ||
+    artifact.target?.arch !== platform.arch ||
+    !/^[0-9a-f]{64}$/u.test(generation)
+  )
+    throw Error("Candidate identity or platform does not match this installation");
+  const components = new Map(
+    (artifact.components ?? []).map((component) => [component.name, component]),
+  );
+  const hostDigest = components.get("product-host")?.digest;
+  const cliDigest = components.get("reference-cli")?.digest;
+  if (!/^[0-9a-f]{64}$/u.test(hostDigest) || !/^[0-9a-f]{64}$/u.test(cliDigest))
+    throw Error("Candidate application closure digests are missing");
+  const source = join(resolve(candidate), "program/product", generation);
+  const verify = async (root) => {
+    await verifyPortableLinks(root);
+    const identity = await readFile(
+      join(root, "generated/build-identities.js"),
+      "utf8",
+    );
+    if (!identity.includes(`PRODUCT_GENERATION_ID = "${generation}"`))
+      throw Error("Candidate Host identity does not match its manifest");
+    await Promise.all([lstat(join(root, "bin.js")), lstat(join(root, "cli/bin.js"))]);
+    if (
+      (await digestTree(root)) !== hostDigest ||
+      (await digestTree(join(root, "cli"))) !== cliDigest
+    )
+      throw Error("Candidate application closure does not match its manifest");
+  };
+  await verify(source);
+  await mkdir(stage, { mode: 0o700 });
+  try {
+    await cp(source, stage, { recursive: true, verbatimSymlinks: true });
+    await verify(stage);
+    return { generation, hostDigest, cliDigest };
+  } catch (error) {
+    await rm(stage, { recursive: true, force: true });
+    throw error;
+  }
+}
 /** Stages complete source-free artifacts, stops the existing Host, backs up stopped state and selects the new generation. */
 export async function updateLinuxProduct(options) {
   if (process.platform !== "linux") throw Error("Use the Linux updater only on Linux");
+  if (!options.candidate)
+    throw Error("--candidate is required; use one frozen assembled Product artifact");
   const target = resolve(options.target);
   const manifest = await json(join(target, "manifest.json"));
   const locatorText = await readFile(join(target, "heptalogos.bootstrap.json"), "utf8");
@@ -37,6 +80,8 @@ export async function updateLinuxProduct(options) {
   const descriptor = await json(
     join(locator.roots.CONFIGURATION, "installation-services.json"),
   );
+  if (![1, 2].includes(manifest.schemaVersion))
+    throw Error("Unsupported installed manifest version");
   if (
     manifest.installationId !== locator.installationId ||
     descriptor.installationId !== locator.installationId ||
@@ -47,42 +92,38 @@ export async function updateLinuxProduct(options) {
     throw Error("Installed platform does not match this updater");
   const lock = join(target, ".heptalogos-update.lock");
   await mkdir(lock, { mode: 0o700 });
+  const stage = join(target, "program/product", ".update-stage-" + process.pid);
+  let staged = false;
   try {
-    const hostArtifact = resolve(
-      options.host ?? join(repositoryRoot, "packages/application/product-host/dist"),
+    const { generation, hostDigest, cliDigest } = await stageFrozenProduct(
+      options.candidate,
+      stage,
+      { os: manifest.platform, arch: manifest.arch },
     );
-    const cliArtifact = resolve(
-      options.cli ?? join(repositoryRoot, "packages/application/cli/dist"),
-    );
-    const hostDigest = await ensureArtifactDependencies(hostArtifact, "product-host");
-    const cliDigest = await ensureArtifactDependencies(cliArtifact, "cli");
-    const source = await readFile(
-      join(hostArtifact, "generated/build-identities.js"),
-      "utf8",
-    );
-    const generation = /PRODUCT_GENERATION_ID = "([0-9a-f]{64})"/u.exec(source)?.[1];
-    if (!generation) throw Error("Built generation identity is unavailable");
-    if (generation === manifest.productGeneration)
-      return { updated: false, installationId: locator.installationId, generation };
+    staged = true;
     const product = join(target, "program/product", generation);
-    const stage = product + ".stage-" + process.pid;
-    try {
-      await lstat(product);
+    const sameGeneration = generation === manifest.productGeneration;
+    const existing = await lstat(product).catch((error) => {
+      if (error?.code === "ENOENT") return undefined;
+      throw error;
+    });
+    if (
+      existing &&
+      sameGeneration &&
+      (await digestTree(product)) === hostDigest &&
+      manifest.schemaVersion === 2 &&
+      manifest.assembly?.hostDigest === hostDigest &&
+      manifest.assembly?.cliDigest === cliDigest
+    ) {
+      await rm(stage, { recursive: true });
+      return { updated: false, installationId: locator.installationId, generation };
+    }
+    if (existing && !sameGeneration) {
+      await rm(stage, { recursive: true });
       throw Error(
         "New generation is already present; inspect it before selecting an existing payload",
       );
-    } catch (error) {
-      if (error?.code !== "ENOENT") throw error;
     }
-    await mkdir(stage, { mode: 0o700 });
-    await cp(hostArtifact, stage, { recursive: true, verbatimSymlinks: true });
-    await cp(cliArtifact, join(stage, "cli"), {
-      recursive: true,
-      verbatimSymlinks: true,
-    });
-    await normalizeCliArtifactManifest(join(stage, "cli"));
-    await verifyPortableLinks(stage);
-    await rename(stage, product);
     const unitPath = join(
       locator.roots.CONFIGURATION,
       "systemd",
@@ -134,6 +175,21 @@ export async function updateLinuxProduct(options) {
     run(join(target, "runtime/postgresql/bin/pg_controldata"), [
       join(backup, "data/private-postgres"),
     ]);
+    if (sameGeneration && existing) {
+      await cp(product, join(backup, "product-payload"), {
+        recursive: true,
+        verbatimSymlinks: true,
+      });
+      const replaced = product + ".replaced-" + process.pid;
+      await rename(product, replaced);
+      try {
+        await rename(stage, product);
+      } catch (error) {
+        await rename(replaced, product);
+        throw error;
+      }
+      await rm(replaced, { recursive: true });
+    } else await rename(stage, product);
     const node = join(target, "runtime/node/bin/node");
     const launcher = `#!/bin/sh\nexec ${quote(node)} ${quote(join(product, "cli/bin.js"))} "$@" --anchor-root ${quote(target)}\n`;
     await atomic(unitPath, unitText.replace(previousEntry, join(product, "bin.js")));
@@ -143,6 +199,7 @@ export async function updateLinuxProduct(options) {
       JSON.stringify(
         {
           ...manifest,
+          schemaVersion: 2,
           productGeneration: generation,
           assembly: { ...manifest.assembly, hostDigest, cliDigest },
         },
@@ -159,6 +216,7 @@ export async function updateLinuxProduct(options) {
       started: false,
     };
   } finally {
+    if (staged) await rm(stage, { recursive: true, force: true });
     await rm(lock, { recursive: true });
   }
 }
@@ -167,8 +225,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     const { values } = parseArgs({
       options: {
         target: { type: "string" },
-        "host-artifact": { type: "string" },
-        "cli-artifact": { type: "string" },
+        candidate: { type: "string" },
       },
     });
     if (!values.target) throw Error("--target is required");
@@ -176,8 +233,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
       JSON.stringify(
         await updateLinuxProduct({
           target: values.target,
-          host: values["host-artifact"],
-          cli: values["cli-artifact"],
+          candidate: values.candidate,
         }),
       ),
     );
