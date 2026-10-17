@@ -12,6 +12,8 @@ ScheduleItem保存计划区间、参与者、目的、归属Activity、规律、
 
 prepareWorldAdvance读取clock、定义、已实现范围、有限日程和相关历史，返回有限WorldFrame。默认主要日程24世界小时、近期细节2小时。规则确定的日常段直接展开，未定场景才调用world.planner；长离线按自然段合并，不补跑每分钟模型或物理工具。
 
+world.planner只输出提案，工具集合为空。Host提供从实际实现游标到当前世界时间的realizationInterval；已实现事件限于该区间，未来安排只进入schedule。未定场景的首次机会按当前planner输入合同版本保持稳定身份，成功采用的patch抑制重复初始化。
+
 realizeWorld采用operationId、expectedRevision、目标范围和WorldPatch。在同Subject短叙事锁下核对版本/域、actor/place身份、因果与已定事实，保存事件/计划结果/推进范围。operationId重放返回原结果，改变内容拒绝；相关版本改变后有限重拟，不能最后写覆盖。模型与Nous网络都在事务外。
 
 WorldLife提供同事务realizeIn供NarrativeCommit采用WorldPatch，不能另借pool连接。锁顺序为Subject叙事锁→world/scene→Activity→behavior；所有相关路径一致，不跨模型持锁。地点/身体排他资源按区间检查；上课时短暂看手机可有显式父事件/可重叠模式，不能以重叠掩盖冲突。自由文本因果冲突由一次窄语义核对补足。
