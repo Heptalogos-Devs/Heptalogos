@@ -2,6 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-only
 import { describe, expect, it, vi } from "vitest";
 import { selectNativeOpportunity } from "../../src/native-dispatch.js";
+import { v5 as uuidv5 } from "uuid";
+import { ROLE_PROMPTS } from "../../src/role-prompts.js";
 import { createWorldRuntime } from "../../src/world-runtime.js";
 
 const subjectId = "10000000-0000-4000-8000-000000000001";
@@ -109,6 +111,10 @@ describe("one native opportunity projection", () => {
       realAt: "2026-10-19T01:30:01.000Z",
     });
     expect(initial?.requestId).not.toBe(projection?.requestId);
+    expect(initial?.requestId).toBe(
+      uuidv5("initial-world-opportunity:" + ROLE_PROMPTS["world.planner"].id, worldId),
+    );
+    expect(initial?.requestId).not.toBe(uuidv5("initial-world-opportunity", worldId));
     // A pending/failed attempt has no receipt: the same identity is retained.
     expect(await runtime.nextOpportunity()).toEqual(initial);
     currentScene = true;

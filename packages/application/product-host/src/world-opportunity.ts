@@ -161,6 +161,7 @@ export function createWorldOpportunity<TContact, TUsage>(
           role: "world.planner",
           context: {
             frame,
+            realizationInterval: range,
             outputContract: {
               schema: realizeWorldSchema,
               hostOwnedFields: [
@@ -172,7 +173,7 @@ export function createWorldOpportunity<TContact, TUsage>(
                 "events[].source.producerRef",
               ],
               instructions:
-                "Return a WorldPatch with interval, events, coverage and optional replacement schedule for the next 24 world hours. The realized interval must end no later than frame.world; future arrangements belong only in schedule. Only propose compatible virtual events; do not report real external effects. Host identity and actual producer fields are supplied by the Host, never granted by this proposal.",
+                "Return only one WorldPatch JSON proposal. Copy realizationInterval into interval and keep all realized events inside that actual elapsed interval. Preserve existing realized events; add only compatible virtual events for unset scenes. Future arrangements for the next 24 world hours belong only in optional schedule, never in interval or events. Do not call tools or report real external effects. The Host validates and adopts the proposal and supplies identity and actual producer fields.",
             },
           },
           ...context,
