@@ -12,7 +12,10 @@ import {
 it("reads exact Life identity only for the current bound Subject and service credential", async () => {
   const subjectId = randomUUID(),
     activityId = randomUUID(),
-    get = vi.fn(async () => undefined);
+    get = vi.fn(async () => undefined),
+    qqScope = vi.fn(async () => {
+      throw Error("QQ is not configured");
+    });
   const gateway = {
     authenticate: async (token: string | undefined) => {
       if (token !== "service-only")
@@ -23,7 +26,8 @@ it("reads exact Life identity only for the current bound Subject and service cre
           "authorization",
         );
     },
-    scope: async () => ({ subjectId }),
+    currentSubject: async () => subjectId,
+    scope: qqScope,
     life: { get },
   } as unknown as GatewayHttpOptions;
   const app = await createProductHttpApp({
@@ -48,6 +52,7 @@ it("reads exact Life identity only for the current bound Subject and service cre
     expect(result.statusCode).toBe(200);
     expect(result.json()).toEqual({ activity: null });
     expect(get).toHaveBeenCalledWith(subjectId, activityId);
+    expect(qqScope).not.toHaveBeenCalled();
   } finally {
     await app.close();
   }

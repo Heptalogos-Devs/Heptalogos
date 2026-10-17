@@ -1199,6 +1199,7 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
     opportunity,
     authenticate: await serviceCredential(options.secretRoot),
     runMutation: options.runMutation,
+    currentSubject,
     scope,
     messaging,
     identity,
