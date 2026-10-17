@@ -61,10 +61,10 @@ export function createWorldRuntime(options: {
   enabled: () => Promise<boolean>;
   bindingFor: (role: SubjectRoleBinding["role"]) => Promise<SubjectRoleBinding>;
   authorize: (activity: LifeActivity) => Promise<void>;
-  schedule: NativeWorldSchedule;
+  reproject: () => Promise<void>;
   now: () => string;
 }) {
-  const scheduleNext = async (input: {
+  const projectNext = async (input: {
     subjectId: string;
     worldId: string;
     activityId: string;
@@ -99,17 +99,20 @@ export function createWorldRuntime(options: {
           Math.max(deadline.at.getTime(), Date.parse(options.now()) + 1000),
         ).toISOString();
     }
-    await options.schedule({
-      ...input,
+    return {
+      subjectId: input.subjectId,
+      worldId: input.worldId,
+      activityId: input.activityId,
       realAt,
       requestId: uuidv5(
         `${input.subjectId}:${input.worldId}:${input.activityId}:${input.next?.timeDomainRef ?? "paused"}:${input.next?.at ?? "none"}`,
         ns,
       ),
-    });
-    return realAt;
+    };
   };
-  const reproject = async () => {
+  const nextOpportunity = async (): Promise<
+    Parameters<NativeWorldSchedule>[0] | null
+  > => {
     const subjectId = await options.currentSubject();
     const enabled = await options.enabled();
     let afterId: string | undefined;
@@ -149,13 +152,12 @@ export function createWorldRuntime(options: {
       afterId = page.nextId ?? undefined;
     } while (afterId);
     candidates.sort((a, b) => Date.parse(a.next.at) - Date.parse(b.next.at));
-    if (candidates[0]) return scheduleNext(candidates[0]);
-    if (fallback) return scheduleNext({ ...fallback, next: null });
+    if (candidates[0]) return projectNext(candidates[0]);
+    if (fallback) return projectNext({ ...fallback, next: null });
     return null;
   };
   return {
-    scheduleNext,
-    reproject,
+    nextOpportunity,
     async advance(input: {
       subjectId: string;
       worldId: string;
@@ -272,9 +274,7 @@ export function createWorldRuntime(options: {
           };
         },
         wakeSubject: options.wakeSubject,
-        scheduleNext: async () => {
-          await reproject();
-        },
+        scheduleNext: options.reproject,
       });
       return op.advance(input);
     },

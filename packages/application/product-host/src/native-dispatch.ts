@@ -27,6 +27,17 @@ interface NativeWorldScheduleInput {
 }
 /** No Host timer or secondary scheduler exists behind this operation. */
 export type NativeWorldSchedule = (input: NativeWorldScheduleInput) => Promise<void>;
+/** Select the sole declaration with its callback identity intact; due world work wins a tie. */
+export function selectNativeOpportunity(
+  world: NativeWorldScheduleInput | null,
+  foreground: NativeWorldScheduleInput,
+): NativeWorldScheduleInput {
+  return world?.realAt &&
+    (!foreground.realAt || Date.parse(world.realAt) <= Date.parse(foreground.realAt))
+    ? world
+    : foreground;
+}
+
 function installedCommand(
   options: InstalledNativeOptions,
   entryName: "dispatch" | "world-schedule" | "agent-catalog",
