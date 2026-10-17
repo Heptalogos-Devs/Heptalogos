@@ -106,6 +106,41 @@ describe("one current Situation target resolver", () => {
     expect(
       input.actionTargets.find((row) => row.action === "continue")?.targets,
     ).toEqual([activity.handle, activity.sourceRef]);
+    const intent = {
+      intent: "Offer a greeting",
+      stance: "friendly",
+      qualifications: [],
+      deception: "none",
+      eventRefs: [],
+      cognitionRefs: [],
+      priorClaimRefs: [],
+    };
+    expect(
+      contract.validate({
+        action: "communicate",
+        target: water.handle,
+        reason: "Speak",
+        expressionIntent: intent,
+      }).ok,
+    ).toBe(false);
+    const communication = compileSchema(
+      currentSituationDecisionInput(frame([conversation])).outputContract,
+    );
+    expect(
+      communication.validate({
+        action: "communicate",
+        target: conversation.handle,
+        reason: "Greet",
+      }).ok,
+    ).toBe(false);
+    expect(
+      communication.validate({
+        action: "communicate",
+        target: conversation.handle,
+        reason: "Greet",
+        expressionIntent: intent,
+      }).ok,
+    ).toBe(true);
     const next = currentSituationDecisionInput(
       frame([{ ...activity, handle: "object:next-frame" }]),
     );
@@ -179,6 +214,7 @@ describe("one current Situation target resolver", () => {
     ).rejects.toThrow("captured native registration");
     const registered = registerInput.mock.calls[0]![0] as unknown as {
       extraSystemPrompt: string;
+      responseFormat: unknown;
     };
     const marker = '{"kind":"heptalogos_ephemeral_role_context"';
     const context = JSON.parse(
@@ -187,6 +223,14 @@ describe("one current Situation target resolver", () => {
     expect(context.currentSituationChoices).toEqual({
       frameRef: view.frameRef,
       actionTargets: currentSituationDecisionInput(view).actionTargets,
+    });
+    expect(registered.responseFormat).toEqual({
+      type: "json_schema",
+      json_schema: {
+        name: "subject_deliberation",
+        strict: true,
+        schema: context.outputContract,
+      },
     });
     const contract = compileSchema(context.outputContract);
     expect(

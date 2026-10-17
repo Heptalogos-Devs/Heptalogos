@@ -5,6 +5,7 @@
  * @module world-runtime
  */
 import { readActiveLifePage } from "./activity-page.js";
+import { ROLE_PROMPTS } from "./role-prompts.js";
 import { v5 as uuidv5 } from "uuid";
 import { projectWorldDeadline, type NousClient } from "@nous-wave/client";
 import {
@@ -141,7 +142,10 @@ export function createWorldRuntime(options: {
           fallback ??= context;
           // Bootstrap one unset scene through the same declaration. Its durable patch
           // suppresses repeats; subsequent work follows actual calendar/action nodes.
-          const initialRequestId = uuidv5("initial-world-opportunity", worldId);
+          const initialRequestId = uuidv5(
+            "initial-world-opportunity:" + ROLE_PROMPTS["world.planner"].id,
+            worldId,
+          );
           if (
             enabled &&
             !hasCurrentWorldScene(frame.schedule, frame.world.at) &&
@@ -251,6 +255,7 @@ export function createWorldRuntime(options: {
         invoke: (request) =>
           options.roles.invoke({
             ...request,
+            taskTools: [],
             deadlineAt: request.deadlineAt ?? frozenPlannerDeadline,
             contacts: [...request.contacts],
             sourceRefs: [...request.sourceRefs],

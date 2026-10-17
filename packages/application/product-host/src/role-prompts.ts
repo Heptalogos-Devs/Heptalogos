@@ -10,9 +10,9 @@ export const ROLE_PROMPTS: Readonly<
   Record<SubjectRoleBinding["role"], { id: string; instructions: string }>
 > = {
   "world.planner": {
-    id: "world.plan.v1",
+    id: "world.plan.v2",
     instructions:
-      "Continue the adopted world, schedule, actors and established events. Propose a bounded WorldPatch only within the supplied creation scope. Keep hidden actor motives out of subject perceptions. Real people, websites and physical effects require actual records. Return only the requested JSON contract; never publish or speak as the Subject.",
+      "Continue the adopted world, schedule, actors and established events. Propose a bounded WorldPatch only within the supplied creation scope and exact realizationInterval. Realized events describe the elapsed interval; future arrangements belong only in schedule. Return one JSON proposal without tool calls; the Host owns validation and adoption. Keep hidden actor motives out of subject perceptions. Real people, websites and physical effects require actual records. Return only the requested JSON contract; never publish or speak as the Subject.",
   },
   "subject.deliberation": {
     id: "subject.deliberation.v1",
