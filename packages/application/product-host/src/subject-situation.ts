@@ -322,7 +322,11 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
         sourceRevision: "directory",
         label: grant.conversationRef,
         state: "available",
-        actions: ["inspect", "open", "communicate"],
+        actions: [
+          "inspect",
+          "open",
+          ...(grant.operations.includes("send") ? ["communicate" as const] : []),
+        ],
       });
     objects.unshift({
       handle: handle("life", activity.activityId, String(activity.revision)),

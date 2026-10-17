@@ -4,6 +4,7 @@
  * @module subject-reactor
  */
 import { v5 as uuidv5 } from "uuid";
+import { resolveSituationTarget } from "./subject-target.js";
 import { digestCanonicalJson } from "@heptalogos/foundation-contracts";
 import { Type } from "@heptalogos/schema-runtime/typebox";
 import { compileSchema } from "@heptalogos/schema-runtime";
@@ -373,32 +374,23 @@ export function createSubjectReactor(options: {
             runId,
           };
         }
-        const object = proposed.target
-          ? frame.value.objects.find((value) => value.handle === proposed.target)
-          : undefined;
-        if (proposed.target && (!object || !object.actions.includes(proposed.action)))
-          return {
-            ...(await yieldReaction(
-              reaction,
-              "invalid_current_handle:" + runId,
-              previous,
-            )),
-            runId,
-          };
-        if (
-          !proposed.target &&
+        const target =
+          proposed.target ||
           !["inspect", "continue", "wait", "rest", "communicate"].includes(
             proposed.action,
           )
-        )
+            ? resolveSituationTarget(frame.value, proposed)
+            : undefined;
+        if (target?.problem)
           return {
             ...(await yieldReaction(
               reaction,
-              "missing_current_handle:" + runId,
+              "invalid_target:" + runId + ":" + target.problem,
               previous,
             )),
             runId,
           };
+        const object = target?.object;
         const adopted = await options.decisions.adopt({
           subjectId: reaction.subjectId,
           activityId: reaction.activityId,

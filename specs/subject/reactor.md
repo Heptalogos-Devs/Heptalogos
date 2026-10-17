@@ -22,6 +22,8 @@ message/world_event/schedule/activity_result/cognition_change/explicit_subject_i
 
 ## SituationFrame与单一动作合同
 
+动作的单一 `target` 可使用当前目录中对象的精确 handle 或公开 sourceRef。两者经同一当前目标解析入口选择对象，引用本身不授予权限；随后核对该对象声明的动作、当前前台与 owner 的实际权限。未知、未列出、拼接目标及跨 owner/对象歧义均拒绝。同一 owner、kind、sourceRef 的重复投影优先采用 currentHandle，否则采用当前目录中首先出现的投影，不合并动作或权限。失败在既有继续信息保留有界的问题和可选 handle/动作；不携带未读正文。只观察的会话目录不声明 communicate。
+
 情境包含正式世界时刻、地点/活动/精力/焦点、本次所见、相关人物、适用Nous投影、短继续信息、当前可操作对象和预算。Host保有稳定句柄映射、真实身份/权限；未读正文、幕后/NPC私密状态、秘密和调用凭据不渲染给模型。
 
 扩展现有DecisionProposal表达当前continue/inspect/open/read/search/move/participate/communicate/wait/rest/adjust_plan及有界后续方向，不维持另一动作语法。每次只采用当前可执行动作，未来计划不是已执行。未知/失效句柄返回实际问题和仍可选操作。
