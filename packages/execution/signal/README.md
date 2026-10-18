@@ -36,10 +36,10 @@ mutation connection for LISTEN.
 
 ## Verification
 
-Run `pnpm nx run signal:test`, `pnpm nx run signal:lint`, typecheck, and the
-real PostgreSQL Signal scenarios in the bootstrap-runtime integration suite.
-Reconnect and listener failures must be covered with bounded fake-client unit
-tests; real LISTEN/NOTIFY claims require real PostgreSQL.
+`integration/foundation/test/durable-work-recovery.integration.test.ts`
+checks that canonical work resumes after actual Signal loss and process
+recovery. Run that scenario for listener/reconnect changes and package
+lint/typecheck for interface changes.
 
 ## Architecture references
 

@@ -24,8 +24,9 @@ the narrow custom fetch route required by configured AI gateways.
 
 ## Verification
 
-Run NetworkAccess unit tests with a controlled transport seam and the live
-model-gateway qualification for the real AI SDK fetch boundary.
+Current provider and native access checks live in Product Host gateway
+integration and OpenClaw Host tests. Run the affected consumer boundary and
+package lint/typecheck when access handling changes.
 
 ## Knowledge references
 

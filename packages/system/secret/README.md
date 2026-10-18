@@ -21,8 +21,9 @@ OS credential adapter.
 
 ## Verification
 
-Run Secret unit tests and the real Product Host integration with the current
-OS credential profile when the backend or restart behavior changes.
+Use the real Product Host integration with the current OS credential profile
+for backend and restart changes. `os-credential` retains the native credential
+boundary tests.
 
 ## Knowledge references
 

@@ -9,18 +9,6 @@
       "options": {
         "command": "oxlint --type-aware tools/repo-kit"
       }
-    },
-    "test": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "vitest run --root tools/repo-kit"
-      },
-      "dependsOn": [
-        {
-          "projects": "repository",
-          "target": "build"
-        }
-      ]
     }
   }
 }

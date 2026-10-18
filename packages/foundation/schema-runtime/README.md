@@ -38,9 +38,9 @@ unsupported shapes fail according to that package's contract.
 
 ## Verification
 
-Run `pnpm nx run schema-runtime:test`, lint, typecheck, and the schema contract
-tests for any validation behavior change. Run boundary and full repository
-gates when public exports change.
+Schema acceptance is checked at the current owner consumer: Bootstrap state
+recovery, WorkQueue admission and native Host boundaries. Run the affected
+consumer and package lint/typecheck for validation changes.
 
 ## Architecture references
 

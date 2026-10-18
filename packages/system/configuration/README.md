@@ -29,8 +29,8 @@ conflict semantics as replacement of an existing revision.
 
 ## Verification
 
-Run the configuration unit tests, typecheck, and the real PostgreSQL Product
-Host integration when activation persistence or restart behavior changes.
+Use the real PostgreSQL Product Host integration for activation persistence
+and restart changes, and package lint/typecheck for interface changes.
 
 ## Knowledge references
 

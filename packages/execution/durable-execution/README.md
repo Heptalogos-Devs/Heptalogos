@@ -55,15 +55,12 @@ remain at the surrounding composition boundary.
 
 ## Verification
 
-Run `pnpm nx run durable-execution:test`, its typecheck and lint targets, and
-the repository dependency, boundary, documentation, and hygiene gates. Real
-DBOS schema, queue, and crash-recovery claims require the PostgreSQL and
-process integration scenarios recorded in the
-[`durable execution qualification record`](../../../project/qualification/results/Q-ASYNC-01.md).
-Those records are platform- and candidate-scoped: a result on one platform
-does not establish a cross-platform, source-less, or service/headless product
-claim. The current qualification record records its exact platform scope and
-remaining `NOT_RUN` boundaries in that qualification record.
+The retained `durable-work-recovery.integration.test.ts` executes actual OS
+process crashes and replays canonical results. `durable-work-retry-cancel`,
+`durable-work-integrity-lineage` and `durable-work-privileges` retain cancellation,
+transaction rollback, Host fencing and database-role checks in
+`integration/foundation/test`. Use the affected scenario and package
+lint/typecheck when this adapter changes.
 
 ## Architecture references
 

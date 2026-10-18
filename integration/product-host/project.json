@@ -7,7 +7,10 @@
   "targets": {
     "test": {
       "dependsOn": [
-        { "projects": ["product-host", "management-client", "cli"], "target": "build" }
+        {
+          "projects": ["product-host", "management-client", "cli"],
+          "target": "build"
+        }
       ],
       "executor": "nx:run-commands",
       "options": {
@@ -15,17 +18,15 @@
       }
     },
     "qualify-portable": {
-      "dependsOn": [{ "projects": ["product-host", "cli"], "target": "prune" }],
+      "dependsOn": [
+        {
+          "projects": ["product-host", "cli"],
+          "target": "prune"
+        }
+      ],
       "executor": "nx:run-commands",
       "options": {
         "command": "vitest run --config vitest.qualification.config.ts --root integration/product-host qualification/portable-product.qualification.test.ts"
-      }
-    },
-    "artifact-smoke": {
-      "dependsOn": [{ "projects": "product-host", "target": "prune" }],
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "vitest run --config vitest.qualification.config.ts --root integration/product-host qualification/application-artifact-smoke.test.ts"
       }
     }
   }

@@ -27,8 +27,10 @@ ProviderRegistry.
 
 ## Verification
 
-Run AIRuntime unit tests through the custom-fetch seam, the local real-SDK
-Chat/Responses fixture, and the protected live NewAPI Chat qualification.
+Current Product Host model work uses the native role/provider path. Its
+protocol, trusted effects and delivery checks live in Product Host integration
+and OpenClaw Host tests. The earlier AIRuntime qualification results remain in
+`project/qualification/results/Q-AI-GATEWAY-CHAT-01.md` as historical evidence.
 
 ## Knowledge references
 

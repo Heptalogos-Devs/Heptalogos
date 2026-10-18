@@ -41,10 +41,10 @@ its own outcome.
 
 ## Verification
 
-Run `pnpm nx run effect-operation:test`, its lint/typecheck/build targets, the
-real PostgreSQL transition/concurrency scenarios, and the process-level
-effect-uncertainty qualification under `integration-foundation`. Use the current
-qualification record for exact `PASS`, `FAIL`, `NOT_RUN`, or `BLOCKED` scope.
+Run the real PostgreSQL `effect-uncertainty` and OS-process
+`effect-uncertainty-process` scenarios under `integration/foundation/test`.
+They cover concurrent dispatch, ambiguous external effects, canonical replay
+and Host fencing. Run package lint/typecheck for interface changes.
 
 ## References
 

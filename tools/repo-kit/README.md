@@ -16,7 +16,6 @@ dependency.
 - Current-tree hygiene scanning and finding normalization.
 - Version Authority readers for the package-manager baseline and workspace catalog.
 - Public package declaration-entrypoint and structured TypeDoc reflection checks.
-- Repo-kit tests for process, boundary, and hygiene behavior.
 - Small reusable helpers that have a concrete repeated repository need.
 
 ## Does not own
@@ -35,8 +34,7 @@ The package exports the reusable mechanics from `src/index.mjs`, including the
 current-tree scanner, process helper, package-export, and TypeDoc reflection
 modules. Verification entrypoints under
 `scripts/verify` call these helpers and remain responsible for command-line
-exit status and claim-specific policy. Tests live under `test/` and exercise the
-public helper behavior with temporary fixtures.
+exit status and claim-specific policy. The existing repository commands exercise the helpers against the current checkout.
 
 ## Dependencies and boundaries
 
@@ -52,9 +50,10 @@ register failures.
 
 ## Verification
 
-Run `pnpm nx run repo-kit:test`, `pnpm nx run repo-kit:lint`, and the repository
-checks affected by a helper change. `pnpm check:hygiene` is the permanent
-consumer of the hygiene scanner.
+Run `pnpm nx run repo-kit:lint` and the repository command that consumes the
+changed helper. `pnpm check:hygiene`, `pnpm check:package-layout`,
+`pnpm check:knowledge` and the other existing commands own their current
+checkout checks.
 
 ## Architecture references
 
