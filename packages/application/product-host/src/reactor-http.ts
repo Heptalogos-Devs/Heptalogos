@@ -52,7 +52,11 @@ export interface ReactorHttpOptions {
   >;
   readonly attention: Pick<ReturnType<typeof createSubjectAttentionService>, "explain">;
   readonly runMutation: <T>(kind: string, operation: () => Promise<T>) => Promise<T>;
-  readonly wake: (input: { subjectId: string; operationRef: string }) => Promise<void>;
+  readonly wake: (input: {
+    subjectId: string;
+    operationRef: string;
+    activityId?: string;
+  }) => Promise<void>;
   readonly projection: () => ReactorProjection;
 }
 /** Schema-only construction is available without any model or running native Gateway. */
@@ -163,7 +167,10 @@ export function registerReactorHttp(
   );
   route(
     "wake",
-    Type.Object({ subjectId: id, operationRef: ref }, object),
+    Type.Object(
+      { subjectId: id, operationRef: ref, activityId: Type.Optional(id) },
+      object,
+    ),
     Type.Object({ projected: Type.Literal(true) }, object),
     (input) =>
       owners().runMutation("management.reactor.wake", async () => {

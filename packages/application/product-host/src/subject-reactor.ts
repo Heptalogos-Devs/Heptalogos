@@ -156,6 +156,7 @@ export function createSubjectReactor(options: {
       subjectId: string;
       naturalOpportunity?: boolean;
       requestId?: string;
+      manualActivityId?: string;
     }): Promise<{
       status: "disabled" | "idle" | "busy" | "yielded" | "processed";
       reactionId?: string;
@@ -200,8 +201,19 @@ export function createSubjectReactor(options: {
           reaction = undefined;
         }
       }
+      if (
+        input.manualActivityId &&
+        reaction &&
+        reaction.activityId !== input.manualActivityId
+      )
+        return {
+          status: "busy",
+          reactionId: reaction.reactionId,
+          ...(reaction.currentRunId ? { runId: reaction.currentRunId } : {}),
+        };
       const selection = await options.attention.select({
         subjectId: input.subjectId,
+        ...(input.manualActivityId ? { manualActivityId: input.manualActivityId } : {}),
         ...(reaction
           ? {
               currentFocus: {
@@ -215,6 +227,11 @@ export function createSubjectReactor(options: {
           : {}),
         naturalOpportunity: input.naturalOpportunity ?? false,
       });
+      if (input.manualActivityId && !selection.candidates.length)
+        return {
+          status: "busy",
+          ...(reaction ? { reactionId: reaction.reactionId } : {}),
+        };
       const lastAction = reaction
         ? await options.foreground.lastAction(input.subjectId, reaction.reactionId)
         : undefined;
@@ -471,6 +488,9 @@ export function createSubjectReactor(options: {
           };
         const considered = await options.attention.select({
           subjectId: reaction.subjectId,
+          ...(input.manualActivityId
+            ? { manualActivityId: input.manualActivityId }
+            : {}),
           currentFocus: {
             reactionId: reaction.reactionId,
             activityId: reaction.activityId,

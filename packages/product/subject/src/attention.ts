@@ -113,6 +113,7 @@ export function createSubjectAttentionService(options: SubjectAttentionOptions) 
         limit,
         positions: history,
         naturalOpportunity: input.naturalOpportunity === true,
+        ...(input.manualActivityId ? { manualActivityId: input.manualActivityId } : {}),
       });
       const actualNow = options.now(),
         now = Date.parse(actualNow);
@@ -130,8 +131,13 @@ export function createSubjectAttentionService(options: SubjectAttentionOptions) 
             "The source owner returned another Subject",
             "authorization",
           );
+        if (input.manualActivityId && candidate.activityId !== input.manualActivityId)
+          continue;
         const prior = bySource.get(candidate.sourceKey);
-        if (prior?.sourceRevision === candidate.sourceRevision) {
+        if (
+          !input.manualActivityId &&
+          prior?.sourceRevision === candidate.sourceRevision
+        ) {
           const next = Date.parse(prior.consideredAt) + policy.reconsiderMs;
           if (next > now) nextAt = nextAt === undefined ? next : Math.min(nextAt, next);
           // An unchanged notification can be reconsidered at a real natural node, never a paid timer poll.
@@ -174,7 +180,10 @@ export function createSubjectAttentionService(options: SubjectAttentionOptions) 
       const best = [...candidates].sort(rank)[0],
         focus = input.currentFocus;
       const switchRequested =
-        best && focus && priority[best.priorityClass] < priority[focus.priorityClass]
+        !input.manualActivityId &&
+        best &&
+        focus &&
+        priority[best.priorityClass] < priority[focus.priorityClass]
           ? best
           : undefined;
       const selected = best && (!focus || input.naturalOpportunity) ? best : undefined;

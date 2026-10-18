@@ -81,6 +81,7 @@ export const selectAttentionSchema = Type.Object(
   {
     subjectId: id,
     currentFocus: Type.Optional(attentionFocusSchema),
+    manualActivityId: Type.Optional(id),
     naturalOpportunity: Type.Optional(Type.Boolean()),
     limit: Type.Optional(Type.Integer({ minimum: 1, maximum: 128 })),
   },
@@ -114,6 +115,7 @@ export interface SubjectAttentionOptions {
     limit: number;
     positions: readonly AttentionPosition[];
     naturalOpportunity: boolean;
+    manualActivityId?: string;
   }) => Promise<{ candidates: readonly SubjectAttentionCandidate[]; more: boolean }>;
 }
 /** Stored explanation contains references and policy reasons, never unread text. */
