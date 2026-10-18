@@ -182,8 +182,8 @@ importers:
         specifier: workspace:*
         version: link:tools/repo-kit
       '@nous-wave/openclaw':
-        specifier: file:vendor/nous-wave/nous-wave-openclaw-15f9426dbd9b.tgz
-        version: file:vendor/nous-wave/nous-wave-openclaw-15f9426dbd9b.tgz
+        specifier: file:vendor/nous-wave/nous-wave-openclaw-8bf3a1c3ed3e.tgz
+        version: file:vendor/nous-wave/nous-wave-openclaw-8bf3a1c3ed3e.tgz
       '@nx/eslint-plugin':
         specifier: 'catalog:'
         version: 23.2.1(@babel/traverse@7.29.8(supports-color@8.1.1))(@typescript-eslint/parser@8.68.0(@typescript/typescript6@6.0.2)(eslint@10.9.1(jiti@2.7.0)(supports-color@7.2.0))(supports-color@8.1.1))(@typescript/typescript6@6.0.2)(eslint@10.9.1(jiti@2.7.0)(supports-color@7.2.0))(nx@23.2.1)(supports-color@8.1.1)
@@ -359,8 +359,8 @@ importers:
         specifier: workspace:*
         version: link:../../foundation/time-service
       '@nous-wave/client':
-        specifier: file:../../../vendor/nous-wave/nous-wave-client-15f9426dbd9b.tgz
-        version: file:vendor/nous-wave/nous-wave-client-15f9426dbd9b.tgz
+        specifier: file:../../../vendor/nous-wave/nous-wave-client-8bf3a1c3ed3e.tgz
+        version: file:vendor/nous-wave/nous-wave-client-8bf3a1c3ed3e.tgz
       fastify:
         specifier: 'catalog:'
         version: 5.12.5
@@ -2024,15 +2024,15 @@ packages:
       '@emnapi/core': ^1.7.1 || ^2.0.0-alpha.4
       '@emnapi/runtime': ^1.7.1 || ^2.0.0-alpha.4
 
-  '@nous-wave/client@file:vendor/nous-wave/nous-wave-client-15f9426dbd9b.tgz':
-    resolution: {integrity: sha512-sdvst3dKOQeQKKpHpV3vGVtmFlQw18k8hGE1aHb22jroWwCoIWD0NLZPJUmrbKbADdB1AiMgEIBwokdKNf2k0g==, tarball: file:vendor/nous-wave/nous-wave-client-15f9426dbd9b.tgz}
+  '@nous-wave/client@file:vendor/nous-wave/nous-wave-client-8bf3a1c3ed3e.tgz':
+    resolution: {integrity: sha512-cchJLOcrDDx6vJlyevT5blo3AwAN5P4tG6dntbMfcxPeW9EYV80pH1bLi+MBZwZJNPQdkQi/6iHGPQtj033gLw==, tarball: file:vendor/nous-wave/nous-wave-client-8bf3a1c3ed3e.tgz}
     version: 0.1.0
     engines: {node: '>=24.21.0'}
     bundledDependencies:
       - '@nous-wave/protocol'
 
-  '@nous-wave/openclaw@file:vendor/nous-wave/nous-wave-openclaw-15f9426dbd9b.tgz':
-    resolution: {integrity: sha512-lPbiCwfxWnNzFZb6gx6i6ptGvMcNF07IbGcpM3prrbcxtFeIRl9hPf13c+KvW61yqaW39NF8MmpsAHIUmicG8g==, tarball: file:vendor/nous-wave/nous-wave-openclaw-15f9426dbd9b.tgz}
+  '@nous-wave/openclaw@file:vendor/nous-wave/nous-wave-openclaw-8bf3a1c3ed3e.tgz':
+    resolution: {integrity: sha512-LDZCKpWeNHR79HLKmn9V0qdCbfwH7OrU+iIxkuHirfo97JOU8CEQCok+LDPjU1lmpPPJWGCGmva7n3Dc1cA+pw==, tarball: file:vendor/nous-wave/nous-wave-openclaw-8bf3a1c3ed3e.tgz}
     version: 0.2.1
     engines: {node: '>=24.21.0'}
     hasBin: true
@@ -6095,14 +6095,14 @@ snapshots:
       '@tybys/wasm-util': 0.10.3
     optional: true
 
-  '@nous-wave/client@file:vendor/nous-wave/nous-wave-client-15f9426dbd9b.tgz':
+  '@nous-wave/client@file:vendor/nous-wave/nous-wave-client-8bf3a1c3ed3e.tgz':
     dependencies:
       '@bufbuild/protobuf': 2.15.0
       '@connectrpc/connect': 2.2.0(@bufbuild/protobuf@2.15.0)
       '@connectrpc/connect-node': 2.2.0(@bufbuild/protobuf@2.15.0)(@connectrpc/connect@2.2.0(@bufbuild/protobuf@2.15.0))
       zod: 4.6.5
 
-  '@nous-wave/openclaw@file:vendor/nous-wave/nous-wave-openclaw-15f9426dbd9b.tgz': {}
+  '@nous-wave/openclaw@file:vendor/nous-wave/nous-wave-openclaw-8bf3a1c3ed3e.tgz': {}
 
   '@nx/devkit@23.2.1(nx@23.2.1)':
     dependencies:

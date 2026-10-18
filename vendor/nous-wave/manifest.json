@@ -4,18 +4,18 @@
   "client": {
     "package": "@nous-wave/client",
     "version": "0.1.0",
-    "file": "nous-wave-client-15f9426dbd9b.tgz",
+    "file": "nous-wave-client-8bf3a1c3ed3e.tgz",
     "sourceRepository": "https://github.com/Heptalogos-Devs/Nous-Wave",
-    "sourceCommit": "15f9426dbd9b64afde5c5513a461ef5bf2230f5d",
-    "sha256": "03f38c2ff3b4b26cf35b59005658dbfac204f928d75d32927f5bae009718956b"
+    "sourceCommit": "8bf3a1c3ed3e196c7805ecf9fb313b5773be92b2",
+    "sha256": "b5863a9c0c3da0f333466150eb577587295729bccd5815849d16998e6f07a55c"
   },
   "nativeInstaller": {
     "package": "@nous-wave/openclaw",
     "version": "0.2.1",
-    "file": "nous-wave-openclaw-15f9426dbd9b.tgz",
+    "file": "nous-wave-openclaw-8bf3a1c3ed3e.tgz",
     "sourceRepository": "https://github.com/Heptalogos-Devs/Nous-Wave",
-    "sourceCommit": "15f9426dbd9b64afde5c5513a461ef5bf2230f5d",
-    "sha256": "53ae9f5709eee245e957bcff9bffce2d5c2d9adf8af3702ee4b6ad896562b769",
+    "sourceCommit": "8bf3a1c3ed3e196c7805ecf9fb313b5773be92b2",
+    "sha256": "58e0c173d0d47b5f471a12f8ede96431ddcfecab278bd530e820128489c6873c",
     "patchManifestSha256": "6c902158b3c97fa1d1dd87b0091fc526ae9885530ac60579dd21d6965274d0b6"
   }
 }
