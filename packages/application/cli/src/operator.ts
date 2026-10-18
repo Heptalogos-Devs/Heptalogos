@@ -71,8 +71,8 @@ export function renderOperatorOverview(
   const lines = [
     "Heptalogos · 运行总览",
     `安装：${value.anchorRoot}`,
-    `程序：${current?.programPath ?? "Host停止，未取得运行路径"}`,
-    `运行代次：${current?.productGeneration ?? "未运行"}`,
+    `程序：${current?.programPath ?? (value.services.some((service) => service.component === "host" && service.state === "active") ? "进程已启动，管理尚未就绪" : "Host已停止")}`,
+    `选中代次：${value.productGeneration}`,
     ...value.services.map(
       (s) =>
         `${s.component.padEnd(12)} ${s.state.padEnd(12)} 自启：${s.autostart ? "开" : "关"}`,
@@ -109,6 +109,7 @@ export function renderOperatorOverview(
       cacheRead: number;
       cacheWrite: number;
       missing: number;
+      registered: number;
     }
   >();
   for (const u of current.usage) {
@@ -118,18 +119,23 @@ export function renderOperatorOverview(
       cacheRead: 0,
       cacheWrite: 0,
       missing: 0,
+      registered: 0,
     };
     total.input += u.input;
     total.output += u.output;
     total.cacheRead += u.cacheRead;
     total.cacheWrite += u.cacheWrite;
     total.missing += u.missingUsage;
+    total.registered += u.recordedRuns;
     roles.set(u.role, total);
   }
-  for (const [role, u] of roles)
+  for (const [role, u] of roles) {
     lines.push(
-      `  ${role}: ${u.input} / ${u.output} / ${u.cacheRead} / ${u.cacheWrite}；缺失${u.missing}次`,
+      u.registered === u.missing
+        ? `  ${role}: 用量未知（${u.missing}项运行登记无用量回执）`
+        : `  ${role}: 已知 ${u.input} / ${u.output} / ${u.cacheRead} / ${u.cacheWrite}；另有${u.missing}项登记无用量回执`,
     );
+  }
   lines.push(
     "",
     "文档：subject documents · 日历：calendar today / week · task <id> · Ctrl-C仅退出观察",

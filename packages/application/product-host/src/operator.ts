@@ -24,6 +24,7 @@ import {
 import type { createGatewayRuntime } from "./gateway-runtime.js";
 import { connectProductNous } from "./nous.js";
 import { createWorldClockManagement } from "./world-clock.js";
+import type { NousClient } from "@nous-wave/client";
 import { PRODUCT_GENERATION_ID } from "./generated/build-identities.js";
 
 const object = { additionalProperties: false } as const;
@@ -120,10 +121,33 @@ const fieldNames: Record<string, string> = {
   variants: "其他写法",
   explanation: "说明",
 };
+type SelfEntry = Awaited<ReturnType<NousClient["self"]["list"]>>["items"][number];
+type SocialEntry = Awaited<ReturnType<NousClient["social"]["list"]>>["items"][number];
+const current = (record: SelfEntry | SocialEntry) =>
+  record.acceptanceState === "accepted" &&
+  record.integrityState === "valid" &&
+  record.suppressionState === "normal";
 const display = (value: unknown) =>
   typeof value === "string"
     ? value
-    : JSON.stringify(value, (_key, v) => (typeof v === "bigint" ? String(v) : v));
+    : JSON.stringify(value, (key, item) => {
+        if (item?.$typeName === "google.protobuf.Timestamp")
+          return new Date(Number(item.seconds) * 1000 + item.nanos / 1e6).toISOString();
+        if (key.startsWith("$")) return undefined;
+        return typeof item === "bigint" ? String(item) : item;
+      });
+async function readPages<T>(
+  read: (token: string) => Promise<{ items: T[]; nextPageToken: string }>,
+) {
+  const records: T[] = [];
+  let token = "";
+  do {
+    const page = await read(token);
+    records.push(...page.items);
+    token = page.nextPageToken;
+  } while (token);
+  return records;
+}
 
 /** Composes the actual bound Subject without a provider, pending-work flush or source contact. */
 export function createOperatorReads(options: OperatorReadOptions) {
@@ -177,7 +201,7 @@ export function createOperatorReads(options: OperatorReadOptions) {
       }),
     };
   };
-  const documents = async () => {
+  const readSelf = async () => {
     const settings = await configured(),
       subjectId = settings.subject.id;
     if (!subjectId)
@@ -189,34 +213,26 @@ export function createOperatorReads(options: OperatorReadOptions) {
       );
     const nous = await connectProductNous(settings);
     const subject = await nous.subjects.getSubject({ subjectId });
-    const self: Awaited<ReturnType<typeof nous.self.list>>["items"] = [];
-    const social: Awaited<ReturnType<typeof nous.social.list>>["items"] = [];
-    for (const [enabled, service, records] of [
-      [subject.capabilities?.selfCognition, nous.self, self],
-      [subject.capabilities?.socialCognition, nous.social, social],
-    ] as const) {
-      if (!enabled) continue;
-      let token = "";
-      do {
-        const page = await service.list({
-          subjectId,
-          page: { pageSize: 128, pageToken: token },
-        });
-        (records as (typeof page.items)[number][]).push(...page.items);
-        token = page.nextPageToken;
-      } while (token);
-    }
-    const current = (record: (typeof self)[number] | (typeof social)[number]) =>
-      record.acceptanceState === "accepted" &&
-      record.integrityState === "valid" &&
-      record.suppressionState === "normal";
-    const selfRecords = self.filter(current),
-      socialRecords = social.filter(current);
+    const selfRecords = subject.capabilities?.selfCognition
+      ? (
+          await readPages((token) =>
+            nous.self.list({ subjectId, page: { pageSize: 100, pageToken: token } }),
+          )
+        ).filter(current)
+      : [];
+    return { settings, subjectId, nous, subject, selfRecords };
+  };
+  const documents = async () => {
+    const { settings, subjectId, nous, subject, selfRecords } = await readSelf();
+    const socialRecords = subject.capabilities?.socialCognition
+      ? (
+          await readPages((token) =>
+            nous.social.list({ subjectId, page: { pageSize: 100, pageToken: token } }),
+          )
+        ).filter(current)
+      : [];
     const generatedAt = new Date().toISOString();
-    const render = (
-      name: string,
-      records: ((typeof self)[number] | (typeof social)[number])[],
-    ) =>
+    const render = (name: string, records: (SelfEntry | SocialEntry)[]) =>
       [
         `# ${name}`,
         `Subject: ${subjectId}\n\n导出时间：${generatedAt}\n\n来源入口：Nous Self/Social 当前对象 → Management /v1/subject/documents；修改使用显式认知修订操作。`,
@@ -265,11 +281,16 @@ export function createOperatorReads(options: OperatorReadOptions) {
       state: "clock_unavailable",
       calendar: null,
     }));
+    const profile = settings.subject.worldId
+      ? await options.gateway.profiles.read(subjectId, settings.subject.worldId)
+      : undefined;
     result["LIFE.md"] = [
       "# 当前生活",
       `Subject: ${subjectId}`,
       `导出时间：${generatedAt}`,
-      "来源：正式 WorldLife living 与 calendar；学生世界为既有开发场景，未增加用户未提供的人设。",
+      profile
+        ? `场景：${profile.profile.name}\n\n入场来源：${profile.entrySourceRef}\n\n原采用说明：${profile.profile.entry.description}`
+        : "来源：正式 WorldLife living 与 calendar；尚无已采用场景。",
       life
         ? `地点：${life.currentPlaceRef}\n\n精力：${life.energy} / 100\n\n实际生活记录至：${life.integratedThrough.at}（${life.integratedThrough.timeDomainRef}）\n\n积分说明：${life.energyExplanation}`
         : "世界未配置或尚无生活记录。",
@@ -321,9 +342,16 @@ export function createOperatorReads(options: OperatorReadOptions) {
       let subjectName = "未形成";
       if (subjectId)
         try {
-          const current = await documents();
-          const identity = current.documents["IDENTITY.md"];
-          subjectName = /- 内容：([^\n]+)/u.exec(identity ?? "")?.[1] ?? "未形成";
+          const { selfRecords } = await readSelf();
+          subjectName =
+            selfRecords
+              .flatMap((record) =>
+                record.content?.content.case === "facet" &&
+                record.content.content.value.kind === "identity"
+                  ? [record.content.content.value.statement]
+                  : [],
+              )
+              .join("；") || "未形成";
         } catch {
           subjectName = "认知暂不可读";
         }
@@ -363,7 +391,7 @@ export function createOperatorReads(options: OperatorReadOptions) {
             : null,
         usage: subjectId ? await options.gateway.native.operatorUsage(subjectId) : [],
         usageCoverage:
-          "Host保留结果的用量；缺失调用和未核实价格标未知，原生配置中的零价格不作为免费依据",
+          "统计已留存的模型用量；其他登记是否提交provider、未留存用量与价格均为未知",
         issues,
       };
     },
