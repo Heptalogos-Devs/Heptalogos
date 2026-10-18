@@ -10,9 +10,6 @@
       "@heptalogos/schema-runtime": [
         "../../packages/foundation/schema-runtime/dist/index.d.ts"
       ],
-      "@heptalogos/schema-runtime/typebox": [
-        "../../packages/foundation/schema-runtime/dist/typebox.d.ts"
-      ],
       "@heptalogos/time-service": [
         "../../packages/foundation/time-service/dist/index.d.ts"
       ],
@@ -63,13 +60,14 @@
         "../../packages/execution/durable-execution/node_modules/execa/index.d.ts"
       ],
       "pg": ["../../packages/data/persistence/node_modules/@types/pg/index.d.ts"],
-      "kysely/migration": [
-        "../../packages/data/persistence/node_modules/kysely/dist/migration/index.d.ts"
-      ],
       "kysely": ["../../packages/data/persistence/node_modules/kysely/dist/index.d.ts"],
       "@heptalogos/messaging": ["../../packages/product/messaging/dist/index.d.ts"],
       "@heptalogos/identity": ["../../packages/product/identity/dist/index.d.ts"],
-      "@heptalogos/subject": ["../../packages/product/subject/dist/index.d.ts"]
+      "@heptalogos/subject": ["../../packages/product/subject/dist/index.d.ts"],
+      "@heptalogos/management": ["../../packages/system/management/dist/index.d.ts"],
+      "@nous-wave/client/host-bridge": [
+        "../../packages/application/product-host/node_modules/@nous-wave/client/dist/host-bridge.d.ts"
+      ]
     },
     "lib": ["ES2025", "DOM"]
   },

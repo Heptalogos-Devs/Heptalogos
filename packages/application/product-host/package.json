@@ -39,7 +39,8 @@
     "@heptalogos/subject": "workspace:*",
     "@heptalogos/messaging": "workspace:*",
     "@heptalogos/identity": "workspace:*",
-    "uuid": "catalog:"
+    "uuid": "catalog:",
+    "typebox": "catalog:"
   },
   "devDependencies": {
     "vitest": "catalog:"

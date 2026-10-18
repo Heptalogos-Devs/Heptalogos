@@ -33,7 +33,7 @@ const metadataUrl = new URL(
   import.meta.url,
 );
 const metadata = JSON.parse(await readFile(metadataUrl, "utf8"));
-const sdk = await import(
+const sdk: typeof import("@nous-wave/client/host-bridge") = await import(
   new URL(metadata.exports["./host-bridge"].import, metadataUrl).href
 );
 const real = qualifiedPgBin ? describe : describe.skip;
@@ -238,29 +238,23 @@ real("Bounded Reactor application under real PostgreSQL", () => {
                 experiences: [
                   {
                     text: "Aggregate historical content must not be copied by Host",
-                    sourceRefs: [
-                      { kind: "derived_representation", value: derivedA },
-                      { kind: "derived_representation", value: derivedB },
-                    ],
-                    evidence: [
-                      {
-                        basisRole: "actual_occurrence",
-                        reference: {
-                          kind: "occurrence",
-                          value:
-                            occurrences.at(-1)?.receipt.occurrenceId ??
-                            foreignOccurrence,
-                        },
+                    sourceRefs: sdk.decodeCognitionUsage({
+                      sourceRead: {
+                        sourceRefs: [
+                          { kind: "derived_representation", value: derivedA },
+                          { kind: "derived_representation", value: derivedB },
+                        ],
                       },
-                      {
-                        basisRole: "actual_occurrence",
-                        reference: {
-                          kind: "occurrence",
-                          value:
-                            occurrences[2]?.receipt.occurrenceId ?? foreignOccurrence,
-                        },
+                    }).sourceRead!.sourceRefs,
+                    evidence: [occurrences.at(-1), occurrences[2]].map((source) => ({
+                      basisRole: "actual_occurrence",
+                      reference: {
+                        kind: "occurrence",
+                        value: source
+                          ? sdk.decodeAcceptedObservation(source.receipt).occurrenceId
+                          : foreignOccurrence,
                       },
-                    ],
+                    })),
                   },
                 ],
               },
@@ -430,7 +424,7 @@ real("Bounded Reactor application under real PostgreSQL", () => {
         decisions: handler,
         native,
         worldNow,
-        readActivity: life.get,
+        readActivity: life.get.bind(life),
         enabled: async () => true,
         now,
         prepare: async ({ reaction, lastAction }) => {
