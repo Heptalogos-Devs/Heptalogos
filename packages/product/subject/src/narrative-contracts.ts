@@ -38,6 +38,28 @@ export const narrativeIntentProposalSchema = Type.Object(
   object,
 );
 export type NarrativeIntentProposal = Static<typeof narrativeIntentProposalSchema>;
+/** Current adoption of an immutable earlier renderer result. */
+const expressionCandidateAdoptionSchema = Type.Object(
+  {
+    decisionRef: ref,
+    sourceRunId: ref,
+    activityRevision: Type.Integer({ minimum: 1 }),
+    adoptedAt: worldPointSchema.properties.at,
+  },
+  object,
+);
+export const expressionCandidateSelectionSchema = Type.Object(
+  { subjectId: id, briefId: id },
+  object,
+);
+export const recoverExpressionCandidatesSchema = Type.Object(
+  { subjectId: id, activityId: id },
+  object,
+);
+export const expressionCandidateDeliverySchema = Type.Object(
+  { reference: ref, prepared: preparedDeliverySchema },
+  object,
+);
 /** Communication intent and the exact scope the candidate may elaborate. */
 export const expressionBriefSchema = Type.Object(
   {
@@ -52,6 +74,18 @@ export const expressionBriefSchema = Type.Object(
     semanticPreparation: Type.Optional(
       Type.Object(
         { reviewerRunId: ref, proposal: narrativeIntentProposalSchema },
+        object,
+      ),
+    ),
+    retainedCandidate: Type.Optional(
+      Type.Object(
+        {
+          prepared: preparedDeliverySchema,
+          recordedAt: worldPointSchema.properties.at,
+          recoveredFrom: Type.Optional(ref),
+          discardedBy: Type.Optional(ref),
+          adoptions: Type.Array(expressionCandidateAdoptionSchema, { maxItems: 128 }),
+        },
         object,
       ),
     ),

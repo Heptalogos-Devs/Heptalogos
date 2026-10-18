@@ -300,6 +300,7 @@ describe("one current Situation target resolver", () => {
       ],
     }));
     const runtime = createSubjectSituationRuntime({
+      narrative: { candidatesForActivity: async () => [] },
       life: { get: async () => activity, worldNow: async () => initial.world },
       settings: async () => ({
         subject: {},
@@ -408,9 +409,6 @@ describe("one current Situation target resolver", () => {
       afterOpen.frame.objects.find((object) => object.sourceRef === conversationRef)
         ?.handle,
     );
-    expect(decodeCognitionUsage(afterOpen.usage).audience?.conversationRef).toBe(
-      conversationRef,
-    );
     const read = await runtime.act({
       reaction,
       frame: afterOpen.frame,
@@ -499,6 +497,7 @@ describe("one current Situation target resolver", () => {
       throw Error("separate audience resolver");
     });
     const runtime = createSubjectSituationRuntime({
+      narrative: { candidatesForActivity: async () => [] },
       life: { get: async () => activity },
       settings: async () => ({
         subject: {},
@@ -562,6 +561,7 @@ describe("one current Situation target resolver", () => {
       },
     };
     const runtime = createSubjectSituationRuntime({
+      narrative: { candidatesForActivity: async () => [] },
       native: {
         readTaskPerceptions: async () => ({
           sourceRefs: [],

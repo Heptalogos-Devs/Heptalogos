@@ -24,7 +24,7 @@ import {
   type LifeActivity,
   type worldPointSchema,
 } from "./contracts.js";
-import type { PreparedDelivery } from "./agency-contracts.js";
+import { preparedDeliverySchema, type PreparedDelivery } from "./agency-contracts.js";
 import type { createDeliberationService } from "./deliberation.js";
 import type { createLifeService } from "./life.js";
 import type { createAgencyService } from "./agency.js";
@@ -43,6 +43,7 @@ import {
   type AdoptedClaim,
   type NarrativeCommitInput,
 } from "./narrative-contracts.js";
+import type { DecisionCommit } from "./deliberation-contracts.js";
 import { subjectProblem } from "./problems.js";
 const digest = (value: unknown) =>
   digestCanonicalJson("agency.narrative.v1", value as CanonicalJsonValue).hex;
@@ -253,6 +254,14 @@ interface NarrativeOptions {
     tx: PersistenceInternalTransaction,
     rendererRunId: string,
   ) => Promise<void>;
+  readonly recoverRenderedCandidates?: (
+    subjectId: string,
+    activityId: string,
+  ) => Promise<{ prepared: PreparedDelivery; recoveredFrom: string }[]>;
+  readonly assertRendererSource?: (
+    brief: ExpressionBrief,
+    prepared: PreparedDelivery,
+  ) => Promise<void>;
   readonly prepareIntent?: (
     brief: ExpressionBrief,
   ) => Promise<{ reviewerRunId: string; proposal: NarrativeIntentProposal }>;
@@ -363,8 +372,374 @@ export function createNarrativeService(options: NarrativeOptions) {
         return value;
       }),
     );
+  const readBrief = async (subjectId: string, briefId: string) =>
+    (
+      await readRepositorySql<{ document: ExpressionBrief }>(
+        options.persistence,
+        "SELECT document FROM heptalogos.expression_brief WHERE subject_id=$1 AND brief_id=$2",
+        [subjectId, briefId],
+      )
+    )[0]?.document;
+  const retainCandidate = async (
+    prepared: PreparedDelivery,
+    recoveredFrom?: string,
+  ) => {
+    prepared = checked<PreparedDelivery>(preparedDeliverySchema, prepared);
+    const brief = await briefForRun(prepared.runId);
+    if (!brief) denied("This rendered candidate has no adopted intention");
+    validateNarrativeCandidate(brief, prepared, {
+      claims: [],
+      conflicts: [],
+      commitments: [],
+      worldPatch: null,
+    });
+    await options.assertRendererSource?.(brief, prepared);
+    return options.persistence.mutate((context) =>
+      useRepositoryMutationTransaction(context, async (tx) => {
+        await lockSubjectNarrative(tx, brief.subjectId);
+        const rows = await sql<{ document: ExpressionBrief }>(
+          tx,
+          "SELECT document FROM heptalogos.expression_brief WHERE brief_id=$1 FOR UPDATE",
+          [brief.briefId],
+        );
+        const current = rows[0]?.document;
+        if (!current) denied("The renderer intention is unavailable");
+        if (current.retainedCandidate) {
+          if (digest(current.retainedCandidate.prepared) !== digest(prepared))
+            denied(
+              "A renderer candidate cannot change its original payload or sending identity",
+            );
+          return current;
+        }
+        const adopted = {
+          ...current,
+          retainedCandidate: {
+            prepared,
+            recordedAt: options.now(),
+            ...(recoveredFrom ? { recoveredFrom } : {}),
+            adoptions: [],
+          },
+        };
+        await sql(
+          tx,
+          "UPDATE heptalogos.expression_brief SET document=$2::jsonb WHERE brief_id=$1",
+          [brief.briefId, JSON.stringify(adopted)],
+        );
+        return adopted;
+      }),
+    );
+  };
+  const selectedDecision = async (
+    subjectId: string,
+    briefId: string,
+    decisionRef: string,
+    action: "communicate" | "discard",
+  ) => {
+    const brief = await readBrief(subjectId, briefId);
+    const decision = await options.decisions.read(subjectId, decisionRef);
+    if (
+      !brief?.retainedCandidate ||
+      !decision ||
+      decision.activityId !== brief.activityId ||
+      decision.decision.action !== action ||
+      decision.decision.target !== "expression-candidate:" + briefId
+    )
+      denied("Use the current Subject choice of this exact retained candidate");
+    if (brief.retainedCandidate.discardedBy)
+      denied("This candidate was already declined by the Subject");
+    if (action === "communicate") {
+      const {
+        intent,
+        stance,
+        qualifications,
+        deception,
+        eventRefs,
+        cognitionRefs,
+        priorClaimRefs,
+        semanticRequirement,
+      } = brief;
+      const original = {
+        intent,
+        stance,
+        qualifications,
+        deception,
+        eventRefs,
+        cognitionRefs,
+        priorClaimRefs,
+        ...(semanticRequirement ? { semanticRequirement } : {}),
+      };
+      if (
+        !decision.decision.expressionIntent ||
+        digest(decision.decision.expressionIntent) !== digest(original)
+      )
+        denied(
+          "Retained expression adoption must preserve its exact original intention and truth stance",
+        );
+    }
+    return { brief, decision };
+  };
+  const assertSelectionIn = async (
+    tx: PersistenceInternalTransaction,
+    brief: ExpressionBrief,
+    decision: DecisionCommit,
+  ) => {
+    await options.assertCandidateCurrentIn?.(tx, decision.sourceRunId);
+    const rows = await sql<{ document: LifeActivity }>(
+      tx,
+      "SELECT document FROM heptalogos.life_activity WHERE subject_id=$1 AND activity_id=$2 FOR UPDATE",
+      [brief.subjectId, brief.activityId],
+    );
+    const activity = rows[0]?.document;
+    if (
+      !activity ||
+      activity.state !== "active" ||
+      activity.continuationRequired ||
+      activity.revision !== decision.activityRevision
+    )
+      denied(
+        "The current Subject candidate choice requires its actual active Activity revision",
+      );
+  };
   return {
     briefForRun,
+    retainCandidate,
+    async recoverCandidates(input: { subjectId: string; activityId: string }) {
+      const originals =
+        (await options.recoverRenderedCandidates?.(
+          input.subjectId,
+          input.activityId,
+        )) ?? [];
+      for (const original of originals) {
+        const brief = await briefForRun(original.prepared.runId);
+        if (
+          brief &&
+          brief.subjectId === input.subjectId &&
+          brief.activityId === input.activityId
+        )
+          await retainCandidate(original.prepared, original.recoveredFrom);
+      }
+      return { recovered: originals.length };
+    },
+    async candidatesForActivity(subjectId: string, activityId: string) {
+      const rows = await readRepositorySql<{
+        document: ExpressionBrief;
+        rejection: NarrativeRejection | null;
+        adopted: boolean;
+      }>(
+        options.persistence,
+        `SELECT b.document,b.rejection,c.brief_id IS NOT NULL AS adopted FROM heptalogos.expression_brief b LEFT JOIN heptalogos.narrative_commit c USING(brief_id) WHERE b.subject_id=$1 AND b.activity_id=$2 AND b.document ? 'retainedCandidate' AND NOT(b.document->'retainedCandidate' ? 'discardedBy') AND NOT EXISTS(SELECT 1 FROM heptalogos.agency_delivery_part p WHERE p.behavior_id=c.behavior_id AND p.state IN ('accepted','dispatching','uncertain')) ORDER BY b.recorded_at DESC LIMIT 16`,
+        [subjectId, activityId],
+      );
+      return rows.map(({ document: brief, rejection, adopted }) => ({
+        adopted,
+        candidateRef: "expression-candidate:" + brief.briefId,
+        briefId: brief.briefId,
+        renderedAt: brief.createdAt,
+        audience: brief.audience,
+        originalIntent: {
+          intent: brief.intent,
+          stance: brief.stance,
+          qualifications: brief.qualifications,
+          deception: brief.deception,
+          eventRefs: brief.eventRefs,
+          cognitionRefs: brief.cognitionRefs,
+          priorClaimRefs: brief.priorClaimRefs,
+          ...(brief.semanticRequirement
+            ? { semanticRequirement: brief.semanticRequirement }
+            : {}),
+        },
+        nativeIntentId: brief.retainedCandidate!.prepared.nativeIntentId,
+        payloads: [...payloadTexts(brief.retainedCandidate!.prepared)].map(
+          ([sourceIndex, text]) => ({ sourceIndex, text }),
+        ),
+        historicProblem: rejection?.problem.code ?? null,
+      }));
+    },
+    async discardCandidate(input: {
+      subjectId: string;
+      briefId: string;
+      decisionRef: string;
+    }) {
+      const { brief, decision } = await selectedDecision(
+        input.subjectId,
+        input.briefId,
+        input.decisionRef,
+        "discard",
+      );
+      await options.persistence.mutate((context) =>
+        useRepositoryMutationTransaction(context, async (tx) => {
+          await lockSubjectNarrative(tx, brief.subjectId);
+          await assertSelectionIn(tx, brief, decision);
+          await sql(
+            tx,
+            "UPDATE heptalogos.expression_brief SET document=jsonb_set(document,'{retainedCandidate,discardedBy}',to_jsonb($2::text)) WHERE brief_id=$1 AND NOT EXISTS(SELECT 1 FROM heptalogos.narrative_commit WHERE brief_id=$1)",
+            [brief.briefId, decision.decisionRef],
+          );
+        }),
+      );
+    },
+    /** Both pre-commit adoption and later queue delivery use this owner's current receipt. */
+    async permitsRetainedRenderer(
+      rendererRunId: string,
+      transaction?: PersistenceInternalTransaction,
+    ) {
+      const statement = `SELECT b.document,c.document AS committed,a.document AS activity FROM heptalogos.expression_brief b JOIN heptalogos.life_activity a USING(subject_id,activity_id) LEFT JOIN heptalogos.narrative_commit c USING(brief_id) WHERE b.renderer_run_id=$1`;
+      const rows = transaction
+        ? await sql<{
+            document: ExpressionBrief;
+            committed: { reaffirmation?: unknown } | null;
+            activity: LifeActivity;
+          }>(transaction, statement, [rendererRunId])
+        : await readRepositorySql<{
+            document: ExpressionBrief;
+            committed: { reaffirmation?: unknown } | null;
+            activity: LifeActivity;
+          }>(options.persistence, statement, [rendererRunId]);
+      const row = rows[0],
+        latest = row?.document.retainedCandidate?.adoptions.at(-1);
+      if (
+        !row ||
+        !latest ||
+        row.activity.state !== "active" ||
+        row.activity.continuationRequired
+      )
+        return false;
+      if (row.committed?.reaffirmation) return true;
+      if (row.activity.revision !== latest.activityRevision) return false;
+      if (transaction)
+        await options.assertCandidateCurrentIn?.(transaction, latest.sourceRunId);
+      return true;
+    },
+    async adoptRetainedCandidate(input: {
+      subjectId: string;
+      briefId: string;
+      decisionRef: string;
+    }) {
+      const { brief, decision } = await selectedDecision(
+        input.subjectId,
+        input.briefId,
+        input.decisionRef,
+        "communicate",
+      );
+      const prepared = brief.retainedCandidate!.prepared;
+      const prior = await priorCommit(prepared);
+      if (prior) return prior;
+      const reaffirmation = {
+        decisionRef: decision.decisionRef,
+        sourceRunId: decision.sourceRunId,
+        activityRevision: decision.activityRevision,
+        adoptedAt: options.now(),
+      };
+      await options.persistence.mutate((context) =>
+        useRepositoryMutationTransaction(context, async (tx) => {
+          await lockSubjectNarrative(tx, brief.subjectId);
+          await assertSelectionIn(tx, brief, decision);
+          const rows = await sql<{ document: ExpressionBrief }>(
+            tx,
+            "SELECT document FROM heptalogos.expression_brief WHERE brief_id=$1 FOR UPDATE",
+            [brief.briefId],
+          );
+          const candidate = rows[0]?.document.retainedCandidate;
+          if (
+            !candidate ||
+            candidate.discardedBy ||
+            digest(candidate.prepared) !== digest(prepared)
+          )
+            denied("The retained candidate changed before current adoption");
+          if (
+            !candidate.adoptions.some(
+              (receipt) => receipt.decisionRef === decision.decisionRef,
+            )
+          )
+            await sql(
+              tx,
+              "UPDATE heptalogos.expression_brief SET document=jsonb_set(document,'{retainedCandidate,adoptions}',$2::jsonb) WHERE brief_id=$1",
+              [brief.briefId, JSON.stringify([...candidate.adoptions, reaffirmation])],
+            );
+        }),
+      );
+      const currentBrief = (await readBrief(brief.subjectId, brief.briefId))!;
+      const semantic =
+        brief.semanticRequirement === "important_conflict"
+          ? await options.review(currentBrief, prepared)
+          : {
+              pending: false as const,
+              reviewerRunId: null,
+              review: { claims: [], conflicts: [], commitments: [], worldPatch: null },
+            };
+      if (semantic.pending) denied("The related important conflict is still pending");
+      validateNarrativeCandidate(brief, prepared, semantic.review);
+      if (semantic.review.worldPatch || semantic.review.commitments.length)
+        denied(
+          "New facts and obligations require their owner before a retained expression can be adopted",
+        );
+      const authority = await options.agency.prepareAdoption(prepared);
+      return options.persistence.mutate((context) =>
+        useRepositoryMutationTransaction(context, async (tx) => {
+          await lockSubjectNarrative(tx, brief.subjectId);
+          const existing = await sql<{ document: { reference: string } }>(
+            tx,
+            "SELECT document FROM heptalogos.narrative_commit WHERE brief_id=$1",
+            [brief.briefId],
+          );
+          if (existing[0]) return { reference: existing[0].document.reference };
+          await assertSelectionIn(tx, brief, decision);
+          const adopted = await options.agency.adoptDeliveryIn(
+            tx,
+            prepared,
+            authority.current,
+          );
+          const claimIds = await indexClaimsIn(
+            tx,
+            brief,
+            adopted.reference,
+            semantic.review.claims,
+            reaffirmation.adoptedAt,
+          );
+          const document = {
+            operationId: brief.briefId,
+            briefId: brief.briefId,
+            prepared,
+            reviewerRunId: semantic.reviewerRunId,
+            review: semantic.review,
+            reference: adopted.reference,
+            claimIds,
+            reaffirmation,
+            semanticState:
+              brief.semanticRequirement === "important_conflict"
+                ? "indexed"
+                : "pending",
+          };
+          await sql(
+            tx,
+            "INSERT INTO heptalogos.narrative_commit(operation_id,brief_id,subject_id,behavior_id,request_digest,document,recorded_at) VALUES($1,$1,$2,$3,$4,$5::jsonb,$6)",
+            [
+              brief.briefId,
+              brief.subjectId,
+              adopted.reference,
+              digest(document),
+              JSON.stringify(document),
+              reaffirmation.adoptedAt,
+            ],
+          );
+          return adopted;
+        }),
+      );
+    },
+    async candidateDelivery(input: { subjectId: string; briefId: string }) {
+      const rows = await readRepositorySql<{
+        document: NarrativeCommitInput & { reference: string };
+      }>(
+        options.persistence,
+        "SELECT document FROM heptalogos.narrative_commit WHERE subject_id=$1 AND brief_id=$2",
+        [input.subjectId, input.briefId],
+      );
+      if (!rows[0]) denied("The Subject has not adopted this retained expression");
+      return {
+        reference: rows[0].document.reference,
+        prepared: rows[0].document.prepared,
+      };
+    },
     rejectionForRun,
     async saveBrief(value: ExpressionBrief, rendererRunId: string) {
       const brief = checked<ExpressionBrief>(expressionBriefSchema, value);
@@ -563,8 +938,7 @@ export function createNarrativeService(options: NarrativeOptions) {
     async adoptDelivery(prepared: PreparedDelivery) {
       const old = await priorCommit(prepared);
       if (old) return old;
-      const brief = await briefForRun(prepared.runId);
-      if (!brief) denied("This native result has no adopted expression brief");
+      const brief = await retainCandidate(prepared);
       const rejection = await rejectionForRun(brief.subjectId, prepared.runId);
       if (rejection) {
         if (rejection.preparedDigest !== digest(prepared))
@@ -783,12 +1157,13 @@ export function createNarrativeService(options: NarrativeOptions) {
     ) {
       if (!rendererRunId)
         denied("Background indexing requires its actual renderer parent");
-      const rows = await sql(
+      const rows = await sql<{ brief_id: string }>(
         tx,
         `SELECT c.brief_id FROM heptalogos.narrative_commit c JOIN heptalogos.expression_brief b USING(brief_id) WHERE c.subject_id=$1 AND b.activity_id=$2 AND b.renderer_run_id=$3 AND c.document->>'semanticState'='pending'`,
         [subjectId, activityId, rendererRunId],
       );
       if (!rows.length) denied("This role has no retained pending statement to index");
+      return { continuationSourceRef: "expression-candidate:" + rows[0]!.brief_id };
     },
     /** Owner backlog uses the already retained exact delivery; reads never launch a model. */
     async pendingSemanticWork(
@@ -841,6 +1216,7 @@ export function createNarrativeService(options: NarrativeOptions) {
         deliveryParts,
         brief: {
           ...brief,
+          retainedCandidate: undefined,
           ...(brief.semanticPreparation
             ? {
                 semanticPreparation: {

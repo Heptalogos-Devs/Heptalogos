@@ -26,7 +26,7 @@ message/world_event/schedule/activity_result/cognition_change/explicit_subject_i
 
 情境包含正式世界时刻、地点/活动/精力/焦点、本次所见、相关人物、适用Nous投影、短继续信息、当前可操作对象和预算。Host保有稳定句柄映射、真实身份/权限；未读正文、幕后/NPC私密状态、秘密和调用凭据不渲染给模型。
 
-扩展现有DecisionProposal表达当前continue/inspect/open/read/search/move/participate/communicate/wait/rest/adjust_plan及有界后续方向，不维持另一动作语法。每次只采用当前可执行动作，未来计划不是已执行。未知/失效句柄返回实际问题和仍可选操作。
+扩展现有DecisionProposal表达当前continue/inspect/open/read/search/move/participate/communicate/discard/wait/rest/adjust_plan及有界后续方向，不维持另一动作语法。每次只采用当前可执行动作，未来计划不是已执行。未知/失效句柄返回实际问题和仍可选操作。
 
 手机只保存收起/通知/会话列表/具体会话/页面等有用途视图，消息仍归Messaging。 当前 Task 打开或读取其已获准观察的会话时保留原 Activity、WorkContext、purpose、来源与工具 scope；导航不隐式改成更宽的自主生活任务。当前听众由仍有权限的实际打开视图或唯一 observe 会话确定，不依赖 WorkContext 中未声明的约束键；多会话未打开时保持 internal。真正转往另一独立获准听众才使用既有 resolver，且不回写原 Task 的授权。 Task 的明确 message roots 与已采纳 scope roots 的有界交集，经 Messaging 身份/生命周期元数据列为可 read 材料，即使已读或不在最近通知中也无需新消息。目录查询不取正文、不产生 seen；实际 read 仍走原材料 owner。存在该精确集合时，通知与读取不扩到同会话相邻消息。打开会话合并确定性机械步骤，按授权条数/字节/附件读取；preview/full/media有各自实际contact，只有provider admission/正式接触receipt完成已读。提前下载不等于理解，撤回前未看不得再释放原文。
 

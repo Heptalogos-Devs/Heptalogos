@@ -41,6 +41,7 @@ export const interactionActionKindSchema = Type.Union([
   Type.Literal("move"),
   Type.Literal("participate"),
   Type.Literal("communicate"),
+  Type.Literal("discard"),
   Type.Literal("continue"),
   Type.Literal("wait"),
   Type.Literal("rest"),

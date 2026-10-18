@@ -8,6 +8,7 @@ import {
   digestCanonicalJson,
   type CanonicalJsonValue,
 } from "@heptalogos/foundation-contracts";
+import { createHash } from "node:crypto";
 import { managementProblem, type SubjectRoleBinding } from "@heptalogos/management";
 import {
   deliberationDecisionSchema,
@@ -16,6 +17,7 @@ import {
   narrativeIntentProposalSchema,
   resolveNarrativeReview,
   type PreparedDelivery,
+  preparedDeliverySchema,
   type NarrativeReviewProposal,
   type ExpressionBrief,
   situationFrameSchema,
@@ -43,6 +45,8 @@ import {
 } from "./subject-target.js";
 import { Type } from "@heptalogos/schema-runtime/typebox";
 import type { currentSubjectContext } from "./subject-context.js";
+import type { PersistenceService } from "@heptalogos/persistence";
+import { readRepositorySql } from "@heptalogos/persistence/repository";
 import { ROLE_PROMPTS } from "./role-prompts.js";
 /** Internal trusted producer context; this is never a model tool or caller-granted role. */
 export interface RoleInvocation {
@@ -283,6 +287,24 @@ function roleReferences(
     directory: [...toKey].map(([reference, key]) => ({ key, reference })),
   };
 }
+function roleVisibleData(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(roleVisibleData);
+  if (value && typeof value === "object")
+    return Object.fromEntries(
+      Object.entries(value)
+        .filter(
+          ([key]) =>
+            ![
+              "outputContract",
+              "retainedCandidate",
+              "executionIdentityToken",
+              "deliveryCustody",
+            ].includes(key),
+        )
+        .map(([key, item]) => [key, roleVisibleData(item)]),
+    );
+  return value;
+}
 function parseRoleOutput(
   input: RoleInvocation,
   text: string,
@@ -319,6 +341,67 @@ function parseRoleOutput(
         checked.value as NarrativeReviewProposal,
       )
     : checked.value;
+}
+/** Recover pre-retention candidates only from actual registered review inputs and their renderer parent. */
+export async function readRegisteredExpressionCandidates(
+  persistence: PersistenceService,
+  subjectId: string,
+  activityId: string,
+) {
+  const rows = await readRepositorySql<{
+    reviewer_run_id: string;
+    renderer_run_id: string;
+    document: {
+      registration?: { currentContextDigest?: string };
+      dispatch?: { params?: { extraSystemPrompt?: string } };
+    };
+  }>(
+    persistence,
+    `SELECT i.native_run_id AS reviewer_run_id,r.run_id AS renderer_run_id,i.document FROM heptalogos.life_native_input i JOIN heptalogos.life_native_run r ON r.run_id=i.document#>>'{registration,parentRunId}' WHERE i.subject_id=$1 AND i.activity_id=$2 AND i.document#>>'{registration,roleScope,role}'='narrative.review' AND r.subject_id=i.subject_id AND r.activity_id=i.activity_id AND r.document#>>'{registration,roleScope,role}'='subject.render' AND r.document->>'consumerId' IS NOT NULL ORDER BY i.recorded_at LIMIT 64`,
+    [subjectId, activityId],
+  );
+  const recovered = new Map<
+    string,
+    { prepared: PreparedDelivery; recoveredFrom: string }
+  >();
+  for (const row of rows) {
+    const text = row.document.dispatch?.params?.extraSystemPrompt;
+    const marker = '{"kind":"heptalogos_ephemeral_role_context"';
+    if (
+      !text ||
+      !text.includes(marker) ||
+      createHash("sha256").update(text).digest("hex") !==
+        row.document.registration?.currentContextDigest
+    )
+      continue;
+    let context: unknown;
+    try {
+      context = JSON.parse(text.slice(text.indexOf(marker)));
+    } catch {
+      continue;
+    }
+    const outer = context as {
+      kind?: string;
+      schemaVersion?: number;
+      sourceData?: { sourceData?: { prepared?: unknown } };
+    };
+    if (outer.kind !== "heptalogos_ephemeral_role_context" || outer.schemaVersion !== 1)
+      continue;
+    const parsed = compileSchema<PreparedDelivery>(preparedDeliverySchema).validate(
+      outer.sourceData?.sourceData?.prepared,
+    );
+    if (
+      !parsed.ok ||
+      parsed.value.runId !== row.renderer_run_id ||
+      parsed.value.preparedBatch.runId !== row.renderer_run_id
+    )
+      continue;
+    recovered.set(parsed.value.nativeIntentId, {
+      prepared: parsed.value,
+      recoveredFrom: row.reviewer_run_id,
+    });
+  }
+  return [...recovered.values()];
 }
 /** Composes one registered native RPC with the current Activity and official cognition boundary. */
 export function createSubjectRoles(options: {
@@ -432,8 +515,8 @@ export function createSubjectRoles(options: {
       !activity?.workContextId ||
       !activity.scope ||
       !activity.adoptedBy ||
-      activity.state !== "active" ||
-      activity.continuationRequired
+      ((input.role !== "narrative.review" || input.foreground) &&
+        (activity.state !== "active" || activity.continuationRequired))
     )
       denied(
         "role.activity_unavailable",
@@ -545,9 +628,7 @@ export function createSubjectRoles(options: {
         purpose: activity.purpose,
         progress: activity.progress,
       },
-      sourceData: Object.fromEntries(
-        Object.entries(input.context).filter(([key]) => key !== "outputContract"),
-      ),
+      sourceData: roleVisibleData(input.context),
     };
     const references = roleReferences(input);
     const prompt = JSON.stringify(

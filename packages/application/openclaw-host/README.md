@@ -34,6 +34,8 @@ node scripts/prepare-sdk.mjs /absolute/path/to/official-runtime
 
 正式配置以 `hostAnchorRoot` 指向已绑定安装，Client 每次请求复用公开 discovery 核对实际 boot 与 loopback 地址。SubjectGateway 启动前的 prepare CLI 使用同一 reader 更新正式 Nous `hostBridge.origin`；服务依赖原 Host 生命周期，重启后重新建立运行许可。
 
+`expression-send`从stdin只接收Subject/brief选择，经`heptalogos.expression.send`取得Host已采用的原prepared与Agency receipt，再调用公开`sendDurableMessageBatch`；保留原nativeIntentId及精确sourceIndex，不重新渲染、准备正文或绕过原生durable队列。
+
 `heptalogos-qq-dispatch` 从 stdin 接收 Host 已预登记的原生 agent 参数，使用正式 SDK 执行单次派发并等待实际终态。配置、状态和凭据沿该原生实例的环境提供，命令行不携带消息或密钥；未知结果不自动重试。
 
 Native discovery/request registries may register another Channel object while the actual account is already running. QQ resolves that account through the public SDK named runtime store, scoped to installation/account, rather than a registration-local delivery closure. Startup claims synchronously before awaiting prerequisites; another lifecycle cannot create a parallel sender. Shutdown disables new adapter use while draining and releases only its own lifecycle identity. Custody and Host begin/record remain on the original message adapter.

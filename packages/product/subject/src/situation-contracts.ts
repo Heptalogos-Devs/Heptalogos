@@ -32,6 +32,7 @@ export const situationObjectSchema = Type.Object(
       Type.Literal("schedule"),
       Type.Literal("page"),
       Type.Literal("activity"),
+      Type.Literal("expression_candidate"),
     ]),
     sourceRef: ref,
     sourceRevision: ref,
@@ -44,7 +45,7 @@ export const situationObjectSchema = Type.Object(
       Type.Literal("viewed"),
     ]),
     actions: Type.Array(interactionActionKindSchema, {
-      maxItems: 11,
+      maxItems: 12,
       uniqueItems: true,
     }),
   },

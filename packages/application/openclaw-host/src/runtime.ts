@@ -23,6 +23,7 @@ import { OneBotPresence } from "./presence.js";
 import { OneBotTransport } from "./transport.js";
 import { createQqResourcePump } from "./resources.js";
 import { synchronizeQqHistory, type HistoryEnvelope } from "./history-sync.js";
+import { registerExpressionSender } from "./expression.js";
 import { registerLifeTool } from "./life-tool.js";
 import { resolveQqNativeRoute } from "./routing.js";
 
@@ -36,6 +37,7 @@ export function registerQqChannel(api: OpenClawPluginApi): void {
     serviceToken: readServiceToken(config.serviceTokenFile),
   });
   registerLifeTool(api, host);
+  registerExpressionSender(api, host);
   if (!("connectionFile" in config)) return;
   const connection = readConnectionFile(config.connectionFile);
   const report = (code: string) => api.logger.warn(`QQ channel: ${code}`);

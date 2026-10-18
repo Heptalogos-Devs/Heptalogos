@@ -13,6 +13,9 @@ import type { FastifyInstance } from "fastify";
 import { Type } from "@heptalogos/schema-runtime/typebox";
 import {
   claimsToSchema,
+  recoverExpressionCandidatesSchema,
+  expressionCandidateSelectionSchema,
+  expressionCandidateDeliverySchema,
   narrativeClaimSchema,
   type createNarrativeService,
 } from "@heptalogos/subject";
@@ -24,7 +27,7 @@ export interface NarrativeHttpOptions {
   readonly runMutation: <T>(kind: string, operation: () => Promise<T>) => Promise<T>;
   readonly narrative: Pick<
     ReturnType<typeof createNarrativeService>,
-    "claimsTo" | "explainStatement"
+    "claimsTo" | "explainStatement" | "recoverCandidates" | "candidateDelivery"
   >;
 }
 const ref = Type.String({ minLength: 1, maxLength: 2048 });
@@ -83,6 +86,23 @@ export function registerNarrativeHttp(
           return operation(input);
         }),
     });
+  route(
+    "recoverExpressionCandidates",
+    "recover-candidates",
+    recoverExpressionCandidatesSchema,
+    Type.Object(
+      { recovered: Type.Integer({ minimum: 0 }) },
+      { additionalProperties: false },
+    ),
+    (input) => owners().narrative.recoverCandidates(input),
+  );
+  route(
+    "readExpressionCandidateDelivery",
+    "candidate-delivery",
+    expressionCandidateSelectionSchema,
+    expressionCandidateDeliverySchema,
+    (input) => owners().narrative.candidateDelivery(input),
+  );
   route(
     "claimsTo",
     "claims",

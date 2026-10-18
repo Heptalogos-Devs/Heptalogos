@@ -12,6 +12,12 @@ ExpressionBrief来自已采用主观决定。可选`semanticRequirement`只标�
 
 renderer结果立即保存。普通候选的原文、听众、来源、已采用意图、时间和唯一发送身份在本地短事务保存，随后经现有唯一发送出口派发。保留精确sourceIndex、reply/thread、媒体和真实平台结果；不要求结构化Claim先完成，不为普通闲聊无条件调用reviewer。
 
+即将交语义处理的原生prepared先由`retainCandidate`短事务保存在原ExpressionBrief，固定原renderer与nativeIntentId。历史未保存的候选只能从真实注册review的原typed输入恢复；核对原父renderer、Subject/Activity和注册currentContextDigest，不接受操作者提供正文。`recoverExpressionCandidates`只恢复候选，不采用或发送。
+
+任务恢复后，当前Subject在情境中看到原候选文字、原意图、听众、生成时间与历史问题；communicate选中该candidateRef并保留originalIntent，或discard明确放弃。Communication以当前真实DecisionCommit和前台/Activity修订追加采用receipt，保留历史brief/rejection；当前来源、听众及重要语义仍由owner核对。原文过时或已不符合意愿时，Subject选择放弃。
+
+已采用候选由只接受Subject/brief选择的`heptalogos.expression.send`读取Host正式receipt，调用公开`sendDurableMessageBatch`并传入原preparedBatch、nativeIntentId和Agency custody。原生队列、实际网络发送与回执仍只有原出口；uncertain按原身份保留。恢复不重新调用renderer、媒体或worker。
+
 发送前检查当前听众、权限、取消及与本候选相关的条件。相对时间失效时只处理相关表达，不改历史。网络、模型、Nous请求均在事务外；同一发送身份重放复用原结果，uncertain不自动重发。直接message/cron/worker announce也经同一出口。
 
 已知重要冲突、严肃承诺或明确新世界事实，只让相关候选等待一次有界局部语义处理。需要采用的新世界细节和承诺先由对应owner处理，再渲染。无关世界或配置变化不撤销全部候选，普通格式/分类错误停在未完成的语义工作，原模型结果与原文保留。
