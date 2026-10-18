@@ -476,6 +476,23 @@ export function createNarrativeService(options: NarrativeOptions) {
           "Retained expression adoption must preserve its exact original intention and truth stance",
         );
     }
+    if (
+      action === "communicate" &&
+      brief.semanticRequirement === "serious_commitment"
+    ) {
+      const now = await options.worldNow(brief.subjectId);
+      if (
+        !brief.semanticPreparation?.proposal.commitments.length ||
+        brief.semanticPreparation.proposal.commitments.some(
+          (commitment) =>
+            commitment.due.timeDomainRef !== now.timeDomainRef ||
+            Date.parse(commitment.due.at) <= Date.parse(now.at),
+        )
+      )
+        denied(
+          "The retained undertaking needs a new future condition; choose a new expression intention",
+        );
+    }
     return { brief, decision };
   };
   const assertSelectionIn = async (

@@ -17,6 +17,7 @@ import {
   narrativeIntentProposalSchema,
   resolveNarrativeReview,
   type PreparedDelivery,
+  type DeliberationDecision,
   preparedDeliverySchema,
   type NarrativeReviewProposal,
   type ExpressionBrief,
@@ -333,6 +334,41 @@ function parseRoleOutput(
       "role.invalid_output",
       "The retained native response does not match its formal response format",
     );
+  if (input.role === "subject.deliberation") {
+    const decision = checked.value as DeliberationDecision;
+    const candidates = Array.isArray(input.context.retainedExpressions)
+      ? input.context.retainedExpressions
+      : [];
+    const candidate = candidates.find(
+      (value: { candidateRef?: string }) => value.candidateRef === decision.target,
+    ) as { originalIntent?: DeliberationDecision["expressionIntent"] } | undefined;
+    if (decision.action === "communicate" && candidate?.originalIntent) {
+      if (
+        decision.expressionIntent &&
+        digestCanonicalJson(
+          "role.retained-intent.v1",
+          decision.expressionIntent as unknown as CanonicalJsonValue,
+        ).hex !==
+          digestCanonicalJson(
+            "role.retained-intent.v1",
+            candidate.originalIntent as unknown as CanonicalJsonValue,
+          ).hex
+      )
+        denied(
+          "role.intent_changed",
+          "Choose a new conversation expression when changing a retained original intention",
+        );
+      const bound = compileSchema<DeliberationDecision>(
+        deliberationDecisionSchema,
+      ).validate({ ...decision, expressionIntent: candidate.originalIntent });
+      if (!bound.ok)
+        denied(
+          "role.invalid_output",
+          "The selected retained intention is not a canonical communication intent",
+        );
+      return bound.value;
+    }
+  }
   return input.role === "narrative.review" &&
     input.context.semanticStage !== "intent" &&
     input.context.prepared
@@ -468,6 +504,7 @@ export function createSubjectRoles(options: {
         activityRevision?: number;
         deadlineAt?: string;
         nativeResult?: unknown;
+        structuredOutput?: unknown;
         referenceDirectory?: { reference: string; key: string }[];
       };
       if (
@@ -493,11 +530,13 @@ export function createSubjectRoles(options: {
         activityRevision: saved.activityRevision!,
         deadlineAt: saved.deadlineAt!,
         text: nativeRoleText(saved.nativeResult),
-        structuredOutput: parseRoleOutput(
-          input,
-          nativeRoleText(saved.nativeResult),
-          saved.referenceDirectory,
-        ),
+        structuredOutput:
+          saved.structuredOutput ??
+          parseRoleOutput(
+            input,
+            nativeRoleText(saved.nativeResult),
+            saved.referenceDirectory,
+          ),
         result: saved.nativeResult,
         status: "completed",
         admitted: true,
@@ -774,6 +813,16 @@ export function createSubjectRoles(options: {
     }
     const result = outcome.result;
     const failed = failedNativeRoleResult(result, input.requestId);
+    let text = "",
+      structuredOutput: unknown,
+      parseError: unknown;
+    if (!failed)
+      try {
+        text = nativeRoleText(result);
+        structuredOutput = parseRoleOutput(input, text);
+      } catch (error) {
+        parseError = error;
+      }
     await options.native.finishDispatch(input.subjectId, input.requestId, {
       state: failed ? "failed" : "completed",
       ...(failed ? { code: "native_role_failed" } : {}),
@@ -787,11 +836,12 @@ export function createSubjectRoles(options: {
         templateId: template.id,
         referenceDirectory: references.directory,
         nativeResult: result,
+        ...(structuredOutput === undefined ? {} : { structuredOutput }),
       },
     });
     if (failed)
       denied("role.native_run_failed", "The exact native role ended in failure");
-    const text = nativeRoleText(result);
+    if (parseError) throw parseError;
     const run = await options.native.readRun(input.requestId);
     if (
       !run?.consumerId ||
@@ -808,7 +858,7 @@ export function createSubjectRoles(options: {
       activityRevision: activity.revision,
       deadlineAt,
       text,
-      structuredOutput: parseRoleOutput(input, text),
+      structuredOutput,
       result,
       status: "completed",
       admitted: true,
