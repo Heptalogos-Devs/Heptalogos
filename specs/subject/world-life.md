@@ -12,9 +12,11 @@ ScheduleItem保存计划区间、参与者、目的、归属Activity、规律、
 
 prepareWorldAdvance读取clock、定义、已实现范围、有限日程和相关历史，返回有限WorldFrame。默认主要日程24世界小时、近期细节2小时。规则确定或已采用意图保持的日常段直接推进，空白可作为合法自主时间；近期缺口或交互确需细化时才调用world.planner；长离线按自然段合并，不补跑每分钟模型或物理工具。
 
-world.planner只输出提案，工具集合为空。Host提供从实际实现游标到当前世界时间的realizationInterval；已实现事件限于该区间，未来安排只进入schedule。未定场景的首次机会按当前planner输入合同版本保持稳定身份，成功采用的patch抑制重复初始化。
+`WorldLife.advance`组合到时动作和日历规律，一次返回进展引用、可感知变化、当前frame与下一条件。没有新增可感知变化时Host只更新原scheduler，不唤醒付费前台。已采用Profile中的空白是自主时间，沿下一日历节点或规划范围终点继续。没有Profile且尚未建立任何场景的首次机会，才由world.planner完成初始细化；已保存的realization抑制重复初始化。
 
-模型侧合同从正式WorldPatch派生，只生成events、coverage及必要的schedule变更，省略不变的日历/规律实例。Host绑定实际Subject/World、版本、冻结实现区间与真实planner来源，再按正式WorldPatch核验并采用。角色模板版本进入原生历史范围，合同变化使用新Session并保留原付费结果。
+world.planner只输出提案，工具集合为空。RoleExecution统一解析正式结构并还原来源键，Host直接消费structuredOutput，绑定实际Subject/World、实现游标至当前时刻的区间和producer。未来安排进入schedule；过去安排和正在发生的前缀在WorldLife统一保护。
+
+模型侧合同从正式WorldPatch派生，只生成events、coverage及必要schedule变更。正式responseFormat保存schema，文本指令只说明语义和来源目录。角色模板版本进入原生历史范围，合同变化使用新Session并保留原付费结果。
 
 realizeWorld采用operationId、expectedRevision、目标范围和WorldPatch。在同Subject短叙事锁下核对版本/域、actor/place身份、因果与已定事实，保存事件/计划结果/推进范围。operationId重放返回原结果，改变内容拒绝；相关版本改变后有限重拟，不能最后写覆盖。模型与Nous网络都在事务外。
 
@@ -55,6 +57,10 @@ knowledgeAtWorldTime读取已实现故事中角色截至该世界点的见闻；
 结构化WorldProfile与可选Seed分别采用。无Seed创建不调用模型、不补人格或旧传记；学校/角色仅是明确入场事实，可按实际启用领域形成认识。新profile不倒退既有世界或覆盖原Subject身份。跨owner步骤复用稳定operation及真实回执，失败续未完成，不建通用创建引擎。
 
 规则使用成熟RFC5545语义：RRULE重复、RDATE增加、EXDATE排除、RECURRENCE-ID原实例身份。单次移动保留原实例，修改只作用于未来实例或正在发生活动的未来尾部；按世界当前时刻和事实检查边界，已过去但未实现的安排也不能改期抹除。时区参与本地展开，DST规则显式，不用UTC每周加固定小时。主体缺席/违反规则的行为与修改学校规则分别处理。
+
+规则的可选attendancePolicy由WorldLife集中解析：mode为autonomous/usual/strict，startToleranceMinutes、earlyMinutes、lateMinutes为开始容忍与移动范围，minimumContinuationMinutes为最短继续时间，interruptAfterMinutes指定相对开始的可中断节点，interruptEvents列出social/important/emergency/official_change。严格政策使用零开始偏移，普通社交与一般重要消息不打断；明确紧急例外或正式改期由对应操作采用。frame.currentPolicy返回实际policy与nextInterruptAt；前台用实际世界时刻和事件类别选择。adjustable仅管理环境修改权，既有持久fixed/choice输入只在集中policy解析处归一。
+
+WorldProfile可选schoolCalendar采用`jci-2025`时间骨架，必须明确startsOn、validThrough、weekdays和slots选择。官方课次只提供Asia/Shanghai的十一节时间；标题、地点、参与者与周几来自明确配置。预览函数返回选定规则，模板同时保留预备、午休、晚餐、自习和熄灯时点供查看；未选择的时间不生成主体活动。来源为2025-07-15公布、2025-09-08执行的[官方作息表](https://www.jci.edu.cn/info/1055/49762.htm)，采用模板不赋予学校身份。
 
 readCalendar按Subject/world/from-to/domain/展示时区、planned/lived/combined、人物/活动及cursor有界展开和合并规则、例外、计划、已实现事件；显示原/现安排、修订来源、真实状态/时段/recorded和coverage。只读不模型、不推进世界、不登记接触。作者、Subject已知安排和公开忙闲各自视角。
 

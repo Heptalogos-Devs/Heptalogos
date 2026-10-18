@@ -23,6 +23,7 @@ export const adoptWorldActionSchema = Type.Object(
     subjectId: id,
     worldId: id,
     sourceReactionRef: ref,
+    interruptingEventId: Type.Optional(id),
     action: worldActionSchema,
   },
   object,
@@ -36,6 +37,7 @@ export const worldActionResultSchema = Type.Object(
     worldId: id,
     operationId: id,
     sourceReactionRef: ref,
+    interruptingEventId: Type.Optional(id),
     action: worldActionSchema,
     status: Type.Union([
       Type.Literal("completed"),

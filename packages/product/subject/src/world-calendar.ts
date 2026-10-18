@@ -8,6 +8,7 @@ import { Temporal } from "@js-temporal/polyfill";
 import recurrence = require("rrule");
 import { v5 as uuidv5 } from "uuid";
 import type { Static } from "@heptalogos/schema-runtime/typebox";
+import { worldAttendancePolicy } from "./world-contracts.js";
 import type {
   worldIntervalSchema,
   worldScheduleItemSchema,
@@ -85,6 +86,19 @@ export function validateWorldRoutines(definition: WorldDefinition): void {
   for (const rule of definition.routineRules ?? []) {
     try {
       setFor(rule);
+      const policy = worldAttendancePolicy(rule);
+      if (
+        policy.mode === "strict" &&
+        (policy.startToleranceMinutes ||
+          policy.earlyMinutes ||
+          policy.lateMinutes ||
+          policy.interruptEvents.some(
+            (kind) => kind === "social" || kind === "important",
+          ))
+      )
+        invalid(
+          "Strict attendance uses zero start offsets and only explicit exceptions or official changes",
+        );
       const start = local(rule.startsAtLocal);
       start.toZonedDateTime(rule.timezone, { disambiguation: rule.disambiguation });
       if (
@@ -279,6 +293,7 @@ export function expandWorldRoutines(
             start: begin.toString({ fractionalSecondDigits: 3 }),
             end: finish.toString({ fractionalSecondDigits: 3 }),
           },
+          attendancePolicy: worldAttendancePolicy(rule),
           title: rule.title,
           description: rule.content,
           actorRefs: exception?.actorRefs ?? rule.actorRefs,

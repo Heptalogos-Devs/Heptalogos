@@ -4,6 +4,7 @@
  * Adopts independent world inputs and initial role facts without changing Subject Seed or biography.
  * @module world-profile
  */
+import { Temporal } from "@js-temporal/polyfill";
 import { v5 as uuidv5 } from "uuid";
 import { createSubjectSchemaReader } from "./checked-schema.js";
 import { readSubjectRows } from "./subject-read.js";
@@ -25,6 +26,7 @@ import {
   type AdoptedWorldProfile,
   type AdoptWorldProfile,
   type WorldLivingState,
+  type WorldProfile,
 } from "./world-profile-contracts.js";
 import type { WorldDefinition } from "./world-contracts.js";
 import type { LifeActivity } from "./contracts.js";
@@ -41,6 +43,97 @@ function conflict(detail: string): never {
 const parse = createSubjectSchemaReader(() =>
   conflict("Use the single canonical WorldProfile JSON contract"),
 );
+/** Official public time slots; adopting these times creates no school identity or course biography. */
+export const schoolCalendarTemplate = {
+  id: "jci-2025",
+  timezone: "Asia/Shanghai",
+  publishedOn: "2025-07-15",
+  effectiveFrom: "2025-09-08",
+  source: "https://www.jci.edu.cn/info/1055/49762.htm",
+  lessons: [
+    ["08:00", "08:40"],
+    ["08:45", "09:25"],
+    ["09:45", "10:25"],
+    ["10:30", "11:10"],
+    ["11:15", "11:55"],
+    ["14:00", "14:40"],
+    ["14:45", "15:25"],
+    ["15:45", "16:25"],
+    ["16:30", "17:10"],
+    ["19:00", "19:40"],
+    ["19:45", "20:25"],
+  ],
+  otherTimes: [
+    { title: "上午预备", start: "07:50" },
+    { title: "午餐和午休", start: "11:55", end: "13:50" },
+    { title: "下午预备", start: "13:50" },
+    { title: "晚餐", start: "17:10", end: "18:50" },
+    { title: "晚自习时段", start: "19:00", end: "22:30" },
+    { title: "教室熄灯", start: "22:30" },
+    { title: "就寝和宿舍熄灯", start: "23:00" },
+  ],
+} as const;
+/** Pure import preview: only explicitly selected dates, weekdays, classes and participants become rules. */
+export function previewSchoolCalendar(
+  worldId: string,
+  selection: NonNullable<WorldProfile["schoolCalendar"]>,
+) {
+  const startsOn = Temporal.PlainDate.from(selection.startsOn),
+    through = Temporal.PlainDate.from(selection.validThrough);
+  if (
+    startsOn.toString() < schoolCalendarTemplate.effectiveFrom ||
+    Temporal.PlainDate.compare(startsOn, through) > 0
+  )
+    conflict(
+      "Choose a finite school template range after its published effective date",
+    );
+  if (new Set(selection.slots.map((slot) => slot.slot)).size !== selection.slots.length)
+    conflict(
+      "Select each lesson slot once; course and weekday choices come from the operator",
+    );
+  return selection.slots.map((selected) => {
+    const times = schoolCalendarTemplate.lessons[selected.slot - 1];
+    if (!times) conflict("Select a published lesson slot");
+    return {
+      ruleId: uuidv5(`school-template:${selection.startsOn}:${selected.slot}`, worldId),
+      revision: 1,
+      title: selected.title,
+      content: selected.title,
+      subjectPerception: selected.title,
+      startsAtLocal: `${selection.startsOn}T${times[0]}:00`,
+      timezone: schoolCalendarTemplate.timezone,
+      rrule: `FREQ=WEEKLY;BYDAY=${selection.weekdays.join(",")}`,
+      rdates: [],
+      exdates: [],
+      validThrough: selection.validThrough,
+      effectiveFrom: null,
+      effectiveUntil: null,
+      startShiftSeconds: 0,
+      disambiguation: "compatible" as const,
+      durationMinutes: 40,
+      actorRefs: selected.actorRefs,
+      placeRef: selected.placeRef,
+      activityId: null,
+      kind: "study" as const,
+      visibility: "subject" as const,
+      adjustable: false,
+      mode: "fixed" as const,
+      attendancePolicy: selected.attendancePolicy ?? {
+        mode: "usual" as const,
+        startToleranceMinutes: 5,
+        earlyMinutes: 0,
+        lateMinutes: 5,
+        minimumContinuationMinutes: 10,
+        interruptAfterMinutes: 40,
+        interruptEvents: [
+          "important" as const,
+          "emergency" as const,
+          "official_change" as const,
+        ],
+      },
+    };
+  });
+}
 /** Identity and official Clock calls occur outside the local adoption transaction. */
 export function createWorldProfileService(options: {
   persistence: PersistenceService;
@@ -228,15 +321,19 @@ export function createWorldProfileService(options: {
               conflict("A policy revision cannot move backwards in world time");
             if (!existingWorld)
               conflict("The adopted world's current definition is unavailable");
-            await options.worlds.configureIn(tx, {
-              operationId: uuidv5("definition", input.operationId),
-              expectedRevision: input.expectedRevision,
-              definition: {
-                ...existingWorld.definition,
-                revision: existingWorld.definition.revision + 1,
+            await options.worlds.configureIn(
+              tx,
+              {
+                operationId: uuidv5("definition", input.operationId),
+                expectedRevision: input.expectedRevision,
+                definition: {
+                  ...existingWorld.definition,
+                  revision: existingWorld.definition.revision + 1,
+                },
+                schedule: [...existingWorld.schedule],
               },
-              schedule: [...existingWorld.schedule],
-            });
+              world,
+            );
             const record: AdoptedWorldProfile = {
               ...current,
               revision: current.revision + 1,
@@ -305,8 +402,16 @@ export function createWorldProfileService(options: {
             subjectActorRef: actor("self"),
             rules: profile.rules,
             creationScope: profile.creationScope,
-            informationSourceRefs: profile.informationSourceRefs,
-            routineRules: profile.routineRules.map((rule) => ({
+            informationSourceRefs: [
+              ...profile.informationSourceRefs,
+              ...(profile.schoolCalendar ? [schoolCalendarTemplate.source] : []),
+            ],
+            routineRules: [
+              ...profile.routineRules,
+              ...(profile.schoolCalendar
+                ? previewSchoolCalendar(input.worldId, profile.schoolCalendar)
+                : []),
+            ].map((rule) => ({
               ...rule,
               actorRefs: rule.actorRefs.map(actor),
             })),
@@ -317,12 +422,16 @@ export function createWorldProfileService(options: {
                 : {}),
             })),
           };
-          await options.worlds.configureIn(tx, {
-            operationId: uuidv5("definition", input.operationId),
-            expectedRevision: input.expectedRevision,
-            definition,
-            schedule: [],
-          });
+          await options.worlds.configureIn(
+            tx,
+            {
+              operationId: uuidv5("definition", input.operationId),
+              expectedRevision: input.expectedRevision,
+              definition,
+              schedule: [],
+            },
+            world,
+          );
           const now = options.now();
           const record: AdoptedWorldProfile = {
             subjectId: input.subjectId,

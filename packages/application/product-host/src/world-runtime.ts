@@ -29,7 +29,7 @@ import type { createSubjectRoles } from "./subject-roles.js";
 import { decisionPhaseId } from "./subject-decisions.js";
 import type { createNativeCognitionBridge } from "./native-cognition.js";
 import type { NativeWorldSchedule } from "./native-dispatch.js";
-import { createWorldOpportunity, hasCurrentWorldScene } from "./world-opportunity.js";
+import { createWorldOpportunity } from "./world-opportunity.js";
 const ns = "b6cb3efa-3bd9-4cc1-bfa4-4a72742b1d13";
 function plannerRevision(context: Record<string, unknown>): number | null {
   const frame = context.frame;
@@ -148,7 +148,7 @@ export function createWorldRuntime(options: {
           );
           if (
             enabled &&
-            !hasCurrentWorldScene(frame.schedule, frame.world.at) &&
+            frame.needsRefinement &&
             !(await options.worlds.readRealization(
               subjectId,
               uuidv5("world.patch", initialRequestId),

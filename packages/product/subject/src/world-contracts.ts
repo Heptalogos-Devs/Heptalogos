@@ -50,6 +50,54 @@ export const worldCalendarExceptionSchema = Type.Object(
   },
   object,
 );
+/** Attendance and interruption are independent of who may edit the environment's timetable. */
+export const worldAttendancePolicySchema = Type.Object(
+  {
+    mode: Type.Union([
+      Type.Literal("autonomous"),
+      Type.Literal("usual"),
+      Type.Literal("strict"),
+    ]),
+    startToleranceMinutes: Type.Integer({ minimum: 0, maximum: 1440 }),
+    earlyMinutes: Type.Integer({ minimum: 0, maximum: 1440 }),
+    lateMinutes: Type.Integer({ minimum: 0, maximum: 1440 }),
+    minimumContinuationMinutes: Type.Integer({ minimum: 0, maximum: 1440 }),
+    interruptAfterMinutes: Type.Union([
+      Type.Integer({ minimum: 1, maximum: 10080 }),
+      Type.Null(),
+    ]),
+    interruptEvents: Type.Array(
+      Type.Union([
+        Type.Literal("social"),
+        Type.Literal("important"),
+        Type.Literal("emergency"),
+        Type.Literal("official_change"),
+      ]),
+      { uniqueItems: true, maxItems: 4 },
+    ),
+  },
+  object,
+);
+export type WorldAttendancePolicy = Static<typeof worldAttendancePolicySchema>;
+/** Old persisted rules are interpreted once here; runtime consumers use this policy. */
+export function worldAttendancePolicy(rule: {
+  attendancePolicy?: WorldAttendancePolicy;
+  mode?: "fixed" | "choice";
+  adjustable?: boolean;
+}): WorldAttendancePolicy {
+  const autonomous = rule.mode !== "fixed" || rule.adjustable;
+  return (
+    rule.attendancePolicy ?? {
+      mode: autonomous ? "autonomous" : "usual",
+      startToleranceMinutes: 0,
+      earlyMinutes: autonomous ? 60 : 0,
+      lateMinutes: autonomous ? 60 : 0,
+      minimumContinuationMinutes: 0,
+      interruptAfterMinutes: autonomous ? 1 : null,
+      interruptEvents: ["social", "important", "emergency", "official_change"],
+    }
+  );
+}
 /** One effective revision of a stable local-time RFC 5545 series. */
 export const worldRoutineRuleSchema = Type.Object(
   {
@@ -87,6 +135,7 @@ export const worldRoutineRuleSchema = Type.Object(
       Type.Literal("public"),
     ]),
     adjustable: Type.Boolean(),
+    attendancePolicy: Type.Optional(worldAttendancePolicySchema),
     cancelled: Type.Optional(Type.Boolean()),
     archived: Type.Optional(Type.Boolean()),
     mode: Type.Union([Type.Literal("fixed"), Type.Literal("choice")]),
@@ -142,6 +191,7 @@ export const worldScheduleItemSchema = Type.Object(
       ),
     ),
     interval: worldIntervalSchema,
+    attendancePolicy: Type.Optional(worldAttendancePolicySchema),
     title: ref,
     description: text,
     actorRefs: refs,
@@ -153,6 +203,20 @@ export const worldScheduleItemSchema = Type.Object(
   },
   object,
 );
+/** Materialized recurrence copies retain the policy owned by their exact rule revision. */
+export function worldScheduleAttendancePolicy(
+  definition: WorldDefinition,
+  schedule: Static<typeof worldScheduleItemSchema>,
+) {
+  const rule =
+    schedule.ruleRef &&
+    definition.routineRules?.find(
+      (item) =>
+        item.ruleId === schedule.ruleRef!.ruleId &&
+        item.revision === schedule.ruleRef!.revision,
+    );
+  return worldAttendancePolicy(rule || schedule);
+}
 /** A visible portion of an adopted virtual event, released only to the named actor. */
 export const worldPerceptionSchema = Type.Object(
   {
@@ -172,6 +236,14 @@ export const worldEventInputSchema = Type.Object(
   {
     eventId: id,
     activityId: Type.Optional(id),
+    interruptionKind: Type.Optional(
+      Type.Union([
+        Type.Literal("social"),
+        Type.Literal("important"),
+        Type.Literal("emergency"),
+        Type.Literal("official_change"),
+      ]),
+    ),
     energy: Type.Optional(worldEventEnergySchema),
     interval: worldIntervalSchema,
     title: ref,
@@ -361,6 +433,18 @@ export const worldFrameSchema = Type.Object(
     schedule: Type.Array(worldScheduleItemSchema, { maxItems: 256 }),
     recentEvents: Type.Array(realizedWorldEventSchema, { maxItems: 128 }),
     nextOpportunity: Type.Union([worldPointSchema, Type.Null()]),
+    needsRefinement: Type.Boolean(),
+    currentPolicy: Type.Union([
+      Type.Object(
+        {
+          scheduleId: id,
+          policy: worldAttendancePolicySchema,
+          nextInterruptAt: worldPointSchema,
+        },
+        object,
+      ),
+      Type.Null(),
+    ]),
     role: Type.Literal("world.planner"),
     contactNature: Type.Literal("execution_only"),
   },
