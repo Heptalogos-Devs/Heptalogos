@@ -61,3 +61,6 @@ export { integrateWorldEnergy } from "./world-living.js";
 export * from "./situation-contracts.js";
 
 export * from "./world-action-contracts.js";
+
+export { readDecisionHistory } from "./deliberation.js";
+export { readActivityStatements } from "./narrative.js";

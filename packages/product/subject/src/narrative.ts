@@ -274,6 +274,59 @@ interface NarrativeOptions {
     | { reviewerRunId: string; pending: true }
   >;
 }
+/** Reads exact retained/adopted originals and delivery receipts without performing semantic indexing. */
+export async function readActivityStatements(
+  persistence: PersistenceService,
+  input: { subjectId: string; activityIds: string[] },
+) {
+  const rows = await readRepositorySql<{
+    brief: ExpressionBrief;
+    run_id: string;
+    committed: NarrativeCommitInput | null;
+    recorded_at: string;
+    delivery: { state: string; messageId: string | null; acceptedAt: string | null }[];
+  }>(
+    persistence,
+    `SELECT b.document AS brief,b.renderer_run_id AS run_id,
+    c.document AS committed,b.recorded_at::text AS recorded_at,
+    COALESCE((SELECT jsonb_agg(jsonb_build_object('state',p.state,
+      'messageId',p.document#>>'{outcome,platformMessageId}',
+      'acceptedAt',p.document#>>'{outcome,acceptedAt}'))
+      FROM heptalogos.agency_delivery_part p WHERE p.behavior_id=c.behavior_id),'[]'::jsonb) AS delivery
+    FROM heptalogos.expression_brief b LEFT JOIN heptalogos.narrative_commit c USING(brief_id)
+    WHERE b.subject_id=$1 AND b.activity_id::text=ANY($2::text[])
+    ORDER BY b.recorded_at DESC,b.brief_id DESC LIMIT 129`,
+    [input.subjectId, input.activityIds],
+  );
+  return {
+    statements: rows.slice(0, 128).flatMap((row) => {
+      const brief = checked<ExpressionBrief>(expressionBriefSchema, row.brief);
+      const prepared = row.committed
+        ? checked<PreparedDelivery>(preparedDeliverySchema, row.committed.prepared)
+        : brief.retainedCandidate?.prepared;
+      if (!prepared) return [];
+      return [
+        {
+          briefId: brief.briefId,
+          activityId: brief.activityId,
+          runId: row.run_id,
+          decisionRef: brief.decisionRef,
+          audience: brief.audience,
+          createdAt: brief.createdAt,
+          recordedAt: row.recorded_at,
+          adopted: row.committed !== null,
+          discarded: !!brief.retainedCandidate?.discardedBy,
+          payloads: [...payloadTexts(prepared)].map(([sourceIndex, text]) => ({
+            sourceIndex,
+            text,
+          })),
+          delivery: row.delivery,
+        },
+      ];
+    }),
+    more: rows.length > 128,
+  };
+}
 /** Briefs, claims, commitments and one native delivery are adopted in the same local transaction. */
 export function createNarrativeService(options: NarrativeOptions) {
   const briefForRun = async (runId: string): Promise<ExpressionBrief | undefined> =>
