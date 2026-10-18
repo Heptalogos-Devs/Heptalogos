@@ -162,7 +162,7 @@ export async function operateInstalledService(
   const properties = Object.fromEntries(
     output.split("\n").map((line) => line.split("=", 2)),
   );
-  if (properties.LoadState !== "loaded")
+  if (properties.LoadState !== "loaded" && operation !== "status")
     throw new CliFailure(
       "installation.service_unavailable",
       "The installed service unit is not registered with the user service manager; register the installer-owned unit before starting it",
@@ -172,7 +172,10 @@ export async function operateInstalledService(
     installationId: descriptor.installationId,
     component,
     unit: service.unit,
-    state: properties.ActiveState ?? "unknown",
+    state:
+      properties.LoadState === "loaded"
+        ? (properties.ActiveState ?? "unknown")
+        : "unregistered",
     subState: properties.SubState ?? "unknown",
     mainPid: Number(properties.MainPID ?? 0),
   };

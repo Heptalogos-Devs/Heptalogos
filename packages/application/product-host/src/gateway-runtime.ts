@@ -58,7 +58,10 @@ import { createSubjectReactor } from "./subject-reactor.js";
 import { createSubjectSituationRuntime } from "./subject-situation.js";
 import { createSubjectAttentionRuntime } from "./subject-attention-runtime.js";
 import { createSubjectActivityResolver } from "./subject-activity-resolver.js";
-import { createSubjectRoles } from "./subject-roles.js";
+import {
+  createSubjectRoles,
+  readRegisteredExpressionCandidates,
+} from "./subject-roles.js";
 import { createSubjectActivityStarter } from "./subject-activity-runtime.js";
 import { createSubjectDecisionHandler, decisionPhaseId } from "./subject-decisions.js";
 import { createBoundLifeReader } from "./native-life-read.js";
@@ -69,6 +72,7 @@ import {
   selectNativeOpportunity,
   type NativeWorldSchedule,
   type NativeAgentSelect,
+  type NativeExpressionSend,
 } from "./native-dispatch.js";
 import { timestampFromDate } from "@nous-wave/client/host-bridge";
 import { createActivityDispatcher } from "./activity-dispatch.js";
@@ -78,6 +82,7 @@ import type { GatewayHttpOptions } from "./gateway-http.js";
 /** Existing Host lifecycle and current authenticated settings remain the owners. */
 export interface GatewayRuntimeOptions {
   readonly dispatchNativeActivity?: NativeActivityDispatch;
+  readonly sendRetainedExpression?: NativeExpressionSend;
   readonly scheduleWorld?: NativeWorldSchedule;
   readonly selectNativeAgent?: NativeAgentSelect;
   readonly persistence: PersistenceService;
@@ -410,13 +415,12 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
         registration.roleScope.role === "narrative.review" &&
         !registration.foreground
       ) {
-        await narrative.assertPendingIndexIn(
+        return narrative.assertPendingIndexIn(
           tx,
           registration.subjectId,
           registration.activityId,
           registration.parentRunId,
         );
-        return;
       }
       if (
         !["subject.deliberation", "subject.render", "narrative.review"].includes(
@@ -673,7 +677,10 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
           transaction,
         ),
       );
-      if (run.state !== "running")
+      if (
+        run.state !== "running" &&
+        !(await narrative.permitsRetainedRenderer(runId, transaction))
+      )
         denied("The original native run no longer permits a new external effect");
       return {
         activity,
@@ -856,6 +863,19 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
     agency,
     worldNow: life.worldNow,
     now: options.now,
+    recoverRenderedCandidates: (subjectId, activityId) =>
+      readRegisteredExpressionCandidates(options.persistence, subjectId, activityId),
+    assertRendererSource: async (brief, prepared) => {
+      const run = await native.readRun(prepared.runId);
+      if (
+        !run?.consumerId ||
+        run.registration.subjectId !== brief.subjectId ||
+        run.registration.activityId !== brief.activityId ||
+        run.registration.roleScope.role !== "subject.render" ||
+        run.registration.actorEntityRef !== brief.actorEntityRef
+      )
+        denied("Retain only the actual registered same-Subject renderer result");
+    },
     assertCandidateCurrentIn: async (tx, runId) => {
       const run = await native.readRun(runId, tx);
       if (!run?.registration.foreground)
@@ -933,8 +953,10 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
         role: "narrative.review",
         ...(brief.semanticRequirement === "important_conflict"
           ? {
-              foreground: (await native.readRun(prepared.runId))!.registration
-                .foreground,
+              foreground: (await native.readRun(
+                brief.retainedCandidate?.adoptions.at(-1)?.sourceRunId ??
+                  prepared.runId,
+              ))!.registration.foreground,
             }
           : {}),
         ...(brief.semanticRequirement === "important_conflict" && !background
@@ -1119,6 +1141,12 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
       }),
   });
   const situation = createSubjectSituationRuntime({
+    narrative,
+    sendRetainedExpression:
+      options.sendRetainedExpression ??
+      (async () => {
+        throw Error("native_retained_delivery_unconfigured");
+      }),
     profiles,
     nous,
     persistence: options.persistence,
@@ -1153,11 +1181,27 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
   const requestReactorOpportunity = async (input: {
     subjectId: string;
     operationRef: string;
+    activityId?: string;
   }) => {
     if (input.subjectId !== (await currentSubject()))
       denied("The opportunity names another current Subject");
+    if (input.activityId) {
+      const activity = await life.get(input.subjectId, input.activityId);
+      if (
+        !activity ||
+        activity.state !== "active" ||
+        !activity.adoptedBy ||
+        !activity.adoptedAt ||
+        !activity.scope ||
+        !activity.workContextId ||
+        activity.continuationRequired
+      )
+        denied("Resume the original adopted task before requesting its attention");
+      await authorizeActivity(activity);
+    }
     await scheduleNative({
       subjectId: input.subjectId,
+      ...(input.activityId ? { activityId: input.activityId } : {}),
       realAt: new Date(Date.parse(options.now()) + 1000).toISOString(),
       requestId: decisionPhaseId(input.operationRef, "reactor-opportunity"),
     });
@@ -1282,6 +1326,7 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
         subjectId: input.subjectId,
         requestId: input.requestId,
         naturalOpportunity: true,
+        ...(input.activityId ? { manualActivityId: input.activityId } : {}),
       });
       return result;
     },
@@ -1303,6 +1348,8 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
     http,
     life,
     native,
+    recoverCandidates: (input: { subjectId: string; activityId: string }) =>
+      narrative.recoverCandidates(input),
     pendingNarrative: (subjectId: string) =>
       narrative.pendingSemanticWork(subjectId, 16),
     foreground,

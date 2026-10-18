@@ -21,6 +21,8 @@ import {
   getOperatorOverview,
   getSubjectDocuments,
   getDefaultCalendar,
+  getSchoolTimeTemplate,
+  getTaskDetails,
 } from "./generated/index.js";
 import { createClient } from "./generated/client/index.js";
 import type {
@@ -138,6 +140,12 @@ export function createManagementClient(options: ManagementClientOptions) {
   return Object.freeze({
     getOverview: () => requestHostData(() => getOperatorOverview(base)),
     getSubjectDocuments: () => requestHostData(() => getSubjectDocuments(base)),
+    getSchoolTimeTemplate: () => requestHostData(() => getSchoolTimeTemplate(base)),
+    getTaskDetails: (
+      activityId: string,
+      query: { inputs?: "true"; before?: string; runId?: string } = {},
+    ) =>
+      requestHostData(() => getTaskDetails({ ...base, path: { activityId }, query })),
     getCalendar: (
       query: { period?: "today" | "week" | "range"; from?: string; to?: string } = {},
     ) => requestHostData(() => getDefaultCalendar({ ...base, query })),

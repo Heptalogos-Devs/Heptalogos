@@ -14,6 +14,7 @@ import {
   subjectReactionSchema,
   worldLivingStateSchema,
   worldCalendarWindow,
+  schoolCalendarTemplate,
 } from "@heptalogos/subject";
 import {
   productStatusSchema,
@@ -67,6 +68,28 @@ export const operatorOverviewSchema = Type.Object(
     living: Type.Union([worldLivingStateSchema, Type.Null()]),
     usage: Type.Array(usageSchema),
     usageCoverage: text,
+    cognitionMaintenance: Type.Union([
+      Type.Object(
+        {
+          schedulerEnabled: Type.Union([Type.Boolean(), Type.Null()]),
+          subjectEnabled: Type.Union([Type.Boolean(), Type.Null()]),
+        },
+        object,
+      ),
+      Type.Null(),
+    ]),
+    narrativeWork: Type.Array(
+      Type.Object(
+        {
+          briefId: text,
+          activityId: text,
+          state: text,
+          problem: Type.Union([text, Type.Null()]),
+          runId: Type.Union([text, Type.Null()]),
+        },
+        object,
+      ),
+    ),
     issues: Type.Array(text),
   },
   object,
@@ -80,6 +103,7 @@ const calendarViewSchema = Type.Object(
   {
     subjectId: Type.Union([text, Type.Null()]),
     state: text,
+    world: Type.Union([activitySchema.properties.world, Type.Null()]),
     calendar: Type.Union([calendarResultSchema, Type.Null()]),
   },
   object,
@@ -94,12 +118,64 @@ const calendarQuerySchema = Type.Object(
   },
   object,
 );
+const schoolTemplateSchema = Type.Object(
+  {
+    id: text,
+    timezone: text,
+    publishedOn: text,
+    effectiveFrom: text,
+    source: text,
+    lessons: Type.Array(Type.Array(text)),
+    otherTimes: Type.Array(
+      Type.Object({ title: text, start: text, end: Type.Optional(text) }, object),
+    ),
+  },
+  object,
+);
+const taskViewSchema = Type.Object(
+  {
+    activity: activitySchema,
+    runs: Type.Array(
+      Type.Object(
+        {
+          runId: text,
+          role: text,
+          purpose: text,
+          recordedAt: text,
+          dispatchState: text,
+          native: Type.Union([
+            Type.Object(
+              {
+                subjectId: text,
+                runId: text,
+                agentId: text,
+                sessionId: text,
+                sessionKey: text,
+              },
+              object,
+            ),
+            Type.Null(),
+          ]),
+          hostInput: Type.Optional(
+            Type.Object({ message: text, extraSystemPrompt: text }, object),
+          ),
+          providerAttempts: Type.Unknown(),
+        },
+        object,
+      ),
+    ),
+    nextRunId: Type.Union([text, Type.Null()]),
+  },
+  object,
+);
 
 /** Installation and existing owner operations used by the authenticated management reads. */
 export interface OperatorReadOptions {
   anchorRoot: string;
   product: ProductManagement;
   gateway: Awaited<ReturnType<typeof createGatewayRuntime>>;
+  readNativeChannels: () => Promise<unknown>;
+  readProviderAttempts: (params: Record<string, unknown>) => Promise<unknown>;
 }
 const fieldNames: Record<string, string> = {
   kind: "类型",
@@ -120,6 +196,30 @@ const fieldNames: Record<string, string> = {
   meaning: "含义",
   variants: "其他写法",
   explanation: "说明",
+  from: "从",
+  to: "至",
+  role: "角色",
+  coordinationExpectations: "交往约定",
+  pragmaticUse: "使用情境",
+  judgment: "依据与不确定性",
+  state: "认识状态",
+  estimate: "估计值",
+  estimateMethod: "估计依据",
+  description: "范围说明",
+  purposes: "用途",
+  entities: "相关参与者",
+  entityRefs: "相关参与者",
+  group: "群体",
+  channel: "渠道",
+  conversation: "会话",
+  conversationRef: "会话",
+  workContext: "工作情境",
+  workContextId: "工作情境",
+  timeDomainRef: "时间域",
+  start: "开始",
+  end: "结束",
+  symmetric: "双向关系",
+  caseInsensitive: "忽略大小写",
 };
 type SelfEntry = Awaited<ReturnType<NousClient["self"]["list"]>>["items"][number];
 type SocialEntry = Awaited<ReturnType<NousClient["social"]["list"]>>["items"][number];
@@ -127,15 +227,55 @@ const current = (record: SelfEntry | SocialEntry) =>
   record.acceptanceState === "accepted" &&
   record.integrityState === "valid" &&
   record.suppressionState === "normal";
-const display = (value: unknown) =>
-  typeof value === "string"
-    ? value
-    : JSON.stringify(value, (key, item) => {
-        if (item?.$typeName === "google.protobuf.Timestamp")
-          return new Date(Number(item.seconds) * 1000 + item.nanos / 1e6).toISOString();
-        if (key.startsWith("$")) return undefined;
-        return typeof item === "bigint" ? String(item) : item;
-      });
+const labels: Record<string, string> = {
+  identity: "身份",
+  role: "角色",
+  preference: "偏好",
+  limitation: "认识到的限制",
+  capability_belief: "能力认识",
+  value: "价值倾向",
+  adopted: "已采用",
+  tentative: "暂定",
+  attributed: "他人陈述",
+  observed: "观察所得",
+  hypothesis: "推测",
+  supported: "有来源支持",
+  member_of: "群体成员",
+  subject_deliberation: "主体审议",
+  professional_execution: "专业执行",
+  reflection: "反思",
+  true: "是",
+  false: "否",
+};
+function display(value: unknown): string {
+  if (value === null || value === undefined) return "未指定";
+  if (
+    typeof value === "string" ||
+    typeof value === "boolean" ||
+    typeof value === "number" ||
+    typeof value === "bigint"
+  )
+    return labels[String(value)] ?? String(value);
+  if (typeof value !== "object") return "未指定";
+  if (Array.isArray(value)) return value.map(display).join("；") || "无";
+  const fields = value as Record<string, unknown>;
+  if (fields.$typeName === "google.protobuf.Timestamp")
+    return new Date(
+      Number(fields.seconds) * 1000 + Number(fields.nanos) / 1e6,
+    ).toISOString();
+  if (typeof fields.case === "string" && "value" in fields)
+    return display(fields.value);
+  return (
+    Object.entries(fields)
+      .filter(([key]) => !key.startsWith("$"))
+      .map(([key, item]) =>
+        ["extent", "value"].includes(key)
+          ? display(item)
+          : `${fieldNames[key] ?? key}：${display(item)}`,
+      )
+      .join("；") || "未指定"
+  );
+}
 async function readPages<T>(
   read: (token: string) => Promise<{ items: T[]; nextPageToken: string }>,
 ) {
@@ -167,10 +307,26 @@ export function createOperatorReads(options: OperatorReadOptions) {
     const subjectId = settings.subject.id,
       worldId = settings.subject.worldId;
     if (!subjectId || !worldId)
-      return { subjectId, state: "world_unconfigured", calendar: null };
+      return { subjectId, state: "world_unconfigured", world: null, calendar: null };
     const world = await options.gateway.worldHttp.worlds.read(subjectId, worldId);
-    if (!world) return { subjectId, state: "world_unavailable", calendar: null };
+    if (!world)
+      return { subjectId, state: "world_unavailable", world: null, calendar: null };
     const timezone = world.definition.timezone;
+    const clock = await createWorldClockManagement({
+      nous: () => connectProductNous(settings),
+    })
+      .read(subjectId)
+      .catch((error) => {
+        if (query.period === "range") return null;
+        throw error;
+      });
+    if (clock && clock.world.timeDomainRef !== world.definition.timeDomainRef)
+      return {
+        subjectId,
+        state: "world_clock_domain_mismatch",
+        world: clock.world,
+        calendar: null,
+      };
     let interval: { start: string; end: string };
     if (query.period === "range") {
       if (!query.from || !query.to)
@@ -182,14 +338,16 @@ export function createOperatorReads(options: OperatorReadOptions) {
         );
       interval = { start: query.from, end: query.to };
     } else {
-      const clock = await createWorldClockManagement({
-        nous: () => connectProductNous(settings),
-      }).read(subjectId);
-      interval = worldCalendarWindow(clock.world.at, timezone, query.period ?? "today");
+      interval = worldCalendarWindow(
+        clock!.world.at,
+        timezone,
+        query.period ?? "today",
+      );
     }
     return {
       subjectId,
       state: "available",
+      world: clock?.world ?? null,
       calendar: await options.gateway.worldHttp.worlds.readCalendar({
         subjectId,
         worldId,
@@ -239,12 +397,22 @@ export function createOperatorReads(options: OperatorReadOptions) {
         ...records.map((record) => {
           const body = record.content?.content;
           if (!body?.case) return "";
+          const fields = body.value as unknown as Record<string, unknown>;
           return [
-            `## ${body.case}`,
-            ...Object.entries(body.value)
-              .filter(([key]) => !key.startsWith("$"))
+            `## ${body.case === "facet" ? display(fields.kind) : body.case === "convention" ? display(fields.expression) : body.case === "narrative" ? "自我理解" : "关系认识"}`,
+            ...Object.entries(fields)
+              .filter(
+                ([key]) =>
+                  !key.startsWith("$") &&
+                  !["producer", "basis", "scope", "validTime", "kind"].includes(key),
+              )
               .map(([key, value]) => `- ${fieldNames[key] ?? key}：${display(value)}`),
+            `\n<details>\n<summary>适用范围、时间与来源</summary>\n`,
+            `适用范围：${display(fields.scope)}`,
+            `\n有效时间：${display(fields.validTime)}`,
+            `\n原始依据：${display(fields.basis)}`,
             `\n精确修订：${record.reference?.kind}:${record.reference?.value}`,
+            `\n</details>`,
           ].join("\n");
         }),
         records.length ? "" : "未形成。",
@@ -279,6 +447,7 @@ export function createOperatorReads(options: OperatorReadOptions) {
       : null;
     const day = await calendar().catch(() => ({
       state: "clock_unavailable",
+      world: null,
       calendar: null,
     }));
     const profile = settings.subject.worldId
@@ -309,6 +478,66 @@ export function createOperatorReads(options: OperatorReadOptions) {
   return {
     documents,
     calendar,
+    async task(
+      activityId: string,
+      includeInputs: boolean,
+      before?: string,
+      runId?: string,
+    ) {
+      const settings = await configured();
+      const subjectId = settings.subject.id;
+      const activity = subjectId
+        ? await options.gateway.life.get(subjectId, activityId)
+        : undefined;
+      if (!subjectId || !activity)
+        throw managementProblem(
+          "life.not_found",
+          "Task unavailable",
+          "The current Subject has no such task",
+          "validation",
+        );
+      let page = await options.gateway.native.operatorRuns(
+        subjectId,
+        activityId,
+        false,
+        before,
+        runId,
+      );
+      const selectedId =
+        runId ??
+        (includeInputs ? page.runs.find((run) => run.native)?.runId : undefined);
+      if (includeInputs && selectedId)
+        page = await options.gateway.native.operatorRuns(
+          subjectId,
+          activityId,
+          true,
+          undefined,
+          selectedId,
+        );
+      const runs = [];
+      for (const run of page.runs) {
+        let providerAttempts: unknown = {
+          coverage: run.native ? "not_requested" : "not_admitted",
+          attempts: [],
+        };
+        if (run.native && run.runId === selectedId) {
+          try {
+            providerAttempts = await options.readProviderAttempts({
+              ...run.native,
+              includeInputs,
+            });
+          } catch {
+            providerAttempts = {
+              coverage: "unavailable",
+              attempts: [],
+              reason: "Native Gateway或正式读取入口未就绪；宿主输入仅单独列出",
+            };
+          }
+        }
+        runs.push({ ...run, providerAttempts });
+      }
+      return { activity, runs, nextRunId: page.nextRunId };
+    },
     async overview() {
       const settings = await configured(),
         subjectId = settings.subject.id;
@@ -339,10 +568,38 @@ export function createOperatorReads(options: OperatorReadOptions) {
       if (!settings.subject.enabled) issues.push("自动付费工作已暂停");
       if (gatewayStatus?.state !== "available")
         issues.push(gatewayStatus?.message ?? "Subject Gateway未启动");
+      let qqState = settings.qq ? "Gateway已停止或未就绪；登录状态未知" : "未配置";
+      if (settings.qq && gatewayStatus?.state === "available") {
+        try {
+          const snapshot = (await options.readNativeChannels()) as {
+            channelAccounts?: Record<
+              string,
+              {
+                accountId: string;
+                connected?: boolean;
+                running?: boolean;
+                lastError?: string;
+              }[]
+            >;
+          };
+          const account = snapshot.channelAccounts?.["heptalogos-qq"]?.find(
+            (account) => account.accountId === settings.qq!.accountId,
+          );
+          qqState = account?.connected
+            ? "已登录并连接"
+            : account?.running
+              ? "渠道运行中，QQ未登录或未连接"
+              : "QQ渠道未运行";
+          if (account?.lastError) issues.push(account.lastError);
+        } catch {
+          qqState = "Gateway在线，渠道状态读取失败";
+        }
+      }
       let subjectName = "未形成";
+      let cognitionMaintenance = null;
       if (subjectId)
         try {
-          const { selfRecords } = await readSelf();
+          const { selfRecords, nous } = await readSelf();
           subjectName =
             selfRecords
               .flatMap((record) =>
@@ -352,6 +609,21 @@ export function createOperatorReads(options: OperatorReadOptions) {
                   : [],
               )
               .join("；") || "未形成";
+          const enabled = async (id?: string) => {
+            const snapshot = await nous.configuration.getConfiguration({
+              subjectId: id,
+              paths: ["maintenance.enabled"],
+              exposureCeiling: 3,
+            });
+            const kind = snapshot.entries.find(
+              (entry) => entry.path === "maintenance.enabled",
+            )?.value?.kind;
+            return kind?.case === "boolValue" ? kind.value : null;
+          };
+          cognitionMaintenance = {
+            schedulerEnabled: await enabled(),
+            subjectEnabled: await enabled(subjectId),
+          };
         } catch {
           subjectName = "认知暂不可读";
         }
@@ -362,12 +634,9 @@ export function createOperatorReads(options: OperatorReadOptions) {
         productGeneration: PRODUCT_GENERATION_ID,
         subjectName,
         model,
+        cognitionMaintenance,
         qqAccount: settings.qq?.accountId ?? null,
-        qqState: settings.qq
-          ? gatewayStatus?.state === "available"
-            ? "Gateway在线，登录状态待渠道核实"
-            : "Gateway已停止或未就绪；登录状态未知"
-          : "未配置",
+        qqState,
         tasks: tasks.activities,
         moreTasks: tasks.nextId !== null,
         retainedResults: subjectId
@@ -392,6 +661,9 @@ export function createOperatorReads(options: OperatorReadOptions) {
         usage: subjectId ? await options.gateway.native.operatorUsage(subjectId) : [],
         usageCoverage:
           "统计已留存的模型用量；其他登记是否提交provider、未留存用量与价格均为未知",
+        narrativeWork: subjectId
+          ? await options.gateway.pendingNarrative(subjectId)
+          : [],
         issues,
       };
     },
@@ -447,6 +719,51 @@ export function registerOperatorHttp(
       },
     },
     () => available().documents(),
+  );
+  app.get(
+    "/v1/tasks/:activityId",
+    {
+      ...common,
+      schema: {
+        operationId: "getTaskDetails",
+        params: Type.Object({ activityId: text }, object),
+        querystring: Type.Object(
+          {
+            inputs: Type.Optional(Type.Literal("true")),
+            before: Type.Optional(text),
+            runId: Type.Optional(text),
+          },
+          object,
+        ),
+        security: [{ bearerAuth: [] }],
+        response: { 200: taskViewSchema, ...errors },
+      },
+    },
+    (request) => {
+      const query = request.query as {
+        inputs?: string;
+        before?: string;
+        runId?: string;
+      };
+      return available().task(
+        (request.params as { activityId: string }).activityId,
+        query.inputs === "true",
+        query.before,
+        query.runId,
+      );
+    },
+  );
+  app.get(
+    "/v1/calendar/template",
+    {
+      ...common,
+      schema: {
+        operationId: "getSchoolTimeTemplate",
+        security: [{ bearerAuth: [] }],
+        response: { 200: schoolTemplateSchema, ...errors },
+      },
+    },
+    () => schoolCalendarTemplate,
   );
   app.get(
     "/v1/calendar",

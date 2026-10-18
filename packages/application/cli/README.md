@@ -13,14 +13,17 @@ heptalogos status --json
 heptalogos subject documents
 heptalogos calendar today
 heptalogos calendar week
+heptalogos calendar template
 heptalogos calendar range --from 2026-10-19T00:00:00Z --to 2026-10-20T00:00:00Z
 heptalogos task <总览中的任务ID>
+heptalogos task <原任务ID> --runs
+heptalogos task <原任务ID> --inputs --run-id <原运行ID>
 heptalogos task <原任务ID> --resume
 ```
 
-总览显示实际运行路径与代次、OS自启、自动工作配置、Gateway阻塞、现有任务/保留结果及按角色汇总的已记录token用量。未留存的用量和未核实价格标未知；原生配置中的零价不作为免费依据。Ctrl-C只退出watch。没有管理进程时仍显示本地安装/服务状态，不为查询启动服务。
+总览显示实际运行路径与代次、OS自启、自动工作配置、Gateway阻塞、现有任务/保留结果及按角色汇总的已记录token用量。未留存的用量和未核实价格标未知；原生配置中的零价不作为免费依据。总览另外读取Nous生效维护策略，分别显示系统调度与当前Subject的自动维护开关。Ctrl-C只退出watch。没有管理进程时仍显示本地安装/服务状态，不为查询启动服务。
 
-`subject documents`确定性导出IDENTITY、SOUL、RELATIONSHIPS、LANGUAGE、LIFE到安装DATA/subject-documents/<Subject>并返回完整路径。未形成内容显示未形成，保留适用范围和正式修订；文件编辑不会自动写认知。today/week使用世界时钟和世界时区，无需填写UUID；没有世界时明确显示未配置。任务resume读取新鲜revision恢复同一Activity，不重建任务；自动工作暂停时不启动模型。
+`subject documents`确定性导出IDENTITY、SOUL、RELATIONSHIPS、LANGUAGE、LIFE到安装DATA/subject-documents/<Subject>并返回完整路径。未形成内容显示未形成，保留适用范围和正式修订；文件编辑不会自动写认知。`calendar template`只预览公开学校时间骨架，不采用课程或身份。`task --runs`按原任务列出实际角色登记；`--inputs`明确读取一项原运行的宿主输入与正式Native provider请求，可能包含聊天正文。旧调用没有最终请求记录时保留未知，宿主prompt单列。today/week使用世界时钟和世界时区，无需填写UUID；没有世界时明确显示未配置。任务resume读取新鲜revision恢复同一Activity，不重建任务；自动工作暂停时不启动模型。
 
 ## 安装后使用
 
@@ -60,7 +63,7 @@ node scripts/package/install-linux-product.mjs configure-maintenance \
   --port <independent-loopback-port>
 ```
 
-安装器返回实际 origin；让 ProductSettings.maintenanceGateway.origin 与该独立端口一致。随后使用已安装的 `heptalogos maintenance start/status/stop/restart`。维护 unit 没有 Host Requires/PartOf 或 Subject prepare/discovery 依赖；配置成功不等于模型可用，实际健康与任务由公开 native RPC 验证。
+安装器返回实际 origin；让 ProductSettings.maintenanceGateway.origin 与该独立端口一致。随后使用已安装的 `heptalogos maintenance start/status/stop/restart`。维护 unit 没有 Host Requires/PartOf 或 Subject prepare/discovery 依赖；实际健康与任务通过公开 native RPC 读取。
 
 `--json` 保持机器可读输出。参数错误为 exit 2，认证/权限错误为 3，连接或安装缺失为 4，合同不符为 5，冲突为 6，服务端错误为 7，前台取消为 130。取消后需按操作身份核对已提交变更，不假定远端事务回滚。
 
@@ -150,6 +153,6 @@ heptalogos reactor wake --subject-id <subject> --operation-ref <explicit-operati
 
 `calendar` 支持任意有限区间；`--calendar-view planned|lived|combined` 区分计划与实际，`--perspective subject|world_author|public` 选择知情范围。用返回的 `continuation` 作下一页参数，显示时区不修改原始 recurrence 身份。`calendar-change` 使用 owner 的完整请求，明确 `scope: this|future|unrealized`、`expectedRevision`、`ruleId`、本地 `recurrenceId` 和 `change`。已实现部分保留历史；Profile 内原始课表仅作采用来源，当前课表以日历 owner 为准。
 
-`living` 读取实际采用区间累计的精力、地点和设备视图，查询不推进世界。`reactor status` 显示前台 Reaction、最近实际动作、有效限额、角色绑定和最近机会投影；可带 `--reaction-id` 查看某轮。`history` 用 `nextReactionId` 作 `--after-reaction-id`；`attention` 可带 `--explanation-ref` 读取当时保存的元信息选择。通知被考虑不等于已读，后台结果 ready 不等于主体已看见。
+`living` 读取实际采用区间累计的精力、地点和设备视图，查询不推进世界。`reactor status` 显示前台 Reaction、最近实际动作、有效限额、角色绑定和最近机会投影；可带 `--reaction-id` 查看某轮。`history` 用 `nextReactionId` 作 `--after-reaction-id`；`attention` 可带 `--explanation-ref` 读取当时保存的元信息选择。通知的已读状态以实际 open/read 回执为准；worker 结果在明确 release 并经过原生输入 admission 后进入主体情境。
 
 `reactor wake` 只请求一次原生调度机会，随后可能按当前授权调用角色模型。主观决定、工具任务、renderer、review 和实际发送仍走同一正式执行链，查询和管理命令不提供手工写入这些结果的捷径。

@@ -25,6 +25,8 @@
 | `GET /v1/subject`、`PUT /v1/subject`                                | 保留离线可读绑定；在实际 Nous owner 核验后显式绑定              |
 | `POST /v1/subjects`                                                 | 按稳定 operationId 调 Nous 正式创建，可无 Seed；不替换已有绑定  |
 
+`GET /v1/tasks/:activityId`按当前绑定主体读取原任务与角色登记，默认不取输入；显式 `inputs=true` 才读取一项原运行的最终provider body和单列宿主prompt，`runId`选择原运行，`before`读取更早登记。没有原生capture的旧调用保留未知。`GET /v1/calendar/template`读取可选学校时间骨架，不写身份或日程。总览分别读取H自动工作、OS自启及Nous实际生效维护策略。
+
 请求不做字符串/布尔/null 强制转换，不静默丢弃未知字段。配置由 Configuration 保存 revision 和 activation；激活必须再次核对 expected revision。参数无效不自动重试，陈旧写入返回冲突。当前激活为 LIVE 的产品字段由实际消费者每次取得有效 snapshot；不能只保存而无人消费。
 
 Host 通过已安装官方 Client 和受保护 discovery 连接 Nous，按配置核验预期 instance identity。No Seed 不产生默认人格；Seed 原文的采用与模型形成分别处理。Subject 创建和认知管理仍属于 Nous owner；Heptalogos 不跨库读取或双写。

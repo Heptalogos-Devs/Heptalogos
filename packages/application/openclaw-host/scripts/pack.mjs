@@ -44,7 +44,8 @@ try {
     "policy.d.ts",
     "prepare-gateway.js",
     "dispatch.js",
-    "agent-catalog.js",
+    "gateway-read.js",
+    "expression-send.js",
     "world-schedule.js",
     "world-wake-cli.js",
   ]) {

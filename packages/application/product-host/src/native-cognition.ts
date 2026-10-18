@@ -37,6 +37,7 @@ import {
   type HostRunTerminalResponse,
   hostPrepareRequestSchema,
   hostPrepareResponseSchema,
+  hostPrepareResponseFields,
   hostAdmittedRequestSchema,
   hostHandoffRequestSchema,
   hostFeedbackRequestSchema,
@@ -255,7 +256,7 @@ export interface NativeCognitionOptions {
   readonly assertForegroundIn?: (
     transaction: PersistenceInternalTransaction,
     registration: Readonly<Registration>,
-  ) => Promise<void>;
+  ) => Promise<void | { continuationSourceRef: string }>;
   /** Retained result viewing checks current source/Activity authority without granting a new provider attempt. */
   readonly authorizeRetainedResult?: (
     registration: Readonly<Registration>,
@@ -321,12 +322,10 @@ function providerPolicy(registration: Registration) {
     hostTokenBudgetSchema.parse(registration.tokenBudget),
   );
   const allowedToolNames = validated(() =>
-    hostPrepareResponseSchema.shape.allowedToolNames.parse(
-      registration.allowedToolNames,
-    ),
+    hostPrepareResponseFields.allowedToolNames.parse(registration.allowedToolNames),
   );
   const responseFormat = validated(() =>
-    hostPrepareResponseSchema.shape.responseFormat.parse(registration.responseFormat),
+    hostPrepareResponseFields.responseFormat.parse(registration.responseFormat),
   );
   return { tokenBudget, allowedToolNames, responseFormat };
 }
@@ -334,8 +333,8 @@ function current(activity: LifeActivity, registration: Registration) {
   if (
     activity.subjectId !== registration.subjectId ||
     activity.activityId !== registration.activityId ||
-    activity.state !== "active" ||
-    activity.continuationRequired ||
+    ((registration.roleScope.role !== "narrative.review" || registration.foreground) &&
+      (activity.state !== "active" || activity.continuationRequired)) ||
     !activity.scope ||
     activity.adoptedBy !== registration.actorEntityRef
   )
@@ -692,7 +691,58 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
     }
     return parent.runId;
   };
+  const readOperatorRuns = async (
+    subjectId: string,
+    activityId: string,
+    includeInputs: boolean,
+    before?: string,
+    runId?: string,
+  ) => {
+    const rows = await readRepositorySql<{
+      run_id: string;
+      recorded_at: string;
+      document: StoredInput;
+      run: NativeRunSnapshot | null;
+    }>(
+      options.persistence,
+      `SELECT i.native_run_id AS run_id,i.recorded_at::text,i.document,r.document AS run
+        FROM heptalogos.life_native_input i LEFT JOIN heptalogos.life_native_run r ON r.run_id=i.native_run_id
+        WHERE i.subject_id=$1 AND i.activity_id=$2 AND ($4::text IS NULL OR i.native_run_id=$4)
+        AND ($3::text IS NULL OR (i.recorded_at,i.native_run_id)<(SELECT recorded_at,native_run_id FROM heptalogos.life_native_input WHERE subject_id=$1 AND activity_id=$2 AND native_run_id=$3))
+        ORDER BY i.recorded_at DESC,i.native_run_id DESC LIMIT 33`,
+      [subjectId, activityId, before ?? null, runId ?? null],
+    );
+    return {
+      runs: rows.slice(0, 32).map((row) => ({
+        runId: row.run_id,
+        role: row.document.registration.roleScope?.role ?? "unknown",
+        purpose: row.document.registration.roleScope?.purpose ?? "unknown",
+        recordedAt: row.recorded_at,
+        dispatchState: row.document.dispatch?.state ?? "registered",
+        native: row.run
+          ? {
+              subjectId,
+              runId: row.run_id,
+              agentId: row.document.registration.nativeAgentId,
+              sessionId: row.run.native.sessionId,
+              sessionKey: row.document.registration.sessionKey,
+            }
+          : null,
+        ...(includeInputs
+          ? {
+              hostInput: {
+                message: row.document.prompt ?? "",
+                extraSystemPrompt:
+                  row.document.dispatch?.params.extraSystemPrompt ?? "",
+              },
+            }
+          : {}),
+      })),
+      nextRunId: rows.length > 32 ? rows[31]!.run_id : null,
+    };
+  };
   const service: GatewayCognitionBridge & {
+    operatorRuns: typeof readOperatorRuns;
     /** Reads saved execution metering without provider calls or result release. */
     operatorUsage(subjectId: string): Promise<
       {
@@ -792,6 +842,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
     ): Promise<void>;
     flushPendingFeedback(limit: number): Promise<{ delivered: number }>;
   } = {
+    operatorRuns: readOperatorRuns,
     async operatorUsage(subjectId) {
       const rows = await readRepositorySql<{
         role: string;
@@ -865,12 +916,17 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
       const sourceParent = input.parentRunId
         ? await readRun(input.parentRunId)
         : undefined;
+      const retainedExpressionParent =
+        input.roleScope.role === "narrative.review" &&
+        sourceParent?.registration.roleScope.role === "subject.render" &&
+        !!sourceParent.consumerId;
       if (
         input.parentRunId &&
         (!sourceParent ||
           sourceParent.registration.subjectId !== input.subjectId ||
           sourceParent.registration.activityId !== input.activityId ||
-          !["running", "completed"].includes(sourceParent.state))
+          (!["running", "completed"].includes(sourceParent.state) &&
+            !retainedExpressionParent))
       )
         deny(
           "native_parent_sources_denied",
@@ -907,10 +963,10 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
       validated(() => hostRoleScopeSchema.parse(input.roleScope));
       validated(() => hostTokenBudgetSchema.parse(input.tokenBudget));
       validated(() =>
-        hostPrepareResponseSchema.shape.responseFormat.parse(input.responseFormat),
+        hostPrepareResponseFields.responseFormat.parse(input.responseFormat),
       );
       validated(() =>
-        hostPrepareResponseSchema.shape.allowedToolNames.parse(input.allowedToolNames),
+        hostPrepareResponseFields.allowedToolNames.parse(input.allowedToolNames),
       );
       for (const contact of input.contacts) {
         if (!contact.contactRef.startsWith("role-result-release:")) continue;
@@ -1288,7 +1344,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           registration.activityId,
         );
         current(activity, registration);
-        await options.assertForegroundIn?.(tx, registration);
+        const continuation = await options.assertForegroundIn?.(tx, registration);
         await options.authorizeInput(registration, activity, tx);
         if (known.accepted.length) {
           const fresh = await readTaskPerceptions(
@@ -1411,67 +1467,71 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
                   )),
           )
           .map((user) => user.key);
-        const response: HostPrepareResponse = {
-          version: 1,
-          contactRequestId: input.contactRequestId,
-          workContextId: activity.workContextId,
-          roleScope: roleScope(registration),
-          tokenBudget: providerPolicy(registration).tokenBudget,
-          ...(providerPolicy(registration).responseFormat
-            ? { responseFormat: providerPolicy(registration).responseFormat }
-            : {}),
-          allowedToolNames: ["subject.render", "narrative.review"].includes(
-            roleScope(registration).role,
-          )
-            ? []
-            : activity.scope!.tools.filter(
-                (name) =>
-                  providerPolicy(registration).allowedToolNames.includes(name) &&
-                  !["message", "sessions_send", "cron"].includes(name),
-              ),
-          allowedHistoryUserKeys,
-          currentSources,
-          usage: encodeCognitionUsage(scopedUsage),
-          scope: {
-            activityRef: registration.activityId,
-            actorEntityRef: registration.actorEntityRef,
-            context: { native_role: registration.role },
-          },
-          contacts:
-            roleScope(registration).contactNature === "execution_only"
+        const response = validated(() =>
+          hostPrepareResponseSchema.parse({
+            version: 1,
+            contactRequestId: input.contactRequestId,
+            ...(continuation
+              ? { continuationSourceRef: continuation.continuationSourceRef }
+              : { workContextId: activity.workContextId }),
+            roleScope: roleScope(registration),
+            tokenBudget: providerPolicy(registration).tokenBudget,
+            ...(providerPolicy(registration).responseFormat
+              ? { responseFormat: providerPolicy(registration).responseFormat }
+              : {}),
+            allowedToolNames: ["subject.render", "narrative.review"].includes(
+              roleScope(registration).role,
+            )
               ? []
-              : (registered[0]?.document.firstContact?.contacts ??
-                registration.contacts.map((contact) => {
-                  const observation = validated(() =>
-                    decodeObservationInput(contact.observation),
-                  );
-                  if (
-                    observation.sessionId &&
-                    observation.sessionId !== input.nousSessionId
-                  )
-                    deny(
-                      "native_session_changed",
-                      "A registered observation cannot be moved to another Nous Session",
+              : activity.scope!.tools.filter(
+                  (name) =>
+                    providerPolicy(registration).allowedToolNames.includes(name) &&
+                    !["message", "sessions_send", "cron"].includes(name),
+                ),
+            allowedHistoryUserKeys,
+            currentSources,
+            usage: encodeCognitionUsage(scopedUsage),
+            scope: {
+              activityRef: registration.activityId,
+              actorEntityRef: registration.actorEntityRef,
+              context: { native_role: registration.role },
+            },
+            contacts:
+              roleScope(registration).contactNature === "execution_only"
+                ? []
+                : (registered[0]?.document.firstContact?.contacts ??
+                  registration.contacts.map((contact) => {
+                    const observation = validated(() =>
+                      decodeObservationInput(contact.observation),
                     );
-                  observation.sessionId = input.nousSessionId;
-                  observation.observedAt =
-                    observation.worldRealized || !observedStamp?.recordedAt
-                      ? timestampFromDate(new Date(at))
-                      : observedStamp.recordedAt;
-                  if (!observation.worldRealized && observedStamp)
-                    observation.observedStamp = observedStamp;
-                  return {
-                    contactRef: contact.contactRef,
-                    observation: encodeObservationInput(
-                      withHostObservationScope(observation, {
-                        usage,
-                        contactRequestId: input.contactRequestId,
-                        activityRef: registration.activityId,
-                      }),
-                    ),
-                  };
-                })),
-        };
+                    if (
+                      observation.sessionId &&
+                      observation.sessionId !== input.nousSessionId
+                    )
+                      deny(
+                        "native_session_changed",
+                        "A registered observation cannot be moved to another Nous Session",
+                      );
+                    observation.sessionId = input.nousSessionId;
+                    observation.observedAt =
+                      observation.worldRealized || !observedStamp?.recordedAt
+                        ? timestampFromDate(new Date(at))
+                        : observedStamp.recordedAt;
+                    if (!observation.worldRealized && observedStamp)
+                      observation.observedStamp = observedStamp;
+                    return {
+                      contactRef: contact.contactRef,
+                      observation: encodeObservationInput(
+                        withHostObservationScope(observation, {
+                          usage,
+                          contactRequestId: input.contactRequestId,
+                          activityRef: registration.activityId,
+                        }),
+                      ),
+                    };
+                  })),
+          }),
+        );
         const firstContact = registered[0]?.document.firstContact;
         if (firstContact && firstContact.nousSessionId !== input.nousSessionId)
           deny(
@@ -1542,7 +1602,6 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         );
         return response;
       });
-      await service.flushPendingFeedback(32);
       return prepared;
     },
     async admitted(value) {
@@ -1992,7 +2051,9 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           !readActivity?.scope ||
           !readContact?.admitted ||
           !readContact.appliedUsage ||
-          !readContact.response.allowedToolNames.includes("heptalogos_life") ||
+          !readContact.response.allowedToolNames.some(
+            (name) => name === "heptalogos_life",
+          ) ||
           !readActivity.scope.tools.includes("heptalogos_life")
         )
           deny(
@@ -2096,7 +2157,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         if (
           !contact?.admitted ||
           !contact.appliedUsage ||
-          !contact.response.allowedToolNames.includes("heptalogos_life")
+          !contact.response.allowedToolNames.some((name) => name === "heptalogos_life")
         )
           deny(
             "native_life_unavailable",
@@ -2255,7 +2316,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         current(activity, run.document.registration);
         await options.authorizeInput(run.document.registration, activity, tx);
         if (
-          !contact.response.allowedToolNames.includes(input.toolName) ||
+          !contact.response.allowedToolNames.some((name) => name === input.toolName) ||
           !activity.scope!.tools.includes(input.toolName)
         )
           deny(
@@ -2296,9 +2357,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
       );
       validated(() => hostTokenBudgetSchema.parse(childPolicy.tokenBudget));
       validated(() =>
-        hostPrepareResponseSchema.shape.allowedToolNames.parse(
-          childPolicy.allowedToolNames,
-        ),
+        hostPrepareResponseFields.allowedToolNames.parse(childPolicy.allowedToolNames),
       );
       await checkInput(preflight.registration);
 
@@ -2943,7 +3002,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         );
       });
       // A platform acknowledgement waits for local durability, not cognition
-      // networking. The dispatch completion or next preparation drains this outbox.
+      // networking. An existing background opportunity drains this outbox.
     },
     async finishRun(runId, state) {
       await mutate(async (tx) => {

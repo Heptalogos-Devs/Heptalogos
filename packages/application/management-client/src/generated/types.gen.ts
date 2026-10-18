@@ -258,6 +258,17 @@ export type GetOperatorOverviewResponses = {
             cost: null;
         }>;
         usageCoverage: string;
+        cognitionMaintenance: {
+            schedulerEnabled: boolean | null;
+            subjectEnabled: boolean | null;
+        } | null;
+        narrativeWork: Array<{
+            briefId: string;
+            activityId: string;
+            state: string;
+            problem: string | null;
+            runId: string | null;
+        }>;
         issues: Array<string>;
     };
 };
@@ -347,6 +358,250 @@ export type GetSubjectDocumentsResponses = {
 
 export type GetSubjectDocumentsResponse = GetSubjectDocumentsResponses[keyof GetSubjectDocumentsResponses];
 
+export type GetTaskDetailsData = {
+    body?: never;
+    path: {
+        activityId: string;
+    };
+    query?: {
+        inputs?: 'true';
+        before?: string;
+        runId?: string;
+    };
+    url: '/v1/tasks/{activityId}';
+};
+
+export type GetTaskDetailsErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type GetTaskDetailsError = GetTaskDetailsErrors[keyof GetTaskDetailsErrors];
+
+export type GetTaskDetailsResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        activity: {
+            activityId: string;
+            subjectId: string;
+            revision: number;
+            purpose: string;
+            mode: 'work' | 'rest' | 'wait';
+            window: {
+                notBefore: {
+                    timeDomainRef: string;
+                    at: string;
+                } | null;
+                notAfter: {
+                    timeDomainRef: string;
+                    at: string;
+                } | null;
+            };
+            sourceRefs: Array<string>;
+            workContextId: string | null;
+            state: 'planned' | 'active' | 'paused' | 'completed' | 'cancelled' | 'failed';
+            proposedBy: string;
+            adoptedBy: string | null;
+            adoptedAt: string | null;
+            lastTransitionReason: string;
+            scope: {
+                conversations: Array<{
+                    conversationRef: string;
+                    operations: Array<'observe' | 'send' | 'edit' | 'withdraw' | 'moderate'>;
+                }>;
+                tools: Array<string>;
+                sourceRefs: Array<string>;
+                maxRunMs: number;
+            } | null;
+            world: {
+                timeDomainRef: string;
+                at: string;
+            };
+            nextOpportunity: {
+                timeDomainRef: string;
+                at: string;
+            } | null;
+            progress: {
+                note: string;
+                sourceRefs: Array<string>;
+                artifactRefs: Array<string>;
+                resultRefs: Array<string>;
+            };
+            interruptOn: Array<'direct' | 'mention' | 'reply' | 'deadline' | 'correction' | 'manual'>;
+            continuationRequired: boolean;
+            createdAt: string;
+            updatedAt: string;
+        };
+        runs: Array<{
+            runId: string;
+            role: string;
+            purpose: string;
+            recordedAt: string;
+            dispatchState: string;
+            native: {
+                subjectId: string;
+                runId: string;
+                agentId: string;
+                sessionId: string;
+                sessionKey: string;
+            } | null;
+            hostInput?: {
+                message: string;
+                extraSystemPrompt: string;
+            };
+            providerAttempts: unknown;
+        }>;
+        nextRunId: string | null;
+    };
+};
+
+export type GetTaskDetailsResponse = GetTaskDetailsResponses[keyof GetTaskDetailsResponses];
+
+export type GetSchoolTimeTemplateData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/calendar/template';
+};
+
+export type GetSchoolTimeTemplateErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type GetSchoolTimeTemplateError = GetSchoolTimeTemplateErrors[keyof GetSchoolTimeTemplateErrors];
+
+export type GetSchoolTimeTemplateResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        id: string;
+        timezone: string;
+        publishedOn: string;
+        effectiveFrom: string;
+        source: string;
+        lessons: Array<Array<string>>;
+        otherTimes: Array<{
+            title: string;
+            start: string;
+            end?: string;
+        }>;
+    };
+};
+
+export type GetSchoolTimeTemplateResponse = GetSchoolTimeTemplateResponses[keyof GetSchoolTimeTemplateResponses];
+
 export type GetDefaultCalendarData = {
     body?: never;
     path?: never;
@@ -426,6 +681,10 @@ export type GetDefaultCalendarResponses = {
     200: {
         subjectId: string | null;
         state: string;
+        world: {
+            timeDomainRef: string;
+            at: string;
+        } | null;
         calendar: {
             worldId: string;
             revision: number;
@@ -464,6 +723,15 @@ export type GetDefaultCalendarResponses = {
                         start: string;
                         end: string;
                     };
+                    attendancePolicy?: {
+                        mode: 'autonomous' | 'usual' | 'strict';
+                        startToleranceMinutes: number;
+                        earlyMinutes: number;
+                        lateMinutes: number;
+                        minimumContinuationMinutes: number;
+                        interruptAfterMinutes: number | null;
+                        interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                    };
                     title: string;
                     description: string;
                     actorRefs: Array<string>;
@@ -476,6 +744,7 @@ export type GetDefaultCalendarResponses = {
                 lived: Array<{
                     eventId: string;
                     activityId?: string;
+                    interruptionKind?: 'social' | 'important' | 'emergency' | 'official_change';
                     energy?: {
                         kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                         participation: 'primary' | 'subsidiary';
@@ -6965,7 +7234,6 @@ export type PrepareCognitionResponses = {
     200: {
         version: 1;
         contactRequestId: string;
-        workContextId: string;
         roleScope: {
             role: 'world.planner' | 'subject.deliberation' | 'subject.execution' | 'subject.render' | 'narrative.review' | 'subject.reflection' | 'system.maintenance';
             purpose: 'world_authoring' | 'subject_deliberation' | 'professional_execution' | 'subject_rendering' | 'narrative_review' | 'reflection' | 'maintenance';
@@ -7009,6 +7277,56 @@ export type PrepareCognitionResponses = {
                 [key: string]: unknown;
             };
         };
+        workContextId: string;
+        continuationSourceRef?: unknown;
+    } | {
+        version: 1;
+        contactRequestId: string;
+        roleScope: {
+            role: 'narrative.review';
+            purpose: 'narrative_review';
+            view: 'review';
+            contactNature: 'execution_only';
+        };
+        tokenBudget: {
+            inputTokens: number;
+            outputTokens: number;
+        };
+        responseFormat?: {
+            type: 'text';
+        } | {
+            type: 'json_schema';
+            json_schema: {
+                name: string;
+                strict: true;
+                schema: {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        allowedToolNames: Array<string>;
+        currentSources: Array<{
+            [key: string]: unknown;
+        }>;
+        allowedHistoryUserKeys: Array<string>;
+        usage: {
+            [key: string]: unknown;
+        };
+        contacts: Array<{
+            contactRef: string;
+            observation: {
+                [key: string]: unknown;
+            };
+        }>;
+        scope: {
+            activityRef: string;
+            actorEntityRef?: string;
+            context: {
+                [key: string]: unknown;
+            };
+        };
+        workContextId?: unknown;
+        continuationSourceRef: string;
     };
 };
 
@@ -9445,6 +9763,15 @@ export type WorldConfigureData = {
                 kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                 visibility: 'subject' | 'world_author' | 'public';
                 adjustable: boolean;
+                attendancePolicy?: {
+                    mode: 'autonomous' | 'usual' | 'strict';
+                    startToleranceMinutes: number;
+                    earlyMinutes: number;
+                    lateMinutes: number;
+                    minimumContinuationMinutes: number;
+                    interruptAfterMinutes: number | null;
+                    interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                };
                 cancelled?: boolean;
                 archived?: boolean;
                 mode: 'fixed' | 'choice';
@@ -9480,6 +9807,15 @@ export type WorldConfigureData = {
                 timeDomainRef: string;
                 start: string;
                 end: string;
+            };
+            attendancePolicy?: {
+                mode: 'autonomous' | 'usual' | 'strict';
+                startToleranceMinutes: number;
+                earlyMinutes: number;
+                lateMinutes: number;
+                minimumContinuationMinutes: number;
+                interruptAfterMinutes: number | null;
+                interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
             };
             title: string;
             description: string;
@@ -9635,6 +9971,15 @@ export type WorldConfigureResponses = {
                 kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                 visibility: 'subject' | 'world_author' | 'public';
                 adjustable: boolean;
+                attendancePolicy?: {
+                    mode: 'autonomous' | 'usual' | 'strict';
+                    startToleranceMinutes: number;
+                    earlyMinutes: number;
+                    lateMinutes: number;
+                    minimumContinuationMinutes: number;
+                    interruptAfterMinutes: number | null;
+                    interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                };
                 cancelled?: boolean;
                 archived?: boolean;
                 mode: 'fixed' | 'choice';
@@ -9671,6 +10016,15 @@ export type WorldConfigureResponses = {
                 timeDomainRef: string;
                 start: string;
                 end: string;
+            };
+            attendancePolicy?: {
+                mode: 'autonomous' | 'usual' | 'strict';
+                startToleranceMinutes: number;
+                earlyMinutes: number;
+                lateMinutes: number;
+                minimumContinuationMinutes: number;
+                interruptAfterMinutes: number | null;
+                interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
             };
             title: string;
             description: string;
@@ -9837,6 +10191,15 @@ export type WorldReadResponses = {
                     kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                     visibility: 'subject' | 'world_author' | 'public';
                     adjustable: boolean;
+                    attendancePolicy?: {
+                        mode: 'autonomous' | 'usual' | 'strict';
+                        startToleranceMinutes: number;
+                        earlyMinutes: number;
+                        lateMinutes: number;
+                        minimumContinuationMinutes: number;
+                        interruptAfterMinutes: number | null;
+                        interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                    };
                     cancelled?: boolean;
                     archived?: boolean;
                     mode: 'fixed' | 'choice';
@@ -9873,6 +10236,15 @@ export type WorldReadResponses = {
                     timeDomainRef: string;
                     start: string;
                     end: string;
+                };
+                attendancePolicy?: {
+                    mode: 'autonomous' | 'usual' | 'strict';
+                    startToleranceMinutes: number;
+                    earlyMinutes: number;
+                    lateMinutes: number;
+                    minimumContinuationMinutes: number;
+                    interruptAfterMinutes: number | null;
+                    interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
                 };
                 title: string;
                 description: string;
@@ -10040,6 +10412,15 @@ export type WorldPrepareResponses = {
                     kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                     visibility: 'subject' | 'world_author' | 'public';
                     adjustable: boolean;
+                    attendancePolicy?: {
+                        mode: 'autonomous' | 'usual' | 'strict';
+                        startToleranceMinutes: number;
+                        earlyMinutes: number;
+                        lateMinutes: number;
+                        minimumContinuationMinutes: number;
+                        interruptAfterMinutes: number | null;
+                        interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                    };
                     cancelled?: boolean;
                     archived?: boolean;
                     mode: 'fixed' | 'choice';
@@ -10077,6 +10458,15 @@ export type WorldPrepareResponses = {
                     start: string;
                     end: string;
                 };
+                attendancePolicy?: {
+                    mode: 'autonomous' | 'usual' | 'strict';
+                    startToleranceMinutes: number;
+                    earlyMinutes: number;
+                    lateMinutes: number;
+                    minimumContinuationMinutes: number;
+                    interruptAfterMinutes: number | null;
+                    interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                };
                 title: string;
                 description: string;
                 actorRefs: Array<string>;
@@ -10111,6 +10501,15 @@ export type WorldPrepareResponses = {
                 start: string;
                 end: string;
             };
+            attendancePolicy?: {
+                mode: 'autonomous' | 'usual' | 'strict';
+                startToleranceMinutes: number;
+                earlyMinutes: number;
+                lateMinutes: number;
+                minimumContinuationMinutes: number;
+                interruptAfterMinutes: number | null;
+                interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+            };
             title: string;
             description: string;
             actorRefs: Array<string>;
@@ -10123,6 +10522,7 @@ export type WorldPrepareResponses = {
         recentEvents: Array<{
             eventId: string;
             activityId?: string;
+            interruptionKind?: 'social' | 'important' | 'emergency' | 'official_change';
             energy?: {
                 kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                 participation: 'primary' | 'subsidiary';
@@ -10163,6 +10563,23 @@ export type WorldPrepareResponses = {
         nextOpportunity: {
             timeDomainRef: string;
             at: string;
+        } | null;
+        needsRefinement: boolean;
+        currentPolicy: {
+            scheduleId: string;
+            policy: {
+                mode: 'autonomous' | 'usual' | 'strict';
+                startToleranceMinutes: number;
+                earlyMinutes: number;
+                lateMinutes: number;
+                minimumContinuationMinutes: number;
+                interruptAfterMinutes: number | null;
+                interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+            };
+            nextInterruptAt: {
+                timeDomainRef: string;
+                at: string;
+            };
         } | null;
         role: 'world.planner';
         contactNature: 'execution_only';
@@ -10284,6 +10701,7 @@ export type WorldAdvanceRulesResponses = {
         events: Array<{
             eventId: string;
             activityId?: string;
+            interruptionKind?: 'social' | 'important' | 'emergency' | 'official_change';
             energy?: {
                 kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                 participation: 'primary' | 'subsidiary';
@@ -10346,6 +10764,7 @@ export type WorldRealizeData = {
         events: Array<{
             eventId: string;
             activityId?: string;
+            interruptionKind?: 'social' | 'important' | 'emergency' | 'official_change';
             energy?: {
                 kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                 participation: 'primary' | 'subsidiary';
@@ -10399,6 +10818,15 @@ export type WorldRealizeData = {
                 timeDomainRef: string;
                 start: string;
                 end: string;
+            };
+            attendancePolicy?: {
+                mode: 'autonomous' | 'usual' | 'strict';
+                startToleranceMinutes: number;
+                earlyMinutes: number;
+                lateMinutes: number;
+                minimumContinuationMinutes: number;
+                interruptAfterMinutes: number | null;
+                interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
             };
             title: string;
             description: string;
@@ -10514,6 +10942,7 @@ export type WorldRealizeResponses = {
         events: Array<{
             eventId: string;
             activityId?: string;
+            interruptionKind?: 'social' | 'important' | 'emergency' | 'official_change';
             energy?: {
                 kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                 participation: 'primary' | 'subsidiary';
@@ -10716,6 +11145,15 @@ export type WorldCalendarReadResponses = {
                     start: string;
                     end: string;
                 };
+                attendancePolicy?: {
+                    mode: 'autonomous' | 'usual' | 'strict';
+                    startToleranceMinutes: number;
+                    earlyMinutes: number;
+                    lateMinutes: number;
+                    minimumContinuationMinutes: number;
+                    interruptAfterMinutes: number | null;
+                    interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                };
                 title: string;
                 description: string;
                 actorRefs: Array<string>;
@@ -10728,6 +11166,7 @@ export type WorldCalendarReadResponses = {
             lived: Array<{
                 eventId: string;
                 activityId?: string;
+                interruptionKind?: 'social' | 'important' | 'emergency' | 'official_change';
                 energy?: {
                     kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                     participation: 'primary' | 'subsidiary';
@@ -10953,6 +11392,15 @@ export type WorldCalendarChangeResponses = {
                 kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                 visibility: 'subject' | 'world_author' | 'public';
                 adjustable: boolean;
+                attendancePolicy?: {
+                    mode: 'autonomous' | 'usual' | 'strict';
+                    startToleranceMinutes: number;
+                    earlyMinutes: number;
+                    lateMinutes: number;
+                    minimumContinuationMinutes: number;
+                    interruptAfterMinutes: number | null;
+                    interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                };
                 cancelled?: boolean;
                 archived?: boolean;
                 mode: 'fixed' | 'choice';
@@ -10989,6 +11437,15 @@ export type WorldCalendarChangeResponses = {
                 timeDomainRef: string;
                 start: string;
                 end: string;
+            };
+            attendancePolicy?: {
+                mode: 'autonomous' | 'usual' | 'strict';
+                startToleranceMinutes: number;
+                earlyMinutes: number;
+                lateMinutes: number;
+                minimumContinuationMinutes: number;
+                interruptAfterMinutes: number | null;
+                interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
             };
             title: string;
             description: string;
@@ -11039,6 +11496,27 @@ export type WorldProfileAdoptData = {
             rules: string;
             creationScope: string;
             informationSourceRefs: Array<string>;
+            schoolCalendar?: {
+                template: 'jci-2025';
+                startsOn: string;
+                validThrough: string;
+                weekdays: Array<'MO' | 'TU' | 'WE' | 'TH' | 'FR' | 'SA' | 'SU'>;
+                slots: Array<{
+                    slot: number;
+                    title: string;
+                    placeRef: string;
+                    actorRefs: Array<string>;
+                    attendancePolicy?: {
+                        mode: 'autonomous' | 'usual' | 'strict';
+                        startToleranceMinutes: number;
+                        earlyMinutes: number;
+                        lateMinutes: number;
+                        minimumContinuationMinutes: number;
+                        interruptAfterMinutes: number | null;
+                        interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                    };
+                }>;
+            };
             routineRules: Array<{
                 ruleId: string;
                 revision: number;
@@ -11062,6 +11540,15 @@ export type WorldProfileAdoptData = {
                 kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                 visibility: 'subject' | 'world_author' | 'public';
                 adjustable: boolean;
+                attendancePolicy?: {
+                    mode: 'autonomous' | 'usual' | 'strict';
+                    startToleranceMinutes: number;
+                    earlyMinutes: number;
+                    lateMinutes: number;
+                    minimumContinuationMinutes: number;
+                    interruptAfterMinutes: number | null;
+                    interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                };
                 cancelled?: boolean;
                 archived?: boolean;
                 mode: 'fixed' | 'choice';
@@ -11238,6 +11725,27 @@ export type WorldProfileAdoptResponses = {
             rules: string;
             creationScope: string;
             informationSourceRefs: Array<string>;
+            schoolCalendar?: {
+                template: 'jci-2025';
+                startsOn: string;
+                validThrough: string;
+                weekdays: Array<'MO' | 'TU' | 'WE' | 'TH' | 'FR' | 'SA' | 'SU'>;
+                slots: Array<{
+                    slot: number;
+                    title: string;
+                    placeRef: string;
+                    actorRefs: Array<string>;
+                    attendancePolicy?: {
+                        mode: 'autonomous' | 'usual' | 'strict';
+                        startToleranceMinutes: number;
+                        earlyMinutes: number;
+                        lateMinutes: number;
+                        minimumContinuationMinutes: number;
+                        interruptAfterMinutes: number | null;
+                        interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                    };
+                }>;
+            };
             routineRules: Array<{
                 ruleId: string;
                 revision: number;
@@ -11261,6 +11769,15 @@ export type WorldProfileAdoptResponses = {
                 kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                 visibility: 'subject' | 'world_author' | 'public';
                 adjustable: boolean;
+                attendancePolicy?: {
+                    mode: 'autonomous' | 'usual' | 'strict';
+                    startToleranceMinutes: number;
+                    earlyMinutes: number;
+                    lateMinutes: number;
+                    minimumContinuationMinutes: number;
+                    interruptAfterMinutes: number | null;
+                    interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                };
                 cancelled?: boolean;
                 archived?: boolean;
                 mode: 'fixed' | 'choice';
@@ -11459,6 +11976,27 @@ export type WorldProfileReadResponses = {
                 rules: string;
                 creationScope: string;
                 informationSourceRefs: Array<string>;
+                schoolCalendar?: {
+                    template: 'jci-2025';
+                    startsOn: string;
+                    validThrough: string;
+                    weekdays: Array<'MO' | 'TU' | 'WE' | 'TH' | 'FR' | 'SA' | 'SU'>;
+                    slots: Array<{
+                        slot: number;
+                        title: string;
+                        placeRef: string;
+                        actorRefs: Array<string>;
+                        attendancePolicy?: {
+                            mode: 'autonomous' | 'usual' | 'strict';
+                            startToleranceMinutes: number;
+                            earlyMinutes: number;
+                            lateMinutes: number;
+                            minimumContinuationMinutes: number;
+                            interruptAfterMinutes: number | null;
+                            interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                        };
+                    }>;
+                };
                 routineRules: Array<{
                     ruleId: string;
                     revision: number;
@@ -11482,6 +12020,15 @@ export type WorldProfileReadResponses = {
                     kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                     visibility: 'subject' | 'world_author' | 'public';
                     adjustable: boolean;
+                    attendancePolicy?: {
+                        mode: 'autonomous' | 'usual' | 'strict';
+                        startToleranceMinutes: number;
+                        earlyMinutes: number;
+                        lateMinutes: number;
+                        minimumContinuationMinutes: number;
+                        interruptAfterMinutes: number | null;
+                        interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                    };
                     cancelled?: boolean;
                     archived?: boolean;
                     mode: 'fixed' | 'choice';
@@ -12045,6 +12592,7 @@ export type WorldQueryResponses = {
         events: Array<{
             eventId: string;
             activityId?: string;
+            interruptionKind?: 'social' | 'important' | 'emergency' | 'official_change';
             energy?: {
                 kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                 participation: 'primary' | 'subsidiary';
@@ -12262,6 +12810,15 @@ export type WorldHistoryResponses = {
                     kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                     visibility: 'subject' | 'world_author' | 'public';
                     adjustable: boolean;
+                    attendancePolicy?: {
+                        mode: 'autonomous' | 'usual' | 'strict';
+                        startToleranceMinutes: number;
+                        earlyMinutes: number;
+                        lateMinutes: number;
+                        minimumContinuationMinutes: number;
+                        interruptAfterMinutes: number | null;
+                        interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                    };
                     cancelled?: boolean;
                     archived?: boolean;
                     mode: 'fixed' | 'choice';
@@ -12298,6 +12855,15 @@ export type WorldHistoryResponses = {
                     timeDomainRef: string;
                     start: string;
                     end: string;
+                };
+                attendancePolicy?: {
+                    mode: 'autonomous' | 'usual' | 'strict';
+                    startToleranceMinutes: number;
+                    earlyMinutes: number;
+                    lateMinutes: number;
+                    minimumContinuationMinutes: number;
+                    interruptAfterMinutes: number | null;
+                    interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
                 };
                 title: string;
                 description: string;
@@ -12675,6 +13241,239 @@ export type WorldActorsResponses = {
 
 export type WorldActorsResponse = WorldActorsResponses[keyof WorldActorsResponses];
 
+export type RecoverExpressionCandidatesData = {
+    body: {
+        subjectId: string;
+        activityId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/narrative/recover-candidates';
+};
+
+export type RecoverExpressionCandidatesErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type RecoverExpressionCandidatesError = RecoverExpressionCandidatesErrors[keyof RecoverExpressionCandidatesErrors];
+
+export type RecoverExpressionCandidatesResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        recovered: number;
+    };
+};
+
+export type RecoverExpressionCandidatesResponse = RecoverExpressionCandidatesResponses[keyof RecoverExpressionCandidatesResponses];
+
+export type ReadExpressionCandidateDeliveryData = {
+    body: {
+        subjectId: string;
+        briefId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/narrative/candidate-delivery';
+};
+
+export type ReadExpressionCandidateDeliveryErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ReadExpressionCandidateDeliveryError = ReadExpressionCandidateDeliveryErrors[keyof ReadExpressionCandidateDeliveryErrors];
+
+export type ReadExpressionCandidateDeliveryResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        reference: string;
+        prepared: {
+            channel: string;
+            accountId: string;
+            to: string;
+            replyToId?: string | null;
+            replyToMode?: 'first' | 'all';
+            threadId?: string | number | null;
+            nativeIntentId: string;
+            runId: string;
+            preparedBatch: {
+                [key: string]: unknown;
+            };
+        };
+    };
+};
+
+export type ReadExpressionCandidateDeliveryResponse = ReadExpressionCandidateDeliveryResponses[keyof ReadExpressionCandidateDeliveryResponses];
+
 export type ClaimsToData = {
     body: {
         subjectId: string;
@@ -12687,6 +13486,7 @@ export type ClaimsToData = {
         status?: 'adopted' | 'expressed' | 'uncertain' | 'not_sent';
         order?: 'oldest' | 'newest';
         afterClaimId?: string;
+        relatedRefs?: Array<string>;
         limit: number;
     };
     path?: never;
@@ -13120,7 +13920,7 @@ export type ReactorStatusResponses = {
             reactionId: string;
             step: number;
             action: {
-                action: 'inspect' | 'open' | 'read' | 'search' | 'move' | 'participate' | 'communicate' | 'continue' | 'wait' | 'rest' | 'adjust_plan';
+                action: 'inspect' | 'open' | 'read' | 'search' | 'move' | 'participate' | 'communicate' | 'discard' | 'continue' | 'wait' | 'rest' | 'adjust_plan';
                 target?: string;
             };
             state: 'started' | 'completed' | 'pending' | 'rejected' | 'unavailable';
@@ -13550,6 +14350,7 @@ export type ReactorWakeData = {
     body: {
         subjectId: string;
         operationRef: string;
+        activityId?: string;
     };
     path?: never;
     query?: never;

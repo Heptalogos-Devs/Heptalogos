@@ -18,7 +18,7 @@ import { createServer } from "node:net";
 import { dirname, join, resolve, sep, isAbsolute } from "node:path";
 import { fileURLToPath } from "node:url";
 import {
-  ensureArtifactDependencies,
+  materializeApplicationArtifact,
   digestTree,
   normalizeCliArtifactManifest,
   verifyPortableLinks,
@@ -120,10 +120,13 @@ async function install(options) {
   if (!/\b18\.6\b/u.test(run(originalPostgres, ["--version"])))
     throw new Error("Linux installation requires PostgreSQL 18.6");
   run("systemctl", ["--user", "show-environment"], 10_000);
-  await ensureArtifactDependencies(options.host, "product-host");
-  await ensureArtifactDependencies(options.cli, "cli");
+  const hostArtifact = await materializeApplicationArtifact(
+    options.host,
+    "product-host",
+  );
+  const cliArtifact = await materializeApplicationArtifact(options.cli, "cli");
   const identityText = await readFile(
-    join(options.host, "generated/build-identities.js"),
+    join(hostArtifact.root, "generated/build-identities.js"),
     "utf8",
   );
   const generation = /PRODUCT_GENERATION_ID = "([0-9a-f]{64})"/u.exec(
@@ -134,8 +137,8 @@ async function install(options) {
   const product = join(options.target, "program/product", generation);
   const cli = join(product, "cli");
   await mkdir(dirname(product), { recursive: true });
-  await cp(options.host, product, { recursive: true, verbatimSymlinks: true });
-  await cp(options.cli, cli, { recursive: true, verbatimSymlinks: true });
+  await cp(hostArtifact.root, product, { recursive: true, verbatimSymlinks: true });
+  await cp(cliArtifact.root, cli, { recursive: true, verbatimSymlinks: true });
   await normalizeCliArtifactManifest(cli);
   const hostDigest = await digestTree(product);
   const cliDigest = await digestTree(cli);

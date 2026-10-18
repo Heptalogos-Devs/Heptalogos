@@ -61,9 +61,11 @@ import { parseProductHostInputs, type ProductHostInputs } from "./inputs.js";
 import {
   createInstalledWorldScheduler,
   createInstalledAgentSelector,
+  createInstalledGatewayReader,
   type NativeAgentSelect,
   type NativeWorldSchedule,
   createInstalledNativeDispatcher,
+  createInstalledExpressionSender,
 } from "./native-dispatch.js";
 
 /** Handle to the independently usable management process. */
@@ -344,6 +346,12 @@ export async function startProductHost(
           installationId: owned.installationId,
           signal: AbortSignal.any([host.signal, dispatchController.signal]),
         }),
+      sendRetainedExpression: createInstalledExpressionSender({
+        anchorRoot: options.anchorRoot,
+        configurationRoot: owned.paths.resolve("CONFIGURATION").canonicalPath,
+        installationId: owned.installationId,
+        signal: AbortSignal.any([host.signal, dispatchController.signal]),
+      }),
     });
     const recoveryConfiguration = await product.configuration();
     const recoverySubjectId = recoveryConfiguration.settings?.subject?.id;
@@ -392,11 +400,19 @@ export async function startProductHost(
         throw error;
       }
     };
+    const readNative = createInstalledGatewayReader({
+      anchorRoot: options.anchorRoot,
+      configurationRoot: owned.paths.resolve("CONFIGURATION").canonicalPath,
+      installationId: owned.installationId,
+      signal: host.signal,
+    });
     app = await createProductHttpApp({
       operator: createOperatorReads({
         anchorRoot: options.anchorRoot,
         product,
         gateway,
+        readNativeChannels: () => readNative("channels.status"),
+        readProviderAttempts: (params) => readNative("nous.provider-attempts", params),
       }),
       authentication,
       product,

@@ -40,7 +40,7 @@ export function selectNativeOpportunity(
 
 function installedCommand(
   options: InstalledNativeOptions,
-  entryName: "dispatch" | "world-schedule" | "agent-catalog",
+  entryName: "dispatch" | "world-schedule" | "gateway-read" | "expression-send",
 ) {
   return async (
     params: unknown,
@@ -200,23 +200,64 @@ export function createInstalledWorldScheduler(
 
 /** Selects only an explicitly bound profile present before the first native execution. */
 export type NativeAgentSelect = (candidates: readonly string[]) => Promise<string>;
+/** Bounded native reads have no agent execution or writable RPC selection. */
+export function createInstalledGatewayReader(options: InstalledNativeOptions) {
+  const invoke = installedCommand(options, "gateway-read");
+  return async (
+    method: "agents.list" | "channels.status" | "nous.provider-attempts",
+    params: Record<string, unknown> = {},
+  ): Promise<unknown> => {
+    const value = await invoke({ method, params }, 5);
+    if (value.status !== "resolved" || value.response.status !== "read")
+      throw Error("native_gateway_read_unavailable");
+    return value.response.result;
+  };
+}
 /** Public agents.list is read once before invocation; failed paid runs never switch profiles. */
 export function createInstalledAgentSelector(
   options: InstalledNativeOptions,
 ): NativeAgentSelect {
-  const invoke = installedCommand(options, "agent-catalog");
+  const read = createInstalledGatewayReader(options);
   return async (candidates) => {
-    const value = await invoke({}, 30);
+    const value = await read("agents.list");
     if (
-      value.status !== "resolved" ||
-      value.response.status !== "catalog" ||
-      !Array.isArray(value.response.result) ||
-      value.response.result.some((id) => typeof id !== "string")
+      !value ||
+      typeof value !== "object" ||
+      !("agents" in value) ||
+      !Array.isArray(value.agents)
     )
       throw Error("native_agent_catalog_unavailable");
-    const present = new Set(value.response.result);
+    const present = new Set(
+      value.agents.map((agent: unknown) =>
+        agent && typeof agent === "object" && "id" in agent ? agent.id : undefined,
+      ),
+    );
     const selected = candidates.find((id) => present.has(id));
     if (!selected) throw Error("native_bound_agent_unavailable");
     return selected;
+  };
+}
+
+/** An already adopted original enters the existing native durable sender. */
+export type NativeExpressionSend = (input: {
+  subjectId: string;
+  briefId: string;
+}) => Promise<{ status: string }>;
+export function createInstalledExpressionSender(
+  options: InstalledNativeOptions,
+): NativeExpressionSend {
+  const invoke = installedCommand(options, "expression-send");
+  return async (input) => {
+    const result = await invoke(input, 60);
+    if (
+      result.status !== "resolved" ||
+      result.response.status !== "delivery" ||
+      !result.response.result ||
+      typeof result.response.result !== "object"
+    )
+      throw Error("native_retained_delivery_unavailable");
+    const status = (result.response.result as { status?: unknown }).status;
+    if (typeof status !== "string") throw Error("native_retained_delivery_invalid");
+    return { status };
   };
 }

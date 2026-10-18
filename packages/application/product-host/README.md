@@ -82,4 +82,6 @@ Custody promotion 可保留同一事件的既有 committed receipt 行；只有�
 
 安装默认只注册供人工启动的systemd服务，不启用开机启动；需要时显式传`--autostart yes`。`configure-subject-gateway`和`configure-maintenance`同样接受`--autostart yes|no`，省略时保留实际systemd选择。安装/升级不启动模型，普通服务启动或配置保存不请求Reactor机会。自动工作暂停时管理Host可独立运行。
 
-认证的`GET /v1/overview`、`GET /v1/subject/documents`和`GET /v1/calendar`提供同一生成Client/CLI使用的零模型读模型，查看不推进生活或索引。费用缺失保留未知，soul导出不创建人格或第二份认知。
+认证的`GET /v1/overview`、`GET /v1/subject/documents`和`GET /v1/calendar`提供同一生成Client/CLI使用的零模型读模型，查看不推进生活或索引。`GET /v1/tasks/:activityId`读取绑定主体原任务的角色登记；默认隐藏输入，显式inputs=true读取一项已接纳运行的实际provider尝试和宿主prompt。Native原生记录保留最终body、usage和结果，历史缺口及费用保留未知。`GET /v1/calendar/template`纯读可选时间骨架。总览读取Nous生效维护开关；soul导出不创建人格或第二份认知。
+
+编译/prune输出保持在各dist；安装器在tmp/product-artifacts中物化生产闭包，冻结产物从该闭包发布。打包不向编译输出安装node_modules，避免API生成和源码构建误读旧部署模块。

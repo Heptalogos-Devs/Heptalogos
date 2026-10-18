@@ -12,6 +12,14 @@ export default class Task extends BaseCommand {
   static args = { id: Args.string({ required: true }) };
   static flags = {
     resume: Flags.boolean({ description: "恢复同一任务；自动工作暂停时不会启动模型" }),
+    runs: Flags.boolean({ description: "列出实际角色运行登记" }),
+    inputs: Flags.boolean({
+      description: "明确查看一项运行的原始模型请求及宿主输入；可能包含聊天正文",
+    }),
+    "run-id": Flags.string({
+      description: "从 --runs 选择原运行，默认取最近已接纳运行",
+    }),
+    before: Flags.string({ description: "读取更早登记，使用上一页nextRunId" }),
   };
   /** Reads the original task and applies an explicitly requested owner resume. */
   async run() {
@@ -30,7 +38,10 @@ export default class Task extends BaseCommand {
         });
         if (!activity)
           throw new CliFailure("life.not_found", "当前主体没有该任务。", 4);
-        if (flags.resume)
+        if (
+          flags.resume &&
+          (activity.state === "paused" || activity.continuationRequired)
+        )
           activity = await gateway.transitionActivity({
             subjectId,
             activityId: args.id,
@@ -39,6 +50,18 @@ export default class Task extends BaseCommand {
             reason: "操作者从任务详情明确恢复原任务",
           });
         const overview = await local.client.getOverview();
+        const recovery = flags.resume
+          ? await gateway.recoverExpressionCandidates({
+              subjectId,
+              activityId: args.id,
+            })
+          : undefined;
+        if (flags.resume && current.settings?.subject.enabled)
+          await gateway.reactorWake({
+            subjectId,
+            activityId: args.id,
+            operationRef: `operator:task-resume:${args.id}:${activity.revision}`,
+          });
         const retained = overview.retainedResults.filter(
           (result) => result.activityId === args.id,
         );
@@ -46,11 +69,31 @@ export default class Task extends BaseCommand {
           activity,
           retained,
           automaticWorkEnabled: current.settings?.subject.enabled ?? false,
+          ...(recovery ? { recoveredCandidates: recovery.recovered } : {}),
+          ...(flags.runs || flags.inputs || flags["run-id"] || flags.before
+            ? {
+                details: await local.client.getTaskDetails(args.id, {
+                  ...(flags.inputs ? { inputs: "true" as const } : {}),
+                  ...(flags["run-id"] ? { runId: flags["run-id"] } : {}),
+                  ...(flags.before ? { before: flags.before } : {}),
+                }),
+              }
+            : {}),
         };
         if (this.jsonEnabled()) return result;
         this.log(
           `目标：${activity.purpose}\n状态：${activity.state}\n任务：${activity.activityId}\n原始来源：${activity.sourceRefs.join("、")}\n保留成果：${retained.reduce((n, run) => n + run.resultCount, 0)}条worker结果；${activity.progress.resultRefs.length}个进展引用\n进展：${activity.progress.note.split("\nReactor ")[0] || "尚未记录有效进展"}\n下一条件：${activity.continuationRequired ? "需要明确resume" : (activity.nextOpportunity?.at ?? "尚未安排")}\n自动付费工作：${result.automaticWorkEnabled ? "配置允许" : "暂停"}`,
         );
+        if (result.details) {
+          for (const run of result.details.runs)
+            this.log(
+              `${run.recordedAt} · ${run.role}/${run.purpose} · ${run.dispatchState} · ${run.runId}`,
+            );
+          if (flags.inputs || flags["run-id"])
+            this.log(JSON.stringify(result.details, null, 2));
+          if (result.details.nextRunId)
+            this.log(`更早登记：--before ${result.details.nextRunId}`);
+        }
       },
       true,
     );

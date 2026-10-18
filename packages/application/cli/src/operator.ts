@@ -86,6 +86,16 @@ export function renderOperatorOverview(
     `QQ：${current.qqAccount ?? "未配置"}；${current.qqState}`,
     `前台：${current.foreground?.candidate.metadata.label ?? "无"}`,
   );
+  const maintenance = current.cognitionMaintenance;
+  if (current.living)
+    lines.push(
+      `生活：${current.living.currentPlaceRef} · 精力${current.living.energy}/100 · 实际记录至${current.living.integratedThrough.at}`,
+    );
+  const state = (enabled: boolean | null | undefined) =>
+    enabled === undefined || enabled === null ? "未知" : enabled ? "开" : "关";
+  lines.push(
+    `Nous自动维护：系统${state(maintenance?.schedulerEnabled)} / 当前主体${state(maintenance?.subjectEnabled)}`,
+  );
   for (const issue of current.issues) lines.push(`阻塞：${issue}`);
   lines.push("", "未完成任务：");
   for (const task of current.tasks.slice(0, 4)) {
@@ -98,6 +108,13 @@ export function renderOperatorOverview(
     );
   }
   if (!current.tasks.length) lines.push("  无");
+  if (current.narrativeWork.length) {
+    lines.push("", "陈述后续工作：");
+    for (const work of current.narrativeWork)
+      lines.push(
+        `  ${work.state === "blocked" ? "待纠正" : work.runId ? "索引处理中" : "等待索引"}：${work.problem ?? "保留原文，后台处理语义"} · task ${work.activityId}`,
+      );
+  }
   if (current.tasks.length > 4 || current.moreTasks)
     lines.push("  其他任务见 status --json；task <id> 查看详情和原成果。");
   lines.push("", "角色用量：输入 / 输出 / cache读 / cache写（保留结果，费用未知）");
