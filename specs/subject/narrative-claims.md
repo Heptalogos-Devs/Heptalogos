@@ -4,7 +4,7 @@
 
 Communication/Narrative拥有完整交流交付。WorldLife拥有已实现世界事实，Nous拥有认识，Messaging/Agency拥有原文、实际听众、唯一发送身份与派发结果。原文先保存；Claim是可追溯的派生索引，不承担普通消息能否落库和发送的资格。
 
-ExpressionBrief来自已采用主观决定，保留actor/听众、意图/姿态、实际来源、必须限定、知识立场、允许世界细化范围、旧说法关系和承诺。所有Subject自然表达经独立subject.render；renderer只输出自然文本/许可表现槽位，不改变听众、工具权限和技术结果。专业worker资料只在正式释放后成为主体输入。
+ExpressionBrief来自已采用主观决定。可选`semanticRequirement`只标明`world_fact`、`serious_commitment`或`important_conflict`；普通交流省略。前两类经`prepareExpression`把正式世界提案或未来承诺交WorldLife/Life采用，receipt留在`semanticPreparation`，再交renderer；已知冲突在最终候选提交前局部读回。Brief保留actor/听众、意图/姿态、实际来源、必须限定、知识立场、允许世界细化范围、旧说法关系和承诺。所有Subject自然表达经独立subject.render；renderer只输出自然文本/许可表现槽位，不改变听众、工具权限和技术结果。专业worker资料只在正式释放后成为主体输入。
 
 角色owner把本次短来源键映射到真实引用及类型一次。输出格式只在正式responseFormat中维护，prompt只保留含义和短目录。Reactor调用完整交流操作，不自行串接brief、解析review、猜来源或修复派发表。
 
@@ -18,7 +18,7 @@ renderer结果立即保存。普通候选的原文、听众、来源、已采用
 
 ## 后台索引、冲突与听众
 
-Claim抽取、相关对象/时段对比、概括、反思和Nous补交使用既有owner待办与结果身份在后台推进。当前追问、世界细化和反思同时读取尚未索引的原文尾部，不因全局索引积压阻塞所有会话。
+Claim抽取、相关对象/时段对比、概括、反思和Nous补交使用既有owner待办与结果身份在后台推进。Narrative沿原`narrative_commit`记录保存`pending/indexed/blocked`语义状态，`pendingSemanticWork`只读待办；获得运行和预算授权的既有机会逐项调用`indexPending`。待原生结果解消的工作保持pending，解析、来源和晚到冲突保留blocked及实际问题。当前追问、世界细化和反思同时读取尚未索引的原文尾部，不因全局索引积压阻塞所有会话。
 
 提案只返回本候选实际原文中的精确quote/sourceIndex，程序解析唯一位置与引用类型；缺失或歧义留在相关索引失败记录。Claim保留实体、肯否/条件/语气、时间域/区间、听众、意图及来源。按相关性读取，不默认塞入最新64条或完整发送批次。
 

@@ -4,6 +4,7 @@
  * Adopted expression, claim history and local narrative transaction contracts.
  * @module narrative-contracts
  */
+import { decisionExpressionIntentSchema } from "./deliberation-contracts.js";
 import { reactorActionProblemSchema } from "./reactor-contracts.js";
 import { Type, type Static } from "@heptalogos/schema-runtime/typebox";
 import { worldIntervalSchema, realizeWorldSchema } from "./world-contracts.js";
@@ -24,6 +25,19 @@ export const expressionAudienceSchema = Type.Object(
   },
   object,
 );
+/** World and undertaking semantics are adopted before their natural expression. */
+export const narrativeIntentProposalSchema = Type.Object(
+  {
+    worldPatch: Type.Union([realizeWorldSchema, Type.Null()]),
+    commitments: Type.Array(
+      Type.Object({ purpose: text, due: worldPointSchema, sourceRefs: refs }, object),
+      { maxItems: 32 },
+    ),
+    conflicts: Type.Array(text, { maxItems: 32 }),
+  },
+  object,
+);
+export type NarrativeIntentProposal = Static<typeof narrativeIntentProposalSchema>;
 /** Communication intent and the exact scope the candidate may elaborate. */
 export const expressionBriefSchema = Type.Object(
   {
@@ -34,6 +48,13 @@ export const expressionBriefSchema = Type.Object(
     expectedActivityRevision: Type.Integer({ minimum: 1 }),
     actorEntityRef: ref,
     audience: expressionAudienceSchema,
+    semanticRequirement: decisionExpressionIntentSchema.properties.semanticRequirement,
+    semanticPreparation: Type.Optional(
+      Type.Object(
+        { reviewerRunId: ref, proposal: narrativeIntentProposalSchema },
+        object,
+      ),
+    ),
     intent: text,
     stance: text,
     sourceRefs: refs,
@@ -148,7 +169,7 @@ export const narrativeCommitSchema = Type.Object(
   {
     operationId: id,
     briefId: id,
-    reviewerRunId: ref,
+    reviewerRunId: Type.Union([ref, Type.Null()]),
     prepared: preparedDeliverySchema,
     review: narrativeReviewSchema,
   },
@@ -172,6 +193,7 @@ export const claimsToSchema = Type.Object(
     ),
     order: Type.Optional(Type.Union([Type.Literal("oldest"), Type.Literal("newest")])),
     afterClaimId: Type.Optional(id),
+    relatedRefs: Type.Optional(refs),
     limit: Type.Integer({ minimum: 1, maximum: 128 }),
   },
   object,

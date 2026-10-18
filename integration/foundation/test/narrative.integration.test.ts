@@ -25,7 +25,7 @@ import { composeProductPersistence } from "../support/product-persistence.js";
 const real = qualifiedPgBin ? describe : describe.skip;
 afterEach(cleanupCanonicalPostgresFixtures);
 real("Narrative adoption on real fenced PostgreSQL", () => {
-  it("commits exact claims and one native delivery, preserves deliberate truth and derives expressed history from actual receipts", async () => {
+  it("sends the retained original without a reviewer and indexes its exact history after an actual receipt", async () => {
     const c = await composeProductPersistence();
     const subjectId = randomUUID(),
       actor = "entity:heptalogos:" + randomUUID();
@@ -295,16 +295,19 @@ real("Narrative adoption on real fenced PostgreSQL", () => {
       await c.run(() => narrative.saveBrief(brief, runId));
       const adopted = await c.run(() => narrative.adoptDelivery(prepared));
       expect(await c.run(() => narrative.adoptDelivery(prepared))).toEqual(adopted);
-      expect(calls).toBe(1);
+      expect(calls).toBe(0);
+      expect(
+        await narrative.unindexedTo(subjectId, brief.audience.conversationRef),
+      ).toMatchObject([{ prepared }]);
+      expect(await narrative.pendingSemanticWork(subjectId)).toMatchObject([
+        { briefId: brief.briefId, state: "pending" },
+      ]);
       const q = {
         subjectId,
         conversationRef: brief.audience.conversationRef,
         limit: 20,
       };
-      const initial = await narrative.claimsTo(q);
-      expect(initial.claims).toHaveLength(1);
-      expect(initial.claims[0]?.status).toBe("adopted");
-      expect(initial.claims[0]?.stance).toBe("deliberate");
+      expect((await narrative.claimsTo(q)).claims).toEqual([]);
       const part = {
         reference: adopted.reference,
         channel: "qq",
@@ -328,6 +331,13 @@ real("Narrative adoption on real fenced PostgreSQL", () => {
           },
         }),
       );
+      expect(calls).toBe(0);
+      await c.run(() => narrative.indexPending(brief.briefId));
+      await c.run(() => narrative.indexPending(brief.briefId));
+      expect(calls).toBe(1);
+      expect(
+        await narrative.unindexedTo(subjectId, brief.audience.conversationRef),
+      ).toEqual([]);
       const expressed = await narrative.explainStatement(subjectId, "platform:actual");
       expect(expressed.claims[0]?.status).toBe("expressed");
       expect(expressed.claims[0]?.platformMessageIds).toEqual(["platform:actual"]);
@@ -347,383 +357,6 @@ real("Narrative adoption on real fenced PostgreSQL", () => {
           ),
         ),
       ).rejects.toMatchObject({ problem: { problemCode: "narrative.conflict" } });
-      const withoutDeception = await adoptIntent("none");
-      await c.run(() =>
-        narrative.saveBrief(
-          {
-            ...brief,
-            briefId: randomUUID(),
-            decisionRef: withoutDeception.decisionRef,
-            expectedActivityRevision: activity.revision,
-            deception: "none",
-          },
-          otherRun,
-        ),
-      );
-      await expect(
-        c.run(() =>
-          narrative.adoptDelivery({
-            ...prepared,
-            runId: otherRun,
-            nativeIntentId: randomUUID(),
-            preparedBatch: { ...prepared.preparedBatch, runId: otherRun },
-          }),
-        ),
-      ).rejects.toMatchObject({ problem: { problemCode: "narrative.conflict" } });
-      expect((await narrative.claimsTo(q)).claims).toHaveLength(1);
-      const worldId = randomUUID();
-      const interval = {
-        timeDomainRef: "time:real",
-        start: new Date(Date.now() - 1200000).toISOString(),
-        end: new Date(Date.now() - 600000).toISOString(),
-      };
-      await c.run(() =>
-        worlds.configure({
-          operationId: randomUUID(),
-          expectedRevision: 0,
-          definition: {
-            worldId,
-            subjectId,
-            revision: 1,
-            name: "Independent world",
-            timeDomainRef: "time:real",
-            timezone: "Asia/Shanghai",
-            offlinePolicy: "simulate_elapsed",
-            places: [
-              { placeRef: "class", name: "Classroom", description: "A classroom" },
-            ],
-            actors: [
-              { entityRef: actor, name: "Subject", description: "Current actor" },
-            ],
-            subjectActorRef: actor,
-            rules: "Established life stays continuous",
-            creationScope: "Classroom details",
-            informationSourceRefs: [],
-          },
-          schedule: [],
-        }),
-      );
-      const parentEventId = randomUUID();
-      await c.run(() =>
-        worlds.realize({
-          operationId: randomUUID(),
-          subjectId,
-          worldId,
-          expectedRevision: 1,
-          interval,
-          coverage: "limited",
-          events: [
-            {
-              eventId: parentEventId,
-              interval,
-              title: "Established classroom scene",
-              content: "An actual same-world scene",
-              actorRefs: [actor],
-              placeRef: "class",
-              scheduleId: null,
-              parentEventId: null,
-              causalEventRefs: [],
-              overlap: "concurrent",
-              source: {
-                kind: "rule",
-                producerRef: "fixture:established-scene",
-                sourceRefs: [],
-              },
-              perceptions: [
-                {
-                  actorRef: actor,
-                  kind: "seen",
-                  at: { timeDomainRef: "time:real", at: interval.start },
-                  content: "I was in the classroom",
-                },
-              ],
-            },
-          ],
-        }),
-      );
-      const parentSource = `world-event:${worldId}:${parentEventId}:1`;
-      const sceneDecision = await adoptIntent("conceal", [parentSource]);
-      const eventId = randomUUID();
-      const patch = {
-        operationId: randomUUID(),
-        subjectId,
-        worldId,
-        expectedRevision: 2,
-        interval,
-        events: [
-          {
-            eventId,
-            interval,
-            title: "Get water",
-            content: "A compatible newly realized detail",
-            actorRefs: [actor],
-            placeRef: "class",
-            scheduleId: null,
-            parentEventId,
-            causalEventRefs: [],
-            overlap: "concurrent" as const,
-            source: {
-              kind: "world_planner" as const,
-              producerRef: "review:actual",
-              sourceRefs: [],
-            },
-            perceptions: [
-              {
-                actorRef: actor,
-                kind: "seen" as const,
-                at: { timeDomainRef: "time:real", at: interval.end },
-                content: "Got water",
-              },
-            ],
-          },
-        ],
-        coverage: "limited" as const,
-      };
-      const nextRun = randomUUID();
-      await retainRun(nextRun, "subject.render");
-      const nextBrief = {
-        ...brief,
-        decisionRef: sceneDecision.decisionRef,
-        eventRefs: [parentSource],
-        briefId: randomUUID(),
-        expectedActivityRevision: activity.revision + 1,
-        worldDetailScope: {
-          worldId,
-          interval,
-          actorRefs: [actor],
-          placeRefs: ["class"],
-          description: "May refine this classroom interval",
-        },
-      };
-      await c.run(() => narrative.saveBrief(nextBrief, nextRun));
-      review.worldPatch = patch;
-      review.claims = [
-        {
-          ...review.claims[0]!,
-          quote: "我去接水",
-          content: "Got water",
-          basis: "new_virtual_detail",
-          stance: "asserted",
-          eventRefs: [eventId],
-        },
-      ];
-      await expect(
-        c.run(() =>
-          narrative.adoptDelivery({
-            ...prepared,
-            runId: nextRun,
-            nativeIntentId: randomUUID(),
-            preparedBatch: {
-              ...prepared.preparedBatch,
-              runId: nextRun,
-              entries: [
-                { sourceIndex: 4, status: "accepted", payload: { text: "我去接水" } },
-              ],
-            },
-          }),
-        ),
-      ).rejects.toMatchObject({ problem: { problemCode: "narrative.conflict" } });
-      expect(
-        (
-          await worlds.query({
-            subjectId,
-            worldId,
-            interval,
-            view: "world_author",
-            limit: 20,
-          })
-        ).events,
-      ).toHaveLength(1);
-      expect((await worlds.read(subjectId, worldId))?.revision).toBe(2);
-      expect((await narrative.claimsTo(q)).claims).toHaveLength(1);
-      const due = {
-        timeDomainRef: "time:real",
-        at: new Date(Date.now() + 86400000).toISOString(),
-      };
-      const waterClaim = review.claims[0]!;
-      review.claims.push({
-        ...waterClaim,
-        start: 5,
-        end: 10,
-        quote: "明天告诉你",
-        content: "I will tell you tomorrow",
-        kind: "commitment",
-        basis: "commitment",
-        eventRefs: [],
-      });
-      review.commitments = [
-        {
-          claimIndex: 1,
-          purpose: "Tell the friend tomorrow",
-          due,
-          sourceRefs: scope.sourceRefs,
-        },
-      ];
-      const successfulRun = randomUUID();
-      await retainRun(successfulRun, "subject.render");
-      await c.run(() =>
-        narrative.saveBrief(
-          {
-            ...nextBrief,
-            briefId: randomUUID(),
-            expectedActivityRevision: activity.revision,
-          },
-          successfulRun,
-        ),
-      );
-      const successfulPrepared = {
-        ...prepared,
-        runId: successfulRun,
-        nativeIntentId: randomUUID(),
-        preparedBatch: {
-          ...prepared.preparedBatch,
-          runId: successfulRun,
-          entries: [
-            {
-              sourceIndex: 4,
-              status: "accepted",
-              payload: { text: "我去接水，明天告诉你" },
-            },
-          ],
-        },
-      };
-      const committedWorld = await c.run(() =>
-        narrative.adoptDelivery(successfulPrepared),
-      );
-      expect((await life.get(subjectId, activity.activityId))?.nextOpportunity).toEqual(
-        due,
-      );
-      const afterCommitRevision = (await life.get(subjectId, activity.activityId))!
-        .revision;
-      expect(await c.run(() => narrative.adoptDelivery(successfulPrepared))).toEqual(
-        committedWorld,
-      );
-      expect((await life.get(subjectId, activity.activityId))!.revision).toBe(
-        afterCommitRevision,
-      );
-      expect((await worlds.read(subjectId, worldId))?.revision).toBe(3);
-      expect(
-        (
-          await worlds.query({
-            subjectId,
-            worldId,
-            interval,
-            view: "world_author",
-            limit: 20,
-          })
-        ).events.find((event) => event.eventId === eventId),
-      ).toMatchObject({
-        source: {
-          kind: "narrative",
-          producerRef: successfulRun,
-          sourceRefs: expect.arrayContaining([successfulRun, "actual-review-run"]),
-        },
-      });
-      expect(
-        (
-          await worlds.query({
-            subjectId,
-            worldId,
-            interval,
-            view: "world_author",
-            limit: 20,
-          })
-        ).events,
-      ).toHaveLength(2);
-      const newest = await narrative.claimsTo({ ...q, order: "newest", limit: 1 });
-      expect(newest.more).toBe(true);
-      expect(newest.claims[0]).toMatchObject({
-        content: "I will tell you tomorrow",
-        status: "adopted",
-      });
-      const older = await narrative.claimsTo({
-        ...q,
-        order: "newest",
-        limit: 1,
-        afterClaimId: newest.claims[0]!.claimId,
-      });
-      expect(older.more).toBe(true);
-      expect(older.claims[0]?.content).toBe("Got water");
-      const oldest = await narrative.claimsTo({
-        ...q,
-        order: "newest",
-        limit: 1,
-        afterClaimId: older.claims[0]!.claimId,
-      });
-      expect(oldest.more).toBe(false);
-      expect(oldest.claims[0]?.claimId).toBe(initial.claims[0]?.claimId);
-      const failedPart = {
-        ...part,
-        reference: committedWorld.reference,
-        deliveryQueueId: "native:world",
-        payload: { ...part.payload, text: "我去接水，明天告诉你" },
-      };
-      const failedAttempt = await c.run(() => agency.beginDelivery(failedPart));
-      if (failedAttempt.action !== "send")
-        throw Error("Expected the new exact adopted delivery");
-      await c.run(() =>
-        agency.recordDelivery({
-          reference: committedWorld.reference,
-          sourceIndex: 4,
-          partIndex: 0,
-          attemptId: failedAttempt.attemptId,
-          outcome: { state: "not_sent", code: "actual_pre_send_rejection" },
-        }),
-      );
-      expect(
-        (
-          await narrative.claimsTo({ ...q, order: "newest", status: "not_sent" })
-        ).claims.map((claim) => claim.claimId),
-      ).toEqual([newest.claims[0]!.claimId, older.claims[0]!.claimId]);
-      const deniedIntent = await adoptIntent("conceal");
-      const deniedRun = randomUUID();
-      await retainRun(deniedRun, "subject.render");
-      const deniedBrief = {
-        ...brief,
-        briefId: randomUUID(),
-        decisionRef: deniedIntent.decisionRef,
-        expectedActivityRevision: deniedIntent.activityRevision,
-      };
-      await c.run(() => narrative.saveBrief(deniedBrief, deniedRun));
-      const deniedPrepared = {
-        ...prepared,
-        runId: deniedRun,
-        nativeIntentId: randomUUID(),
-      };
-      review.claims = [
-        {
-          ...review.claims[0]!,
-          sourceIndex: 4,
-          start: 0,
-          end: 4,
-          quote: "我在复习",
-          sourceRefs: ["source:not-adopted"],
-        },
-      ];
-      const beforeRejectionCalls = calls;
-      await expect(
-        c.run(() => narrative.adoptDelivery(deniedPrepared)),
-      ).rejects.toMatchObject({
-        problem: { problemCode: "narrative.review_source_denied" },
-      });
-      const rejection = (await narrative.rejectionForRun(subjectId, deniedRun))!;
-      expect(rejection.problem.code).toBe("narrative.review_source_denied");
-      expect(rejection.problem.availableSourceRefs).toEqual(deniedBrief.sourceRefs);
-      expect(calls).toBe(beforeRejectionCalls + 1);
-      await expect(
-        c.run(() => narrative.adoptDelivery(deniedPrepared)),
-      ).rejects.toMatchObject({
-        problem: { problemCode: "narrative.review_source_denied" },
-      });
-      expect(calls).toBe(beforeRejectionCalls + 1);
-      expect(await narrative.rejectionForRun(subjectId, deniedRun)).toEqual(rejection);
-      await expect(
-        c.run(() =>
-          narrative.adoptDelivery({ ...deniedPrepared, nativeIntentId: randomUUID() }),
-        ),
-      ).rejects.toThrow();
-      expect(await narrative.rejectionForRun(subjectId, deniedRun)).toEqual(rejection);
-      expect(await narrative.rejectionForRun(randomUUID(), deniedRun)).toBeUndefined();
     } finally {
       await c.close();
     }

@@ -19,6 +19,13 @@ const summary = Type.String({ minLength: 1, maxLength: 4096 });
 /** Explicitly adopted communication content does not grant an audience or permission. */
 export const decisionExpressionIntentSchema = Type.Object(
   {
+    semanticRequirement: Type.Optional(
+      Type.Union([
+        Type.Literal("important_conflict"),
+        Type.Literal("world_fact"),
+        Type.Literal("serious_commitment"),
+      ]),
+    ),
     intent: summary,
     stance: summary,
     qualifications: Type.Array(summary, { maxItems: 64 }),

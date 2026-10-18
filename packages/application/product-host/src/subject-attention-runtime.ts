@@ -22,7 +22,10 @@ export function createSubjectAttentionRuntime(options: {
   persistence: PersistenceService;
   settings: () => Promise<ProductSettings>;
   life: Pick<ReturnType<typeof createLifeService>, "schedule" | "worldNow">;
-  worlds: Pick<ReturnType<typeof createWorldLifeService>, "pendingContacts">;
+  worlds: Pick<
+    ReturnType<typeof createWorldLifeService>,
+    "pendingContacts" | "prepareAdvance"
+  >;
   profiles: Pick<ReturnType<typeof createWorldProfileService>, "entryNotice">;
   narrative: Pick<ReturnType<typeof createNarrativeService>, "pendingCommitments">;
   native: Pick<
@@ -76,8 +79,18 @@ export function createSubjectAttentionRuntime(options: {
           metadata: { label: "已启用主体，可开始安排自己的生活" },
         });
       }
+      const world = await options.life.worldNow(input.subjectId);
+      const current = settings.subject.worldId
+        ? await options.worlds.prepareAdvance(input.subjectId, settings.subject.worldId)
+        : undefined;
+      const policy = current?.currentPolicy;
+      const socialAllowed =
+        !policy ||
+        (policy.policy.interruptEvents.includes("social") &&
+          policy.nextInterruptAt.timeDomainRef === world.timeDomainRef &&
+          Date.parse(world.at) >= Date.parse(policy.nextInterruptAt.at));
       const qq = settings.qq;
-      if (qq) {
+      if (qq && socialAllowed) {
         const canonical = await options.messaging.resolveConversations({
           conversations: qq.conversations
             .filter((grant) => grant.receive && grant.observe)
@@ -214,7 +227,6 @@ export function createSubjectAttentionRuntime(options: {
           metadata: { label: "已委派的资料或工具工作有结果可查看" },
         });
       // World due comparisons use its declared domain; no real-time substitution is permitted.
-      const world = await options.life.worldNow(input.subjectId);
       const worldActivities = new Map<
         string,
         (typeof activities)[number] | undefined

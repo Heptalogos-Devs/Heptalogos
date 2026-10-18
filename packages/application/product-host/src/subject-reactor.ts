@@ -18,6 +18,7 @@ import {
   type SituationObject,
   type SubjectReaction,
   type DecisionCommit,
+  type DeliberationDecision,
   type ReactorActionReceipt,
   type SubjectAttentionCandidate,
   type LifeActivity,
@@ -31,7 +32,6 @@ import {
 } from "./subject-roles.js";
 import {
   decisionPhaseId,
-  parseDeliberation,
   type createSubjectDecisionHandler,
 } from "./subject-decisions.js";
 import type { createNativeCognitionBridge } from "./native-cognition.js";
@@ -405,15 +405,12 @@ export function createSubjectReactor(options: {
             )),
             runId,
           };
-        let proposed: ReturnType<typeof parseDeliberation>;
-        try {
-          proposed = parseDeliberation(result.text);
-        } catch {
+        const proposed = result.structuredOutput as DeliberationDecision | undefined;
+        if (!proposed)
           return {
             ...(await yieldReaction(reaction, "invalid_decision:" + runId, previous)),
             runId,
           };
-        }
         const target =
           proposed.target || !allowsUntargetedSituationAction(proposed.action)
             ? resolveSituationTarget(frame.value, proposed)

@@ -22,9 +22,8 @@ import {
   createWorldHostLifecycleService,
   createDeliberationService,
   createNarrativeService,
-  narrativeReviewProposalSchema,
-  resolveNarrativeReview,
-  type NarrativeReviewProposal,
+  type NarrativeReview,
+  type NarrativeIntentProposal,
   assertScopeWithin,
   type ActivityScope,
   type LifeActivity,
@@ -55,7 +54,6 @@ import {
   hasAuthorizedNativeSources,
 } from "./native-source-selection.js";
 import { createPursuitMotivation } from "./pursuit-motivation.js";
-import { compileSchema } from "@heptalogos/schema-runtime";
 import { createSubjectReactor } from "./subject-reactor.js";
 import { createSubjectSituationRuntime } from "./subject-situation.js";
 import { createSubjectAttentionRuntime } from "./subject-attention-runtime.js";
@@ -408,6 +406,18 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
       });
     },
     assertForegroundIn: async (tx, registration) => {
+      if (
+        registration.roleScope.role === "narrative.review" &&
+        !registration.foreground
+      ) {
+        await narrative.assertPendingIndexIn(
+          tx,
+          registration.subjectId,
+          registration.activityId,
+          registration.parentRunId,
+        );
+        return;
+      }
       if (
         !["subject.deliberation", "subject.render", "narrative.review"].includes(
           registration.roleScope.role,
@@ -808,6 +818,7 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
   let narrative: ReturnType<typeof createNarrativeService>;
   const roles: ReturnType<typeof createSubjectRoles> = {
     startExecution: (input) => nativeRoles.startExecution(input),
+    startIndex: (input) => nativeRoles.startIndex(input),
     invoke: async (input) => {
       if (input.role !== "subject.deliberation") return nativeRoles.invoke(input);
       const activity = await life.get(input.subjectId, input.activityId);
@@ -856,13 +867,44 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
         run.registration.foreground,
       );
     },
-    review: async (brief, prepared) => {
+    prepareIntent: async (brief) => {
+      const adopted = await decisions.read(brief.subjectId, brief.decisionRef);
+      if (!adopted) denied("The adopted expression decision is unavailable");
+      const applied = await native.readAppliedContext(adopted.sourceRunId);
+      const result = await roles.invoke({
+        requestId: decisionPhaseId(brief.briefId, "semantic-intent"),
+        subjectId: brief.subjectId,
+        activityId: brief.activityId,
+        parentRunId: adopted.sourceRunId,
+        role: "narrative.review",
+        foreground: (await native.readRun(adopted.sourceRunId))!.registration
+          .foreground,
+        deadlineAt: brief.validUntil,
+        context: { semanticStage: "intent", brief },
+        contacts: [],
+        sourceRefs: brief.sourceRefs,
+        usage: applied.usage,
+      });
+      return {
+        reviewerRunId: result.runId,
+        proposal: result.structuredOutput as NarrativeIntentProposal,
+      };
+    },
+    review: async (brief, prepared, background = false) => {
       const applied = await native.readAppliedContext(prepared.runId);
       const claims = await narrative.claimsTo({
         subjectId: brief.subjectId,
         conversationRef: brief.audience.conversationRef,
-        limit: 64,
+        limit: 16,
         order: "newest",
+        relatedRefs: [
+          ...new Set([
+            ...brief.sourceRefs,
+            ...brief.eventRefs,
+            ...brief.cognitionRefs,
+            ...brief.priorClaimRefs,
+          ]),
+        ].slice(0, 128),
       });
       const world = brief.worldDetailScope
         ? await worlds.query({
@@ -873,7 +915,9 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
             limit: 64,
           })
         : null;
-      const review = await roles.invoke({
+      const invokeReview = (input: Parameters<typeof roles.invoke>[0]) =>
+        background ? roles.startIndex(input) : roles.invoke(input);
+      const review = await invokeReview({
         requestId: decisionPhaseId(
           prepared.runId,
           "narrative-review:" + prepared.nativeIntentId,
@@ -887,43 +931,34 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
         activityId: brief.activityId,
         parentRunId: prepared.runId,
         role: "narrative.review",
-        foreground: (await native.readRun(prepared.runId))!.registration.foreground,
-        deadlineAt: brief.validUntil,
+        ...(brief.semanticRequirement === "important_conflict"
+          ? {
+              foreground: (await native.readRun(prepared.runId))!.registration
+                .foreground,
+            }
+          : {}),
+        ...(brief.semanticRequirement === "important_conflict" && !background
+          ? { deadlineAt: brief.validUntil }
+          : {}),
         context: {
           brief,
           prepared,
           currentClaims: claims,
           relatedWorld: world,
-          outputContract: narrativeReviewProposalSchema,
+          unindexedStatements: await narrative.unindexedTo(
+            brief.subjectId,
+            brief.audience.conversationRef,
+          ),
         },
         contacts: [],
         sourceRefs: brief.sourceRefs,
         usage: applied.usage,
       });
-      let parsed: unknown;
-      try {
-        parsed = JSON.parse(review.text);
-      } catch {
-        throw managementProblem(
-          "narrative.invalid_review",
-          "Reviewer returned invalid JSON",
-          "Inspect the actual saved review role result",
-          "validation",
-        );
-      }
-      const checked = compileSchema<NarrativeReviewProposal>(
-        narrativeReviewProposalSchema,
-      ).validate(parsed);
-      if (!checked.ok)
-        throw managementProblem(
-          "narrative.invalid_review",
-          "Reviewer output does not match its contract",
-          "Inspect the actual saved review result",
-          "validation",
-        );
+      if (review.status === "pending")
+        return { reviewerRunId: review.runId, pending: true as const };
       return {
         reviewerRunId: review.runId,
-        review: resolveNarrativeReview(prepared, checked.value),
+        review: review.structuredOutput as NarrativeReview,
       };
     },
   });
@@ -1024,7 +1059,7 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
     scope,
     nous,
     now: options.now,
-    wake: (input) => reactor.wake(input),
+    wake: (input) => wakeAndContinue(input),
     authorizeActivity: async (activity) => {
       await pursuits.guardActivity(activity.subjectId, activity.activityId);
       if (!activity.scope || !activity.adoptedBy) denied("The Activity is not adopted");
@@ -1127,11 +1162,58 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
       requestId: decisionPhaseId(input.operationRef, "reactor-opportunity"),
     });
   };
+  async function continueBackground(subjectId: string) {
+    if (
+      !(await currentSettings()).subject.enabled ||
+      (await foreground.current(subjectId))
+    )
+      return;
+    const pending = (await narrative.pendingSemanticWork(subjectId, 1, "pending")).find(
+      (work) => work.state === "pending",
+    );
+    if (pending) await narrative.indexPending(pending.briefId);
+    try {
+      await native.flushPendingFeedback(16);
+    } catch {
+      /* The native outbox keeps the exact unsubmitted fact for the next opportunity. */
+    }
+  }
+  async function wakeAndContinue(input: Parameters<typeof reactor.wake>[0]) {
+    const result = await reactor.wake(input);
+    await continueBackground(input.subjectId);
+    await reprojectSubject(input.subjectId);
+    return result;
+  }
   const reprojectSubject = async (subjectId: string) => {
     const worldOpportunity = await worldRuntime.nextOpportunity();
     let next = worldOpportunity?.realAt ?? null;
+    let semanticNext: { at: string; requestId: string } | undefined;
     const selection = await attention.select({ subjectId });
     const actualNow = Date.parse(options.now());
+    if ((await currentSettings()).subject.enabled) {
+      const pending = (
+        await narrative.pendingSemanticWork(subjectId, 1, "pending")
+      ).find((work) => work.state === "pending");
+      if (pending) {
+        const run = pending.runId ? await native.readRun(pending.runId) : undefined;
+        if (
+          !pending.runId ||
+          (run && ["completed", "failed", "cancelled"].includes(run.state))
+        ) {
+          const at = new Date(actualNow + 1000).toISOString();
+          if (!next || Date.parse(at) < Date.parse(next)) {
+            next = at;
+            semanticNext = {
+              at,
+              requestId: decisionPhaseId(
+                pending.briefId,
+                "semantic-next:" + (pending.runId ?? "start"),
+              ),
+            };
+          }
+        }
+      }
+    }
     const metadataAt = selection.selected
       ? new Date(actualNow + 1000).toISOString()
       : selection.nextConsiderAt;
@@ -1169,13 +1251,16 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
       selectNativeOpportunity(worldOpportunity, {
         subjectId,
         realAt: next,
-        requestId: decisionPhaseId(subjectId, "reactor-next:" + (next ?? "none")),
+        requestId:
+          semanticNext?.at === next
+            ? semanticNext.requestId
+            : decisionPhaseId(subjectId, "reactor-next:" + (next ?? "none")),
       }),
     );
   };
   const opportunity = createActivityOpportunity({
     scope,
-    wake: (input) => reactor.wake(input),
+    wake: (input) => wakeAndContinue(input),
     enabled: async () =>
       !!(await options.product.configuration()).settings?.subject.enabled,
   });
@@ -1189,14 +1274,15 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
           worldId: input.worldId,
           activityId: input.activityId,
         });
+        await continueBackground(input.subjectId);
+        await reprojectSubject(input.subjectId);
         return { status: "processed" };
       }
-      const result = await reactor.wake({
+      const result = await wakeAndContinue({
         subjectId: input.subjectId,
         requestId: input.requestId,
         naturalOpportunity: true,
       });
-      await reprojectSubject(input.subjectId);
       return result;
     },
     opportunity,
@@ -1217,6 +1303,8 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
     http,
     life,
     native,
+    pendingNarrative: (subjectId: string) =>
+      narrative.pendingSemanticWork(subjectId, 16),
     foreground,
     reactor,
     attention,
@@ -1262,8 +1350,12 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
       authenticate: http.authenticate,
       runMutation: options.runMutation,
       currentSubject,
-      advance: (input: Parameters<typeof worldRuntime.advance>[0]) =>
-        worldRuntime.advance(input),
+      advance: async (input: Parameters<typeof worldRuntime.advance>[0]) => {
+        const result = await worldRuntime.advance(input);
+        await continueBackground(input.subjectId);
+        await reprojectSubject(input.subjectId);
+        return result;
+      },
     },
     narrativeHttp: {
       authenticate: http.authenticate,

@@ -231,6 +231,17 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
       denied("The actual adopted Activity and WorkContext are unavailable");
     const world = await options.life.worldNow(reaction.subjectId),
       settings = await options.settings();
+    const worldFrame = settings.subject.worldId
+      ? await options.worlds.prepareAdvance(
+          reaction.subjectId,
+          settings.subject.worldId,
+        )
+      : undefined;
+    const socialAllowed =
+      !worldFrame?.currentPolicy ||
+      (worldFrame.currentPolicy.policy.interruptEvents.includes("social") &&
+        Date.parse(world.at) >=
+          Date.parse(worldFrame.currentPolicy.nextInterruptAt.at));
     const living = settings.subject.worldId
       ? await options.worlds.readLivingState({
           subjectId: reaction.subjectId,
@@ -424,6 +435,10 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
       state: "available",
       actions: ["inspect", "continue", "search", "wait", "rest"],
     });
+    if (!socialAllowed) {
+      for (const object of objects)
+        if (object.owner === "messaging") object.actions = [];
+    }
     const device = living?.device.view;
     const currentRef =
       device?.kind === "conversation"
@@ -514,6 +529,12 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
       }),
       context: {
         situation: frame,
+        worldContinuation: worldFrame
+          ? {
+              currentPolicy: worldFrame.currentPolicy,
+              nextOpportunity: worldFrame.nextOpportunity,
+            }
+          : null,
         ...(settings.subject.worldId
           ? {
               pendingWorldActions: await options.worlds.readPendingActions(
@@ -697,7 +718,7 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
         input.reaction.activityId,
       );
       if (!activity?.scope) denied("The actual continuation Activity is unavailable");
-      const continuation = `Reactor ${input.reaction.reactionId}: ${input.reason}; action ${input.lastAction?.actionId ?? "none"}`;
+      const continuation = input.reason;
       const joined = [activity.progress.note, continuation].filter(Boolean).join("\n");
       const progress = {
         ...activity.progress,
@@ -757,6 +778,32 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
         continuationRef,
         ...extra,
       });
+      if (
+        ["open", "read", "communicate"].includes(action) &&
+        (object?.owner === "messaging" || action === "communicate")
+      ) {
+        const worldId = (await options.settings()).subject.worldId;
+        if (worldId) {
+          const frame = await options.worlds.prepareAdvance(
+            reaction.subjectId,
+            worldId,
+          );
+          const policy = frame.currentPolicy;
+          const now = await options.life.worldNow(reaction.subjectId);
+          if (
+            policy &&
+            (!policy.policy.interruptEvents.includes("social") ||
+              Date.parse(now.at) < Date.parse(policy.nextInterruptAt.at))
+          )
+            return result("rejected", [adopted.decisionRef], {
+              yield: true,
+              problem: {
+                code: "world.social_interruption_deferred",
+                detail: "当前已采用活动继续到下个可中断节点；普通社交消息保留待处理。",
+              },
+            });
+        }
+      }
       if (action === "inspect") {
         await adoptView(reaction, actionId, { kind: "notifications" });
         const settings = await options.settings(),
