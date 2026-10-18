@@ -824,6 +824,7 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
   });
   let narrative: ReturnType<typeof createNarrativeService>;
   const roles: ReturnType<typeof createSubjectRoles> = {
+    recoverOutput: (input) => nativeRoles.recoverOutput(input),
     startExecution: (input) => nativeRoles.startExecution(input),
     startIndex: (input) => nativeRoles.startIndex(input),
     invoke: async (input) => {
@@ -905,6 +906,14 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
         sourceRefs: brief.sourceRefs,
         usage: applied.usage,
       });
+      if (result.outputProblem)
+        throw managementProblem(
+          "role.output_blocked",
+          "The retained role output needs attention",
+          result.outputProblem.detail,
+          "conflict",
+          "after-change",
+        );
       return {
         reviewerRunId: result.runId,
         proposal: result.structuredOutput as NarrativeIntentProposal,
@@ -978,6 +987,14 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
       });
       if (review.status === "pending")
         return { reviewerRunId: review.runId, pending: true as const };
+      if ("outputProblem" in review && review.outputProblem)
+        throw managementProblem(
+          "role.output_blocked",
+          "The retained role output needs attention",
+          review.outputProblem.detail,
+          "conflict",
+          "after-change",
+        );
       return {
         reviewerRunId: review.runId,
         review: review.structuredOutput as NarrativeReview,
@@ -1348,6 +1365,60 @@ export async function createGatewayRuntime(options: GatewayRuntimeOptions) {
     http,
     life,
     native,
+    /** Reparse existing terminal role outputs only; no model, adoption, renderer or sender call. */
+    async recoverRoleOutputs(input: { subjectId: string; activityId: string }) {
+      const activity = await life.get(input.subjectId, input.activityId);
+      if (!activity?.scope) denied("The original Task is unavailable");
+      await authorizeActivity(activity);
+      const recoveredRunIds: string[] = [];
+      const blocked: { runId: string; code: string; detail: string }[] = [];
+      let before: string | undefined;
+      do {
+        const page = await native.operatorRuns(
+          input.subjectId,
+          input.activityId,
+          false,
+          before,
+        );
+        for (const row of page.runs) {
+          if (
+            row.dispatchState !== "completed" ||
+            !["subject.deliberation", "narrative.review", "world.planner"].includes(
+              row.role,
+            )
+          )
+            continue;
+          const saved = await native.readDispatch(input.subjectId, row.runId);
+          if (
+            saved?.result &&
+            typeof saved.result === "object" &&
+            "structuredOutput" in saved.result &&
+            saved.result.structuredOutput !== undefined
+          )
+            continue;
+          try {
+            const result = await roles.recoverOutput({
+              subjectId: input.subjectId,
+              runId: row.runId,
+            });
+            if (result.status === "completed" && result.outputProblem)
+              blocked.push({ runId: row.runId, ...result.outputProblem });
+            else if (result.status === "completed") recoveredRunIds.push(row.runId);
+          } catch (error) {
+            blocked.push({
+              runId: row.runId,
+              code: "role.recovery_blocked",
+              detail: (error instanceof Error
+                ? error.message
+                : "The protected original role output is unavailable"
+              ).slice(0, 512),
+            });
+          }
+        }
+        before = page.nextRunId ?? undefined;
+      } while (before);
+      return { recoveredRunIds, blocked };
+    },
     recoverCandidates: (input: { subjectId: string; activityId: string }) =>
       narrative.recoverCandidates(input),
     pendingNarrative: (subjectId: string) =>

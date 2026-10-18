@@ -328,11 +328,11 @@ describe("one current Situation target resolver", () => {
       resolveActivity,
       foreground: { current: async () => reaction },
       native: {
+        unadoptedDecisions: async () => [],
         readyResults: async () => ({ runs: [] }),
         readTaskPerceptions: async () => ({
           sourceRefs: [],
           accepted: [],
-          cognitionRefs: [],
         }),
       },
       activities: { prepare: prepareRead },
@@ -563,10 +563,10 @@ describe("one current Situation target resolver", () => {
     const runtime = createSubjectSituationRuntime({
       narrative: { candidatesForActivity: async () => [] },
       native: {
+        unadoptedDecisions: async () => [],
         readTaskPerceptions: async () => ({
           sourceRefs: [],
           accepted: [],
-          cognitionRefs: [],
         }),
       },
       life: { get: async () => activity, worldNow: async () => view.world },

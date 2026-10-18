@@ -7,7 +7,11 @@ import {
   resolveSituationTarget,
   allowsUntargetedSituationAction,
 } from "./subject-target.js";
-import { digestCanonicalJson, createUuidV7Id } from "@heptalogos/foundation-contracts";
+import {
+  digestCanonicalJson,
+  createUuidV7Id,
+  ProblemError,
+} from "@heptalogos/foundation-contracts";
 import { Type } from "@heptalogos/schema-runtime/typebox";
 import { compileSchema } from "@heptalogos/schema-runtime";
 import { managementProblem } from "@heptalogos/management";
@@ -413,6 +417,15 @@ export function createSubjectReactor(options: {
           focus: reaction,
           runId,
         });
+        if (result.outputProblem)
+          return {
+            ...(await yieldReaction(
+              reaction,
+              `role_output_blocked:${runId}:${result.outputProblem.code}`,
+              previous,
+            )),
+            runId,
+          };
         if (reaction.stepCount >= reaction.policy.maxInteractionSteps)
           return {
             ...(await yieldReaction(
@@ -462,15 +475,34 @@ export function createSubjectReactor(options: {
         if (!reservation.claimed)
           return { status: "busy", reactionId: reaction.reactionId, runId };
         // Owners validate permissions and exact revisions again; model choices cannot construct source identities.
-        const actual = await options.act({
-          reaction,
-          frame: frame.value,
-          ...(object ? { object } : {}),
-          adopted,
-          sourceRunId: runId,
-          view,
-          actionId,
-        });
+        let actual: ReactorActionOutcome;
+        try {
+          actual = await options.act({
+            reaction,
+            frame: frame.value,
+            ...(object ? { object } : {}),
+            adopted,
+            sourceRunId: runId,
+            view,
+            actionId,
+          });
+        } catch (error) {
+          if (
+            !(error instanceof ProblemError) ||
+            error.problem.problemCode !== "role.output_blocked"
+          )
+            throw error;
+          actual = {
+            state: "rejected",
+            resultRefs: [],
+            yield: true,
+            continuationRef: "activity:" + reaction.activityId,
+            problem: {
+              code: error.problem.problemCode,
+              detail: (error.problem.detail ?? error.problem.title).slice(0, 512),
+            },
+          };
+        }
         previous = await options.foreground.finishAction({
           subjectId: reaction.subjectId,
           actionId,

@@ -40,7 +40,6 @@ describe("owned role reference and expression scope", () => {
       status: "terminal",
       result: {
         status: "ok",
-        runId: "review-run",
         result: {
           payloads: [
             {
@@ -87,6 +86,7 @@ describe("owned role reference and expression scope", () => {
       },
       native: {
         readDispatch: async () => retained,
+        recordRoleOutput: vi.fn(),
         registerInput,
         finishDispatch: async (_subject: string, _run: string, value: unknown) => {
           retained = { ...(value as object), requestDigest: "stable" };

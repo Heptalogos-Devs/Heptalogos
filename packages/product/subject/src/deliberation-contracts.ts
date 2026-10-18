@@ -44,7 +44,7 @@ export const decisionExpressionIntentSchema = Type.Object(
 export const deliberationDecisionSchema = Type.Object(
   {
     ...interactionActionSchema.properties,
-    reason: summary,
+    reason: Type.Optional(summary),
     calendarChange: Type.Optional(Type.Pick(changeCalendarSchema, ["scope", "change"])),
     nextOpportunity: Type.Optional(Type.Union([worldPointSchema, Type.Null()])),
     expressionIntent: Type.Optional(decisionExpressionIntentSchema),

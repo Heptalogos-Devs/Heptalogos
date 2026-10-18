@@ -122,6 +122,9 @@ export function currentSituationDecisionInput(
             .properties
         : {}),
       action: Type.Literal(choice.action),
+      ...(choice.action === "adjust_plan"
+        ? Type.Required(Type.Pick(deliberationDecisionSchema, ["reason"])).properties
+        : {}),
       target:
         choice.action === "communicate" && retained.length
           ? Type.Optional(regularTarget)

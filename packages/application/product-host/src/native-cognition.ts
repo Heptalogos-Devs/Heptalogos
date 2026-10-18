@@ -155,6 +155,11 @@ export interface NativeRoleResults {
   }[];
   readonly omitted: boolean;
 }
+/** Local interpretation failure of an actual retained provider response. */
+export interface NativeRoleOutputProblem {
+  readonly code: string;
+  readonly detail: string;
+}
 /** Official admitted Projection wire and actual caller metadata; no second cognition DTO. */
 export interface NativeAppliedContext {
   readonly runId: string;
@@ -719,6 +724,20 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         purpose: row.document.registration.roleScope?.purpose ?? "unknown",
         recordedAt: row.recorded_at,
         dispatchState: row.document.dispatch?.state ?? "registered",
+        outputProblem: (() => {
+          const result = row.document.dispatch?.result;
+          if (!result || typeof result !== "object" || !("outputProblem" in result))
+            return null;
+          const problem = result.outputProblem;
+          return problem &&
+            typeof problem === "object" &&
+            "code" in problem &&
+            typeof problem.code === "string" &&
+            "detail" in problem &&
+            typeof problem.detail === "string"
+            ? { code: problem.code, detail: problem.detail }
+            : null;
+        })(),
         native: row.run
           ? {
               subjectId,
@@ -793,6 +812,17 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         code?: string;
       },
     ): Promise<ActivityDispatchResult>;
+    /** Actual unadopted local choices remain task material for a later current decision. */
+    unadoptedDecisions(
+      subjectId: string,
+      activityId: string,
+    ): Promise<{ runId: string; sourceRefs: readonly string[]; decision: unknown }[]>;
+    /** Records only derived interpretation; original registration and provider result stay immutable. */
+    recordRoleOutput(
+      subjectId: string,
+      runId: string,
+      output: { structuredOutput?: unknown; outputProblem?: NativeRoleOutputProblem },
+    ): Promise<void>;
     /** Bounded terminal execution directory. Bodies remain in RoleRun until explicit viewing. */
     readyResults(input: {
       subjectId: string;
@@ -834,7 +864,10 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
       subjectId: string,
       runId: string,
       transaction?: PersistenceInternalTransaction,
-    ): Promise<{ registration: Registration; prepared: boolean } | undefined>;
+    ): Promise<
+      | { registration: Registration; prepared: boolean; extraSystemPrompt?: string }
+      | undefined
+    >;
     recordDeliveryFact(fact: AgencyDeliveryFact): Promise<void>;
     finishRun(
       runId: string,
@@ -1228,6 +1261,73 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
           [saved.registration.nativeRunId, subjectId, outcome.state, options.now()],
         );
         return dispatchResult(document, false);
+      });
+    },
+    async unadoptedDecisions(subjectId, activityId) {
+      const activity = await options.life.get(subjectId, activityId);
+      if (!activity?.scope) return [];
+      const rows = await readRepositorySql<{ run_id: string; document: StoredInput }>(
+        options.persistence,
+        "SELECT i.native_run_id AS run_id,i.document FROM heptalogos.life_native_input i WHERE i.subject_id=$1 AND i.activity_id=$2 AND i.document#>>'{registration,roleScope,role}'='subject.deliberation' AND i.document#>>'{dispatch,state}'='completed' AND i.document#>'{dispatch,result,structuredOutput}' IS NOT NULL AND NOT EXISTS (SELECT 1 FROM heptalogos.subject_decision d WHERE d.subject_id=i.subject_id AND d.source_run_id=i.native_run_id) ORDER BY i.recorded_at DESC LIMIT 4",
+        [subjectId, activityId],
+      );
+      return rows.flatMap((row) => {
+        if (
+          row.document.registration.actorEntityRef !== activity.adoptedBy ||
+          !hasAuthorizedNativeSources(activity, row.document.registration)
+        )
+          return [];
+        const result = row.document.dispatch?.result;
+        return result && typeof result === "object" && "structuredOutput" in result
+          ? [
+              {
+                runId: row.run_id,
+                sourceRefs: row.document.registration.sourceRefs,
+                decision: result.structuredOutput,
+              },
+            ]
+          : [];
+      });
+    },
+    async recordRoleOutput(subjectId, runId, output) {
+      await mutate(async (tx) => {
+        const rows = await sql<{ document: StoredInput }>(
+          tx,
+          "SELECT document FROM heptalogos.life_native_input WHERE subject_id=$1 AND native_run_id=$2 FOR UPDATE",
+          [subjectId, runId],
+        );
+        const saved = rows[0]?.document;
+        const result = saved?.dispatch?.result;
+        if (
+          !saved?.dispatch ||
+          saved.dispatch.state !== "completed" ||
+          !result ||
+          typeof result !== "object" ||
+          !("kind" in result) ||
+          result.kind !== "subject_role_result"
+        )
+          deny(
+            "native_role_output_unavailable",
+            "Only an original completed role response can be interpreted",
+          );
+        if ("structuredOutput" in result && result.structuredOutput !== undefined)
+          return;
+        const { outputProblem: _oldProblem, ...original } = result as Record<
+          string,
+          unknown
+        >;
+        await sql(
+          tx,
+          "UPDATE heptalogos.life_native_input SET document=$3::jsonb WHERE subject_id=$1 AND native_run_id=$2",
+          [
+            subjectId,
+            runId,
+            JSON.stringify({
+              ...saved,
+              dispatch: { ...saved.dispatch, result: { ...original, ...output } },
+            }),
+          ],
+        );
       });
     },
     async prepare(value) {
@@ -2760,6 +2860,7 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
         ? {
             registration: rows[0].document.registration,
             prepared: !!rows[0].document.firstContact,
+            extraSystemPrompt: rows[0].document.dispatch?.params.extraSystemPrompt,
           }
         : undefined;
     },

@@ -6,6 +6,7 @@
  */
 import {
   digestCanonicalJson,
+  ProblemError,
   type CanonicalJsonValue,
 } from "@heptalogos/foundation-contracts";
 import { createHash } from "node:crypto";
@@ -29,12 +30,16 @@ import {
 } from "@heptalogos/subject";
 import {
   decodeCognitionUsage,
+  decodeProjection,
   decodeObservationInput,
   encodeObservationInput,
   type HostPrepareResponse,
   type HostRoleScope,
 } from "@nous-wave/client/host-bridge";
-import type { createNativeCognitionBridge } from "./native-cognition.js";
+import type {
+  NativeRoleOutputProblem,
+  createNativeCognitionBridge,
+} from "./native-cognition.js";
 import type {
   NativeActivityDispatch,
   NativeActivityParams,
@@ -79,6 +84,7 @@ export interface RoleInvocationResult {
   readonly text: string;
   readonly result: unknown;
   readonly structuredOutput?: unknown;
+  readonly outputProblem?: NativeRoleOutputProblem;
   readonly status: "completed";
   readonly admitted: boolean;
 }
@@ -288,6 +294,18 @@ function roleReferences(
     directory: [...toKey].map(([reference, key]) => ({ key, reference })),
   };
 }
+function subjectProgressNote(note: string) {
+  return note
+    .split(/\nReactor\b/)[0]!
+    .split("\n")
+    .filter(
+      (line) =>
+        !/^(?:reaction_deadline|attention_switch|interaction_budget|read_admitted_at_action_boundary|subject_(?:disabled|wait|rest|continue)|activity_authority_stopped|(?:native_role_failed|role_output_blocked|invalid_decision|invalid_target):)/.test(
+          line,
+        ),
+    )
+    .join("\n");
+}
 function roleVisibleData(value: unknown): unknown {
   if (Array.isArray(value)) return value.map(roleVisibleData);
   if (value && typeof value === "object")
@@ -310,6 +328,7 @@ function parseRoleOutput(
   input: RoleInvocation,
   text: string,
   retained?: { reference: string; key: string }[],
+  admittedCognition: readonly string[] = [],
 ) {
   const schema =
     input.role === "subject.deliberation"
@@ -328,11 +347,70 @@ function parseRoleOutput(
   } catch {
     denied("role.invalid_output", "Inspect the retained native structured response");
   }
+  // A citation's category follows the actual admitted directory, never the provider's array name.
+  if (
+    input.role === "subject.deliberation" &&
+    value &&
+    typeof value === "object" &&
+    "expressionIntent" in value
+  ) {
+    const intent = value.expressionIntent;
+    if (
+      intent &&
+      typeof intent === "object" &&
+      "eventRefs" in intent &&
+      Array.isArray(intent.eventRefs) &&
+      "cognitionRefs" in intent &&
+      Array.isArray(intent.cognitionRefs)
+    ) {
+      const claims = new Set(
+        (input.context.currentClaims?.claims ?? []).map((claim) => claim.claimId),
+      );
+      if (
+        "priorClaimRefs" in intent &&
+        Array.isArray(intent.priorClaimRefs) &&
+        intent.priorClaimRefs.some((ref) => !claims.has(ref))
+      )
+        denied(
+          "role.reference_denied",
+          "Use exact prior claims from this run's current claim directory",
+        );
+      const cognition = new Set(admittedCognition);
+      const moved = intent.eventRefs.filter(
+        (ref): ref is string => typeof ref === "string" && cognition.has(ref),
+      );
+      const eventRefs = intent.eventRefs.filter((ref) => !moved.includes(ref));
+      const cognitionRefs = [...new Set([...intent.cognitionRefs, ...moved])];
+      intent.eventRefs = eventRefs;
+      intent.cognitionRefs = cognitionRefs;
+      const worldEvents = new Set(
+        (input.context.knownWorldViews ?? []).flatMap((view) =>
+          view.events.map(
+            (event) =>
+              `world-event:${view.worldId}:${event.eventId}:${"eventRevision" in event ? event.eventRevision : "revision" in event ? event.revision : 0}`,
+          ),
+        ),
+      );
+      if (
+        eventRefs.some((ref) => !worldEvents.has(ref)) ||
+        cognitionRefs.some((ref) => !cognition.has(ref))
+      )
+        denied(
+          "role.reference_denied",
+          "Use exact references from this run's admitted cognition and realized-world directories",
+        );
+    }
+  }
   const checked = compileSchema(schema).validate(value);
   if (!checked.ok)
     denied(
       "role.invalid_output",
-      "The retained native response does not match its formal response format",
+      "The retained native response does not match its formal response format: " +
+        checked.issues
+          .slice(0, 3)
+          .map((issue) => `${issue.instancePath || "/"} ${issue.message}`)
+          .join("; ")
+          .slice(0, 350),
     );
   if (input.role === "subject.deliberation") {
     const decision = checked.value as DeliberationDecision;
@@ -377,6 +455,17 @@ function parseRoleOutput(
         checked.value as NarrativeReviewProposal,
       )
     : checked.value;
+}
+function dispatchResultRecord(dispatch: { result?: unknown } | undefined) {
+  const result = dispatch?.result;
+  if (
+    !result ||
+    typeof result !== "object" ||
+    !("kind" in result) ||
+    result.kind !== "subject_role_result"
+  )
+    denied("role.retained_result_invalid", "The original role response is unavailable");
+  return result as { referenceDirectory?: { reference: string; key: string }[] };
 }
 /** Recover pre-retention candidates only from actual registered review inputs and their renderer parent. */
 export async function readRegisteredExpressionCandidates(
@@ -446,7 +535,14 @@ export function createSubjectRoles(options: {
   readonly life: Pick<ReturnType<typeof createLifeService>, "get">;
   readonly native: Pick<
     ReturnType<typeof createNativeCognitionBridge>,
-    "registerInput" | "readDispatch" | "finishDispatch" | "readRun" | "readRoleResults"
+    | "registerInput"
+    | "readDispatch"
+    | "finishDispatch"
+    | "readRun"
+    | "readRoleResults"
+    | "readAppliedContext"
+    | "recordRoleOutput"
+    | "readInputState"
   >;
   readonly dispatch: NativeActivityDispatch;
   readonly authorize: (
@@ -454,6 +550,36 @@ export function createSubjectRoles(options: {
     binding: SubjectRoleBinding,
   ) => Promise<void>;
 }) {
+  async function interpret(
+    input: RoleInvocation,
+    text: string,
+    directory?: { reference: string; key: string }[],
+  ) {
+    try {
+      const cognition =
+        input.role === "subject.deliberation"
+          ? decodeProjection(
+              (await options.native.readAppliedContext(input.requestId)).projection,
+            ).segments.flatMap((segment) =>
+              segment.sourceRefs.map((ref) => ref.kind + ":" + ref.value),
+            )
+          : [];
+      return { structuredOutput: parseRoleOutput(input, text, directory, cognition) };
+    } catch (error) {
+      return {
+        outputProblem: {
+          code:
+            error instanceof ProblemError
+              ? error.problem.problemCode
+              : "role.invalid_output",
+          detail: (error instanceof Error
+            ? error.message
+            : "The retained role response could not be interpreted"
+          ).slice(0, 512),
+        },
+      };
+    }
+  }
   async function execute(
     input: RoleInvocation,
     background: boolean,
@@ -505,6 +631,7 @@ export function createSubjectRoles(options: {
         deadlineAt?: string;
         nativeResult?: unknown;
         structuredOutput?: unknown;
+        outputProblem?: NativeRoleOutputProblem;
         referenceDirectory?: { reference: string; key: string }[];
       };
       if (
@@ -525,18 +652,24 @@ export function createSubjectRoles(options: {
           "role.cognition_not_admitted",
           "The retained result has no actual admitted consumer",
         );
+      let text = "";
+      try {
+        text = nativeRoleText(saved.nativeResult);
+      } catch {
+        /* Retain the actual invalid response. */
+      }
+      const output =
+        saved.structuredOutput === undefined
+          ? await interpret(input, text, saved.referenceDirectory)
+          : { structuredOutput: saved.structuredOutput };
+      if (saved.structuredOutput === undefined)
+        await options.native.recordRoleOutput(input.subjectId, input.requestId, output);
       return {
         runId: input.requestId,
         activityRevision: saved.activityRevision!,
         deadlineAt: saved.deadlineAt!,
-        text: nativeRoleText(saved.nativeResult),
-        structuredOutput:
-          saved.structuredOutput ??
-          parseRoleOutput(
-            input,
-            nativeRoleText(saved.nativeResult),
-            saved.referenceDirectory,
-          ),
+        text,
+        ...output,
         result: saved.nativeResult,
         status: "completed",
         admitted: true,
@@ -665,7 +798,12 @@ export function createSubjectRoles(options: {
       activity: {
         activityId: activity.activityId,
         purpose: activity.purpose,
-        progress: activity.progress,
+        progress: {
+          ...activity.progress,
+          note: activity.progress.note
+            ? subjectProgressNote(activity.progress.note)
+            : "",
+        },
       },
       sourceData: roleVisibleData(input.context),
     };
@@ -700,7 +838,10 @@ export function createSubjectRoles(options: {
           kind: "heptalogos_ephemeral_role_context",
           schemaVersion: 1,
           sourceData: context,
-          referenceKeys: references.directory.map(({ key }) => key),
+          referenceDirectory: references.directory.map(({ key, reference }) => ({
+            key,
+            category: reference.split(":")[0],
+          })),
         }),
       );
     const historyScope = digestCanonicalJson("host.role-history.v1", {
@@ -813,16 +954,7 @@ export function createSubjectRoles(options: {
     }
     const result = outcome.result;
     const failed = failedNativeRoleResult(result, input.requestId);
-    let text = "",
-      structuredOutput: unknown,
-      parseError: unknown;
-    if (!failed)
-      try {
-        text = nativeRoleText(result);
-        structuredOutput = parseRoleOutput(input, text);
-      } catch (error) {
-        parseError = error;
-      }
+
     await options.native.finishDispatch(input.subjectId, input.requestId, {
       state: failed ? "failed" : "completed",
       ...(failed ? { code: "native_role_failed" } : {}),
@@ -836,12 +968,18 @@ export function createSubjectRoles(options: {
         templateId: template.id,
         referenceDirectory: references.directory,
         nativeResult: result,
-        ...(structuredOutput === undefined ? {} : { structuredOutput }),
       },
     });
     if (failed)
       denied("role.native_run_failed", "The exact native role ended in failure");
-    if (parseError) throw parseError;
+    let text = "";
+    try {
+      text = nativeRoleText(result);
+    } catch {
+      /* The raw response is already retained. */
+    }
+    const output = await interpret(input, text, references.directory);
+    await options.native.recordRoleOutput(input.subjectId, input.requestId, output);
     const run = await options.native.readRun(input.requestId);
     if (
       !run?.consumerId ||
@@ -858,13 +996,71 @@ export function createSubjectRoles(options: {
       activityRevision: activity.revision,
       deadlineAt,
       text,
-      structuredOutput,
+      ...output,
       result,
       status: "completed",
       admitted: true,
     };
   }
   return {
+    /** Reinterprets the same completed paid response from its protected frozen input; grants no adoption or effects. */
+    async recoverOutput(input: { subjectId: string; runId: string }) {
+      const state = await options.native.readInputState(input.subjectId, input.runId);
+      const text = state?.extraSystemPrompt;
+      const marker = '{"kind":"heptalogos_ephemeral_role_context"';
+      if (
+        !state ||
+        !text ||
+        createHash("sha256").update(text).digest("hex") !==
+          state.registration.currentContextDigest ||
+        !text.includes(marker)
+      )
+        denied(
+          "role.retained_input_invalid",
+          "The original protected role input is unavailable",
+        );
+      const retained = dispatchResultRecord(
+        await options.native.readDispatch(input.subjectId, input.runId),
+      );
+      const decoded = roleReferences(
+        { sourceRefs: [], context: {} } as unknown as RoleInvocation,
+        retained.referenceDirectory,
+      ).decode(JSON.parse(text.slice(text.indexOf(marker))));
+      const frozen = decoded as {
+        sourceData: { sourceData: RoleInvocation["context"] };
+      };
+      const applied = await options.native.readAppliedContext(input.runId);
+      const role = state.registration.roleScope.role;
+      if (
+        role !== "subject.deliberation" &&
+        role !== "narrative.review" &&
+        role !== "world.planner"
+      )
+        denied(
+          "role.recovery_denied",
+          "This role has no structured response to reinterpret",
+        );
+      const dispatch = await options.native.readDispatch(input.subjectId, input.runId);
+      if (!dispatch || dispatch.state !== "completed")
+        denied(
+          "role.result_pending",
+          "Only the original completed response can be reinterpreted",
+        );
+      return execute(
+        {
+          requestId: input.runId,
+          requestDigest: dispatch.requestDigest,
+          subjectId: input.subjectId,
+          activityId: state.registration.activityId,
+          role,
+          context: frozen.sourceData.sourceData,
+          sourceRefs: state.registration.sourceRefs,
+          contacts: [],
+          usage: applied.usage,
+        },
+        false,
+      );
+    },
     async invoke(input: RoleInvocation): Promise<RoleInvocationResult> {
       const result = await execute(input, false);
       if (result.status !== "completed")

@@ -98,6 +98,7 @@ export interface SubjectSituationOptions {
     | "readTaskPerceptions"
     | "readRun"
     | "readInputState"
+    | "unadoptedDecisions"
     | "readAppliedContext"
     | "readResultRelease"
     | "readRoleResults"
@@ -561,6 +562,10 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
       context: {
         situation: frame,
         retainedExpressions,
+        priorUnadoptedChoices: await options.native.unadoptedDecisions(
+          reaction.subjectId,
+          activity.activityId,
+        ),
         worldContinuation: worldFrame
           ? {
               currentPolicy: worldFrame.currentPolicy,
@@ -1294,7 +1299,8 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
           (value) =>
             `world-schedule:${worldId}:${value.instanceId}` === object.sourceRef,
         )?.planned;
-        if (!schedule?.ruleRef) return result("rejected", [], { yield: true });
+        if (!schedule?.ruleRef || !adopted.decision.reason)
+          return result("rejected", [], { yield: true });
         const changed = await options.worlds.changeCalendar(
           {
             operationId: actionId,
