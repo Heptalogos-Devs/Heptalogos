@@ -358,6 +358,9 @@ importers:
       '@heptalogos/time-service':
         specifier: workspace:*
         version: link:../../foundation/time-service
+      '@js-temporal/polyfill':
+        specifier: 'catalog:'
+        version: 0.5.1
       '@nous-wave/client':
         specifier: file:../../../vendor/nous-wave/nous-wave-client-8bf3a1c3ed3e.tgz
         version: file:vendor/nous-wave/nous-wave-client-8bf3a1c3ed3e.tgz

@@ -40,7 +40,8 @@
     "@heptalogos/messaging": "workspace:*",
     "@heptalogos/identity": "workspace:*",
     "uuid": "catalog:",
-    "typebox": "catalog:"
+    "typebox": "catalog:",
+    "@js-temporal/polyfill": "catalog:"
   },
   "devDependencies": {
     "vitest": "catalog:"
