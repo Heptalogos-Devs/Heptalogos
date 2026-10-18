@@ -41,6 +41,7 @@ export {
 } from "./world-lifecycle.js";
 
 export * from "./world-calendar-contracts.js";
+export { worldCalendarWindow } from "./world-calendar-service.js";
 
 export * from "./attention-contracts.js";
 export { createSubjectAttentionService } from "./attention.js";

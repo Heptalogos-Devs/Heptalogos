@@ -42,6 +42,23 @@ function invalid(detail: string): never {
 const parse = createSubjectSchemaReader(() =>
   invalid("Read the canonical calendar contract"),
 );
+/** The default display window follows the world's clock and IANA timezone. */
+export function worldCalendarWindow(
+  instant: string,
+  timezone: string,
+  period: "today" | "week",
+) {
+  const now = Temporal.Instant.from(instant).toZonedDateTimeISO(timezone);
+  const day = now.startOfDay();
+  const start = period === "week" ? day.subtract({ days: day.dayOfWeek - 1 }) : day;
+  return {
+    start: start.toInstant().toString(),
+    end: start
+      .add({ days: period === "week" ? 7 : 1 })
+      .toInstant()
+      .toString(),
+  };
+}
 /** Reads a stable time/key page from any finite world interval without writing future instances. */
 export async function readWorldCalendar(
   options: { persistence: PersistenceService },

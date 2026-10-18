@@ -4,6 +4,542 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type GetOperatorOverviewData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/overview';
+};
+
+export type GetOperatorOverviewErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type GetOperatorOverviewError = GetOperatorOverviewErrors[keyof GetOperatorOverviewErrors];
+
+export type GetOperatorOverviewResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        status: {
+            installationId: string;
+            bootId: string;
+            startedAt: string;
+            management: 'available';
+            subject: {
+                id: string | null;
+                enabled: boolean;
+            };
+            configurationRevision: string | null;
+            dependencies: Array<{
+                name: string;
+                state: 'available' | 'unavailable' | 'unconfigured';
+                checkedAt: string;
+                code: string;
+                message: string;
+                nextStep?: string;
+            }>;
+            capabilities: Array<string>;
+        };
+        anchorRoot: string;
+        programPath: string;
+        productGeneration: string;
+        subjectName: string;
+        model: string;
+        qqAccount: string | null;
+        qqState: string;
+        tasks: Array<{
+            activityId: string;
+            subjectId: string;
+            revision: number;
+            purpose: string;
+            mode: 'work' | 'rest' | 'wait';
+            window: {
+                notBefore: {
+                    timeDomainRef: string;
+                    at: string;
+                } | null;
+                notAfter: {
+                    timeDomainRef: string;
+                    at: string;
+                } | null;
+            };
+            sourceRefs: Array<string>;
+            workContextId: string | null;
+            state: 'planned' | 'active' | 'paused' | 'completed' | 'cancelled' | 'failed';
+            proposedBy: string;
+            adoptedBy: string | null;
+            adoptedAt: string | null;
+            lastTransitionReason: string;
+            scope: {
+                conversations: Array<{
+                    conversationRef: string;
+                    operations: Array<'observe' | 'send' | 'edit' | 'withdraw' | 'moderate'>;
+                }>;
+                tools: Array<string>;
+                sourceRefs: Array<string>;
+                maxRunMs: number;
+            } | null;
+            world: {
+                timeDomainRef: string;
+                at: string;
+            };
+            nextOpportunity: {
+                timeDomainRef: string;
+                at: string;
+            } | null;
+            progress: {
+                note: string;
+                sourceRefs: Array<string>;
+                artifactRefs: Array<string>;
+                resultRefs: Array<string>;
+            };
+            interruptOn: Array<'direct' | 'mention' | 'reply' | 'deadline' | 'correction' | 'manual'>;
+            continuationRequired: boolean;
+            createdAt: string;
+            updatedAt: string;
+        }>;
+        moreTasks: boolean;
+        retainedResults: Array<{
+            activityId: string;
+            runId: string;
+            resultCount: number;
+        }>;
+        foreground: {
+            subjectId: string;
+            activityId: string;
+            reactionId: string;
+            focusRevision: number;
+            candidate: {
+                subjectId: string;
+                candidateRef: string;
+                sourceOwner: 'messaging' | 'world' | 'life' | 'role_result' | 'cognition';
+                sourceKey: string;
+                sourceRef: string;
+                sourceRevision: string;
+                sourcePosition?: string;
+                kind: 'message' | 'world_event' | 'world_entry' | 'schedule' | 'activity_result' | 'cognition_change' | 'explicit_subject_intent';
+                activityId?: string;
+                worldId?: string;
+                priorityClass: 'important' | 'direct' | 'background';
+                availableAt: string;
+                related: boolean;
+                metadata: {
+                    label: string;
+                    conversationRef?: string;
+                    messageRefs?: Array<string>;
+                    unreadCount?: number;
+                    direct?: boolean;
+                    mention?: boolean;
+                    reply?: boolean;
+                };
+            };
+            explanationRef: string;
+            startedAt: string;
+            deadlineAt: string;
+            policy: {
+                /**
+                 * Maximum short interactions in one foreground Reaction.
+                 */
+                maxInteractionSteps: number;
+                /**
+                 * Real milliseconds for the foreground Reaction, excluding a yielded long worker.
+                 */
+                reactionDeadlineMs: number;
+                /**
+                 * Concurrent adopted professional runs within the actual native capacity.
+                 */
+                workerConcurrency: number;
+            };
+            state: 'active' | 'yielded' | 'superseded' | 'completed';
+            stepCount: number;
+            currentRunId?: string;
+            continuationRef?: string;
+            stopReason?: string;
+        } | null;
+        living: {
+            subjectId: string;
+            worldId: string;
+            revision: number;
+            profileRevision: number;
+            energy: number;
+            integratedThrough: {
+                timeDomainRef: string;
+                at: string;
+            };
+            coverage: 'complete' | 'limited';
+            currentPlaceRef: string;
+            currentActivityRefs: Array<string>;
+            energyExplanation: string;
+            device: {
+                revision: number;
+                view: {
+                    kind: 'stowed';
+                } | {
+                    kind: 'notifications';
+                } | {
+                    kind: 'conversations';
+                } | {
+                    kind: 'conversation';
+                    conversationRef: string;
+                } | {
+                    kind: 'page';
+                    materialRef: string;
+                };
+            };
+            updatedAt: string;
+        } | null;
+        usage: Array<{
+            role: string;
+            purpose: string;
+            activityId: string;
+            recordedRuns: number;
+            input: number;
+            output: number;
+            cacheRead: number;
+            cacheWrite: number;
+            missingUsage: number;
+            cost: null;
+        }>;
+        usageCoverage: string;
+        issues: Array<string>;
+    };
+};
+
+export type GetOperatorOverviewResponse = GetOperatorOverviewResponses[keyof GetOperatorOverviewResponses];
+
+export type GetSubjectDocumentsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/subject/documents';
+};
+
+export type GetSubjectDocumentsErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type GetSubjectDocumentsError = GetSubjectDocumentsErrors[keyof GetSubjectDocumentsErrors];
+
+export type GetSubjectDocumentsResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        subjectId: string;
+        generatedAt: string;
+        documents: {
+            [key: string]: string;
+        };
+    };
+};
+
+export type GetSubjectDocumentsResponse = GetSubjectDocumentsResponses[keyof GetSubjectDocumentsResponses];
+
+export type GetDefaultCalendarData = {
+    body?: never;
+    path?: never;
+    query?: {
+        period?: 'today' | 'week' | 'range';
+        from?: string;
+        to?: string;
+    };
+    url: '/v1/calendar';
+};
+
+export type GetDefaultCalendarErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type GetDefaultCalendarError = GetDefaultCalendarErrors[keyof GetDefaultCalendarErrors];
+
+export type GetDefaultCalendarResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        subjectId: string | null;
+        state: string;
+        calendar: {
+            worldId: string;
+            revision: number;
+            interval: {
+                timeDomainRef: string;
+                start: string;
+                end: string;
+            };
+            displayTimezone: string;
+            items: Array<{
+                instanceId: string;
+                interval: {
+                    timeDomainRef: string;
+                    start: string;
+                    end: string;
+                };
+                localStart: string;
+                localEnd: string;
+                status: 'planned' | 'cancelled' | 'realized' | 'unplanned';
+                planned: {
+                    scheduleId: string;
+                    ruleRef?: {
+                        ruleId: string;
+                        revision: number;
+                        recurrenceId: string;
+                        originalInterval: {
+                            timeDomainRef: string;
+                            start: string;
+                            end: string;
+                        };
+                        timezoneAdjusted: boolean;
+                        exceptionId: string | null;
+                    };
+                    interval: {
+                        timeDomainRef: string;
+                        start: string;
+                        end: string;
+                    };
+                    title: string;
+                    description: string;
+                    actorRefs: Array<string>;
+                    placeRef: string;
+                    activityId: string | null;
+                    sourceRefs: Array<string>;
+                    status: 'planned' | 'cancelled';
+                    overlap: 'exclusive' | 'concurrent';
+                } | null;
+                lived: Array<{
+                    eventId: string;
+                    activityId?: string;
+                    energy?: {
+                        kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
+                        participation: 'primary' | 'subsidiary';
+                        delta: number;
+                        reason: string;
+                    };
+                    interval: {
+                        timeDomainRef: string;
+                        start: string;
+                        end: string;
+                    };
+                    title: string;
+                    content: string;
+                    actorRefs: Array<string>;
+                    placeRef: string;
+                    scheduleId: string | null;
+                    scheduleOutcome?: 'completed' | 'missed' | 'partial';
+                    parentEventId: string | null;
+                    causalEventRefs: Array<string>;
+                    overlap: 'exclusive' | 'concurrent';
+                    source: {
+                        kind: 'rule' | 'world_planner' | 'narrative' | 'environment';
+                        producerRef: string;
+                        sourceRefs: Array<string>;
+                    };
+                    perceptions: Array<{
+                        actorRef: string;
+                        kind: 'seen' | 'heard' | 'recall';
+                        at: {
+                            timeDomainRef: string;
+                            at: string;
+                        };
+                        content: string;
+                    }>;
+                    revision: number;
+                    recordedAt: string;
+                } | {
+                    eventId: string;
+                    eventRevision: number;
+                    worldId: string;
+                    interval: {
+                        timeDomainRef: string;
+                        start: string;
+                        end: string;
+                    };
+                    recordedAt: string;
+                    actorRef: string;
+                    kind: 'seen' | 'heard' | 'recall';
+                    at: {
+                        timeDomainRef: string;
+                        at: string;
+                    };
+                    content: string;
+                }>;
+                recordedAt: string;
+                sourceRefs: Array<string>;
+            }>;
+            continuation: string | null;
+        } | null;
+    };
+};
+
+export type GetDefaultCalendarResponse = GetDefaultCalendarResponses[keyof GetDefaultCalendarResponses];
+
 export type GetManagementDiscoveryData = {
     body?: never;
     path?: never;
@@ -1122,11 +1658,6 @@ export type ConfigureProductResponses = {
                 origin: string;
             };
         } | null;
-        reactorOpportunity?: {
-            state: 'not_requested' | 'projected' | 'unavailable' | 'disabled';
-            operationRef?: string;
-            attemptedAt?: string;
-        };
     };
 };
 

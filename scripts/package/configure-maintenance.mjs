@@ -9,7 +9,11 @@ import { isAbsolute, join } from "node:path";
 import { createServer } from "node:net";
 import { randomBytes } from "node:crypto";
 import { runProcessSyncChecked } from "@heptalogos/repo-kit";
-import { quoteUnit, readInstallationServices } from "./service-unit.mjs";
+import {
+  quoteUnit,
+  readInstallationServices,
+  registerService,
+} from "./service-unit.mjs";
 const run = (command, args, timeout = 30000) =>
   runProcessSyncChecked(command, args, { timeout, stdin: "ignore" }).stdout.trim();
 async function protectedFile(path) {
@@ -56,6 +60,7 @@ export async function configureMaintenanceGateway({
   sourceProfile,
   model,
   port,
+  autostart,
 }) {
   await protectedFile(environmentFile);
   await protectedFile(sourceProfile);
@@ -205,8 +210,7 @@ export async function configureMaintenanceGateway({
     }),
     { mode: 0o600 },
   );
-  run("systemctl", ["--user", "enable", unitPath]);
-  run("systemctl", ["--user", "daemon-reload"]);
+  const enabled = registerService(unitPath, autostart);
   const latestDescriptor = JSON.parse(await readFile(descriptorPath, "utf8"));
   if (
     latestDescriptor.installationId !== descriptor.installationId ||
@@ -229,6 +233,7 @@ export async function configureMaintenanceGateway({
     JSON.stringify({
       configured: true,
       installationId: descriptor.installationId,
+      autostart: enabled,
       unit: maintenance.unit,
       origin: `http://127.0.0.1:${profile.gateway.port}`,
       profilePath,

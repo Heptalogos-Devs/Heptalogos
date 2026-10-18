@@ -4,7 +4,12 @@
 /** Installs built application artifacts and fixed user-systemd services on Linux.
  * @module install-linux-product
  */
-import { quoteUnit, readInstallationServices } from "./service-unit.mjs";
+import {
+  quoteUnit,
+  readInstallationServices,
+  registerService,
+  autostartChoice,
+} from "./service-unit.mjs";
 import { configureMaintenanceGateway } from "./configure-maintenance.mjs";
 import { runProcessSyncChecked } from "@heptalogos/repo-kit";
 import { cp, mkdir, readFile, lstat, writeFile, chmod, rename } from "node:fs/promises";
@@ -34,6 +39,7 @@ function argumentsFrom(argv) {
     "--postgres-root",
     "--host-artifact",
     "--cli-artifact",
+    "--autostart",
   ];
   for (let index = 0; index < argv.length; index += 2) {
     if (
@@ -42,13 +48,17 @@ function argumentsFrom(argv) {
       argv[index + 1].startsWith("--")
     )
       throw new Error(
-        "Expected --target, --node-root, --postgres-root and optional --host-artifact/--cli-artifact paths",
+        "Expected --target, --node-root, --postgres-root and optional --host-artifact/--cli-artifact paths, --autostart yes|no",
       );
-    values.set(argv[index], resolve(argv[index + 1]));
+    values.set(
+      argv[index],
+      argv[index] === "--autostart" ? argv[index + 1] : resolve(argv[index + 1]),
+    );
   }
   for (const key of ["--target", "--node-root", "--postgres-root"])
     if (!values.has(key)) throw new Error(`${key} is required`);
   return {
+    autostart: autostartChoice(values.get("--autostart")) ?? false,
     target: values.get("--target"),
     nodeRoot: values.get("--node-root"),
     postgresRoot: values.get("--postgres-root"),
@@ -226,8 +236,7 @@ async function install(options) {
   } catch (error) {
     if (error?.code !== "ENOENT") throw error;
   }
-  run("systemctl", ["--user", "enable", unitPath], 10_000);
-  run("systemctl", ["--user", "daemon-reload"], 10_000);
+  const autostart = registerService(unitPath, options.autostart);
   console.log(
     JSON.stringify({
       installed: true,
@@ -235,6 +244,7 @@ async function install(options) {
       installationId,
       command: join(bin, "heptalogos"),
       services,
+      autostart,
     }),
   );
 }
@@ -255,7 +265,7 @@ export function subjectGatewayServiceUnit({
 }
 
 /** Configures the one existing Subject slot through its authoritative installation descriptor. */
-export async function configureSubjectGateway({ target, environmentFile }) {
+export async function configureSubjectGateway({ target, environmentFile, autostart }) {
   if (environmentFile) {
     const metadata = await lstat(environmentFile);
     if (
@@ -326,8 +336,7 @@ export async function configureSubjectGateway({ target, environmentFile }) {
     }),
     { mode: 0o600 },
   );
-  run("systemctl", ["--user", "enable", unitPath], 10000);
-  run("systemctl", ["--user", "daemon-reload"], 10000);
+  const enabled = registerService(unitPath, autostart);
   subject.configured = true;
   if (environmentFile) subject.environmentFile = environmentFile;
   else delete subject.environmentFile;
@@ -342,6 +351,7 @@ export async function configureSubjectGateway({ target, environmentFile }) {
       installationId: descriptor.installationId,
       unit: subject.unit,
       profilePath,
+      autostart: enabled,
     }),
   );
 }
@@ -363,12 +373,13 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
             "--source-profile",
             "--model",
             "--port",
+            "--autostart",
           ].includes(args[index]) ||
           !args[index + 1] ||
           values.has(args[index])
         )
           throw Error(
-            "Usage: install-linux-product.mjs configure-maintenance --target <anchor> --environment-file <private-env> --source-profile <native-profile> --model <provider/model> [--port <port>]",
+            "Usage: install-linux-product.mjs configure-maintenance --target <anchor> --environment-file <private-env> --source-profile <native-profile> --model <provider/model> [--port <port>] [--autostart yes|no]",
           );
         values.set(args[index], args[index + 1]);
       }
@@ -388,19 +399,29 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
         sourceProfile: resolve(values.get("--source-profile")),
         model: values.get("--model"),
         port: values.has("--port") ? Number(values.get("--port")) : undefined,
+        autostart: autostartChoice(values.get("--autostart")),
       });
     } else if (process.argv[2] === "configure-subject-gateway") {
-      if (
-        ![5, 7].includes(process.argv.length) ||
-        process.argv[3] !== "--target" ||
-        (process.argv.length === 7 && process.argv[5] !== "--environment-file")
-      )
-        throw Error(
-          "Usage: install-linux-product.mjs configure-subject-gateway --target <installation-anchor> [--environment-file <private-env-file>]",
-        );
+      const values = new Map();
+      const args = process.argv.slice(3);
+      for (let index = 0; index < args.length; index += 2) {
+        if (
+          !["--target", "--environment-file", "--autostart"].includes(args[index]) ||
+          !args[index + 1] ||
+          values.has(args[index])
+        )
+          throw Error(
+            "Expected --target, optional --environment-file and --autostart yes|no",
+          );
+        values.set(args[index], args[index + 1]);
+      }
+      if (!values.has("--target")) throw Error("--target is required");
       await configureSubjectGateway({
-        target: resolve(process.argv[4]),
-        environmentFile: process.argv[6] ? resolve(process.argv[6]) : undefined,
+        target: resolve(values.get("--target")),
+        environmentFile: values.has("--environment-file")
+          ? resolve(values.get("--environment-file"))
+          : undefined,
+        autostart: autostartChoice(values.get("--autostart")),
       });
     } else await install(argumentsFrom(process.argv.slice(2)));
   } catch (error) {

@@ -693,6 +693,21 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
     return parent.runId;
   };
   const service: GatewayCognitionBridge & {
+    /** Reads saved execution metering without provider calls or result release. */
+    operatorUsage(subjectId: string): Promise<
+      {
+        role: string;
+        purpose: string;
+        activityId: string;
+        recordedRuns: number;
+        input: number;
+        output: number;
+        cacheRead: number;
+        cacheWrite: number;
+        missingUsage: number;
+        cost: null;
+      }[]
+    >;
     registerInput(
       input: Omit<
         Registration,
@@ -777,6 +792,63 @@ export function createNativeCognitionBridge(options: NativeCognitionOptions) {
     ): Promise<void>;
     flushPendingFeedback(limit: number): Promise<{ delivered: number }>;
   } = {
+    async operatorUsage(subjectId) {
+      const rows = await readRepositorySql<{
+        role: string;
+        purpose: string;
+        activity_id: string;
+        metadata: {
+          usage?: {
+            input?: number;
+            output?: number;
+            cacheRead?: number;
+            cacheWrite?: number;
+          };
+        } | null;
+      }>(
+        options.persistence,
+        "SELECT document#>>'{registration,roleScope,role}' AS role, document#>>'{registration,roleScope,purpose}' AS purpose, activity_id, document#>'{dispatch,result,nativeResult,result,meta,agentMeta}' AS metadata FROM heptalogos.life_native_input WHERE subject_id=$1",
+        [subjectId],
+      );
+      const groups = new Map<
+        string,
+        {
+          role: string;
+          purpose: string;
+          activityId: string;
+          recordedRuns: number;
+          input: number;
+          output: number;
+          cacheRead: number;
+          cacheWrite: number;
+          missingUsage: number;
+          cost: null;
+        }
+      >();
+      for (const row of rows) {
+        const key = `${row.role}:${row.purpose}:${row.activity_id}`;
+        const group = groups.get(key) ?? {
+          role: row.role ?? "unknown",
+          purpose: row.purpose ?? "unknown",
+          activityId: row.activity_id,
+          recordedRuns: 0,
+          input: 0,
+          output: 0,
+          cacheRead: 0,
+          cacheWrite: 0,
+          missingUsage: 0,
+          cost: null,
+        };
+        group.recordedRuns++;
+        const usage = row.metadata?.usage;
+        if (!usage) group.missingUsage++;
+        else
+          for (const field of ["input", "output", "cacheRead", "cacheWrite"] as const)
+            group[field] += usage[field] ?? 0;
+        groups.set(key, group);
+      }
+      return [...groups.values()];
+    },
     async registerInput(input, dispatch) {
       const taskLimit =
         input.roleScope.role === "subject.execution"

@@ -2,7 +2,7 @@
 
 ## 实施合同与边界
 
-WorldLife 是 subject 产品包内的独立 owner，沿现有 Activity、Host fence 与 PostgreSQL短事务实现。当前 `createWorldLifeService` 已提供定义/日程配置、prepareAdvance、realize/同事务realizeIn、world/subject视角与双cutoff查询、coverage及待接触交接。固定日历规律经Temporal按IANA/DST展开、确定性实现并给出下一自然节点；choice规律留给planner/主体选择。真实Pg回归覆盖并发幂等、冲突、视角、历史截点、兼容细化与重复规则推进。正式HTTP hook已定义；安装组合、原生scheduler、多角色消费者与Nous接触还须完整贯通后报告完成。Activity/进展仍分别保存技术投入。认知时钟与长期认识仍由Nous拥有。
+WorldLife 是 subject 产品包内的独立 owner，沿现有 Activity、Host fence 与 PostgreSQL短事务实现。当前 `createWorldLifeService` 已提供定义/日程配置、prepareAdvance、realize/同事务realizeIn、world/subject视角与双cutoff查询、coverage及待接触交接。日历规律经Temporal按IANA/DST展开；履约政策集中区分自主、通常遵循和严格，分别决定默认参与、可中断条件和明确偏离，不能用fixed/choice或adjustable同时承担这些含义。真实Pg回归覆盖并发幂等、冲突、视角、历史截点、兼容细化与重复规则推进。正式HTTP hook已定义；安装组合、原生scheduler、多角色消费者与Nous接触还须完整贯通后报告完成。Activity/进展仍分别保存技术投入。认知时钟与长期认识仍由Nous拥有。
 
 WorldDefinition 保存 worldId、Subject、timeDomainRef、IANA时区、稳定地点/world-scoped actor、生活规律、创作范围、现实信息来源与offline policy。worldId不等于时间域；无Seed不自动生成童年、性格、价值或专业履历。既有Subject采用学校角色/回溯背景须显式来源采用。
 
@@ -10,7 +10,7 @@ ScheduleItem保存计划区间、参与者、目的、归属Activity、规律、
 
 ## 读取、推进与采用
 
-prepareWorldAdvance读取clock、定义、已实现范围、有限日程和相关历史，返回有限WorldFrame。默认主要日程24世界小时、近期细节2小时。规则确定的日常段直接展开，未定场景才调用world.planner；长离线按自然段合并，不补跑每分钟模型或物理工具。
+prepareWorldAdvance读取clock、定义、已实现范围、有限日程和相关历史，返回有限WorldFrame。默认主要日程24世界小时、近期细节2小时。规则确定或已采用意图保持的日常段直接推进，空白可作为合法自主时间；近期缺口或交互确需细化时才调用world.planner；长离线按自然段合并，不补跑每分钟模型或物理工具。
 
 world.planner只输出提案，工具集合为空。Host提供从实际实现游标到当前世界时间的realizationInterval；已实现事件限于该区间，未来安排只进入schedule。未定场景的首次机会按当前planner输入合同版本保持稳定身份，成功采用的patch抑制重复初始化。
 
@@ -20,7 +20,7 @@ realizeWorld采用operationId、expectedRevision、目标范围和WorldPatch。�
 
 WorldLife提供同事务realizeIn供NarrativeCommit采用WorldPatch，不能另借pool连接。锁顺序为Subject叙事锁→world/scene→Activity→behavior；所有相关路径一致，不跨模型持锁。地点/身体排他资源按区间检查；上课时短暂看手机可有显式父事件/可重叠模式，不能以重叠掩盖冲突。自由文本因果冲突由一次窄语义核对补足。
 
-已实现课程可追加兼容的被点名细节，须引用原事件与自身recordedAt；不能把同一时段改成异地旅行。管理纠正追加revision/supersession和原因，历史对外说法保留。
+已实现课程可追加兼容的被点名细节，须引用原事件与自身recordedAt；不能把同一时段改成异地旅行。过去安排和已实现事实只读；纠正以当前recordedAt追加说明或解释，原事件、原版本和已表达原话保留。
 
 ## 视角与认知交接
 
@@ -38,7 +38,7 @@ knowledgeAtWorldTime读取已实现故事中角色截至该世界点的见闻；
 
 管理API/Client/CLI提供世界定义采用/修订、计划与规则、prepare/realize、任意范围lifeAt、coverage、世界/主体视角、事件解释/纠正。内部机会为world_event/schedule/activity_result/cognition_change/explicit_subject_intent；仅message机会和真正外发要求会话。内部session按Subject/world/Activity/role构成，不能伪造canonical conversation。
 
-下一自然节点投影到已有OpenClaw scheduler，只有一个实际唤醒者，无第二运行循环。QQ完全关闭时仍应推进课程、休息、娱乐和内部审议；QQ接入后只有实际查看才接触正文。
+下一自然节点投影到已有OpenClaw scheduler，只有一个实际唤醒者，无第二运行循环。QQ关闭时世界规律和已采用活动仍可确定性推进；无新变化不触发付费审议。WorldLife一次返回进展、可感知变化与下一节点，continue保存实际下一条件；QQ接入后只有实际查看才接触正文。
 
 参见[主体活动](subject-base.md)、[叙事与陈述](narrative-claims.md)、[时间](../execution/time.md)。
 
@@ -54,7 +54,7 @@ knowledgeAtWorldTime读取已实现故事中角色截至该世界点的见闻；
 
 结构化WorldProfile与可选Seed分别采用。无Seed创建不调用模型、不补人格或旧传记；学校/角色仅是明确入场事实，可按实际启用领域形成认识。新profile不倒退既有世界或覆盖原Subject身份。跨owner步骤复用稳定operation及真实回执，失败续未完成，不建通用创建引擎。
 
-规则使用成熟RFC5545语义：RRULE重复、RDATE增加、EXDATE排除、RECURRENCE-ID原实例身份。单次移动保留原实例，修订显式限定本次/未来范围/尚未实现系列；旧已实现事件不重写。时区参与本地展开，DST规则显式，不用UTC每周加固定小时。主体缺席/违反规则的行为与修改学校规则分别处理。
+规则使用成熟RFC5545语义：RRULE重复、RDATE增加、EXDATE排除、RECURRENCE-ID原实例身份。单次移动保留原实例，修改只作用于未来实例或正在发生活动的未来尾部；按世界当前时刻和事实检查边界，已过去但未实现的安排也不能改期抹除。时区参与本地展开，DST规则显式，不用UTC每周加固定小时。主体缺席/违反规则的行为与修改学校规则分别处理。
 
 readCalendar按Subject/world/from-to/domain/展示时区、planned/lived/combined、人物/活动及cursor有界展开和合并规则、例外、计划、已实现事件；显示原/现安排、修订来源、真实状态/时段/recorded和coverage。只读不模型、不推进世界、不登记接触。作者、Subject已知安排和公开忙闲各自视角。
 

@@ -2,6 +2,26 @@
 
 CLI 是确定性的 ManagementClient 投影；查询不调用模型，明确的执行或机会命令可使原生调度器运行主体。Linux 服务命令使用安装器发布并核对安装身份的 systemd 描述符；不能传入任意 unit 名。普通聊天不获得这些管理权限。
 
+## 先查看当前主体
+
+安装后的命令默认使用该安装绑定的Subject；管理读取不调用模型。
+
+```sh
+heptalogos status
+heptalogos status --watch
+heptalogos status --json
+heptalogos subject documents
+heptalogos calendar today
+heptalogos calendar week
+heptalogos calendar range --from 2026-10-19T00:00:00Z --to 2026-10-20T00:00:00Z
+heptalogos task <总览中的任务ID>
+heptalogos task <原任务ID> --resume
+```
+
+总览显示实际运行路径与代次、OS自启、自动工作配置、Gateway阻塞、现有任务/保留结果及按角色汇总的已记录token用量。未留存的用量和未核实价格标未知；原生配置中的零价不作为免费依据。Ctrl-C只退出watch。没有管理进程时仍显示本地安装/服务状态，不为查询启动服务。
+
+`subject documents`确定性导出IDENTITY、SOUL、RELATIONSHIPS、LANGUAGE、LIFE到安装DATA/subject-documents/<Subject>并返回完整路径。未形成内容显示未形成，保留适用范围和正式修订；文件编辑不会自动写认知。today/week使用世界时钟和世界时区，无需填写UUID；没有世界时明确显示未配置。任务resume读取新鲜revision恢复同一Activity，不重建任务；自动工作暂停时不启动模型。
+
 ## 安装后使用
 
 独立安装的 `bin/heptalogos` 自动传入安装根，从任何目录均可调用。开发环境直接运行构建后的 CLI 时，需要 `--anchor-root /absolute/installation`。
@@ -46,9 +66,9 @@ node scripts/package/install-linux-product.mjs configure-maintenance \
 
 精确合同见 [管理](../../../specs/management/system-authority.md)，安装和生命周期边界见 [Host](../product-host/README.md)。验证应从独立安装运行完整认领、登录、配置、启停与恢复，不能只运行源码入口。
 
-`start/stop/restart --component host|subject|maintenance|all` 明确选择组件，默认只处理 Host。`all` 启动按 Host、Subject、maintenance 的顺序处理已配置服务；停止按相反的依赖方向关闭。启动或重启 Subject 后，CLI 等待实际 Gateway 就绪，再请求同一 Reactor 原生机会。`reactorOpportunity` 单独报告 `projected`、`disabled` 或 `unavailable`；服务已启动不等于主体已执行。没有管理员会话时，服务控制仍可完成，机会投影报告需要登录。
+`start/stop/restart --component host|subject|maintenance|all`默认只处理Host，all按组件依赖顺序启停。进程启动、配置保存与自主付费运行分别控制，CLI不在启动后请求模型机会。subject.enabled与已授权预算决定自动工作；安装和Gateway配置默认不打开开机启动，--autostart yes|no显式选择，重配/升级保留原选择。
 
-配置 `set` 在 Native 或 Nous 停机时仍可提交，额外的 `reactorOpportunity` 说明本次原生机会能否投影。配置保存和模型执行分别查询，原生 profile/model/密钥仍由独立 OpenClaw 配置管理。`config describe` 给出 `roles` 绑定及 `reactor` 限额；`reactor status` 返回实际生效值。
+配置set在Native/Nous停机时仍可提交，保存不触发Reactor机会；原生profile/model/密钥仍归独立OpenClaw配置。config describe显示角色和资源上限，reactor status读取当前有效值。
 
 ## 活动、注意与主动追求
 

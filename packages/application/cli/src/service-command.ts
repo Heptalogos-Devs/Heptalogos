@@ -6,7 +6,6 @@
  */
 import { Flags } from "@oclif/core";
 import { BaseCommand } from "./base-command.js";
-import { projectStartedReactor } from "./service-reactor.js";
 import {
   operateInstalledService,
   type InstalledComponent,
@@ -42,30 +41,9 @@ export abstract class ServiceCommand extends BaseCommand {
             descriptor.services[name].configured ? operation : "status",
           ),
         );
-      return this.present({
-        services,
-        ...(operation === "start" || operation === "restart"
-          ? {
-              reactorOpportunity: await projectStartedReactor(
-                anchorRoot,
-                descriptor.services.subject.configured,
-              ),
-            }
-          : {}),
-      });
+      return this.present({ services });
     }
     const result = await operateInstalledService(anchorRoot, component, operation);
-    return this.present({
-      ...result,
-      ...((operation === "start" || operation === "restart") &&
-      component !== "maintenance"
-        ? {
-            reactorOpportunity: await projectStartedReactor(
-              anchorRoot,
-              component === "subject",
-            ),
-          }
-        : {}),
-    });
+    return this.present(result);
   }
 }

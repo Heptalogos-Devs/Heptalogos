@@ -18,6 +18,9 @@ import {
   getBoundSubject,
   bindProductSubject,
   createProductSubject,
+  getOperatorOverview,
+  getSubjectDocuments,
+  getDefaultCalendar,
 } from "./generated/index.js";
 import { createClient } from "./generated/client/index.js";
 import type {
@@ -133,6 +136,11 @@ export function createManagementClient(options: ManagementClientOptions) {
     signal: options.signal,
   };
   return Object.freeze({
+    getOverview: () => requestHostData(() => getOperatorOverview(base)),
+    getSubjectDocuments: () => requestHostData(() => getSubjectDocuments(base)),
+    getCalendar: (
+      query: { period?: "today" | "week" | "range"; from?: string; to?: string } = {},
+    ) => requestHostData(() => getDefaultCalendar({ ...base, query })),
     getSubject: () => requestHostData(() => getBoundSubject(base)),
     bindSubject: (body: BindSubjectInput) =>
       requestHostData(() => bindProductSubject({ ...base, body })),

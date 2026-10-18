@@ -55,7 +55,7 @@ Ordinary GitHub Actions are not a required execution route. Keep `pnpm verify` r
 
 ## Verification and process cost
 
-TDD is optional. Tests must protect a current contract, observed risk, or meaningful uncertainty; do not add tests merely to show that unimplemented behavior is absent. During iteration, use the narrowest check that can falsify the change. Do not add speculative validators, recovery layers, or process gates for hypothetical future work.
+TDD is optional. Tests must protect a current contract, observed risk, or meaningful uncertainty; do not add tests merely to show that unimplemented behavior is absent. During iteration, use the affected check that can falsify the change; do not require the full repository suite for every edit. Honor the active Plan's independent per-repository test-count and support-code budgets. New installations do not enable autostart or paid work by default. Do not add speculative validators, recovery layers, or process gates for hypothetical future work.
 
 ## Completion
 
