@@ -42,6 +42,23 @@ function invalid(detail: string): never {
 const parse = createSubjectSchemaReader(() =>
   invalid("Read the canonical calendar contract"),
 );
+/** The default display window follows the world's clock and IANA timezone. */
+export function worldCalendarWindow(
+  instant: string,
+  timezone: string,
+  period: "today" | "week",
+) {
+  const now = Temporal.Instant.from(instant).toZonedDateTimeISO(timezone);
+  const day = now.startOfDay();
+  const start = period === "week" ? day.subtract({ days: day.dayOfWeek - 1 }) : day;
+  return {
+    start: start.toInstant().toString(),
+    end: start
+      .add({ days: period === "week" ? 7 : 1 })
+      .toInstant()
+      .toString(),
+  };
+}
 /** Reads a stable time/key page from any finite world interval without writing future instances. */
 export async function readWorldCalendar(
   options: { persistence: PersistenceService },
@@ -285,6 +302,7 @@ export function applyCalendarChange(
   input: ChangeCalendar,
   realizedScheduleIds: ReadonlySet<string>,
   realizedEvents: readonly RealizedWorldEvent[] = [],
+  worldAt?: string,
 ): WorldDefinition {
   const rules = definition.routineRules ?? [];
   const current = rules.find(
@@ -303,10 +321,80 @@ export function applyCalendarChange(
   );
   if (!isWorldRecurrence(current, input.recurrenceId))
     invalid("The recurrence identity is not in this adopted RFC set");
-  if (input.scope === "this" && realizedScheduleIds.has(instanceId))
+  const existingException = definition.calendarExceptions?.find(
+    (value) =>
+      value.ruleId === input.ruleId && value.recurrenceId === input.recurrenceId,
+  );
+  const originalAt = Temporal.PlainDateTime.from(
+    existingException?.startLocal ?? input.recurrenceId,
+  )
+    .add({ seconds: existingException?.startLocal ? 0 : current.startShiftSeconds })
+    .toZonedDateTime(current.timezone, { disambiguation: current.disambiguation })
+    .toInstant();
+  const occurrence = expandWorldRoutines(definition, {
+    timeDomainRef: definition.timeDomainRef,
+    start: originalAt.subtract({ hours: 24 * 8 }).toString(),
+    end: originalAt.add({ hours: 24 * 8 }).toString(),
+  }).find((item) => item.schedule.scheduleId === instanceId)?.schedule;
+  if (worldAt && occurrence) {
+    const now = Date.parse(worldAt),
+      start = Date.parse(occurrence.interval.start),
+      end = Date.parse(occurrence.interval.end);
+    if (end <= now || (input.scope !== "this" && start < now))
+      invalid(
+        "Elapsed arrangements remain fixed even when their realization is missing; choose a future recurrence",
+      );
+    if (start < now) {
+      const changed = input.change;
+      const unchangedStart =
+        !changed.startLocal ||
+        Temporal.PlainDateTime.from(changed.startLocal).toZonedDateTime(
+          current.timezone,
+          { disambiguation: current.disambiguation },
+        ).epochMilliseconds === start;
+      if (
+        !unchangedStart ||
+        changed.placeRef ||
+        changed.actorRefs ||
+        changed.status === "cancelled" ||
+        !changed.durationMinutes ||
+        start + changed.durationMinutes * 60000 < now
+      )
+        invalid(
+          "An ongoing arrangement can change only its unelapsed duration; its elapsed prefix stays fixed",
+        );
+    }
+    if (
+      input.change.startLocal &&
+      Temporal.PlainDateTime.from(input.change.startLocal).toZonedDateTime(
+        current.timezone,
+        { disambiguation: current.disambiguation },
+      ).epochMilliseconds < now &&
+      start >= now
+    )
+      invalid("A future arrangement cannot be moved into elapsed world time");
+  }
+  if (
+    input.scope === "this" &&
+    realizedScheduleIds.has(instanceId) &&
+    (!worldAt ||
+      !occurrence ||
+      Date.parse(occurrence.interval.start) >= Date.parse(worldAt))
+  )
     invalid("An already realized instance cannot be moved or cancelled");
   const original = Temporal.PlainDateTime.from(input.recurrenceId),
     changed = input.change;
+  if (
+    occurrence &&
+    changed.durationMinutes &&
+    realizedEvents.some(
+      (event) =>
+        event.scheduleId === instanceId &&
+        Date.parse(event.interval.end) >
+          Date.parse(occurrence.interval.start) + changed.durationMinutes! * 60000,
+    )
+  )
+    invalid("A changed tail cannot remove an already recorded interval");
   if (input.scope === "this")
     return {
       ...definition,
@@ -398,4 +486,144 @@ export function applyCalendarChange(
     calendarExceptions: [...protectedInstances.values()],
     routineRules: revised,
   };
+}
+
+/** A replacement schedule may revise a future tail, never erase an elapsed arrangement. */
+export function preserveElapsedSchedule(
+  current: WorldState["schedule"],
+  next: WorldState["schedule"],
+  worldAt: string,
+): void {
+  const now = Date.parse(worldAt);
+  for (const old of current) {
+    if (Date.parse(old.interval.start) >= now) continue;
+    const replacement = next.find((item) => item.scheduleId === old.scheduleId);
+    if (!replacement)
+      invalid("Keep elapsed arrangements, including plans with no realization");
+    const prefix = (item: typeof old) => ({
+      ...item,
+      interval: {
+        ...item.interval,
+        end: new Date(Math.min(Date.parse(item.interval.end), now)).toISOString(),
+      },
+    });
+    if (
+      digestCanonicalJson(
+        "world.schedule-prefix.v1",
+        prefix(old) as unknown as CanonicalJsonValue,
+      ).hex !==
+      digestCanonicalJson(
+        "world.schedule-prefix.v1",
+        prefix(replacement) as unknown as CanonicalJsonValue,
+      ).hex
+    )
+      invalid("Only the future tail of an ongoing arrangement can change");
+  }
+  for (const item of next)
+    if (
+      !current.some((old) => old.scheduleId === item.scheduleId) &&
+      Date.parse(item.interval.start) < now
+    )
+      invalid(
+        "New arrangements start in the future; append late facts through realization",
+      );
+}
+/** Existing rules retain historical content; new versions become effective in the future. */
+export function preserveElapsedRules(
+  current: WorldDefinition,
+  next: WorldDefinition,
+  worldAt: string,
+): void {
+  const now = Temporal.Instant.from(worldAt);
+  const at = (
+    value: string,
+    rule: NonNullable<WorldDefinition["routineRules"]>[number],
+  ) =>
+    Temporal.PlainDateTime.from(value)
+      .toZonedDateTime(rule.timezone, { disambiguation: rule.disambiguation })
+      .toInstant();
+  for (const rule of current.routineRules ?? []) {
+    const replacement = next.routineRules?.find(
+      (item) => item.ruleId === rule.ruleId && item.revision === rule.revision,
+    );
+    if (
+      Temporal.Instant.compare(
+        at(rule.effectiveFrom ?? rule.startsAtLocal, rule).add({
+          seconds: rule.startShiftSeconds,
+        }),
+        now,
+      ) >= 0
+    )
+      continue;
+    if (!replacement)
+      invalid("Keep historical rule revisions; revise a future effective range");
+    const historical = (item: typeof rule) => ({ ...item, effectiveUntil: null });
+    if (
+      digestCanonicalJson(
+        "world.rule-history.v1",
+        historical(rule) as unknown as CanonicalJsonValue,
+      ).hex !==
+        digestCanonicalJson(
+          "world.rule-history.v1",
+          historical(replacement) as unknown as CanonicalJsonValue,
+        ).hex ||
+      (replacement.effectiveUntil !== rule.effectiveUntil &&
+        (!replacement.effectiveUntil ||
+          Temporal.Instant.compare(
+            at(replacement.effectiveUntil, rule).add({
+              seconds: rule.startShiftSeconds,
+            }),
+            now,
+          ) < 0))
+    )
+      invalid("Existing rule content is historical; adopt a new future revision");
+  }
+  for (const rule of next.routineRules ?? [])
+    if (
+      !current.routineRules?.some(
+        (old) => old.ruleId === rule.ruleId && old.revision === rule.revision,
+      ) &&
+      Temporal.Instant.compare(
+        at(rule.effectiveFrom ?? rule.startsAtLocal, rule).add({
+          seconds: rule.startShiftSeconds,
+        }),
+        now,
+      ) < 0
+    )
+      invalid("New rule revisions cannot start in elapsed world time");
+  for (const exception of current.calendarExceptions ?? []) {
+    const rule = current.routineRules?.find((item) => item.ruleId === exception.ruleId);
+    if (
+      rule &&
+      Temporal.Instant.compare(
+        at(exception.startLocal ?? exception.recurrenceId, rule),
+        now,
+      ) < 0 &&
+      digestCanonicalJson(
+        "world.exception-history.v1",
+        exception as unknown as CanonicalJsonValue,
+      ).hex !==
+        digestCanonicalJson(
+          "world.exception-history.v1",
+          (next.calendarExceptions?.find(
+            (item) => item.exceptionId === exception.exceptionId,
+          ) ?? null) as unknown as CanonicalJsonValue,
+        ).hex
+    )
+      invalid("Keep elapsed calendar exceptions and their sources");
+  }
+  for (const exception of next.calendarExceptions ?? []) {
+    const rule = next.routineRules?.find((item) => item.ruleId === exception.ruleId);
+    if (
+      rule &&
+      !current.calendarExceptions?.some(
+        (old) => old.exceptionId === exception.exceptionId,
+      ) &&
+      Temporal.Instant.compare(
+        at(exception.startLocal ?? exception.recurrenceId, rule),
+        now,
+      ) < 0
+    )
+      invalid("New calendar exceptions cannot rewrite elapsed arrangements");
+  }
 }

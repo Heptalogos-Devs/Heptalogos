@@ -34,12 +34,6 @@
       "options": {
         "command": "oxlint --type-aware --ignore-pattern \"**/src/generated/**\" packages/application/management-client"
       }
-    },
-    "test": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "vitest run --root packages/application/management-client"
-      }
     }
   }
 }

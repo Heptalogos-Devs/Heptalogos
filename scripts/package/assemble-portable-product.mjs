@@ -217,8 +217,21 @@ async function pathExists(path) {
   }
 }
 
-/** Materializes the production dependency closure with the workspace's package-manager policy. */
-export async function ensureArtifactDependencies(artifactRoot, label) {
+/** Materializes a deployment closure outside compiler output, using the workspace package policy. */
+export async function materializeApplicationArtifact(sourceRoot, label) {
+  const stateDirectory = join(repositoryRoot, "tmp", "product-artifact-state");
+  const statePath = join(stateDirectory, `${label}.json`);
+  const artifactRoot = join(repositoryRoot, "tmp", "product-artifacts", label);
+  const sourceDigest = await digestArtifactInputs(sourceRoot);
+  const previous = await readJsonIfPresent(statePath);
+  if (previous?.sourceDigest !== sourceDigest || !(await pathExists(artifactRoot))) {
+    await rm(artifactRoot, { recursive: true, force: true });
+    await cp(sourceRoot, artifactRoot, {
+      recursive: true,
+      verbatimSymlinks: true,
+      filter: (path) => !relative(sourceRoot, path).split(sep).includes("node_modules"),
+    });
+  }
   await requireFile(join(artifactRoot, "package.json"), `${label} artifact manifest`);
   const manifestPath = join(artifactRoot, "package.json");
   const manifest = JSON.parse(await readFile(manifestPath, "utf8"));
@@ -270,18 +283,16 @@ export async function ensureArtifactDependencies(artifactRoot, label) {
     fail(`${label} artifact workspace modules are missing: ${artifactRoot}`);
   });
 
-  const stateDirectory = join(repositoryRoot, "tmp", "product-artifact-state");
-  const statePath = join(stateDirectory, `${label}.json`);
   const inputDigest = await digestArtifactInputs(artifactRoot);
-  const previous = await readJsonIfPresent(statePath);
   if (
-    previous?.schemaVersion === 4 &&
+    previous?.schemaVersion === 5 &&
+    previous?.sourceDigest === sourceDigest &&
     previous?.inputDigest === inputDigest &&
     previous?.nodeLinker === artifactNodeLinker &&
     (await pathExists(join(artifactRoot, "node_modules/.modules.yaml"))) &&
     previous.outputDigest === (await digestTree(join(artifactRoot, "node_modules")))
   ) {
-    return inputDigest;
+    return { root: artifactRoot, digest: inputDigest };
   }
 
   // Nx owns the pruned artifact and workspace-module copy. pnpm owns the
@@ -309,14 +320,15 @@ export async function ensureArtifactDependencies(artifactRoot, label) {
   await writeFile(
     statePath,
     JSON.stringify({
-      schemaVersion: 4,
+      schemaVersion: 5,
+      sourceDigest,
       inputDigest: finalInputDigest,
       outputDigest,
       nodeLinker: artifactNodeLinker,
     }),
     { encoding: "utf8", mode: 0o600 },
   );
-  return finalInputDigest;
+  return { root: artifactRoot, digest: finalInputDigest };
 }
 
 async function replaceDirectory(source, destination) {
@@ -591,18 +603,15 @@ async function main() {
     join(options.cliArtifact, "bin.js"),
     "built reference CLI artifact",
   );
-  const hostArtifactDigest = await ensureArtifactDependencies(
+  const hostArtifact = await materializeApplicationArtifact(
     options.hostArtifact,
     "product-host",
   );
-  const cliArtifactDigest = await ensureArtifactDependencies(
-    options.cliArtifact,
-    "cli",
-  );
+  const cliArtifact = await materializeApplicationArtifact(options.cliArtifact, "cli");
   const applicationArtifactDigest = createHash("sha256")
-    .update(JSON.stringify([hostArtifactDigest, cliArtifactDigest]))
+    .update(JSON.stringify([hostArtifact.digest, cliArtifact.digest]))
     .digest("hex");
-  const productIdentities = join(options.hostArtifact, "generated/build-identities.js");
+  const productIdentities = join(hostArtifact.root, "generated/build-identities.js");
   await requireFile(productIdentities, "Product Host build identities");
   const identityText = await readFile(productIdentities, "utf8");
   const productGeneration = /PRODUCT_GENERATION_ID = "([0-9a-f]{64})"/u.exec(
@@ -674,8 +683,8 @@ async function main() {
     return;
   }
   if (applicationNeedsReplacement) {
-    await replaceDirectory(options.hostArtifact, productRoot);
-    await replaceDirectory(options.cliArtifact, cliRoot);
+    await replaceDirectory(hostArtifact.root, productRoot);
+    await replaceDirectory(cliArtifact.root, cliRoot);
     await normalizeCliArtifactManifest(cliRoot);
   }
 

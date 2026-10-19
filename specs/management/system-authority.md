@@ -14,15 +14,20 @@
 
 公共 `/.well-known/heptalogos-management` 返回安装、boot、`/v1` base path 和 `management.v1`。其余管理操作使用 bearer；`/readyz` 只表示管理 HTTP 可用，不证明依赖、QQ 或模型已上线。
 
-| API                                              | 行为                                                            |
-| ------------------------------------------------ | --------------------------------------------------------------- |
-| `POST /v1/bootstrap/claim`                       | 消费一次 claim，创建管理员                                      |
-| `POST /v1/session`、`DELETE /v1/session/current` | 创建、撤销当前 opaque session                                   |
-| `GET /v1/status`                                 | 当前安装、Subject 意图、配置 revision、分别核对的依赖与实际能力 |
-| `GET /v1/config/describe`、`GET /v1/config`      | code-owned schema 与当前有效配置                                |
-| `POST /v1/config/check`、`PUT /v1/config`        | 无副作用校验、带 expectedRevision 的完整配置替换与 activation   |
-| `GET /v1/subject`、`PUT /v1/subject`             | 保留离线可读绑定；在实际 Nous owner 核验后显式绑定              |
-| `POST /v1/subjects`                              | 按稳定 operationId 调 Nous 正式创建，可无 Seed；不替换已有绑定  |
+| API                                                                 | 行为                                                            |
+| ------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `POST /v1/bootstrap/claim`                                          | 消费一次 claim，创建管理员                                      |
+| `POST /v1/session`、`DELETE /v1/session/current`                    | 创建、撤销当前 opaque session                                   |
+| `GET /v1/overview`、`GET /v1/subject/documents`、`GET /v1/calendar` | 当前总览、确定性主体文档与默认世界日历，零模型、无业务写入      |
+| `GET /v1/status`                                                    | 当前安装、Subject 意图、配置 revision、分别核对的依赖与实际能力 |
+| `GET /v1/config/describe`、`GET /v1/config`                         | code-owned schema 与当前有效配置                                |
+| `POST /v1/config/check`、`PUT /v1/config`                           | 无副作用校验、带 expectedRevision 的完整配置替换与 activation   |
+| `GET /v1/subject`、`PUT /v1/subject`                                | 保留离线可读绑定；在实际 Nous owner 核验后显式绑定              |
+| `POST /v1/subjects`                                                 | 按稳定 operationId 调 Nous 正式创建，可无 Seed；不替换已有绑定  |
+
+`GET /v1/tasks/:activityId`按当前绑定主体读取原任务与角色登记，默认不取输入；显式 `inputs=true` 才读取一项原运行的最终provider body和单列宿主prompt，`runId`选择原运行，`before`读取更早登记。没有原生capture的旧调用保留未知。`GET /v1/calendar/template`读取可选学校时间骨架，不写身份或日程。总览分别读取H自动工作、OS自启及Nous实际生效维护策略。
+
+`POST /v1/subject/documents/import`是显式管理员认知修订：读取文档中的`nous-revision`块，采用正式Client内容codec，并以原revision/epoch及稳定operationId调用Self/Social.revise。正文由同一Nous域renderer提供，文件编辑不自动写入；未改内容跳过，每条修订独立返回结果。原版本与采用范围保留，手工修改不沿用旧模型producer。新认知对象的采用仍走Nous既有adopt；LIFE历史只读，未来日历修改走WorldLife。
 
 请求不做字符串/布尔/null 强制转换，不静默丢弃未知字段。配置由 Configuration 保存 revision 和 activation；激活必须再次核对 expected revision。参数无效不自动重试，陈旧写入返回冲突。当前激活为 LIVE 的产品字段由实际消费者每次取得有效 snapshot；不能只保存而无人消费。
 
@@ -38,7 +43,7 @@ Host 通过已安装官方 Client 和受保护 discovery 连接 Nous，按配置
 
 ## 安装与监督
 
-安装入口原子发布完整 locator，有互斥；既有安装身份和显式 roots 不得覆盖。Linux 使用安装器固定发布、按 InstallationId 派生的用户 systemd unit。CLI 不接受任意 unit 名。Host 自有私有 PostgreSQL只有一个监督者；维护 Gateway 生命周期独立，产品停止不关闭它。
+安装入口原子发布完整 locator，有互斥；既有安装身份和显式 roots 不得覆盖。Linux 使用安装器固定发布、按 InstallationId 派生的用户 systemd unit。安装器只安装，默认不启用开机启动、不调用模型；--autostart yes|no显式选择，Gateway重配和升级保留systemd当前选择。进程启动与自主付费分别由服务命令和subject.enabled/已授权预算控制，普通启动或配置保存不唤醒主体。CLI 不接受任意 unit 名。Host 自有私有 PostgreSQL只有一个监督者；维护 Gateway 生命周期独立，产品停止不关闭它。
 
 停止关闭新 admission，有限 drain 在途管理工作、关闭持久化并释放自有数据库；故障收尾仍尝试剩余 owned cleanup，失去所有权后不得用旧 ready handle 关闭新 owner 的数据库。启动重用数据与配置，不重新认领管理员。代码、配置、数据、秘密、blob、缓存、run 与备份分别保留。
 

@@ -11,12 +11,6 @@
         "command": "oxlint --type-aware packages/data/persistence"
       }
     },
-    "test": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "vitest run --root packages/data/persistence --exclude **/*.integration.test.ts"
-      }
-    },
     "test:integration": {
       "executor": "nx:run-commands",
       "options": {

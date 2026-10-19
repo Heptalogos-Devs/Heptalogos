@@ -33,13 +33,15 @@
     "@heptalogos/persistence": "workspace:*",
     "@heptalogos/schema-runtime": "workspace:*",
     "@heptalogos/time-service": "workspace:*",
-    "@nous-wave/client": "file:../../../vendor/nous-wave/nous-wave-client-41bb5f8ee965.tgz",
+    "@nous-wave/client": "file:../../../vendor/nous-wave/nous-wave-client-aa93ede67117.tgz",
     "fastify": "catalog:",
     "write-file-atomic": "catalog:",
     "@heptalogos/subject": "workspace:*",
     "@heptalogos/messaging": "workspace:*",
     "@heptalogos/identity": "workspace:*",
-    "uuid": "catalog:"
+    "uuid": "catalog:",
+    "typebox": "catalog:",
+    "@js-temporal/polyfill": "catalog:"
   },
   "devDependencies": {
     "vitest": "catalog:"

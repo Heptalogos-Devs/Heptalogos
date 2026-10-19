@@ -39,18 +39,15 @@ import {
 } from "@heptalogos/management";
 import { Type } from "@heptalogos/schema-runtime/typebox";
 import { tokenFromRequest } from "./http-auth.js";
+import { registerOperatorHttp, type createOperatorOperations } from "./operator.js";
+import { registerCalendarMomentHttp, type createCalendarMomentOperations } from "./calendar-moment.js";
 import { registerPursuitHttp, type PursuitHttpOptions } from "./pursuit-http.js";
 import { registerWorldHttp, type WorldHttpOptions } from "./world-http.js";
 import { registerNarrativeHttp, type NarrativeHttpOptions } from "./narrative-http.js";
 import { registerWorldOpportunityHttp } from "./world-opportunity-http.js";
 import { registerLifeReadHttp } from "./life-read-http.js";
 import { registerGatewayHttp, type GatewayHttpOptions } from "./gateway-http.js";
-import {
-  registerReactorHttp,
-  reactorProjectionSchema,
-  type ReactorHttpOptions,
-  type ReactorProjection,
-} from "./reactor-http.js";
+import { registerReactorHttp, type ReactorHttpOptions } from "./reactor-http.js";
 
 async function withRequestSignal<T>(
   request: FastifyRequest,
@@ -75,6 +72,8 @@ async function withRequestSignal<T>(
 
 /** Configures the one current Management listener, without starting any agent. */
 export interface ProductHttpOptions {
+  readonly operator?: ReturnType<typeof createOperatorOperations>;
+  readonly calendarMoment?: ReturnType<typeof createCalendarMomentOperations>;
   readonly authentication: ManagementAuthentication;
   readonly product: ProductManagement;
   readonly identity: { readonly installationId: string; readonly bootId: string };
@@ -84,9 +83,6 @@ export interface ProductHttpOptions {
   readonly world?: WorldHttpOptions;
   readonly narrative?: NarrativeHttpOptions;
   readonly reactor?: ReactorHttpOptions;
-  readonly onConfigurationActivated?: (
-    configuration: Awaited<ReturnType<ProductManagement["configuration"]>>,
-  ) => Promise<ReactorProjection>;
   readonly worldOpportunity?: Parameters<typeof registerWorldOpportunityHttp>[1];
 }
 /** Builds a loopback-only, non-model-dependent Management API. */
@@ -156,6 +152,15 @@ export async function createProductHttpApp(options: ProductHttpOptions) {
     500: managementProblemSchema,
   };
   const security = [{ bearerAuth: [] }];
+  registerOperatorHttp(
+    app,
+    (token) => options.authentication.authenticate(token ?? "").then(() => undefined),
+    options.operator,
+  );
+  registerCalendarMomentHttp(app,
+    (token) => options.authentication.authenticate(token ?? "").then(() => undefined),
+    options.calendarMoment,
+  );
   app.get(
     "/.well-known/heptalogos-management",
     {
@@ -280,13 +285,7 @@ export async function createProductHttpApp(options: ProductHttpOptions) {
         security,
         body: configureProductSchema,
         response: {
-          200: Type.Object(
-            {
-              ...productConfigurationSchema.properties,
-              reactorOpportunity: Type.Optional(reactorProjectionSchema),
-            },
-            { additionalProperties: false },
-          ),
+          200: productConfigurationSchema,
           ...errors,
         },
       },
@@ -302,12 +301,7 @@ export async function createProductHttpApp(options: ProductHttpOptions) {
           body.expectedRevision,
           signal,
         );
-        const reactorOpportunity =
-          await options.onConfigurationActivated?.(configuration);
-        return {
-          ...configuration,
-          ...(reactorOpportunity ? { reactorOpportunity } : {}),
-        };
+        return configuration;
       });
     },
   );

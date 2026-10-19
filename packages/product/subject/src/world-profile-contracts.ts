@@ -53,6 +53,47 @@ export const worldProfileSchema = Type.Object(
     rules: worldDefinitionSchema.properties.rules,
     creationScope: worldDefinitionSchema.properties.creationScope,
     informationSourceRefs: worldDefinitionSchema.properties.informationSourceRefs,
+    schoolCalendar: Type.Optional(
+      Type.Object(
+        {
+          template: Type.Literal("jci-2025"),
+          startsOn: Type.String({ pattern: "^\\d{4}-\\d{2}-\\d{2}$" }),
+          validThrough: Type.String({ pattern: "^\\d{4}-\\d{2}-\\d{2}$" }),
+          weekdays: Type.Array(
+            Type.Union([
+              Type.Literal("MO"),
+              Type.Literal("TU"),
+              Type.Literal("WE"),
+              Type.Literal("TH"),
+              Type.Literal("FR"),
+              Type.Literal("SA"),
+              Type.Literal("SU"),
+            ]),
+            { minItems: 1, uniqueItems: true, maxItems: 7 },
+          ),
+          slots: Type.Array(
+            Type.Object(
+              {
+                slot: Type.Integer({ minimum: 1, maximum: 11 }),
+                title: ref,
+                placeRef: ref,
+                actorRefs: Type.Array(ref, {
+                  minItems: 1,
+                  maxItems: 128,
+                  uniqueItems: true,
+                }),
+                attendancePolicy: Type.Optional(
+                  worldRoutineRuleSchema.properties.attendancePolicy,
+                ),
+              },
+              object,
+            ),
+            { minItems: 1, maxItems: 11 },
+          ),
+        },
+        object,
+      ),
+    ),
     routineRules: Type.Array(worldRoutineRuleSchema, { maxItems: 256 }),
     calendarExceptions: Type.Array(worldCalendarExceptionSchema, { maxItems: 1024 }),
     energy: worldEnergyProfileSchema,

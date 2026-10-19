@@ -2,7 +2,7 @@
 
 import { client } from './client.gen.js';
 import type { Client, ClientMeta, Options as Options2, RequestResult, TDataShape } from './client/index.js';
-import type { AcceptFactsData, AcceptFactsErrors, AcceptFactsResponses, AdmitCognitionData, AdmitCognitionErrors, AdmitCognitionResponses, AdoptActivityData, AdoptActivityErrors, AdoptActivityResponses, AdoptDeliveryData, AdoptDeliveryErrors, AdoptDeliveryResponses, AdoptPursuitData, AdoptPursuitErrors, AdoptPursuitResponses, AdvanceWorldOpportunityData, AdvanceWorldOpportunityErrors, AdvanceWorldOpportunityResponses, ArchiveEnvelopeData, ArchiveEnvelopeErrors, ArchiveEnvelopeResponses, AuthorizeDeliveryData, AuthorizeDeliveryErrors, AuthorizeDeliveryResponses, AuthorizeToolExecutionData, AuthorizeToolExecutionErrors, AuthorizeToolExecutionResponses, BeginDeliveryData, BeginDeliveryErrors, BeginDeliveryResponses, BindProductSubjectData, BindProductSubjectErrors, BindProductSubjectResponses, BindSubjectAccountData, BindSubjectAccountErrors, BindSubjectAccountResponses, CheckProductConfigurationData, CheckProductConfigurationErrors, CheckProductConfigurationResponses, ClaimFirstAdministratorData, ClaimFirstAdministratorErrors, ClaimFirstAdministratorResponses, ClaimsToData, ClaimsToErrors, ClaimsToResponses, CompleteNativeChildData, CompleteNativeChildErrors, CompleteNativeChildResponses, CompleteNativeRunData, CompleteNativeRunErrors, CompleteNativeRunResponses, CompletePendingData, CompletePendingErrors, CompletePendingResponses, ConfigureProductData, ConfigureProductErrors, ConfigureProductResponses, CreateManagementSessionData, CreateManagementSessionErrors, CreateManagementSessionResponses, CreateProductSubjectData, CreateProductSubjectErrors, CreateProductSubjectResponses, DescribeProductConfigurationData, DescribeProductConfigurationErrors, DescribeProductConfigurationResponses, DispatchActivityData, DispatchActivityErrors, DispatchActivityResponses, EvaluatePursuitData, EvaluatePursuitErrors, EvaluatePursuitResponses, ExplainStatementData, ExplainStatementErrors, ExplainStatementResponses, FeedbackCognitionData, FeedbackCognitionErrors, FeedbackCognitionResponses, GatewayScopeData, GatewayScopeErrors, GatewayScopeResponses, GetBoundSubjectData, GetBoundSubjectErrors, GetBoundSubjectResponses, GetManagementDiscoveryData, GetManagementDiscoveryResponses, GetProductConfigurationData, GetProductConfigurationErrors, GetProductConfigurationResponses, GetProductStatusData, GetProductStatusErrors, GetProductStatusResponses, HandoffCognitionData, HandoffCognitionErrors, HandoffCognitionResponses, ListPursuitsData, ListPursuitsErrors, ListPursuitsResponses, NativeLifeData, NativeLifeErrors, NativeLifeResponses, PendingAttachmentsData, PendingAttachmentsErrors, PendingAttachmentsResponses, PendingFactsData, PendingFactsErrors, PendingFactsResponses, PendingReferencesData, PendingReferencesErrors, PendingReferencesResponses, PrepareCognitionData, PrepareCognitionErrors, PrepareCognitionResponses, PrepareReadData, PrepareReadErrors, PrepareReadResponses, ProgressActivityData, ProgressActivityErrors, ProgressActivityResponses, ProposeActivityData, ProposeActivityErrors, ProposeActivityResponses, PursuitHistoryData, PursuitHistoryErrors, PursuitHistoryResponses, ReactorAttentionExplainData, ReactorAttentionExplainErrors, ReactorAttentionExplainResponses, ReactorHistoryData, ReactorHistoryErrors, ReactorHistoryResponses, ReactorStatusData, ReactorStatusErrors, ReactorStatusResponses, ReactorWakeData, ReactorWakeErrors, ReactorWakeResponses, ReadActivityData, ReadActivityErrors, ReadActivityResponses, ReadArchiveData, ReadArchiveErrors, ReadArchiveResponses, ReadEventsData, ReadEventsErrors, ReadEventsResponses, ReadHistoryCoverageData, ReadHistoryCoverageErrors, ReadHistoryCoverageResponses, ReadPursuitData, ReadPursuitErrors, ReadPursuitResponses, RecheckPursuitData, RecheckPursuitErrors, RecheckPursuitResponses, ReconsiderPursuitData, ReconsiderPursuitErrors, ReconsiderPursuitResponses, RecordDeliveryData, RecordDeliveryErrors, RecordDeliveryResponses, RegisterChannelRouteData, RegisterChannelRouteErrors, RegisterChannelRouteResponses, ReleaseNativeResultData, ReleaseNativeResultErrors, ReleaseNativeResultResponses, ResolveAccountData, ResolveAccountErrors, ResolveAccountResponses, ResolveGroupData, ResolveGroupErrors, ResolveGroupResponses, RevokeCurrentManagementSessionData, RevokeCurrentManagementSessionErrors, RevokeCurrentManagementSessionResponses, ScheduleActivitiesData, ScheduleActivitiesErrors, ScheduleActivitiesResponses, SubjectReactorOpportunityData, SubjectReactorOpportunityErrors, SubjectReactorOpportunityResponses, TakeActivityOpportunityData, TakeActivityOpportunityErrors, TakeActivityOpportunityResponses, TakeAttentionData, TakeAttentionErrors, TakeAttentionResponses, TransitionActivityData, TransitionActivityErrors, TransitionActivityResponses, TransitionPursuitData, TransitionPursuitErrors, TransitionPursuitResponses, UpdateAttachmentData, UpdateAttachmentErrors, UpdateAttachmentResponses, UpdateHistoryCoverageData, UpdateHistoryCoverageErrors, UpdateHistoryCoverageResponses, UpdateReferenceData, UpdateReferenceErrors, UpdateReferenceResponses, UploadAttachmentData, UploadAttachmentErrors, UploadAttachmentResponses, WorldActorResolveData, WorldActorResolveErrors, WorldActorResolveResponses, WorldActorsData, WorldActorsErrors, WorldActorsResponses, WorldAdvanceRulesData, WorldAdvanceRulesErrors, WorldAdvanceRulesResponses, WorldCalendarChangeData, WorldCalendarChangeErrors, WorldCalendarChangeResponses, WorldCalendarReadData, WorldCalendarReadErrors, WorldCalendarReadResponses, WorldClockConfigureData, WorldClockConfigureErrors, WorldClockConfigureResponses, WorldClockReadData, WorldClockReadErrors, WorldClockReadResponses, WorldConfigureData, WorldConfigureErrors, WorldConfigureResponses, WorldCoverageData, WorldCoverageErrors, WorldCoverageResponses, WorldHistoryData, WorldHistoryErrors, WorldHistoryResponses, WorldLivingData, WorldLivingErrors, WorldLivingResponses, WorldPrepareData, WorldPrepareErrors, WorldPrepareResponses, WorldProfileAdoptData, WorldProfileAdoptErrors, WorldProfileAdoptResponses, WorldProfileReadData, WorldProfileReadErrors, WorldProfileReadResponses, WorldQueryData, WorldQueryErrors, WorldQueryResponses, WorldReadData, WorldReadErrors, WorldReadResponses, WorldRealizeData, WorldRealizeErrors, WorldRealizeResponses } from './types.gen.js';
+import type { AcceptFactsData, AcceptFactsErrors, AcceptFactsResponses, AdmitCognitionData, AdmitCognitionErrors, AdmitCognitionResponses, AdoptActivityData, AdoptActivityErrors, AdoptActivityResponses, AdoptDeliveryData, AdoptDeliveryErrors, AdoptDeliveryResponses, AdoptPursuitData, AdoptPursuitErrors, AdoptPursuitResponses, AdvanceWorldOpportunityData, AdvanceWorldOpportunityErrors, AdvanceWorldOpportunityResponses, ArchiveEnvelopeData, ArchiveEnvelopeErrors, ArchiveEnvelopeResponses, AuthorizeDeliveryData, AuthorizeDeliveryErrors, AuthorizeDeliveryResponses, AuthorizeToolExecutionData, AuthorizeToolExecutionErrors, AuthorizeToolExecutionResponses, BeginDeliveryData, BeginDeliveryErrors, BeginDeliveryResponses, BindProductSubjectData, BindProductSubjectErrors, BindProductSubjectResponses, BindSubjectAccountData, BindSubjectAccountErrors, BindSubjectAccountResponses, CheckProductConfigurationData, CheckProductConfigurationErrors, CheckProductConfigurationResponses, ClaimFirstAdministratorData, ClaimFirstAdministratorErrors, ClaimFirstAdministratorResponses, ClaimsToData, ClaimsToErrors, ClaimsToResponses, CompleteNativeChildData, CompleteNativeChildErrors, CompleteNativeChildResponses, CompleteNativeRunData, CompleteNativeRunErrors, CompleteNativeRunResponses, CompletePendingData, CompletePendingErrors, CompletePendingResponses, ConfigureProductData, ConfigureProductErrors, ConfigureProductResponses, CreateManagementSessionData, CreateManagementSessionErrors, CreateManagementSessionResponses, CreateProductSubjectData, CreateProductSubjectErrors, CreateProductSubjectResponses, DescribeProductConfigurationData, DescribeProductConfigurationErrors, DescribeProductConfigurationResponses, DispatchActivityData, DispatchActivityErrors, DispatchActivityResponses, EvaluatePursuitData, EvaluatePursuitErrors, EvaluatePursuitResponses, ExplainStatementData, ExplainStatementErrors, ExplainStatementResponses, FeedbackCognitionData, FeedbackCognitionErrors, FeedbackCognitionResponses, GatewayScopeData, GatewayScopeErrors, GatewayScopeResponses, GetBoundSubjectData, GetBoundSubjectErrors, GetBoundSubjectResponses, GetCalendarMomentData, GetCalendarMomentErrors, GetCalendarMomentResponses, GetDefaultCalendarData, GetDefaultCalendarErrors, GetDefaultCalendarResponses, GetManagementDiscoveryData, GetManagementDiscoveryResponses, GetOperatorOverviewData, GetOperatorOverviewErrors, GetOperatorOverviewResponses, GetProductConfigurationData, GetProductConfigurationErrors, GetProductConfigurationResponses, GetProductStatusData, GetProductStatusErrors, GetProductStatusResponses, GetSchoolTimeTemplateData, GetSchoolTimeTemplateErrors, GetSchoolTimeTemplateResponses, GetSubjectDocumentsData, GetSubjectDocumentsErrors, GetSubjectDocumentsResponses, GetTaskDetailsData, GetTaskDetailsErrors, GetTaskDetailsResponses, HandoffCognitionData, HandoffCognitionErrors, HandoffCognitionResponses, ImportSubjectDocumentData, ImportSubjectDocumentErrors, ImportSubjectDocumentResponses, ListPursuitsData, ListPursuitsErrors, ListPursuitsResponses, NativeLifeData, NativeLifeErrors, NativeLifeResponses, PendingAttachmentsData, PendingAttachmentsErrors, PendingAttachmentsResponses, PendingFactsData, PendingFactsErrors, PendingFactsResponses, PendingReferencesData, PendingReferencesErrors, PendingReferencesResponses, PrepareCognitionData, PrepareCognitionErrors, PrepareCognitionResponses, PrepareReadData, PrepareReadErrors, PrepareReadResponses, ProgressActivityData, ProgressActivityErrors, ProgressActivityResponses, ProposeActivityData, ProposeActivityErrors, ProposeActivityResponses, PursuitHistoryData, PursuitHistoryErrors, PursuitHistoryResponses, ReactorAttentionExplainData, ReactorAttentionExplainErrors, ReactorAttentionExplainResponses, ReactorHistoryData, ReactorHistoryErrors, ReactorHistoryResponses, ReactorStatusData, ReactorStatusErrors, ReactorStatusResponses, ReactorWakeData, ReactorWakeErrors, ReactorWakeResponses, ReadActivityData, ReadActivityErrors, ReadActivityResponses, ReadArchiveData, ReadArchiveErrors, ReadArchiveResponses, ReadEventsData, ReadEventsErrors, ReadEventsResponses, ReadExpressionCandidateDeliveryData, ReadExpressionCandidateDeliveryErrors, ReadExpressionCandidateDeliveryResponses, ReadHistoryCoverageData, ReadHistoryCoverageErrors, ReadHistoryCoverageResponses, ReadPursuitData, ReadPursuitErrors, ReadPursuitResponses, RecheckPursuitData, RecheckPursuitErrors, RecheckPursuitResponses, ReconsiderPursuitData, ReconsiderPursuitErrors, ReconsiderPursuitResponses, RecordDeliveryData, RecordDeliveryErrors, RecordDeliveryResponses, RecoverExpressionCandidatesData, RecoverExpressionCandidatesErrors, RecoverExpressionCandidatesResponses, RegisterChannelRouteData, RegisterChannelRouteErrors, RegisterChannelRouteResponses, ReleaseNativeResultData, ReleaseNativeResultErrors, ReleaseNativeResultResponses, ResolveAccountData, ResolveAccountErrors, ResolveAccountResponses, ResolveGroupData, ResolveGroupErrors, ResolveGroupResponses, ResumeTaskData, ResumeTaskErrors, ResumeTaskResponses, RevokeCurrentManagementSessionData, RevokeCurrentManagementSessionErrors, RevokeCurrentManagementSessionResponses, ScheduleActivitiesData, ScheduleActivitiesErrors, ScheduleActivitiesResponses, SubjectReactorOpportunityData, SubjectReactorOpportunityErrors, SubjectReactorOpportunityResponses, TakeActivityOpportunityData, TakeActivityOpportunityErrors, TakeActivityOpportunityResponses, TakeAttentionData, TakeAttentionErrors, TakeAttentionResponses, TransitionActivityData, TransitionActivityErrors, TransitionActivityResponses, TransitionPursuitData, TransitionPursuitErrors, TransitionPursuitResponses, UpdateAttachmentData, UpdateAttachmentErrors, UpdateAttachmentResponses, UpdateHistoryCoverageData, UpdateHistoryCoverageErrors, UpdateHistoryCoverageResponses, UpdateReferenceData, UpdateReferenceErrors, UpdateReferenceResponses, UploadAttachmentData, UploadAttachmentErrors, UploadAttachmentResponses, WorldActorResolveData, WorldActorResolveErrors, WorldActorResolveResponses, WorldActorsData, WorldActorsErrors, WorldActorsResponses, WorldAdvanceRulesData, WorldAdvanceRulesErrors, WorldAdvanceRulesResponses, WorldCalendarChangeData, WorldCalendarChangeErrors, WorldCalendarChangeResponses, WorldCalendarReadData, WorldCalendarReadErrors, WorldCalendarReadResponses, WorldClockConfigureData, WorldClockConfigureErrors, WorldClockConfigureResponses, WorldClockReadData, WorldClockReadErrors, WorldClockReadResponses, WorldConfigureData, WorldConfigureErrors, WorldConfigureResponses, WorldCoverageData, WorldCoverageErrors, WorldCoverageResponses, WorldHistoryData, WorldHistoryErrors, WorldHistoryResponses, WorldLivingData, WorldLivingErrors, WorldLivingResponses, WorldPrepareData, WorldPrepareErrors, WorldPrepareResponses, WorldProfileAdoptData, WorldProfileAdoptErrors, WorldProfileAdoptResponses, WorldProfileReadData, WorldProfileReadErrors, WorldProfileReadResponses, WorldQueryData, WorldQueryErrors, WorldQueryResponses, WorldReadData, WorldReadErrors, WorldReadResponses, WorldRealizeData, WorldRealizeErrors, WorldRealizeResponses } from './types.gen.js';
 
 export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends boolean = boolean, TResponse = unknown> = Options2<TData, ThrowOnError, TResponse> & {
     /**
@@ -17,6 +17,90 @@ export type Options<TData extends TDataShape = TDataShape, ThrowOnError extends 
      */
     meta?: keyof ClientMeta extends never ? Record<string, unknown> : ClientMeta;
 };
+
+export const getOperatorOverview = <ThrowOnError extends boolean = false>(options?: Options<GetOperatorOverviewData, ThrowOnError>): RequestResult<GetOperatorOverviewResponses, GetOperatorOverviewErrors, ThrowOnError> => (options?.client ?? client).get<GetOperatorOverviewResponses, GetOperatorOverviewErrors, ThrowOnError>({
+    security: [{
+            key: 'bearerAuth',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/v1/overview',
+    ...options
+});
+
+export const getSubjectDocuments = <ThrowOnError extends boolean = false>(options?: Options<GetSubjectDocumentsData, ThrowOnError>): RequestResult<GetSubjectDocumentsResponses, GetSubjectDocumentsErrors, ThrowOnError> => (options?.client ?? client).get<GetSubjectDocumentsResponses, GetSubjectDocumentsErrors, ThrowOnError>({
+    security: [{
+            key: 'bearerAuth',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/v1/subject/documents',
+    ...options
+});
+
+export const importSubjectDocument = <ThrowOnError extends boolean = false>(options: Options<ImportSubjectDocumentData, ThrowOnError>): RequestResult<ImportSubjectDocumentResponses, ImportSubjectDocumentErrors, ThrowOnError> => (options.client ?? client).post<ImportSubjectDocumentResponses, ImportSubjectDocumentErrors, ThrowOnError>({
+    security: [{
+            key: 'bearerAuth',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/v1/subject/documents/import',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const getTaskDetails = <ThrowOnError extends boolean = false>(options: Options<GetTaskDetailsData, ThrowOnError>): RequestResult<GetTaskDetailsResponses, GetTaskDetailsErrors, ThrowOnError> => (options.client ?? client).get<GetTaskDetailsResponses, GetTaskDetailsErrors, ThrowOnError>({
+    security: [{
+            key: 'bearerAuth',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/v1/tasks/{activityId}',
+    ...options
+});
+
+export const resumeTask = <ThrowOnError extends boolean = false>(options: Options<ResumeTaskData, ThrowOnError>): RequestResult<ResumeTaskResponses, ResumeTaskErrors, ThrowOnError> => (options.client ?? client).post<ResumeTaskResponses, ResumeTaskErrors, ThrowOnError>({
+    security: [{
+            key: 'bearerAuth',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/v1/tasks/{activityId}/resume',
+    ...options
+});
+
+export const getSchoolTimeTemplate = <ThrowOnError extends boolean = false>(options?: Options<GetSchoolTimeTemplateData, ThrowOnError>): RequestResult<GetSchoolTimeTemplateResponses, GetSchoolTimeTemplateErrors, ThrowOnError> => (options?.client ?? client).get<GetSchoolTimeTemplateResponses, GetSchoolTimeTemplateErrors, ThrowOnError>({
+    security: [{
+            key: 'bearerAuth',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/v1/calendar/template',
+    ...options
+});
+
+export const getDefaultCalendar = <ThrowOnError extends boolean = false>(options?: Options<GetDefaultCalendarData, ThrowOnError>): RequestResult<GetDefaultCalendarResponses, GetDefaultCalendarErrors, ThrowOnError> => (options?.client ?? client).get<GetDefaultCalendarResponses, GetDefaultCalendarErrors, ThrowOnError>({
+    security: [{
+            key: 'bearerAuth',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/v1/calendar',
+    ...options
+});
+
+export const getCalendarMoment = <ThrowOnError extends boolean = false>(options: Options<GetCalendarMomentData, ThrowOnError>): RequestResult<GetCalendarMomentResponses, GetCalendarMomentErrors, ThrowOnError> => (options.client ?? client).get<GetCalendarMomentResponses, GetCalendarMomentErrors, ThrowOnError>({
+    security: [{
+            key: 'bearerAuth',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/v1/calendar/moment',
+    ...options
+});
 
 export const getManagementDiscovery = <ThrowOnError extends boolean = false>(options?: Options<GetManagementDiscoveryData, ThrowOnError>): RequestResult<GetManagementDiscoveryResponses, unknown, ThrowOnError> => (options?.client ?? client).get<GetManagementDiscoveryResponses, unknown, ThrowOnError>({ url: '/.well-known/heptalogos-management', ...options });
 
@@ -1076,6 +1160,34 @@ export const worldActors = <ThrowOnError extends boolean = false>(options: Optio
             type: 'http'
         }],
     url: '/gateway/v1/world/actors',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const recoverExpressionCandidates = <ThrowOnError extends boolean = false>(options: Options<RecoverExpressionCandidatesData, ThrowOnError>): RequestResult<RecoverExpressionCandidatesResponses, RecoverExpressionCandidatesErrors, ThrowOnError> => (options.client ?? client).post<RecoverExpressionCandidatesResponses, RecoverExpressionCandidatesErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/narrative/recover-candidates',
+    ...options,
+    headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+    }
+});
+
+export const readExpressionCandidateDelivery = <ThrowOnError extends boolean = false>(options: Options<ReadExpressionCandidateDeliveryData, ThrowOnError>): RequestResult<ReadExpressionCandidateDeliveryResponses, ReadExpressionCandidateDeliveryErrors, ThrowOnError> => (options.client ?? client).post<ReadExpressionCandidateDeliveryResponses, ReadExpressionCandidateDeliveryErrors, ThrowOnError>({
+    security: [{
+            key: 'gatewayService',
+            scheme: 'bearer',
+            type: 'http'
+        }],
+    url: '/gateway/v1/narrative/candidate-delivery',
     ...options,
     headers: {
         'Content-Type': 'application/json',

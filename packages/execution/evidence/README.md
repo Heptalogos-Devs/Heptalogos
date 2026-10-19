@@ -36,10 +36,10 @@ becoming a second Evidence store or identity Authority.
 
 ## Verification
 
-Run `pnpm nx run evidence:test`, lint, typecheck, and the persistence-backed
-Evidence scenarios. For evidence projection changes, run `pnpm check:knowledge`
-and qualification-navigation checks and keep PASS/FAIL/NOT_RUN/BLOCKED claims
-matched to actual runs.
+`integration/foundation/test/execution-foundation.integration.test.ts`
+checks canonical state, Activity and required Evidence in one real PostgreSQL
+transaction, including rollback after Evidence rejection. Run the affected
+scenario and package lint/typecheck for changes.
 
 ## Architecture references
 

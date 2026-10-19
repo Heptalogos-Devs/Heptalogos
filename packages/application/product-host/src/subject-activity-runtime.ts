@@ -50,8 +50,7 @@ export function createSubjectActivityStarter(options: {
       throw Error("The adopted parent Activity is unavailable");
     await options.authorize(parent);
     const choice = saved.decision.newActivity;
-    const purpose =
-      choice?.purpose ?? saved.decision.delegation?.goal ?? saved.decision.reason;
+    const purpose = choice.purpose;
     if (!purpose.trim()) throw Error("The adopted learning objective is empty");
     const applied = await options.native.readAppliedContext(saved.sourceRunId);
     const usage = decodeCognitionUsage(applied.usage);
@@ -70,7 +69,7 @@ export function createSubjectActivityStarter(options: {
         resumeConditions: [],
         budgetSummary: {},
         cognitionAnchors: usage.sourceRead?.sourceRefs ?? [],
-        contextText: saved.decision.reason,
+        ...(saved.decision.reason ? { contextText: saved.decision.reason } : {}),
         // H Activity actors are not Nous-owned cognitive EntityRefs.
         entityAnchors: [],
         tagAnchors: [],

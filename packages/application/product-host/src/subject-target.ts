@@ -102,14 +102,45 @@ export function currentSituationDecisionInput(
           : choice.action === "adjust_plan"
             ? "calendarChange"
             : undefined;
-    return Type.Object({
+    const retained =
+      choice.action === "communicate"
+        ? choice.targets.filter((value) =>
+            frame.objects.some(
+              (object) =>
+                object.kind === "expression_candidate" &&
+                (object.handle === value || object.sourceRef === value),
+            ),
+          )
+        : [];
+    const regularTargets = choice.targets.filter((value) => !retained.includes(value));
+    const regularTarget = regularTargets.length
+      ? Type.Union(regularTargets.map((value) => Type.Literal(value)))
+      : Type.Never();
+    const normal = Type.Object({
       ...(requiredField
         ? Type.Required(Type.Pick(deliberationDecisionSchema, [requiredField]))
             .properties
         : {}),
       action: Type.Literal(choice.action),
-      target: choice.targetRequired ? target : Type.Optional(target),
+      ...(choice.action === "adjust_plan"
+        ? Type.Required(Type.Pick(deliberationDecisionSchema, ["reason"])).properties
+        : {}),
+      target:
+        choice.action === "communicate" && retained.length
+          ? Type.Optional(regularTarget)
+          : choice.targetRequired
+            ? target
+            : Type.Optional(target),
     });
+    return retained.length
+      ? Type.Union([
+          normal,
+          Type.Object({
+            action: Type.Literal("communicate"),
+            target: Type.Union(retained.map((value) => Type.Literal(value))),
+          }),
+        ])
+      : normal;
   });
   return {
     frameRef: frame.frameRef,

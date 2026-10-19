@@ -2,6 +2,32 @@
 
 CLI 是确定性的 ManagementClient 投影；查询不调用模型，明确的执行或机会命令可使原生调度器运行主体。Linux 服务命令使用安装器发布并核对安装身份的 systemd 描述符；不能传入任意 unit 名。普通聊天不获得这些管理权限。
 
+## 先查看当前主体
+
+安装后的命令默认使用该安装绑定的Subject；管理读取不调用模型。
+
+```sh
+heptalogos status
+heptalogos status --watch
+heptalogos status --json
+heptalogos subject documents
+heptalogos subject documents --import /absolute/path/SOUL.md --reason "明确修订说明"
+heptalogos calendar today
+heptalogos calendar week
+heptalogos calendar template
+heptalogos calendar range --from 2026-10-19T00:00:00Z --to 2026-10-20T00:00:00Z
+heptalogos task <总览中的任务ID>
+heptalogos task <原任务ID> --runs
+heptalogos task <原任务ID> --inputs --run-id <原运行ID>
+heptalogos task <原任务ID> --resume
+```
+
+总览显示实际运行路径与代次、OS自启、自动工作配置、Gateway阻塞、现有任务/保留结果及按角色汇总的已记录token用量。未留存的用量和未核实价格标未知；原生配置中的零价不作为免费依据。总览另外读取Nous生效维护策略，分别显示系统调度与当前Subject的自动维护开关。Ctrl-C只退出watch。没有管理进程时仍显示本地安装/服务状态，不为查询启动服务。
+
+`subject documents`确定性导出IDENTITY、SOUL、RELATIONSHIPS、LANGUAGE、LIFE到安装DATA/subject-documents/<Subject>并返回完整路径。未形成内容显示未形成；Self/Social正文与SDK片段使用同一个Nous域渲染。每条认知的折叠来源中包含`nous-revision`修订块：只编辑其中的`content`，保留原修订、epoch和Subject，再用`--import 文件 --reason 说明`显式提交。导入复用正式Self/Social修订和历史，未改内容跳过；每条独立结果可见，部分失败可沿同一文件和原因继续。再次导出前会将已编辑文件保留到drafts，文件编辑本身不写认知。LIFE的未来安排走Calendar操作。
+
+`calendar template`只预览公开学校时间骨架，不采用课程或身份。`task --runs`按原任务列出实际角色登记及输出问题；`--inputs`明确读取一项原运行的宿主输入与正式Native provider请求，可能包含聊天正文。旧调用没有最终请求记录时保留未知，宿主prompt单列。today/week使用世界时钟和世界时区，无需填写UUID；没有世界时明确显示未配置。任务resume读取新鲜revision恢复同一Activity，不重建任务；自动工作暂停时不启动模型。
+
 ## 安装后使用
 
 独立安装的 `bin/heptalogos` 自动传入安装根，从任何目录均可调用。开发环境直接运行构建后的 CLI 时，需要 `--anchor-root /absolute/installation`。
@@ -40,15 +66,15 @@ node scripts/package/install-linux-product.mjs configure-maintenance \
   --port <independent-loopback-port>
 ```
 
-安装器返回实际 origin；让 ProductSettings.maintenanceGateway.origin 与该独立端口一致。随后使用已安装的 `heptalogos maintenance start/status/stop/restart`。维护 unit 没有 Host Requires/PartOf 或 Subject prepare/discovery 依赖；配置成功不等于模型可用，实际健康与任务由公开 native RPC 验证。
+安装器返回实际 origin；让 ProductSettings.maintenanceGateway.origin 与该独立端口一致。随后使用已安装的 `heptalogos maintenance start/status/stop/restart`。维护 unit 没有 Host Requires/PartOf 或 Subject prepare/discovery 依赖；实际健康与任务通过公开 native RPC 读取。
 
 `--json` 保持机器可读输出。参数错误为 exit 2，认证/权限错误为 3，连接或安装缺失为 4，合同不符为 5，冲突为 6，服务端错误为 7，前台取消为 130。取消后需按操作身份核对已提交变更，不假定远端事务回滚。
 
 精确合同见 [管理](../../../specs/management/system-authority.md)，安装和生命周期边界见 [Host](../product-host/README.md)。验证应从独立安装运行完整认领、登录、配置、启停与恢复，不能只运行源码入口。
 
-`start/stop/restart --component host|subject|maintenance|all` 明确选择组件，默认只处理 Host。`all` 启动按 Host、Subject、maintenance 的顺序处理已配置服务；停止按相反的依赖方向关闭。启动或重启 Subject 后，CLI 等待实际 Gateway 就绪，再请求同一 Reactor 原生机会。`reactorOpportunity` 单独报告 `projected`、`disabled` 或 `unavailable`；服务已启动不等于主体已执行。没有管理员会话时，服务控制仍可完成，机会投影报告需要登录。
+`start/stop/restart --component host|subject|maintenance|all`默认只处理Host，all按组件依赖顺序启停。进程启动、配置保存与自主付费运行分别控制，CLI不在启动后请求模型机会。subject.enabled与已授权预算决定自动工作；安装和Gateway配置默认不打开开机启动，--autostart yes|no显式选择，重配/升级保留原选择。
 
-配置 `set` 在 Native 或 Nous 停机时仍可提交，额外的 `reactorOpportunity` 说明本次原生机会能否投影。配置保存和模型执行分别查询，原生 profile/model/密钥仍由独立 OpenClaw 配置管理。`config describe` 给出 `roles` 绑定及 `reactor` 限额；`reactor status` 返回实际生效值。
+配置set在Native/Nous停机时仍可提交，保存不触发Reactor机会；原生profile/model/密钥仍归独立OpenClaw配置。config describe显示角色和资源上限，reactor status读取当前有效值。
 
 ## 活动、注意与主动追求
 
@@ -130,6 +156,6 @@ heptalogos reactor wake --subject-id <subject> --operation-ref <explicit-operati
 
 `calendar` 支持任意有限区间；`--calendar-view planned|lived|combined` 区分计划与实际，`--perspective subject|world_author|public` 选择知情范围。用返回的 `continuation` 作下一页参数，显示时区不修改原始 recurrence 身份。`calendar-change` 使用 owner 的完整请求，明确 `scope: this|future|unrealized`、`expectedRevision`、`ruleId`、本地 `recurrenceId` 和 `change`。已实现部分保留历史；Profile 内原始课表仅作采用来源，当前课表以日历 owner 为准。
 
-`living` 读取实际采用区间累计的精力、地点和设备视图，查询不推进世界。`reactor status` 显示前台 Reaction、最近实际动作、有效限额、角色绑定和最近机会投影；可带 `--reaction-id` 查看某轮。`history` 用 `nextReactionId` 作 `--after-reaction-id`；`attention` 可带 `--explanation-ref` 读取当时保存的元信息选择。通知被考虑不等于已读，后台结果 ready 不等于主体已看见。
+`living` 读取实际采用区间累计的精力、地点和设备视图，查询不推进世界。`reactor status` 显示前台 Reaction、最近实际动作、有效限额、角色绑定和最近机会投影；可带 `--reaction-id` 查看某轮。`history` 用 `nextReactionId` 作 `--after-reaction-id`；`attention` 可带 `--explanation-ref` 读取当时保存的元信息选择。通知的已读状态以实际 open/read 回执为准；worker 结果在明确 release 并经过原生输入 admission 后进入主体情境。
 
 `reactor wake` 只请求一次原生调度机会，随后可能按当前授权调用角色模型。主观决定、工具任务、renderer、review 和实际发送仍走同一正式执行链，查询和管理命令不提供手工写入这些结果的捷径。

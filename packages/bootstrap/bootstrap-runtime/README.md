@@ -52,18 +52,11 @@ authority before the maintenance witness is finalized.
 
 ## Verification
 
-Run `pnpm nx run bootstrap-runtime:test`, the real PostgreSQL integration target,
-recovery-process targets, and the boundary/dependency gates. Lifecycle changes
-also require claim-matched Host and Runtime qualification. The durable-execution qualification's real
-composition covers DBOS queue/admission behavior, process crash recovery, and
-Host lifecycle settlement; product platform/source-less claims remain
-separately scoped in the durable-execution qualification record.
-
-The Foundation process-level composition proof is the explicit
-`pnpm nx run integration-foundation:test:foundation-spine` qualification target. It
-uses real Bootstrap, Host ownership, PostgreSQL, Runtime, WorkQueue, DBOS, and
-canonical WorkItem construction; it is not a claim that the Subject vertical
-slice or broader Product Runtime exists.
+Run `pnpm nx run bootstrap-runtime:test` for filesystem ownership, lock races,
+process identity, roots and credential boundaries. The two recovery-process
+targets retain actual owner-process races and killed PostgreSQL maintenance
+recovery. Normal installation, start and stop use the installed Product Host
+consumer path; Runtime/Host composition remains in `integration/foundation`.
 
 ## Architecture references
 

@@ -4,6 +4,1509 @@ export type ClientOptions = {
     baseUrl: `${string}://${string}` | (string & {});
 };
 
+export type GetOperatorOverviewData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/overview';
+};
+
+export type GetOperatorOverviewErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type GetOperatorOverviewError = GetOperatorOverviewErrors[keyof GetOperatorOverviewErrors];
+
+export type GetOperatorOverviewResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        status: {
+            installationId: string;
+            bootId: string;
+            startedAt: string;
+            management: 'available';
+            subject: {
+                id: string | null;
+                enabled: boolean;
+            };
+            configurationRevision: string | null;
+            dependencies: Array<{
+                name: string;
+                state: 'available' | 'unavailable' | 'unconfigured';
+                checkedAt: string;
+                code: string;
+                message: string;
+                nextStep?: string;
+            }>;
+            capabilities: Array<string>;
+        };
+        anchorRoot: string;
+        programPath: string;
+        productGeneration: string;
+        subjectName: string;
+        model: string;
+        qqAccount: string | null;
+        qqState: string;
+        tasks: Array<{
+            activityId: string;
+            subjectId: string;
+            revision: number;
+            purpose: string;
+            mode: 'work' | 'rest' | 'wait';
+            window: {
+                notBefore: {
+                    timeDomainRef: string;
+                    at: string;
+                } | null;
+                notAfter: {
+                    timeDomainRef: string;
+                    at: string;
+                } | null;
+            };
+            sourceRefs: Array<string>;
+            workContextId: string | null;
+            state: 'planned' | 'active' | 'paused' | 'completed' | 'cancelled' | 'failed';
+            proposedBy: string;
+            adoptedBy: string | null;
+            adoptedAt: string | null;
+            lastTransitionReason: string;
+            scope: {
+                conversations: Array<{
+                    conversationRef: string;
+                    operations: Array<'observe' | 'send' | 'edit' | 'withdraw' | 'moderate'>;
+                }>;
+                tools: Array<string>;
+                sourceRefs: Array<string>;
+                maxRunMs: number;
+            } | null;
+            world: {
+                timeDomainRef: string;
+                at: string;
+            };
+            nextOpportunity: {
+                timeDomainRef: string;
+                at: string;
+            } | null;
+            progress: {
+                note: string;
+                sourceRefs: Array<string>;
+                artifactRefs: Array<string>;
+                resultRefs: Array<string>;
+            };
+            interruptOn: Array<'direct' | 'mention' | 'reply' | 'deadline' | 'correction' | 'manual'>;
+            continuationRequired: boolean;
+            createdAt: string;
+            updatedAt: string;
+        }>;
+        moreTasks: boolean;
+        retainedResults: Array<{
+            activityId: string;
+            runId: string;
+            resultCount: number;
+        }>;
+        foreground: {
+            subjectId: string;
+            activityId: string;
+            reactionId: string;
+            focusRevision: number;
+            candidate: {
+                subjectId: string;
+                candidateRef: string;
+                sourceOwner: 'messaging' | 'world' | 'life' | 'role_result' | 'cognition';
+                sourceKey: string;
+                sourceRef: string;
+                sourceRevision: string;
+                sourcePosition?: string;
+                kind: 'message' | 'world_event' | 'world_entry' | 'schedule' | 'activity_result' | 'cognition_change' | 'explicit_subject_intent';
+                activityId?: string;
+                worldId?: string;
+                priorityClass: 'important' | 'direct' | 'background';
+                availableAt: string;
+                related: boolean;
+                metadata: {
+                    label: string;
+                    conversationRef?: string;
+                    messageRefs?: Array<string>;
+                    unreadCount?: number;
+                    direct?: boolean;
+                    mention?: boolean;
+                    reply?: boolean;
+                };
+            };
+            explanationRef: string;
+            startedAt: string;
+            deadlineAt: string;
+            policy: {
+                /**
+                 * Maximum short interactions in one foreground Reaction.
+                 */
+                maxInteractionSteps: number;
+                /**
+                 * Real milliseconds for the foreground Reaction, excluding a yielded long worker.
+                 */
+                reactionDeadlineMs: number;
+                /**
+                 * Concurrent adopted professional runs within the actual native capacity.
+                 */
+                workerConcurrency: number;
+            };
+            state: 'active' | 'yielded' | 'superseded' | 'completed';
+            stepCount: number;
+            currentRunId?: string;
+            continuationRef?: string;
+            stopReason?: string;
+        } | null;
+        living: {
+            subjectId: string;
+            worldId: string;
+            revision: number;
+            profileRevision: number;
+            energy: number;
+            integratedThrough: {
+                timeDomainRef: string;
+                at: string;
+            };
+            coverage: 'complete' | 'limited';
+            currentPlaceRef: string;
+            currentActivityRefs: Array<string>;
+            energyExplanation: string;
+            device: {
+                revision: number;
+                view: {
+                    kind: 'stowed';
+                } | {
+                    kind: 'notifications';
+                } | {
+                    kind: 'conversations';
+                } | {
+                    kind: 'conversation';
+                    conversationRef: string;
+                } | {
+                    kind: 'page';
+                    materialRef: string;
+                };
+            };
+            updatedAt: string;
+        } | null;
+        usage: Array<{
+            role: string;
+            purpose: string;
+            activityId: string;
+            recordedRuns: number;
+            input: number;
+            output: number;
+            cacheRead: number;
+            cacheWrite: number;
+            missingUsage: number;
+            cost: null;
+        }>;
+        usageCoverage: string;
+        cognitionMaintenance: {
+            schedulerEnabled: boolean | null;
+            subjectEnabled: boolean | null;
+        } | null;
+        narrativeWork: Array<{
+            briefId: string;
+            activityId: string;
+            state: string;
+            problem: string | null;
+            runId: string | null;
+        }>;
+        issues: Array<string>;
+    };
+};
+
+export type GetOperatorOverviewResponse = GetOperatorOverviewResponses[keyof GetOperatorOverviewResponses];
+
+export type GetSubjectDocumentsData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/subject/documents';
+};
+
+export type GetSubjectDocumentsErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type GetSubjectDocumentsError = GetSubjectDocumentsErrors[keyof GetSubjectDocumentsErrors];
+
+export type GetSubjectDocumentsResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        subjectId: string;
+        generatedAt: string;
+        documents: {
+            [key: string]: string;
+        };
+    };
+};
+
+export type GetSubjectDocumentsResponse = GetSubjectDocumentsResponses[keyof GetSubjectDocumentsResponses];
+
+export type ImportSubjectDocumentData = {
+    body: {
+        document: string;
+        reason: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/v1/subject/documents/import';
+};
+
+export type ImportSubjectDocumentErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ImportSubjectDocumentError = ImportSubjectDocumentErrors[keyof ImportSubjectDocumentErrors];
+
+export type ImportSubjectDocumentResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        subjectId: string;
+        results: Array<{
+            targetRevision: string;
+            status: 'unchanged' | 'revised' | 'failed';
+            revision?: string;
+            objectEpoch?: string;
+            problem?: string;
+        }>;
+    };
+};
+
+export type ImportSubjectDocumentResponse = ImportSubjectDocumentResponses[keyof ImportSubjectDocumentResponses];
+
+export type GetTaskDetailsData = {
+    body?: never;
+    path: {
+        activityId: string;
+    };
+    query?: {
+        inputs?: 'true';
+        before?: string;
+        runId?: string;
+    };
+    url: '/v1/tasks/{activityId}';
+};
+
+export type GetTaskDetailsErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type GetTaskDetailsError = GetTaskDetailsErrors[keyof GetTaskDetailsErrors];
+
+export type GetTaskDetailsResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        activity: {
+            activityId: string;
+            subjectId: string;
+            revision: number;
+            purpose: string;
+            mode: 'work' | 'rest' | 'wait';
+            window: {
+                notBefore: {
+                    timeDomainRef: string;
+                    at: string;
+                } | null;
+                notAfter: {
+                    timeDomainRef: string;
+                    at: string;
+                } | null;
+            };
+            sourceRefs: Array<string>;
+            workContextId: string | null;
+            state: 'planned' | 'active' | 'paused' | 'completed' | 'cancelled' | 'failed';
+            proposedBy: string;
+            adoptedBy: string | null;
+            adoptedAt: string | null;
+            lastTransitionReason: string;
+            scope: {
+                conversations: Array<{
+                    conversationRef: string;
+                    operations: Array<'observe' | 'send' | 'edit' | 'withdraw' | 'moderate'>;
+                }>;
+                tools: Array<string>;
+                sourceRefs: Array<string>;
+                maxRunMs: number;
+            } | null;
+            world: {
+                timeDomainRef: string;
+                at: string;
+            };
+            nextOpportunity: {
+                timeDomainRef: string;
+                at: string;
+            } | null;
+            progress: {
+                note: string;
+                sourceRefs: Array<string>;
+                artifactRefs: Array<string>;
+                resultRefs: Array<string>;
+            };
+            interruptOn: Array<'direct' | 'mention' | 'reply' | 'deadline' | 'correction' | 'manual'>;
+            continuationRequired: boolean;
+            createdAt: string;
+            updatedAt: string;
+        };
+        automaticWorkEnabled: boolean;
+        retained: Array<{
+            runId: string;
+            resultCount: number;
+        }>;
+        runs: Array<{
+            runId: string;
+            role: string;
+            purpose: string;
+            recordedAt: string;
+            dispatchState: string;
+            outputProblem: {
+                code: string;
+                detail: string;
+            } | null;
+            native: {
+                subjectId: string;
+                runId: string;
+                agentId: string;
+                sessionId: string;
+                sessionKey: string;
+            } | null;
+            hostInput?: {
+                message: string;
+                extraSystemPrompt: string;
+            };
+            providerAttempts: unknown;
+        }>;
+        nextRunId: string | null;
+    };
+};
+
+export type GetTaskDetailsResponse = GetTaskDetailsResponses[keyof GetTaskDetailsResponses];
+
+export type ResumeTaskData = {
+    body?: never;
+    path: {
+        activityId: string;
+    };
+    query?: never;
+    url: '/v1/tasks/{activityId}/resume';
+};
+
+export type ResumeTaskErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ResumeTaskError = ResumeTaskErrors[keyof ResumeTaskErrors];
+
+export type ResumeTaskResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        activity: {
+            activityId: string;
+            subjectId: string;
+            revision: number;
+            purpose: string;
+            mode: 'work' | 'rest' | 'wait';
+            window: {
+                notBefore: {
+                    timeDomainRef: string;
+                    at: string;
+                } | null;
+                notAfter: {
+                    timeDomainRef: string;
+                    at: string;
+                } | null;
+            };
+            sourceRefs: Array<string>;
+            workContextId: string | null;
+            state: 'planned' | 'active' | 'paused' | 'completed' | 'cancelled' | 'failed';
+            proposedBy: string;
+            adoptedBy: string | null;
+            adoptedAt: string | null;
+            lastTransitionReason: string;
+            scope: {
+                conversations: Array<{
+                    conversationRef: string;
+                    operations: Array<'observe' | 'send' | 'edit' | 'withdraw' | 'moderate'>;
+                }>;
+                tools: Array<string>;
+                sourceRefs: Array<string>;
+                maxRunMs: number;
+            } | null;
+            world: {
+                timeDomainRef: string;
+                at: string;
+            };
+            nextOpportunity: {
+                timeDomainRef: string;
+                at: string;
+            } | null;
+            progress: {
+                note: string;
+                sourceRefs: Array<string>;
+                artifactRefs: Array<string>;
+                resultRefs: Array<string>;
+            };
+            interruptOn: Array<'direct' | 'mention' | 'reply' | 'deadline' | 'correction' | 'manual'>;
+            continuationRequired: boolean;
+            createdAt: string;
+            updatedAt: string;
+        };
+        automaticWorkEnabled: boolean;
+        recoveredCandidates: number;
+        recoveredRunIds: Array<string>;
+        blocked: Array<{
+            runId: string;
+            code: string;
+            detail: string;
+        }>;
+    };
+};
+
+export type ResumeTaskResponse = ResumeTaskResponses[keyof ResumeTaskResponses];
+
+export type GetSchoolTimeTemplateData = {
+    body?: never;
+    path?: never;
+    query?: never;
+    url: '/v1/calendar/template';
+};
+
+export type GetSchoolTimeTemplateErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type GetSchoolTimeTemplateError = GetSchoolTimeTemplateErrors[keyof GetSchoolTimeTemplateErrors];
+
+export type GetSchoolTimeTemplateResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        id: string;
+        timezone: string;
+        publishedOn: string;
+        effectiveFrom: string;
+        source: string;
+        lessons: Array<Array<string>>;
+        otherTimes: Array<{
+            title: string;
+            start: string;
+            end?: string;
+        }>;
+    };
+};
+
+export type GetSchoolTimeTemplateResponse = GetSchoolTimeTemplateResponses[keyof GetSchoolTimeTemplateResponses];
+
+export type GetDefaultCalendarData = {
+    body?: never;
+    path?: never;
+    query?: {
+        period?: 'today' | 'week' | 'range';
+        from?: string;
+        to?: string;
+    };
+    url: '/v1/calendar';
+};
+
+export type GetDefaultCalendarErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type GetDefaultCalendarError = GetDefaultCalendarErrors[keyof GetDefaultCalendarErrors];
+
+export type GetDefaultCalendarResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        subjectId: string | null;
+        state: string;
+        world: {
+            timeDomainRef: string;
+            at: string;
+        } | null;
+        calendar: {
+            worldId: string;
+            revision: number;
+            interval: {
+                timeDomainRef: string;
+                start: string;
+                end: string;
+            };
+            displayTimezone: string;
+            items: Array<{
+                instanceId: string;
+                interval: {
+                    timeDomainRef: string;
+                    start: string;
+                    end: string;
+                };
+                localStart: string;
+                localEnd: string;
+                status: 'planned' | 'cancelled' | 'realized' | 'unplanned';
+                planned: {
+                    scheduleId: string;
+                    ruleRef?: {
+                        ruleId: string;
+                        revision: number;
+                        recurrenceId: string;
+                        originalInterval: {
+                            timeDomainRef: string;
+                            start: string;
+                            end: string;
+                        };
+                        timezoneAdjusted: boolean;
+                        exceptionId: string | null;
+                    };
+                    interval: {
+                        timeDomainRef: string;
+                        start: string;
+                        end: string;
+                    };
+                    attendancePolicy?: {
+                        mode: 'autonomous' | 'usual' | 'strict';
+                        startToleranceMinutes: number;
+                        earlyMinutes: number;
+                        lateMinutes: number;
+                        minimumContinuationMinutes: number;
+                        interruptAfterMinutes: number | null;
+                        interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                    };
+                    title: string;
+                    description: string;
+                    actorRefs: Array<string>;
+                    placeRef: string;
+                    activityId: string | null;
+                    sourceRefs: Array<string>;
+                    status: 'planned' | 'cancelled';
+                    overlap: 'exclusive' | 'concurrent';
+                } | null;
+                lived: Array<{
+                    eventId: string;
+                    activityId?: string;
+                    interruptionKind?: 'social' | 'important' | 'emergency' | 'official_change';
+                    energy?: {
+                        kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
+                        participation: 'primary' | 'subsidiary';
+                        delta: number;
+                        reason: string;
+                    };
+                    interval: {
+                        timeDomainRef: string;
+                        start: string;
+                        end: string;
+                    };
+                    title: string;
+                    content: string;
+                    actorRefs: Array<string>;
+                    placeRef: string;
+                    scheduleId: string | null;
+                    scheduleOutcome?: 'completed' | 'missed' | 'partial';
+                    parentEventId: string | null;
+                    causalEventRefs: Array<string>;
+                    overlap: 'exclusive' | 'concurrent';
+                    source: {
+                        kind: 'rule' | 'world_planner' | 'narrative' | 'environment';
+                        producerRef: string;
+                        sourceRefs: Array<string>;
+                    };
+                    perceptions: Array<{
+                        actorRef: string;
+                        kind: 'seen' | 'heard' | 'recall';
+                        at: {
+                            timeDomainRef: string;
+                            at: string;
+                        };
+                        content: string;
+                    }>;
+                    revision: number;
+                    recordedAt: string;
+                } | {
+                    eventId: string;
+                    eventRevision: number;
+                    worldId: string;
+                    interval: {
+                        timeDomainRef: string;
+                        start: string;
+                        end: string;
+                    };
+                    recordedAt: string;
+                    actorRef: string;
+                    kind: 'seen' | 'heard' | 'recall';
+                    at: {
+                        timeDomainRef: string;
+                        at: string;
+                    };
+                    content: string;
+                }>;
+                recordedAt: string;
+                sourceRefs: Array<string>;
+            }>;
+            continuation: string | null;
+        } | null;
+    };
+};
+
+export type GetDefaultCalendarResponse = GetDefaultCalendarResponses[keyof GetDefaultCalendarResponses];
+
+export type GetCalendarMomentData = {
+    body?: never;
+    path?: never;
+    query: {
+        at: string;
+        to?: string;
+    };
+    url: '/v1/calendar/moment';
+};
+
+export type GetCalendarMomentErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type GetCalendarMomentError = GetCalendarMomentErrors[keyof GetCalendarMomentErrors];
+
+export type GetCalendarMomentResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        subjectId: string;
+        worldId: string;
+        timezone: string;
+        timeDomainRef: string;
+        at: string;
+        to: string | null;
+        calendar: {
+            worldId: string;
+            revision: number;
+            interval: {
+                timeDomainRef: string;
+                start: string;
+                end: string;
+            };
+            displayTimezone: string;
+            items: Array<{
+                instanceId: string;
+                interval: {
+                    timeDomainRef: string;
+                    start: string;
+                    end: string;
+                };
+                localStart: string;
+                localEnd: string;
+                status: 'planned' | 'cancelled' | 'realized' | 'unplanned';
+                planned: {
+                    scheduleId: string;
+                    ruleRef?: {
+                        ruleId: string;
+                        revision: number;
+                        recurrenceId: string;
+                        originalInterval: {
+                            timeDomainRef: string;
+                            start: string;
+                            end: string;
+                        };
+                        timezoneAdjusted: boolean;
+                        exceptionId: string | null;
+                    };
+                    interval: {
+                        timeDomainRef: string;
+                        start: string;
+                        end: string;
+                    };
+                    attendancePolicy?: {
+                        mode: 'autonomous' | 'usual' | 'strict';
+                        startToleranceMinutes: number;
+                        earlyMinutes: number;
+                        lateMinutes: number;
+                        minimumContinuationMinutes: number;
+                        interruptAfterMinutes: number | null;
+                        interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                    };
+                    title: string;
+                    description: string;
+                    actorRefs: Array<string>;
+                    placeRef: string;
+                    activityId: string | null;
+                    sourceRefs: Array<string>;
+                    status: 'planned' | 'cancelled';
+                    overlap: 'exclusive' | 'concurrent';
+                } | null;
+                lived: Array<{
+                    eventId: string;
+                    activityId?: string;
+                    interruptionKind?: 'social' | 'important' | 'emergency' | 'official_change';
+                    energy?: {
+                        kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
+                        participation: 'primary' | 'subsidiary';
+                        delta: number;
+                        reason: string;
+                    };
+                    interval: {
+                        timeDomainRef: string;
+                        start: string;
+                        end: string;
+                    };
+                    title: string;
+                    content: string;
+                    actorRefs: Array<string>;
+                    placeRef: string;
+                    scheduleId: string | null;
+                    scheduleOutcome?: 'completed' | 'missed' | 'partial';
+                    parentEventId: string | null;
+                    causalEventRefs: Array<string>;
+                    overlap: 'exclusive' | 'concurrent';
+                    source: {
+                        kind: 'rule' | 'world_planner' | 'narrative' | 'environment';
+                        producerRef: string;
+                        sourceRefs: Array<string>;
+                    };
+                    perceptions: Array<{
+                        actorRef: string;
+                        kind: 'seen' | 'heard' | 'recall';
+                        at: {
+                            timeDomainRef: string;
+                            at: string;
+                        };
+                        content: string;
+                    }>;
+                    revision: number;
+                    recordedAt: string;
+                } | {
+                    eventId: string;
+                    eventRevision: number;
+                    worldId: string;
+                    interval: {
+                        timeDomainRef: string;
+                        start: string;
+                        end: string;
+                    };
+                    recordedAt: string;
+                    actorRef: string;
+                    kind: 'seen' | 'heard' | 'recall';
+                    at: {
+                        timeDomainRef: string;
+                        at: string;
+                    };
+                    content: string;
+                }>;
+                recordedAt: string;
+                sourceRefs: Array<string>;
+            }>;
+            continuation: string | null;
+        };
+        knownAt: string;
+        knownEvents: Array<{
+            eventId: string;
+            eventRevision: number;
+            worldId: string;
+            interval: {
+                timeDomainRef: string;
+                start: string;
+                end: string;
+            };
+            recordedAt: string;
+            actorRef: string;
+            kind: 'seen' | 'heard' | 'recall';
+            at: {
+                timeDomainRef: string;
+                at: string;
+            };
+            content: string;
+        }>;
+        deviations: Array<{
+            instanceId: string;
+            state: string;
+            detail: string;
+        }>;
+        inputs: Array<{
+            runId: string;
+            activityId: string;
+            role: string;
+            contextAt: {
+                timeDomainRef: string;
+                at: string;
+                recordedAt: string | null;
+            } | null;
+            contextInWindow: boolean;
+            recordedAt: string;
+            consumed: boolean;
+            contacts: Array<{
+                contactRef: string;
+                occurrenceId: string;
+                conversationRef: string | null;
+                observedAt: {
+                    timeDomainRef: string;
+                    at: string;
+                    recordedAt: string | null;
+                } | null;
+                text: string | null;
+            }>;
+        }>;
+        decisions: Array<{
+            record: {
+                decisionId: string;
+                decisionRef: string;
+                operationId: string;
+                subjectId: string;
+                activityId: string;
+                sourceRunId: string;
+                previousActivityRevision: number;
+                activityRevision: number;
+                decision: {
+                    action: 'inspect' | 'open' | 'read' | 'search' | 'move' | 'participate' | 'communicate' | 'discard' | 'continue' | 'wait' | 'rest' | 'adjust_plan';
+                    target?: string;
+                    reason?: string;
+                    calendarChange?: {
+                        scope: 'this' | 'future' | 'unrealized';
+                        change: {
+                            startLocal?: string;
+                            durationMinutes?: number;
+                            placeRef?: string;
+                            actorRefs?: Array<string>;
+                            status: 'planned' | 'cancelled';
+                        };
+                    };
+                    nextOpportunity?: {
+                        timeDomainRef: string;
+                        at: string;
+                    } | null;
+                    expressionIntent?: {
+                        semanticRequirement?: 'important_conflict' | 'world_fact' | 'serious_commitment';
+                        intent: string;
+                        stance: string;
+                        qualifications: Array<string>;
+                        deception: 'none' | 'conceal' | 'fabricate';
+                        eventRefs: Array<string>;
+                        cognitionRefs: Array<string>;
+                        priorClaimRefs: Array<string>;
+                    };
+                    delegation?: {
+                        goal: string;
+                        sourceRefs: Array<string>;
+                        tools: Array<string>;
+                    };
+                    newActivity?: {
+                        purpose: string;
+                        mode: 'work' | 'rest' | 'wait';
+                    };
+                };
+                sourceRefs: Array<string>;
+                tools: Array<string>;
+                mode: 'work' | 'rest' | 'wait';
+                nextOpportunity: {
+                    timeDomainRef: string;
+                    at: string;
+                } | null;
+                adoptedAt: string;
+            };
+            inputContextAt: {
+                timeDomainRef: string;
+                at: string;
+                recordedAt: string | null;
+            } | null;
+            semanticAdoptedAt: null;
+        }>;
+        statements: Array<{
+            briefId: string;
+            activityId: string;
+            runId: string;
+            decisionRef: string;
+            audience: {
+                conversationRef: string;
+                channel: string;
+                accountId: string;
+                to: string;
+            };
+            createdAt: string;
+            recordedAt: string;
+            adopted: boolean;
+            discarded: boolean;
+            payloads: Array<{
+                sourceIndex: number;
+                text: string;
+            }>;
+            delivery: Array<{
+                state: string;
+                messageId: string | null;
+                acceptedAt: string | null;
+            }>;
+            inputContextAt: {
+                timeDomainRef: string;
+                at: string;
+                recordedAt: string | null;
+            } | null;
+            semanticSentAt: null;
+        }>;
+        currentActivities: Array<{
+            activityId: string;
+            subjectId: string;
+            revision: number;
+            purpose: string;
+            mode: 'work' | 'rest' | 'wait';
+            window: {
+                notBefore: {
+                    timeDomainRef: string;
+                    at: string;
+                } | null;
+                notAfter: {
+                    timeDomainRef: string;
+                    at: string;
+                } | null;
+            };
+            sourceRefs: Array<string>;
+            workContextId: string | null;
+            state: 'planned' | 'active' | 'paused' | 'completed' | 'cancelled' | 'failed';
+            proposedBy: string;
+            adoptedBy: string | null;
+            adoptedAt: string | null;
+            lastTransitionReason: string;
+            scope: {
+                conversations: Array<{
+                    conversationRef: string;
+                    operations: Array<'observe' | 'send' | 'edit' | 'withdraw' | 'moderate'>;
+                }>;
+                tools: Array<string>;
+                sourceRefs: Array<string>;
+                maxRunMs: number;
+            } | null;
+            world: {
+                timeDomainRef: string;
+                at: string;
+            };
+            nextOpportunity: {
+                timeDomainRef: string;
+                at: string;
+            } | null;
+            progress: {
+                note: string;
+                sourceRefs: Array<string>;
+                artifactRefs: Array<string>;
+                resultRefs: Array<string>;
+            };
+            interruptOn: Array<'direct' | 'mention' | 'reply' | 'deadline' | 'correction' | 'manual'>;
+            continuationRequired: boolean;
+            createdAt: string;
+            updatedAt: string;
+        }>;
+        foreground: Array<{
+            subjectId: string;
+            activityId: string;
+            reactionId: string;
+            focusRevision: number;
+            candidate: {
+                subjectId: string;
+                candidateRef: string;
+                sourceOwner: 'messaging' | 'world' | 'life' | 'role_result' | 'cognition';
+                sourceKey: string;
+                sourceRef: string;
+                sourceRevision: string;
+                sourcePosition?: string;
+                kind: 'message' | 'world_event' | 'world_entry' | 'schedule' | 'activity_result' | 'cognition_change' | 'explicit_subject_intent';
+                activityId?: string;
+                worldId?: string;
+                priorityClass: 'important' | 'direct' | 'background';
+                availableAt: string;
+                related: boolean;
+                metadata: {
+                    label: string;
+                    conversationRef?: string;
+                    messageRefs?: Array<string>;
+                    unreadCount?: number;
+                    direct?: boolean;
+                    mention?: boolean;
+                    reply?: boolean;
+                };
+            };
+            explanationRef: string;
+            startedAt: string;
+            deadlineAt: string;
+            policy: {
+                /**
+                 * Maximum short interactions in one foreground Reaction.
+                 */
+                maxInteractionSteps: number;
+                /**
+                 * Real milliseconds for the foreground Reaction, excluding a yielded long worker.
+                 */
+                reactionDeadlineMs: number;
+                /**
+                 * Concurrent adopted professional runs within the actual native capacity.
+                 */
+                workerConcurrency: number;
+            };
+            state: 'active' | 'yielded' | 'superseded' | 'completed';
+            stepCount: number;
+            currentRunId?: string;
+            continuationRef?: string;
+            stopReason?: string;
+        }>;
+        limited: {
+            calendar: boolean;
+            knownEvents: boolean;
+            inputs: boolean;
+            decisions: boolean;
+            statements: boolean;
+            foreground: boolean;
+        };
+        unknown: Array<string>;
+    };
+};
+
+export type GetCalendarMomentResponse = GetCalendarMomentResponses[keyof GetCalendarMomentResponses];
+
 export type GetManagementDiscoveryData = {
     body?: never;
     path?: never;
@@ -1122,11 +2625,6 @@ export type ConfigureProductResponses = {
                 origin: string;
             };
         } | null;
-        reactorOpportunity?: {
-            state: 'not_requested' | 'projected' | 'unavailable' | 'disabled';
-            operationRef?: string;
-            attemptedAt?: string;
-        };
     };
 };
 
@@ -6434,7 +7932,6 @@ export type PrepareCognitionResponses = {
     200: {
         version: 1;
         contactRequestId: string;
-        workContextId: string;
         roleScope: {
             role: 'world.planner' | 'subject.deliberation' | 'subject.execution' | 'subject.render' | 'narrative.review' | 'subject.reflection' | 'system.maintenance';
             purpose: 'world_authoring' | 'subject_deliberation' | 'professional_execution' | 'subject_rendering' | 'narrative_review' | 'reflection' | 'maintenance';
@@ -6478,6 +7975,56 @@ export type PrepareCognitionResponses = {
                 [key: string]: unknown;
             };
         };
+        workContextId: string;
+        continuationSourceRef?: unknown;
+    } | {
+        version: 1;
+        contactRequestId: string;
+        roleScope: {
+            role: 'narrative.review';
+            purpose: 'narrative_review';
+            view: 'review';
+            contactNature: 'execution_only';
+        };
+        tokenBudget: {
+            inputTokens: number;
+            outputTokens: number;
+        };
+        responseFormat?: {
+            type: 'text';
+        } | {
+            type: 'json_schema';
+            json_schema: {
+                name: string;
+                strict: true;
+                schema: {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        allowedToolNames: Array<string>;
+        currentSources: Array<{
+            [key: string]: unknown;
+        }>;
+        allowedHistoryUserKeys: Array<string>;
+        usage: {
+            [key: string]: unknown;
+        };
+        contacts: Array<{
+            contactRef: string;
+            observation: {
+                [key: string]: unknown;
+            };
+        }>;
+        scope: {
+            activityRef: string;
+            actorEntityRef?: string;
+            context: {
+                [key: string]: unknown;
+            };
+        };
+        workContextId?: unknown;
+        continuationSourceRef: string;
     };
 };
 
@@ -8914,6 +10461,15 @@ export type WorldConfigureData = {
                 kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                 visibility: 'subject' | 'world_author' | 'public';
                 adjustable: boolean;
+                attendancePolicy?: {
+                    mode: 'autonomous' | 'usual' | 'strict';
+                    startToleranceMinutes: number;
+                    earlyMinutes: number;
+                    lateMinutes: number;
+                    minimumContinuationMinutes: number;
+                    interruptAfterMinutes: number | null;
+                    interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                };
                 cancelled?: boolean;
                 archived?: boolean;
                 mode: 'fixed' | 'choice';
@@ -8949,6 +10505,15 @@ export type WorldConfigureData = {
                 timeDomainRef: string;
                 start: string;
                 end: string;
+            };
+            attendancePolicy?: {
+                mode: 'autonomous' | 'usual' | 'strict';
+                startToleranceMinutes: number;
+                earlyMinutes: number;
+                lateMinutes: number;
+                minimumContinuationMinutes: number;
+                interruptAfterMinutes: number | null;
+                interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
             };
             title: string;
             description: string;
@@ -9104,6 +10669,15 @@ export type WorldConfigureResponses = {
                 kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                 visibility: 'subject' | 'world_author' | 'public';
                 adjustable: boolean;
+                attendancePolicy?: {
+                    mode: 'autonomous' | 'usual' | 'strict';
+                    startToleranceMinutes: number;
+                    earlyMinutes: number;
+                    lateMinutes: number;
+                    minimumContinuationMinutes: number;
+                    interruptAfterMinutes: number | null;
+                    interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                };
                 cancelled?: boolean;
                 archived?: boolean;
                 mode: 'fixed' | 'choice';
@@ -9140,6 +10714,15 @@ export type WorldConfigureResponses = {
                 timeDomainRef: string;
                 start: string;
                 end: string;
+            };
+            attendancePolicy?: {
+                mode: 'autonomous' | 'usual' | 'strict';
+                startToleranceMinutes: number;
+                earlyMinutes: number;
+                lateMinutes: number;
+                minimumContinuationMinutes: number;
+                interruptAfterMinutes: number | null;
+                interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
             };
             title: string;
             description: string;
@@ -9306,6 +10889,15 @@ export type WorldReadResponses = {
                     kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                     visibility: 'subject' | 'world_author' | 'public';
                     adjustable: boolean;
+                    attendancePolicy?: {
+                        mode: 'autonomous' | 'usual' | 'strict';
+                        startToleranceMinutes: number;
+                        earlyMinutes: number;
+                        lateMinutes: number;
+                        minimumContinuationMinutes: number;
+                        interruptAfterMinutes: number | null;
+                        interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                    };
                     cancelled?: boolean;
                     archived?: boolean;
                     mode: 'fixed' | 'choice';
@@ -9342,6 +10934,15 @@ export type WorldReadResponses = {
                     timeDomainRef: string;
                     start: string;
                     end: string;
+                };
+                attendancePolicy?: {
+                    mode: 'autonomous' | 'usual' | 'strict';
+                    startToleranceMinutes: number;
+                    earlyMinutes: number;
+                    lateMinutes: number;
+                    minimumContinuationMinutes: number;
+                    interruptAfterMinutes: number | null;
+                    interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
                 };
                 title: string;
                 description: string;
@@ -9509,6 +11110,15 @@ export type WorldPrepareResponses = {
                     kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                     visibility: 'subject' | 'world_author' | 'public';
                     adjustable: boolean;
+                    attendancePolicy?: {
+                        mode: 'autonomous' | 'usual' | 'strict';
+                        startToleranceMinutes: number;
+                        earlyMinutes: number;
+                        lateMinutes: number;
+                        minimumContinuationMinutes: number;
+                        interruptAfterMinutes: number | null;
+                        interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                    };
                     cancelled?: boolean;
                     archived?: boolean;
                     mode: 'fixed' | 'choice';
@@ -9546,6 +11156,15 @@ export type WorldPrepareResponses = {
                     start: string;
                     end: string;
                 };
+                attendancePolicy?: {
+                    mode: 'autonomous' | 'usual' | 'strict';
+                    startToleranceMinutes: number;
+                    earlyMinutes: number;
+                    lateMinutes: number;
+                    minimumContinuationMinutes: number;
+                    interruptAfterMinutes: number | null;
+                    interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                };
                 title: string;
                 description: string;
                 actorRefs: Array<string>;
@@ -9580,6 +11199,15 @@ export type WorldPrepareResponses = {
                 start: string;
                 end: string;
             };
+            attendancePolicy?: {
+                mode: 'autonomous' | 'usual' | 'strict';
+                startToleranceMinutes: number;
+                earlyMinutes: number;
+                lateMinutes: number;
+                minimumContinuationMinutes: number;
+                interruptAfterMinutes: number | null;
+                interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+            };
             title: string;
             description: string;
             actorRefs: Array<string>;
@@ -9592,6 +11220,7 @@ export type WorldPrepareResponses = {
         recentEvents: Array<{
             eventId: string;
             activityId?: string;
+            interruptionKind?: 'social' | 'important' | 'emergency' | 'official_change';
             energy?: {
                 kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                 participation: 'primary' | 'subsidiary';
@@ -9632,6 +11261,23 @@ export type WorldPrepareResponses = {
         nextOpportunity: {
             timeDomainRef: string;
             at: string;
+        } | null;
+        needsRefinement: boolean;
+        currentPolicy: {
+            scheduleId: string;
+            policy: {
+                mode: 'autonomous' | 'usual' | 'strict';
+                startToleranceMinutes: number;
+                earlyMinutes: number;
+                lateMinutes: number;
+                minimumContinuationMinutes: number;
+                interruptAfterMinutes: number | null;
+                interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+            };
+            nextInterruptAt: {
+                timeDomainRef: string;
+                at: string;
+            };
         } | null;
         role: 'world.planner';
         contactNature: 'execution_only';
@@ -9753,6 +11399,7 @@ export type WorldAdvanceRulesResponses = {
         events: Array<{
             eventId: string;
             activityId?: string;
+            interruptionKind?: 'social' | 'important' | 'emergency' | 'official_change';
             energy?: {
                 kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                 participation: 'primary' | 'subsidiary';
@@ -9815,6 +11462,7 @@ export type WorldRealizeData = {
         events: Array<{
             eventId: string;
             activityId?: string;
+            interruptionKind?: 'social' | 'important' | 'emergency' | 'official_change';
             energy?: {
                 kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                 participation: 'primary' | 'subsidiary';
@@ -9868,6 +11516,15 @@ export type WorldRealizeData = {
                 timeDomainRef: string;
                 start: string;
                 end: string;
+            };
+            attendancePolicy?: {
+                mode: 'autonomous' | 'usual' | 'strict';
+                startToleranceMinutes: number;
+                earlyMinutes: number;
+                lateMinutes: number;
+                minimumContinuationMinutes: number;
+                interruptAfterMinutes: number | null;
+                interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
             };
             title: string;
             description: string;
@@ -9983,6 +11640,7 @@ export type WorldRealizeResponses = {
         events: Array<{
             eventId: string;
             activityId?: string;
+            interruptionKind?: 'social' | 'important' | 'emergency' | 'official_change';
             energy?: {
                 kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                 participation: 'primary' | 'subsidiary';
@@ -10185,6 +11843,15 @@ export type WorldCalendarReadResponses = {
                     start: string;
                     end: string;
                 };
+                attendancePolicy?: {
+                    mode: 'autonomous' | 'usual' | 'strict';
+                    startToleranceMinutes: number;
+                    earlyMinutes: number;
+                    lateMinutes: number;
+                    minimumContinuationMinutes: number;
+                    interruptAfterMinutes: number | null;
+                    interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                };
                 title: string;
                 description: string;
                 actorRefs: Array<string>;
@@ -10197,6 +11864,7 @@ export type WorldCalendarReadResponses = {
             lived: Array<{
                 eventId: string;
                 activityId?: string;
+                interruptionKind?: 'social' | 'important' | 'emergency' | 'official_change';
                 energy?: {
                     kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                     participation: 'primary' | 'subsidiary';
@@ -10422,6 +12090,15 @@ export type WorldCalendarChangeResponses = {
                 kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                 visibility: 'subject' | 'world_author' | 'public';
                 adjustable: boolean;
+                attendancePolicy?: {
+                    mode: 'autonomous' | 'usual' | 'strict';
+                    startToleranceMinutes: number;
+                    earlyMinutes: number;
+                    lateMinutes: number;
+                    minimumContinuationMinutes: number;
+                    interruptAfterMinutes: number | null;
+                    interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                };
                 cancelled?: boolean;
                 archived?: boolean;
                 mode: 'fixed' | 'choice';
@@ -10458,6 +12135,15 @@ export type WorldCalendarChangeResponses = {
                 timeDomainRef: string;
                 start: string;
                 end: string;
+            };
+            attendancePolicy?: {
+                mode: 'autonomous' | 'usual' | 'strict';
+                startToleranceMinutes: number;
+                earlyMinutes: number;
+                lateMinutes: number;
+                minimumContinuationMinutes: number;
+                interruptAfterMinutes: number | null;
+                interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
             };
             title: string;
             description: string;
@@ -10508,6 +12194,27 @@ export type WorldProfileAdoptData = {
             rules: string;
             creationScope: string;
             informationSourceRefs: Array<string>;
+            schoolCalendar?: {
+                template: 'jci-2025';
+                startsOn: string;
+                validThrough: string;
+                weekdays: Array<'MO' | 'TU' | 'WE' | 'TH' | 'FR' | 'SA' | 'SU'>;
+                slots: Array<{
+                    slot: number;
+                    title: string;
+                    placeRef: string;
+                    actorRefs: Array<string>;
+                    attendancePolicy?: {
+                        mode: 'autonomous' | 'usual' | 'strict';
+                        startToleranceMinutes: number;
+                        earlyMinutes: number;
+                        lateMinutes: number;
+                        minimumContinuationMinutes: number;
+                        interruptAfterMinutes: number | null;
+                        interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                    };
+                }>;
+            };
             routineRules: Array<{
                 ruleId: string;
                 revision: number;
@@ -10531,6 +12238,15 @@ export type WorldProfileAdoptData = {
                 kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                 visibility: 'subject' | 'world_author' | 'public';
                 adjustable: boolean;
+                attendancePolicy?: {
+                    mode: 'autonomous' | 'usual' | 'strict';
+                    startToleranceMinutes: number;
+                    earlyMinutes: number;
+                    lateMinutes: number;
+                    minimumContinuationMinutes: number;
+                    interruptAfterMinutes: number | null;
+                    interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                };
                 cancelled?: boolean;
                 archived?: boolean;
                 mode: 'fixed' | 'choice';
@@ -10707,6 +12423,27 @@ export type WorldProfileAdoptResponses = {
             rules: string;
             creationScope: string;
             informationSourceRefs: Array<string>;
+            schoolCalendar?: {
+                template: 'jci-2025';
+                startsOn: string;
+                validThrough: string;
+                weekdays: Array<'MO' | 'TU' | 'WE' | 'TH' | 'FR' | 'SA' | 'SU'>;
+                slots: Array<{
+                    slot: number;
+                    title: string;
+                    placeRef: string;
+                    actorRefs: Array<string>;
+                    attendancePolicy?: {
+                        mode: 'autonomous' | 'usual' | 'strict';
+                        startToleranceMinutes: number;
+                        earlyMinutes: number;
+                        lateMinutes: number;
+                        minimumContinuationMinutes: number;
+                        interruptAfterMinutes: number | null;
+                        interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                    };
+                }>;
+            };
             routineRules: Array<{
                 ruleId: string;
                 revision: number;
@@ -10730,6 +12467,15 @@ export type WorldProfileAdoptResponses = {
                 kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                 visibility: 'subject' | 'world_author' | 'public';
                 adjustable: boolean;
+                attendancePolicy?: {
+                    mode: 'autonomous' | 'usual' | 'strict';
+                    startToleranceMinutes: number;
+                    earlyMinutes: number;
+                    lateMinutes: number;
+                    minimumContinuationMinutes: number;
+                    interruptAfterMinutes: number | null;
+                    interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                };
                 cancelled?: boolean;
                 archived?: boolean;
                 mode: 'fixed' | 'choice';
@@ -10928,6 +12674,27 @@ export type WorldProfileReadResponses = {
                 rules: string;
                 creationScope: string;
                 informationSourceRefs: Array<string>;
+                schoolCalendar?: {
+                    template: 'jci-2025';
+                    startsOn: string;
+                    validThrough: string;
+                    weekdays: Array<'MO' | 'TU' | 'WE' | 'TH' | 'FR' | 'SA' | 'SU'>;
+                    slots: Array<{
+                        slot: number;
+                        title: string;
+                        placeRef: string;
+                        actorRefs: Array<string>;
+                        attendancePolicy?: {
+                            mode: 'autonomous' | 'usual' | 'strict';
+                            startToleranceMinutes: number;
+                            earlyMinutes: number;
+                            lateMinutes: number;
+                            minimumContinuationMinutes: number;
+                            interruptAfterMinutes: number | null;
+                            interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                        };
+                    }>;
+                };
                 routineRules: Array<{
                     ruleId: string;
                     revision: number;
@@ -10951,6 +12718,15 @@ export type WorldProfileReadResponses = {
                     kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                     visibility: 'subject' | 'world_author' | 'public';
                     adjustable: boolean;
+                    attendancePolicy?: {
+                        mode: 'autonomous' | 'usual' | 'strict';
+                        startToleranceMinutes: number;
+                        earlyMinutes: number;
+                        lateMinutes: number;
+                        minimumContinuationMinutes: number;
+                        interruptAfterMinutes: number | null;
+                        interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                    };
                     cancelled?: boolean;
                     archived?: boolean;
                     mode: 'fixed' | 'choice';
@@ -11514,6 +13290,7 @@ export type WorldQueryResponses = {
         events: Array<{
             eventId: string;
             activityId?: string;
+            interruptionKind?: 'social' | 'important' | 'emergency' | 'official_change';
             energy?: {
                 kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                 participation: 'primary' | 'subsidiary';
@@ -11731,6 +13508,15 @@ export type WorldHistoryResponses = {
                     kind: 'study' | 'social' | 'rest' | 'sleep' | 'ordinary' | 'entertainment';
                     visibility: 'subject' | 'world_author' | 'public';
                     adjustable: boolean;
+                    attendancePolicy?: {
+                        mode: 'autonomous' | 'usual' | 'strict';
+                        startToleranceMinutes: number;
+                        earlyMinutes: number;
+                        lateMinutes: number;
+                        minimumContinuationMinutes: number;
+                        interruptAfterMinutes: number | null;
+                        interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
+                    };
                     cancelled?: boolean;
                     archived?: boolean;
                     mode: 'fixed' | 'choice';
@@ -11767,6 +13553,15 @@ export type WorldHistoryResponses = {
                     timeDomainRef: string;
                     start: string;
                     end: string;
+                };
+                attendancePolicy?: {
+                    mode: 'autonomous' | 'usual' | 'strict';
+                    startToleranceMinutes: number;
+                    earlyMinutes: number;
+                    lateMinutes: number;
+                    minimumContinuationMinutes: number;
+                    interruptAfterMinutes: number | null;
+                    interruptEvents: Array<'social' | 'important' | 'emergency' | 'official_change'>;
                 };
                 title: string;
                 description: string;
@@ -12144,6 +13939,239 @@ export type WorldActorsResponses = {
 
 export type WorldActorsResponse = WorldActorsResponses[keyof WorldActorsResponses];
 
+export type RecoverExpressionCandidatesData = {
+    body: {
+        subjectId: string;
+        activityId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/narrative/recover-candidates';
+};
+
+export type RecoverExpressionCandidatesErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type RecoverExpressionCandidatesError = RecoverExpressionCandidatesErrors[keyof RecoverExpressionCandidatesErrors];
+
+export type RecoverExpressionCandidatesResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        recovered: number;
+    };
+};
+
+export type RecoverExpressionCandidatesResponse = RecoverExpressionCandidatesResponses[keyof RecoverExpressionCandidatesResponses];
+
+export type ReadExpressionCandidateDeliveryData = {
+    body: {
+        subjectId: string;
+        briefId: string;
+    };
+    path?: never;
+    query?: never;
+    url: '/gateway/v1/narrative/candidate-delivery';
+};
+
+export type ReadExpressionCandidateDeliveryErrors = {
+    /**
+     * Default Response
+     */
+    400: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    401: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    403: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    409: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    500: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+    /**
+     * Default Response
+     */
+    503: {
+        type: string;
+        title: string;
+        status: number;
+        detail: string;
+        instance?: string;
+        problemCode: string;
+        category: string;
+        retryClass: 'never' | 'immediate' | 'backoff' | 'after-change' | 'manual';
+        schemaVersion: 1;
+    };
+};
+
+export type ReadExpressionCandidateDeliveryError = ReadExpressionCandidateDeliveryErrors[keyof ReadExpressionCandidateDeliveryErrors];
+
+export type ReadExpressionCandidateDeliveryResponses = {
+    /**
+     * Default Response
+     */
+    200: {
+        reference: string;
+        prepared: {
+            channel: string;
+            accountId: string;
+            to: string;
+            replyToId?: string | null;
+            replyToMode?: 'first' | 'all';
+            threadId?: string | number | null;
+            nativeIntentId: string;
+            runId: string;
+            preparedBatch: {
+                [key: string]: unknown;
+            };
+        };
+    };
+};
+
+export type ReadExpressionCandidateDeliveryResponse = ReadExpressionCandidateDeliveryResponses[keyof ReadExpressionCandidateDeliveryResponses];
+
 export type ClaimsToData = {
     body: {
         subjectId: string;
@@ -12156,6 +14184,7 @@ export type ClaimsToData = {
         status?: 'adopted' | 'expressed' | 'uncertain' | 'not_sent';
         order?: 'oldest' | 'newest';
         afterClaimId?: string;
+        relatedRefs?: Array<string>;
         limit: number;
     };
     path?: never;
@@ -12589,7 +14618,7 @@ export type ReactorStatusResponses = {
             reactionId: string;
             step: number;
             action: {
-                action: 'inspect' | 'open' | 'read' | 'search' | 'move' | 'participate' | 'communicate' | 'continue' | 'wait' | 'rest' | 'adjust_plan';
+                action: 'inspect' | 'open' | 'read' | 'search' | 'move' | 'participate' | 'communicate' | 'discard' | 'continue' | 'wait' | 'rest' | 'adjust_plan';
                 target?: string;
             };
             state: 'started' | 'completed' | 'pending' | 'rejected' | 'unavailable';
@@ -13019,6 +15048,7 @@ export type ReactorWakeData = {
     body: {
         subjectId: string;
         operationRef: string;
+        activityId?: string;
     };
     path?: never;
     query?: never;

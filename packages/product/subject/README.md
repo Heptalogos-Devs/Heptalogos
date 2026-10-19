@@ -16,13 +16,13 @@ Product Life 和 Agency 的语义所有者。Nous 拥有主体身份与长期认
 
 `createPursuitService` 显式采纳 exact Desire/DesiredCondition revisions，并关联已经采纳的同 Subject Activity 与 open Nous WorkContext。来源修订/撤回、生命周期 epoch 或时间域改变会标记 reviewRequired、暂停该 Activity；继续前由 `guardActivity` 重新核验。`reconsider` 是明确换修订的采纳，保留旧 adoption/evaluation history，并保持执行暂停；实际执行仍走原 Life。官方 Motivation evaluator 是唯一真值与覆盖 owner，Pursuit 只保留实际 evaluationId、来源、verdict、finalConclusion、coverage 与时间域，不把任务完成等同于满足，也不创建后台 worker。
 
-`createWorldLifeService` 拥有正式WorldDefinition、显式日程和本地日历规律、已实现事件、主体可见投影、覆盖与待回流contact。`prepareAdvance`返回前2小时/后24小时的有界世界frame及下一自然节点；`advanceRules`实现fixed规律，choice留给正式世界/主观角色。Temporal处理IANA/DST，uuid库固定规律发生身份；重启或重复机会不重造事件。`realizeIn`与NarrativeCommit复用同一个短事务和Subject叙事锁，模型与clock读取在事务外。world-author数据与Subject感知内容在查询前分开，`asRecordedAt`和`knowledgeAtWorldTime`分别处理现实提交历史和故事内知情。正式语义见[WorldLife](../../../specs/subject/world-life.md)。
+`createWorldLifeService`拥有世界定义、日历、已实现生活和可见变化。`advance`一次完成到时动作及确定性规律，返回`progress`、`perceptibleChanges`、当前`frame`和`nextOpportunity`。Host只在有新增可感知变化时唤醒前台。`prepareAdvance`只读，按Profile规划范围展开日历，返回当前履约政策及下一可中断点；合法自主空白等到下一日历节点或规划范围终点。`realizeIn`与Narrative复用短事务和Subject叙事锁。`asRecordedAt`与`knowledgeAtWorldTime`分别限制真实提交历史和故事内知情，正式语义见[WorldLife](../../../specs/subject/world-life.md)。
 
 `createDeliberationService` 采用真实主观角色的决定：`adopt`在Subject短锁与Activity CAS下同时保存不可变DecisionCommit和Life模式/下一节点，保留技术进展原文。Host提供actual run/admission/source核对，provider与clock在事务外读取，当前权限在同事务重查。`read`按decisionRef、`readOperation`按操作身份恢复已有receipt。明确expressionIntent可伴随任何choice；后续brief引用此实际采用来源，沉默不会自动变成表达。实际worker、新Activity与发送仍由原owner消费，不由本服务建立新运行循环。
 
 `Life.get(subjectId, activityId, transaction?)` 与 `WorldLife.resolveSourceRefs(input, transaction?)` 在授权/发送围栏中复用调用者事务，仍由原owner SQL和解析器读取；不会持有写连接再借读连接。
 
-`createNarrativeService`在实际DecisionCommit基础上保存ExpressionBrief，采用独立原生review后的完整renderer payload。兼容场景细节、Claim、承诺到期点与唯一Agency行为在同一Host事务提交，实际平台结果继续由Agency保存；`claimsTo`按听众及实际发送状态分页，`pendingCommitments`将尚未履约的采用记录供后续Life审议。模型、认知服务与网络始终在事务外。正式合同见[叙事与陈述](../../../specs/subject/narrative-claims.md)。
+`createNarrativeService`拥有交流采用与后台陈述索引。`saveBrief`保存已采用意图；显式新世界事实和严肃承诺由`prepareExpression`先调用WorldLife/Life采用，再交独立renderer。普通`adoptDelivery`在短事务中保存精确原文、听众、意图、来源及唯一Agency发送身份，随后沿原发送出口派发；已知重要冲突才在该候选提交前读回一次。`pendingSemanticWork`和`indexPending`复用已有brief/原生结果身份推进后台Claim索引，晚到冲突保留为可见待澄清工作。`unindexedTo`让同听众后续输入读取尚未索引的原文及实际发送状态；后台不改原文、不重发。`claimsTo`查询派生索引，`pendingCommitments`同时读取已采用意图承诺和已有Claim承诺。正式合同见[叙事与陈述](../../../specs/subject/narrative-claims.md)。
 
 ## 世界 Profile、日历和生活状态
 
@@ -30,11 +30,13 @@ Product Life 和 Agency 的语义所有者。Nous 拥有主体身份与长期认
 
 Profile 的课表保存原采用输入来源；当前可写课表只有 WorldDefinition 中的规则/修订。`changeCalendar` 改当前日历，不能通过重新导入旧 Profile 覆盖它。再次采用同一入场资料时可明确修改运行参数；初始角色、初始精力及当前精力不重置，原入场 source/ref/recordedAt 保留。能量费率带 `policyEffectiveAt`，跨修订的实际区间分段使用当时参数。
 
-`readCalendar` 接受任意有限世界区间，按 planned/lived/combined、展示时区、角色/活动和 continuation 读取；查询不调用模型、不推进时钟、不创建多年实例。RRULE/RDATE/EXDATE 由 [rrule](https://github.com/jkbrzt/rrule) 处理，Temporal 将本地重复坐标按明确 IANA/DST policy 转为世界区间。`RECURRENCE-ID` 原始本地坐标决定实例 ID，单次移动和未来有效修订保留身份。已实现实例保留原安排，Subject 只能修改 adjustable 规则；缺席不能删除学校规则。
+`readCalendar`接受有限世界区间，按planned/lived/combined、展示时区、角色/活动分页读取。RRULE/RDATE/EXDATE由rrule处理，Temporal处理IANA/DST，原始RECURRENCE-ID固定实例身份。`changeCalendar`按实际世界时刻检查过去：即使没有realization，过去的安排也只读；未来用例外或新规则修订，正在进行的本次安排可修改尚未发生的时长。直接configure和planner替换schedule也保留已发生前缀。Subject仅可修改adjustable规则，缺席保留校方安排及实际结果。
 
 `readLivingState` 返回已实现区间导出的精力、积分点、覆盖、地点、当前世界动作及独立 device revision。一个时段只计一个主活动速率；附属活动只计最大正负担的配置比例。休息/睡眠恢复必须已有实际 realized 区间，计划与 worker 数量不提供恢复或额外扣减。迟到细化从此前保留状态重算，重复 operation 不重复积分。`adoptDeviceViewIn` 复用 Reactor 的同一事务；设备 CAS 不因无关精力变化而失败。
 
-`adoptAction` 接受 move、participate、rest 和真实 Reaction 来源，可信前台校验在同一短事务内执行。动作时长由已采用 route、日程或 rest policy 决定，不能由模型调用改钟。`completeActions` 只实现当前正式时钟已经走过的部分；未到终点仍为 pending，移动不会提前到达目标。当前原生唤醒者读取 `nextOpportunity`；本包没有 timer。`advanceRules` 先处理已采用动作的实际进展，再分段实现规律；离开教室后的课程段记录 missed，不强制主体瞬移，也不把睡眠与主动学习同时计入精力。
+规则的`attendancePolicy`集中表达autonomous、usual、strict，包含开始容忍、提前/延后范围、最短继续分钟、可中断点和事件类别。`adjustable`只决定环境安排修改权。已采用的通常/严格日程默认继续，真实占用冲突保留缺席；严格日程拒绝普通move/rest抢占。`adoptAction`沿既有route、日程和休息参数采用move/participate/rest，`completeActions`只实现已过去部分，保留真实下一节点，晚加入记录partial。精力仍从这些实际区间积分。
+
+可选`profile.schoolCalendar`从[学校时间选择](examples/school-calendar-selection.json)选择公开课次、有效日期、周几、课程标题和已有参与者/地点。`previewSchoolCalendar`零模型返回将采用的规则；`schoolCalendarTemplate`包含官方时间骨架与来源，未选择的课次保持空白。模板只提供时间，角色仍由明确的Profile入场资料采用。已有世界可预览后通过现有configure采用未来规则，既有学生的身份、课表、精力和历史继续保留。
 
 世界接触先由 `selectContact` 为一个稳定 native run 独占；selected 不是已感知。实际 admitted projection 与 exact official occurrence 回执成立后，原 run 才能 `acknowledgeContact` 置 released。未知发布状态不换随机 observation ID；只有可信 Reactor 已证明原 run 从未 prepare/publish 且已撤销时，才可同事务 CAS 转移 selection，并保留依据。`pendingContact` 精确读一个事件，分页按实际 recordedAt/eventId，而不是 UUID 大小或故事发生时间推进。
 

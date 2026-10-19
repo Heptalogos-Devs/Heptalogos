@@ -51,6 +51,8 @@ import {
   writeManagementEndpointDescriptor,
 } from "./files.js";
 import { createProductHttpApp, closeProductHttpApp } from "./product-http.js";
+import { createOperatorOperations } from "./operator.js";
+import { createCalendarMomentOperations } from "./calendar-moment.js";
 import { getNousSubject, createNousSubject, connectProductNous } from "./nous.js";
 import { createWorldClockManagement } from "./world-clock.js";
 import type { ReactorProjection } from "./reactor-http.js";
@@ -60,9 +62,11 @@ import { parseProductHostInputs, type ProductHostInputs } from "./inputs.js";
 import {
   createInstalledWorldScheduler,
   createInstalledAgentSelector,
+  createInstalledGatewayReader,
   type NativeAgentSelect,
   type NativeWorldSchedule,
   createInstalledNativeDispatcher,
+  createInstalledExpressionSender,
 } from "./native-dispatch.js";
 
 /** Handle to the independently usable management process. */
@@ -343,18 +347,25 @@ export async function startProductHost(
           installationId: owned.installationId,
           signal: AbortSignal.any([host.signal, dispatchController.signal]),
         }),
+      sendRetainedExpression: createInstalledExpressionSender({
+        anchorRoot: options.anchorRoot,
+        configurationRoot: owned.paths.resolve("CONFIGURATION").canonicalPath,
+        installationId: owned.installationId,
+        signal: AbortSignal.any([host.signal, dispatchController.signal]),
+      }),
     });
     const recoveryConfiguration = await product.configuration();
     const recoverySubjectId = recoveryConfiguration.settings?.subject?.id;
     if (recoverySubjectId) {
-      stopWorldClock = () =>
-        runMutationActivity("subject.world.host_stop", () =>
-          gateway.worldHostLifecycle.stop(),
-        );
-      // Management remains available when its external clock cannot currently be reached.
-      await runMutationActivity("subject.world.host_start", () =>
-        gateway.worldHostLifecycle.start(),
-      ).catch(() => {});
+      if (recoveryConfiguration.settings?.subject.enabled) {
+        stopWorldClock = () =>
+          runMutationActivity("subject.world.host_stop", () =>
+            gateway.worldHostLifecycle.stop(),
+          );
+        await runMutationActivity("subject.world.host_start", () =>
+          gateway.worldHostLifecycle.start(),
+        ).catch(() => {});
+      }
       await runMutationActivity("subject.life.recover", () =>
         gateway.life.recover(recoverySubjectId),
       );
@@ -390,24 +401,23 @@ export async function startProductHost(
         throw error;
       }
     };
-    const projectConfiguration = async (
-      configuration: Awaited<ReturnType<typeof product.configuration>>,
-    ): Promise<ReactorProjection> => {
-      const settings = configuration.settings;
-      if (!settings?.subject.id || !settings.subject.enabled)
-        return (opportunityProjection = { state: "disabled" });
-      const operationRef = "configuration:" + configuration.revision;
-      try {
-        await projectOpportunity({ subjectId: settings.subject.id, operationRef });
-        return { state: "projected", operationRef };
-      } catch {
-        return { state: "unavailable", operationRef };
-      }
-    };
+    const readNative = createInstalledGatewayReader({
+      anchorRoot: options.anchorRoot,
+      configurationRoot: owned.paths.resolve("CONFIGURATION").canonicalPath,
+      installationId: owned.installationId,
+      signal: host.signal,
+    });
     app = await createProductHttpApp({
+      calendarMoment: createCalendarMomentOperations({ product, gateway, persistence: currentPersistence }),
+      operator: createOperatorOperations({
+        anchorRoot: options.anchorRoot,
+        product,
+        gateway,
+        readNativeChannels: () => readNative("channels.status"),
+        readProviderAttempts: (params) => readNative("nous.provider-attempts", params),
+      }),
       authentication,
       product,
-      onConfigurationActivated: projectConfiguration,
       gateway: gateway.http,
       pursuit: gateway.pursuitHttp,
       world: {
@@ -438,10 +448,6 @@ export async function startProductHost(
               },
               configuration.revision,
             );
-          await projectOpportunity({
-            subjectId: profile.subjectId,
-            operationRef: "world-profile:" + profile.operationId,
-          }).catch(() => {});
         },
       },
       worldOpportunity: gateway.worldOpportunityHttp,
@@ -483,11 +489,6 @@ export async function startProductHost(
       bootId: host.bootId,
       origin,
     });
-    if (recoverySubjectId && recoveryConfiguration.settings?.subject.enabled)
-      await projectOpportunity({
-        subjectId: recoverySubjectId,
-        operationRef: "host-ready:" + currentHost.bootId,
-      }).catch(() => {});
     claim = await startFirstClaimMaintenance({
       readLocalClaim: () => readFirstClaimMaterial(currentRunRoot),
       ensureClaim: (local) => authentication.ensureFirstAdministratorClaim(local),

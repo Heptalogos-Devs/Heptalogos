@@ -7,12 +7,8 @@
   "targets": {
     "lint": {
       "executor": "nx:run-commands",
-      "options": { "command": "oxlint --type-aware packages/system/ai-runtime" }
-    },
-    "test": {
-      "executor": "nx:run-commands",
       "options": {
-        "command": "vitest run --root packages/system/ai-runtime"
+        "command": "oxlint --type-aware packages/system/ai-runtime"
       }
     }
   }

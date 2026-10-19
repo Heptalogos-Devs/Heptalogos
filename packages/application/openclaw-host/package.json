@@ -15,7 +15,8 @@
     "NOTICE",
     "dist/prepare-gateway.js",
     "dist/dispatch.js",
-    "dist/agent-catalog.js",
+    "dist/gateway-read.js",
+    "dist/expression-send.js",
     "dist/world-schedule.js",
     "dist/world-wake-cli.js"
   ],

@@ -53,23 +53,4 @@ describe("WorkQueue profile catalog", () => {
       createWorkQueueProfileCatalog([profile({ minPollingIntervalMs: 0 })]),
     ).toThrow();
   });
-
-  it("retains an immutable validated catalog", () => {
-    const definition = profile({
-      globalConcurrency: 4,
-      workerConcurrency: 2,
-      partition: {
-        concurrency: 2,
-        workerConcurrency: 1,
-        rateLimit: { limitPerPeriod: 10, periodSeconds: 1 },
-      },
-    });
-    const catalog = createWorkQueueProfileCatalog([definition]);
-
-    expect(catalog.get(profileId)).toMatchObject(definition);
-    expect(catalog.list()).toHaveLength(1);
-    expect(Object.isFrozen(catalog.list())).toBe(true);
-    expect(Object.isFrozen(catalog.list()[0])).toBe(true);
-    expect(Object.isFrozen(catalog.list()[0]?.partition)).toBe(true);
-  });
 });

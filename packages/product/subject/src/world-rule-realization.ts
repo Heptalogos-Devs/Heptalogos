@@ -1,11 +1,12 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
 /**
- * Realizes fixed rule segments against actual presence instead of assuming every plan was attended.
+ * Realizes adopted attendance against actual competing activity and autonomous presence.
  * @module world-rule-realization
  */
 import { v5 as uuidv5 } from "uuid";
 import type { Static } from "@heptalogos/schema-runtime/typebox";
+import { worldAttendancePolicy } from "./world-contracts.js";
 import type {
   WorldDefinition,
   RealizedWorldEvent,
@@ -84,7 +85,10 @@ export function realizeRuleSegments(
       const place = previous?.placeRef ?? initialPlaceRef;
       const attended =
         !rule.actorRefs.includes(definition.subjectActorRef) ||
-        (blocking.length === 0 && (!place || place === rule.placeRef));
+        (blocking.length === 0 &&
+          (worldAttendancePolicy(rule).mode !== "autonomous" ||
+            !place ||
+            place === rule.placeRef));
       const actors = attended
         ? rule.actorRefs
         : rule.actorRefs.filter((actor) => actor !== definition.subjectActorRef);

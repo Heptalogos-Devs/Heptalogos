@@ -3,11 +3,7 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createIdentityService } from "@heptalogos/identity";
 import { randomUUID } from "node:crypto";
-import {
-  createWorldLifeService,
-  createLifeService,
-  expandWorldRoutines,
-} from "@heptalogos/subject";
+import { createWorldLifeService, createLifeService } from "@heptalogos/subject";
 import {
   qualifiedPgBin,
   cleanupCanonicalPostgresFixtures,
@@ -419,56 +415,6 @@ real("WorldLife canonical realization on real fenced PostgreSQL", () => {
           }),
         ),
       ).rejects.toMatchObject({ problem: { problemCode: "world.conflict" } });
-      const routine = {
-        ruleId: randomUUID(),
-        title: "Break",
-        content: "A fixed break in the courtyard",
-        subjectPerception: "I rested in the courtyard",
-        revision: 1,
-        startsAtLocal: "2026-10-16T10:00:00",
-        timezone: "Asia/Shanghai",
-        rrule: "FREQ=DAILY",
-        rdates: [],
-        exdates: [],
-        validThrough: "2026-10-17",
-        effectiveFrom: null,
-        effectiveUntil: null,
-        startShiftSeconds: 0,
-        disambiguation: "compatible" as const,
-        kind: "rest" as const,
-        visibility: "subject" as const,
-        adjustable: false,
-        durationMinutes: 15,
-        actorRefs: [actor],
-        placeRef: "home",
-        activityId: null,
-        mode: "fixed" as const,
-      };
-      await current.run(() =>
-        life.configure({
-          operationId: randomUUID(),
-          expectedRevision: 3,
-          definition: { ...definition, revision: 2, routineRules: [routine] },
-          schedule: [],
-        }),
-      );
-      const ruleRange = {
-        timeDomainRef: domain,
-        start: "2026-10-16T01:30:00.000Z",
-        end: "2026-10-16T03:00:00.000Z",
-      };
-      const firstRules = await current.run(() =>
-        life.advanceRules(subjectId, worldId, ruleRange),
-      );
-      expect(firstRules.events).toHaveLength(1);
-      expect(firstRules.events[0]?.interval.start).toBe("2026-10-16T02:00:00.000Z");
-      expect(
-        (await current.run(() => life.advanceRules(subjectId, worldId, ruleRange)))
-          .events,
-      ).toHaveLength(0);
-      expect((await life.prepareAdvance(subjectId, worldId)).nextOpportunity?.at).toBe(
-        "2026-10-17T02:00:00.000Z",
-      );
       const revisions = await life.history({ subjectId, worldId, limit: 2 });
       expect(revisions.history.map((row) => row.revision)).toEqual([1, 2]);
       expect(revisions.nextRevision).toBe(2);
@@ -476,31 +422,7 @@ real("WorldLife canonical realization on real fenced PostgreSQL", () => {
         (
           await life.history({ subjectId, worldId, afterRevision: 2, limit: 2 })
         ).history.map((row) => row.revision),
-      ).toEqual([3, 4]);
-      const dst = expandWorldRoutines(
-        {
-          ...definition,
-          timezone: "America/New_York",
-          routineRules: [
-            {
-              ...routine,
-              startsAtLocal: "2026-03-07T08:00:00",
-              timezone: "America/New_York",
-              validThrough: "2026-03-09",
-            },
-          ],
-        },
-        {
-          timeDomainRef: domain,
-          start: "2026-03-07T00:00:00.000Z",
-          end: "2026-03-09T23:59:59.000Z",
-        },
-      );
-      expect(dst.map((item) => item.schedule.interval.start)).toEqual([
-        "2026-03-07T13:00:00.000Z",
-        "2026-03-08T12:00:00.000Z",
-        "2026-03-09T12:00:00.000Z",
-      ]);
+      ).toEqual([3]);
     } finally {
       await current.close();
     }

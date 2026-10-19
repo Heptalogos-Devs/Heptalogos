@@ -19,6 +19,8 @@ import {
 } from "@heptalogos/persistence/repository";
 import {
   worldHistoryQuerySchema,
+  worldAttendancePolicy,
+  worldScheduleAttendancePolicy,
   configureWorldSchema,
   queryWorldSchema,
   realizeWorldSchema,
@@ -49,7 +51,12 @@ import {
   changeCalendarSchema,
   type ChangeCalendar,
 } from "./world-calendar-contracts.js";
-import { readWorldCalendar, applyCalendarChange } from "./world-calendar-service.js";
+import {
+  readWorldCalendar,
+  applyCalendarChange,
+  preserveElapsedSchedule,
+  preserveElapsedRules,
+} from "./world-calendar-service.js";
 
 function conflict(detail: string): never {
   throw subjectProblem("world.conflict", "World patch is not admissible", detail);
@@ -265,6 +272,25 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
       )
         conflict("A detail must refer to a realized enclosing parent event");
       for (const other of [...related, ...events]) {
+        if (
+          event.scheduleId &&
+          event.scheduleId === other.scheduleId &&
+          overlaps(event.interval, other.interval) &&
+          other.scheduleOutcome === "missed" &&
+          event.actorRefs.includes(state.definition.subjectActorRef)
+        )
+          conflict("A recorded absence cannot become attendance through a late event");
+        if (
+          event.scheduleId &&
+          event.scheduleId === other.scheduleId &&
+          overlaps(event.interval, other.interval) &&
+          event.scheduleOutcome &&
+          other.scheduleOutcome &&
+          event.scheduleOutcome !== other.scheduleOutcome
+        )
+          conflict(
+            "Append a correction to a recorded outcome; do not replace absence or participation with a different outcome",
+          );
         if (event.eventId === other.eventId)
           conflict(
             "An adopted event identity is immutable; append an explicit detail instead",
@@ -318,6 +344,8 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
       events.push(canonical);
     }
     if (input.schedule)
+      preserveElapsedSchedule(state.schedule, input.schedule, world.at);
+    if (input.schedule)
       for (const item of input.schedule) {
         interval(item.interval, state.definition.timeDomainRef);
         if (
@@ -355,6 +383,7 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
   const configureIn = async (
     tx: PersistenceInternalTransaction,
     value: Static<typeof configureWorldSchema>,
+    world?: { timeDomainRef: string; at: string },
   ): Promise<WorldState> => {
     const input = checked<Static<typeof configureWorldSchema>>(
       configureWorldSchema,
@@ -409,6 +438,12 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
       conflict("Existing world history cannot be moved to another clock domain");
     if (input.definition.revision !== (current?.definition.revision ?? 0) + 1)
       conflict("Adopt the next explicit definition revision");
+    if (current) {
+      if (!world || world.timeDomainRef !== current.definition.timeDomainRef)
+        conflict("Configuration updates require the actual current world clock");
+      preserveElapsedSchedule(current.schedule, input.schedule, world.at);
+      preserveElapsedRules(current.definition, input.definition, world.at);
+    }
     const next = {
       definition: input.definition,
       revision: input.expectedRevision + 1,
@@ -528,12 +563,34 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
               conflict(
                 "The Subject cannot rewrite a school's fixed rule; choose participation or absence instead",
               );
+            if (input.change.startLocal) {
+              const rule = affected[0]!;
+              const exception = current.definition.calendarExceptions?.find(
+                (item) =>
+                  item.ruleId === input.ruleId &&
+                  item.recurrenceId === input.recurrenceId,
+              );
+              const original =
+                Date.parse((exception?.startLocal ?? input.recurrenceId) + "Z") +
+                (exception?.startLocal ? 0 : rule.startShiftSeconds * 1000);
+              const offsetMinutes =
+                (Date.parse(input.change.startLocal + "Z") - original) / 60000;
+              const policy = worldAttendancePolicy(rule);
+              if (
+                offsetMinutes < -policy.earlyMinutes ||
+                offsetMinutes > policy.lateMinutes
+              )
+                conflict(
+                  "The Subject's schedule change exceeds the adopted early/late allowance",
+                );
+            }
           }
           const definition = applyCalendarChange(
             current.definition,
             input,
             realizedIds,
             rows.map((row) => row.document),
+            world.at,
           );
           validateWorldRoutines(definition);
           const next: WorldState = {
@@ -543,7 +600,7 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
             updatedAt: options.now(),
             schedule: current.schedule.filter(
               (plan) =>
-                realizedIds.has(plan.scheduleId) ||
+                Date.parse(plan.interval.end) <= Date.parse(world.at) ||
                 plan.ruleRef?.ruleId !== input.ruleId,
             ),
           };
@@ -565,8 +622,11 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
     /** Explicitly adopts environment and future schedule, retaining every revision. */
     configureIn,
     async configure(value: Static<typeof configureWorldSchema>) {
+      const world = await options.worldNow(value.definition.subjectId);
       return options.persistence.mutate((context) =>
-        useRepositoryMutationTransaction(context, (tx) => configureIn(tx, value)),
+        useRepositoryMutationTransaction(context, (tx) =>
+          configureIn(tx, value, world),
+        ),
       );
     },
     /** Realization does not infer that planned events actually occurred. */
@@ -576,11 +636,65 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
         useRepositoryMutationTransaction(context, (tx) => realizeIn(tx, value, world)),
       );
     },
+    /** Advances adopted life once; callers consume changes and the next condition together. */
+    async advance(subjectId: string, worldId: string) {
+      const world = await options.worldNow(subjectId);
+      const completedActions = await service.completeActions(
+        { subjectId, worldId, limit: 32 },
+        world,
+      );
+      let frame = await service.prepareAdvance(subjectId, worldId, world);
+      const cursor = await service.realizationCursor(subjectId, worldId);
+      const range = {
+        timeDomainRef: frame.world.timeDomainRef,
+        start: new Date(
+          Math.max(
+            cursor?.timeDomainRef === frame.world.timeDomainRef
+              ? Date.parse(cursor.at)
+              : Date.parse(frame.world.at) - 86400000,
+            Date.parse(frame.world.at) - 31 * 86400000,
+          ),
+        ).toISOString(),
+        end: frame.world.at,
+      };
+      const result =
+        Date.parse(range.start) < Date.parse(range.end)
+          ? await service.advanceRules(subjectId, worldId, range, world)
+          : null;
+      frame = await service.prepareAdvance(subjectId, worldId, world);
+      const events = result?.events ?? [];
+      const perceptibleEventRefs = events
+        .filter((event) =>
+          event.perceptions.some(
+            (p) => p.actorRef === frame.state.definition.subjectActorRef,
+          ),
+        )
+        .map((event) => `world-event:${worldId}:${event.eventId}:${event.revision}`);
+      return {
+        frame,
+        interval: range,
+        progress: {
+          eventRefs: events.map(
+            (event) => `world-event:${worldId}:${event.eventId}:${event.revision}`,
+          ),
+          actionRefs: completedActions.map((action) => action.actionRef),
+        },
+        perceptibleChanges: [
+          ...perceptibleEventRefs,
+          ...completedActions.flatMap((action) => action.eventRefs),
+        ],
+        nextOpportunity: frame.nextOpportunity,
+      };
+    },
     /** Produces the finite author frame; Subject inputs must use the filtered query instead. */
-    async prepareAdvance(subjectId: string, worldId: string) {
+    async prepareAdvance(
+      subjectId: string,
+      worldId: string,
+      capturedWorld?: { timeDomainRef: string; at: string },
+    ) {
       const [state, world] = await Promise.all([
         service.read(subjectId, worldId),
-        options.worldNow(subjectId),
+        capturedWorld ?? options.worldNow(subjectId),
       ]);
       if (!state || state.definition.timeDomainRef !== world.timeDomainRef)
         conflict("World and current clock must share a declared domain");
@@ -624,14 +738,62 @@ ON CONFLICT(subject_id,world_id) DO UPDATE SET revision=excluded.revision,time_d
         view: "world_author",
         limit: 128,
       });
+      const current = schedule.find(
+        (item) =>
+          item.actorRefs.includes(state.definition.subjectActorRef) &&
+          Date.parse(item.interval.start) <= Date.parse(world.at) &&
+          Date.parse(item.interval.end) > Date.parse(world.at),
+      );
+      const policy = current
+        ? worldScheduleAttendancePolicy(state.definition, current)
+        : null;
+      const nextInterruptAt =
+        current && policy
+          ? new Date(
+              Math.min(
+                Date.parse(current.interval.end),
+                Date.parse(current.interval.start) +
+                  Math.max(
+                    policy.minimumContinuationMinutes,
+                    policy.interruptAfterMinutes ??
+                      (Date.parse(current.interval.end) -
+                        Date.parse(current.interval.start)) /
+                        60000,
+                  ) *
+                    60000,
+              ),
+            ).toISOString()
+          : null;
       return {
         state,
         world,
         schedule,
         recentEvents: recent.events,
-        nextOpportunity: future[0]
-          ? { timeDomainRef: world.timeDomainRef, at: future[0] }
-          : null,
+        needsRefinement:
+          !adopted[0] &&
+          !current &&
+          !recent.events.length &&
+          !(await service.realizationCursor(subjectId, worldId)),
+        currentPolicy:
+          current && policy && nextInterruptAt
+            ? {
+                scheduleId: current.scheduleId,
+                policy,
+                nextInterruptAt: {
+                  timeDomainRef: world.timeDomainRef,
+                  at: nextInterruptAt,
+                },
+              }
+            : null,
+        nextOpportunity: {
+          timeDomainRef: world.timeDomainRef,
+          at:
+            [future[0], nextInterruptAt]
+              .filter((at): at is string =>
+                Boolean(at && Date.parse(at) > Date.parse(world.at)),
+              )
+              .sort()[0] ?? upcoming.end,
+        },
         role: "world.planner" as const,
         contactNature: "execution_only" as const,
       };
@@ -736,9 +898,14 @@ WHERE subject_id=$1 AND world_id=$2 AND document->'interval' IS NOT NULL ORDER B
       subjectId: string,
       worldId: string,
       range: { timeDomainRef: string; start: string; end: string },
+      capturedWorld?: { timeDomainRef: string; at: string },
     ) {
-      await service.completeActions({ subjectId, worldId });
-      const { state, world } = await service.prepareAdvance(subjectId, worldId);
+      if (!capturedWorld) await service.completeActions({ subjectId, worldId });
+      const { state, world } = await service.prepareAdvance(
+        subjectId,
+        worldId,
+        capturedWorld,
+      );
       interval(range, state.definition.timeDomainRef);
       if (Date.parse(range.end) > Date.parse(world.at))
         conflict("Rules cannot realize future planned life");
@@ -761,7 +928,7 @@ WHERE subject_id=$1 AND world_id=$2 AND document->'interval' IS NOT NULL ORDER B
       );
       const due = expanded.filter(
         (value) =>
-          value.rule.mode === "fixed" &&
+          (value.rule.attendancePolicy ? true : value.rule.mode === "fixed") &&
           value.schedule.status === "planned" &&
           Date.parse(value.schedule.interval.start) < Date.parse(range.end) &&
           Date.parse(value.schedule.interval.end) > Date.parse(range.start) &&

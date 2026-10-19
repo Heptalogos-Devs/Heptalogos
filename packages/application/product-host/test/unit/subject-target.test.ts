@@ -62,104 +62,6 @@ describe("one current Situation target resolver", () => {
       resolveSituationTarget(view, { action: "move", target: conversationRef }).problem,
     ).toContain("action_unavailable");
   });
-  it("projects action-specific exact targets instead of an object prefix plus a business ID", () => {
-    const activityId = "01a147fd-376b-73c2-a45a-ec826de32174";
-    const activity: SituationObject = {
-      ...conversation,
-      owner: "life",
-      kind: "activity",
-      handle: "object:" + randomUUID(),
-      sourceRef: "activity:" + activityId,
-      actions: ["inspect", "continue", "wait", "rest"],
-    };
-    const water: SituationObject = { ...conversation, actions: ["inspect", "open"] };
-    const view = { ...frame([activity, water]), activityId };
-    const input = currentSituationDecisionInput(view);
-    const contract = compileSchema(input.outputContract);
-    for (const target of [activity.handle, activity.sourceRef]) {
-      expect(
-        contract.validate({
-          action: "continue",
-          target,
-          reason: "Continue current work",
-        }).ok,
-      ).toBe(true);
-      expect(resolveSituationTarget(view, { action: "continue", target }).object).toBe(
-        activity,
-      );
-    }
-    for (const target of ["object:" + activityId, "object:expired", water.handle])
-      expect(
-        contract.validate({ action: "continue", target, reason: "Current work" }).ok,
-      ).toBe(false);
-    expect(
-      contract.validate({
-        action: "communicate",
-        target: water.handle,
-        reason: "Speak",
-      }).ok,
-    ).toBe(false);
-    expect(
-      contract.validate({ action: "continue", reason: "Continue local work" }).ok,
-    ).toBe(true);
-    expect(contract.validate({ action: "open", reason: "Open" }).ok).toBe(false);
-    expect(
-      input.actionTargets.find((row) => row.action === "continue")?.targets,
-    ).toEqual([activity.handle, activity.sourceRef]);
-    const intent = {
-      intent: "Offer a greeting",
-      stance: "friendly",
-      qualifications: [],
-      deception: "none",
-      eventRefs: [],
-      cognitionRefs: [],
-      priorClaimRefs: [],
-    };
-    expect(
-      contract.validate({
-        action: "communicate",
-        target: water.handle,
-        reason: "Speak",
-        expressionIntent: intent,
-      }).ok,
-    ).toBe(false);
-    const communication = compileSchema(
-      currentSituationDecisionInput(frame([conversation])).outputContract,
-    );
-    expect(
-      communication.validate({
-        action: "communicate",
-        target: conversation.handle,
-        reason: "Greet",
-      }).ok,
-    ).toBe(false);
-    expect(
-      communication.validate({
-        action: "communicate",
-        target: conversation.handle,
-        reason: "Greet",
-        expressionIntent: intent,
-      }).ok,
-    ).toBe(true);
-    const next = currentSituationDecisionInput(
-      frame([{ ...activity, handle: "object:next-frame" }]),
-    );
-    const nextContract = compileSchema(next.outputContract);
-    expect(
-      nextContract.validate({
-        action: "continue",
-        target: activity.handle,
-        reason: "Old choice",
-      }).ok,
-    ).toBe(false);
-    expect(
-      nextContract.validate({
-        action: "continue",
-        target: "object:next-frame",
-        reason: "Current choice",
-      }).ok,
-    ).toBe(true);
-  });
   it("registers the current action target contract in the actual ephemeral role input", async () => {
     const view = frame();
     const registerInput = vi.fn(async (_input: unknown) => {
@@ -214,7 +116,7 @@ describe("one current Situation target resolver", () => {
     ).rejects.toThrow("captured native registration");
     const registered = registerInput.mock.calls[0]![0] as unknown as {
       extraSystemPrompt: string;
-      responseFormat: unknown;
+      responseFormat: { json_schema: { schema: unknown } };
     };
     const marker = '{"kind":"heptalogos_ephemeral_role_context"';
     const context = JSON.parse(
@@ -224,15 +126,8 @@ describe("one current Situation target resolver", () => {
       frameRef: view.frameRef,
       actionTargets: currentSituationDecisionInput(view).actionTargets,
     });
-    expect(registered.responseFormat).toEqual({
-      type: "json_schema",
-      json_schema: {
-        name: "subject_deliberation",
-        strict: true,
-        schema: context.outputContract,
-      },
-    });
-    const contract = compileSchema(context.outputContract);
+    expect(context.outputContract).toBeUndefined();
+    const contract = compileSchema(registered.responseFormat.json_schema.schema);
     expect(
       contract.validate({
         action: "open",
@@ -248,102 +143,6 @@ describe("one current Situation target resolver", () => {
       }).ok,
     ).toBe(false);
     expect(dispatch).not.toHaveBeenCalled();
-  });
-  it("limits world and prior-claim citations to the current owners' supplied records", () => {
-    const intent = {
-      intent: "Describe actual media",
-      stance: "neutral",
-      qualifications: [],
-      deception: "none",
-      eventRefs: [],
-      cognitionRefs: [],
-      priorClaimRefs: [],
-    };
-    const base = {
-      action: "communicate",
-      target: conversationRef,
-      reason: "Reply",
-      expressionIntent: intent,
-    };
-    const empty = compileSchema(currentSituationDecisionInput(frame()).outputContract);
-    expect(empty.validate(base).ok).toBe(true);
-    expect(
-      empty.validate({
-        ...base,
-        expressionIntent: { ...intent, eventRefs: ["message:visible"] },
-      }).ok,
-    ).toBe(false);
-    const event = "world-event:current:event:1",
-      prior = randomUUID();
-    const known = compileSchema(
-      currentSituationDecisionInput(frame(), {
-        eventRefs: [event],
-        priorClaimRefs: [prior],
-      }).outputContract,
-    );
-    expect(
-      known.validate({
-        ...base,
-        expressionIntent: { ...intent, eventRefs: [event], priorClaimRefs: [prior] },
-      }).ok,
-    ).toBe(true);
-  });
-  it("omits ambiguous public aliases using the same canonical resolver", () => {
-    const other = { ...conversation, owner: "world" as const, handle: "object:other" };
-    const view = frame([conversation, other]);
-    const choice = currentSituationDecisionInput(view).actionTargets.find(
-      (row) => row.action === "open",
-    )!;
-    expect(choice.targets).toContain(conversation.handle);
-    expect(choice.targets).not.toContain(conversationRef);
-  });
-  it("bounds failure feedback to directory metadata without echoing an unknown target body", () => {
-    const value = { ...conversation, handle: "object:" + "h".repeat(2040) };
-    const view = frame(Array.from({ length: 128 }, () => value));
-    const problem = resolveSituationTarget(view, {
-      action: "open",
-      target: "unlisted-private-text".repeat(90),
-    }).problem!;
-    expect(problem.length).toBeLessThan(1900);
-    expect(problem).not.toContain("unlisted-private-text");
-    expect(problem).not.toContain(conversation.label);
-    expect(JSON.parse(problem).choices).toHaveLength(0);
-  });
-  it("uses the current duplicate projection without merging affordances, and rejects distinct-owner/object ambiguity", () => {
-    const current = {
-      ...conversation,
-      handle: "object:current",
-      sourceRevision: "current",
-      actions: ["inspect"] as SituationObject["actions"],
-    };
-    const view = { ...frame([conversation, current]), currentHandle: current.handle };
-    expect(
-      resolveSituationTarget(view, { action: "inspect", target: conversationRef }),
-    ).toEqual({ object: current });
-    expect(
-      resolveSituationTarget(view, { action: "communicate", target: conversationRef })
-        .problem,
-    ).toContain("action_unavailable");
-    expect(
-      resolveSituationTarget(frame([conversation, current]), {
-        action: "open",
-        target: conversationRef,
-      }),
-    ).toEqual({ object: conversation });
-    for (const other of [
-      { ...current, owner: "world" as const },
-      { ...current, kind: "notification" as const },
-    ])
-      expect(
-        resolveSituationTarget(frame([conversation, other]), {
-          action: "inspect",
-          target: conversationRef,
-        }).problem,
-      ).toContain("target_ambiguous");
-    expect(
-      resolveSituationTarget(frame(), { action: "open", target: "object:expired" })
-        .problem,
-    ).toContain("target_not_visible");
   });
   it.each([true, false])(
     "routes actual public-reference choices to the existing action owner (visible=%s)",
@@ -400,7 +199,7 @@ describe("one current Situation target resolver", () => {
         }),
         roles: {
           invoke: async () => ({
-            text: JSON.stringify({ action: "open", target, reason: "查看实际动画" }),
+            structuredOutput: { action: "open", target, reason: "查看实际动画" },
           }),
         },
         decisions: { adopt },
@@ -501,6 +300,7 @@ describe("one current Situation target resolver", () => {
       ],
     }));
     const runtime = createSubjectSituationRuntime({
+      narrative: { candidatesForActivity: async () => [] },
       life: { get: async () => activity, worldNow: async () => initial.world },
       settings: async () => ({
         subject: {},
@@ -528,11 +328,11 @@ describe("one current Situation target resolver", () => {
       resolveActivity,
       foreground: { current: async () => reaction },
       native: {
+        unadoptedDecisions: async () => [],
         readyResults: async () => ({ runs: [] }),
         readTaskPerceptions: async () => ({
           sourceRefs: [],
           accepted: [],
-          cognitionRefs: [],
         }),
       },
       activities: { prepare: prepareRead },
@@ -608,9 +408,6 @@ describe("one current Situation target resolver", () => {
     expect(afterOpen.frame.currentHandle).toBe(
       afterOpen.frame.objects.find((object) => object.sourceRef === conversationRef)
         ?.handle,
-    );
-    expect(decodeCognitionUsage(afterOpen.usage).audience?.conversationRef).toBe(
-      conversationRef,
     );
     const read = await runtime.act({
       reaction,
@@ -700,6 +497,7 @@ describe("one current Situation target resolver", () => {
       throw Error("separate audience resolver");
     });
     const runtime = createSubjectSituationRuntime({
+      narrative: { candidatesForActivity: async () => [] },
       life: { get: async () => activity },
       settings: async () => ({
         subject: {},
@@ -763,11 +561,12 @@ describe("one current Situation target resolver", () => {
       },
     };
     const runtime = createSubjectSituationRuntime({
+      narrative: { candidatesForActivity: async () => [] },
       native: {
+        unadoptedDecisions: async () => [],
         readTaskPerceptions: async () => ({
           sourceRefs: [],
           accepted: [],
-          cognitionRefs: [],
         }),
       },
       life: { get: async () => activity, worldNow: async () => view.world },

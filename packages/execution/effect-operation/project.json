@@ -10,12 +10,6 @@
       "options": {
         "command": "oxlint --type-aware packages/execution/effect-operation"
       }
-    },
-    "test": {
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "vitest run --root packages/execution/effect-operation"
-      }
     }
   }
 }

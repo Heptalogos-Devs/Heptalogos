@@ -43,6 +43,25 @@ const checked = createSubjectSchemaReader(() => {
     "validation",
   );
 });
+/** Immutable decisions selected by their actual input run or related Activity, not current authority. */
+export async function readDecisionHistory(
+  persistence: DeliberationOptions["persistence"],
+  input: { subjectId: string; sourceRunIds: string[]; activityIds: string[] },
+) {
+  const rows = await readRepositorySql<{ document: unknown }>(
+    persistence,
+    `SELECT document FROM heptalogos.subject_decision WHERE subject_id=$1
+     AND (source_run_id=ANY($2::text[]) OR activity_id::text=ANY($3::text[]))
+     ORDER BY adopted_at DESC,decision_id DESC LIMIT 129`,
+    [input.subjectId, input.sourceRunIds, input.activityIds],
+  );
+  return {
+    decisions: rows
+      .slice(0, 128)
+      .map((row) => checked<DecisionCommit>(decisionCommitSchema, row.document)),
+    more: rows.length > 128,
+  };
+}
 /** No model loop or alternative Activity lifecycle is created by this owner. */
 export function createDeliberationService(options: DeliberationOptions) {
   const read = async (
@@ -115,6 +134,8 @@ export function createDeliberationService(options: DeliberationOptions) {
         conflict(
           "Use the canonical communicate action for an explicit expression intent",
         );
+      if (decision.calendarChange && !decision.reason?.trim())
+        conflict("A calendar change requires its actual reason");
       if (decision.calendarChange && decision.action !== "adjust_plan")
         conflict("A calendar change belongs to the canonical adjust_plan action");
       if (decision.delegation && decision.action !== "search")

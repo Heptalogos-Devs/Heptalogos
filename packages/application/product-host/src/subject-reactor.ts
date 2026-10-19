@@ -7,7 +7,11 @@ import {
   resolveSituationTarget,
   allowsUntargetedSituationAction,
 } from "./subject-target.js";
-import { digestCanonicalJson, createUuidV7Id } from "@heptalogos/foundation-contracts";
+import {
+  digestCanonicalJson,
+  createUuidV7Id,
+  ProblemError,
+} from "@heptalogos/foundation-contracts";
 import { Type } from "@heptalogos/schema-runtime/typebox";
 import { compileSchema } from "@heptalogos/schema-runtime";
 import { managementProblem } from "@heptalogos/management";
@@ -18,6 +22,7 @@ import {
   type SituationObject,
   type SubjectReaction,
   type DecisionCommit,
+  type DeliberationDecision,
   type ReactorActionReceipt,
   type SubjectAttentionCandidate,
   type LifeActivity,
@@ -31,7 +36,6 @@ import {
 } from "./subject-roles.js";
 import {
   decisionPhaseId,
-  parseDeliberation,
   type createSubjectDecisionHandler,
 } from "./subject-decisions.js";
 import type { createNativeCognitionBridge } from "./native-cognition.js";
@@ -156,6 +160,7 @@ export function createSubjectReactor(options: {
       subjectId: string;
       naturalOpportunity?: boolean;
       requestId?: string;
+      manualActivityId?: string;
     }): Promise<{
       status: "disabled" | "idle" | "busy" | "yielded" | "processed";
       reactionId?: string;
@@ -200,8 +205,19 @@ export function createSubjectReactor(options: {
           reaction = undefined;
         }
       }
+      if (
+        input.manualActivityId &&
+        reaction &&
+        reaction.activityId !== input.manualActivityId
+      )
+        return {
+          status: "busy",
+          reactionId: reaction.reactionId,
+          ...(reaction.currentRunId ? { runId: reaction.currentRunId } : {}),
+        };
       const selection = await options.attention.select({
         subjectId: input.subjectId,
+        ...(input.manualActivityId ? { manualActivityId: input.manualActivityId } : {}),
         ...(reaction
           ? {
               currentFocus: {
@@ -215,6 +231,11 @@ export function createSubjectReactor(options: {
           : {}),
         naturalOpportunity: input.naturalOpportunity ?? false,
       });
+      if (input.manualActivityId && !selection.candidates.length)
+        return {
+          status: "busy",
+          ...(reaction ? { reactionId: reaction.reactionId } : {}),
+        };
       const lastAction = reaction
         ? await options.foreground.lastAction(input.subjectId, reaction.reactionId)
         : undefined;
@@ -396,6 +417,15 @@ export function createSubjectReactor(options: {
           focus: reaction,
           runId,
         });
+        if (result.outputProblem)
+          return {
+            ...(await yieldReaction(
+              reaction,
+              `role_output_blocked:${runId}:${result.outputProblem.code}`,
+              previous,
+            )),
+            runId,
+          };
         if (reaction.stepCount >= reaction.policy.maxInteractionSteps)
           return {
             ...(await yieldReaction(
@@ -405,15 +435,12 @@ export function createSubjectReactor(options: {
             )),
             runId,
           };
-        let proposed: ReturnType<typeof parseDeliberation>;
-        try {
-          proposed = parseDeliberation(result.text);
-        } catch {
+        const proposed = result.structuredOutput as DeliberationDecision | undefined;
+        if (!proposed)
           return {
             ...(await yieldReaction(reaction, "invalid_decision:" + runId, previous)),
             runId,
           };
-        }
         const target =
           proposed.target || !allowsUntargetedSituationAction(proposed.action)
             ? resolveSituationTarget(frame.value, proposed)
@@ -448,15 +475,34 @@ export function createSubjectReactor(options: {
         if (!reservation.claimed)
           return { status: "busy", reactionId: reaction.reactionId, runId };
         // Owners validate permissions and exact revisions again; model choices cannot construct source identities.
-        const actual = await options.act({
-          reaction,
-          frame: frame.value,
-          ...(object ? { object } : {}),
-          adopted,
-          sourceRunId: runId,
-          view,
-          actionId,
-        });
+        let actual: ReactorActionOutcome;
+        try {
+          actual = await options.act({
+            reaction,
+            frame: frame.value,
+            ...(object ? { object } : {}),
+            adopted,
+            sourceRunId: runId,
+            view,
+            actionId,
+          });
+        } catch (error) {
+          if (
+            !(error instanceof ProblemError) ||
+            error.problem.problemCode !== "role.output_blocked"
+          )
+            throw error;
+          actual = {
+            state: "rejected",
+            resultRefs: [],
+            yield: true,
+            continuationRef: "activity:" + reaction.activityId,
+            problem: {
+              code: error.problem.problemCode,
+              detail: (error.problem.detail ?? error.problem.title).slice(0, 512),
+            },
+          };
+        }
         previous = await options.foreground.finishAction({
           subjectId: reaction.subjectId,
           actionId,
@@ -474,6 +520,9 @@ export function createSubjectReactor(options: {
           };
         const considered = await options.attention.select({
           subjectId: reaction.subjectId,
+          ...(input.manualActivityId
+            ? { manualActivityId: input.manualActivityId }
+            : {}),
           currentFocus: {
             reactionId: reaction.reactionId,
             activityId: reaction.activityId,

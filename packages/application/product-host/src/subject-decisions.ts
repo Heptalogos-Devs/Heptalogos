@@ -6,10 +6,8 @@
  */
 import { v5 as uuidv5 } from "uuid";
 import { digestCanonicalJson } from "@heptalogos/foundation-contracts";
-import { compileSchema } from "@heptalogos/schema-runtime";
 import { managementProblem } from "@heptalogos/management";
 import {
-  deliberationDecisionSchema,
   type DeliberationDecision,
   type createDeliberationService,
   type createLifeService,
@@ -41,27 +39,6 @@ function denied(code: string, detail: string): never {
     "conflict",
     "after-change",
   );
-}
-/** Parses a complete machine result, without stripping arbitrary punctuation or guessing a replacement. */
-export function parseDeliberation(text: string): DeliberationDecision {
-  let value: unknown;
-  try {
-    value = JSON.parse(text);
-  } catch {
-    denied(
-      "subject.decision_invalid",
-      "The deliberation role did not return its structured decision",
-    );
-  }
-  const result = compileSchema<DeliberationDecision>(
-    deliberationDecisionSchema,
-  ).validate(value);
-  if (!result.ok)
-    denied(
-      "subject.decision_invalid",
-      "The actual decision does not match the adopted role output contract",
-    );
-  return result.value;
 }
 /** Scene elaboration uses only exact known/released events, never the author's hidden plot. */
 async function detailScope(
@@ -147,6 +124,7 @@ export function createSubjectDecisionHandler(options: {
         activityRevision?: number;
         deadlineAt?: string;
         result?: unknown;
+        structuredOutput?: unknown;
         status?: string;
       };
     }): Promise<DecisionCommit> {
@@ -168,12 +146,32 @@ export function createSubjectDecisionHandler(options: {
       );
       let adopted = previous;
       if (!adopted) {
-        if (!input.run.text || !Number.isInteger(input.run.activityRevision))
+        if (
+          !input.run.structuredOutput ||
+          !Number.isInteger(input.run.activityRevision)
+        )
           denied(
             "subject.decision_basis_missing",
             "Use the exact native result and frozen Activity revision",
           );
-        const decision = parseDeliberation(input.run.text);
+        const decision = input.run.structuredOutput as DeliberationDecision;
+        if (decision.action === "continue" && !decision.nextOpportunity) {
+          const applied = await options.native.readAppliedContext(input.run.runId);
+          const worldId = input.worldId ?? decodeCognitionUsage(applied.usage).worldId;
+          if (worldId) {
+            const frame = await options.worlds.prepareAdvance(input.subjectId, worldId);
+            const now = await options.life.worldNow(input.subjectId);
+            const next = [frame.nextOpportunity, frame.currentPolicy?.nextInterruptAt]
+              .filter(
+                (point): point is NonNullable<typeof point> =>
+                  !!point &&
+                  point.timeDomainRef === now.timeDomainRef &&
+                  Date.parse(point.at) > Date.parse(now.at),
+              )
+              .sort((a, b) => a.at.localeCompare(b.at))[0];
+            if (next) decision.nextOpportunity = next;
+          }
+        }
         adopted = await options.decisions.adopt({
           operationId,
           subjectId: input.subjectId,
@@ -290,6 +288,9 @@ export function createSubjectDecisionHandler(options: {
             expectedActivityRevision: adopted.activityRevision,
             actorEntityRef: run.registration.actorEntityRef,
             audience,
+            ...(decision.expressionIntent.semanticRequirement
+              ? { semanticRequirement: decision.expressionIntent.semanticRequirement }
+              : {}),
             intent: decision.expressionIntent.intent,
             stance: decision.expressionIntent.stance,
             sourceRefs: [...run.registration.sourceRefs],
@@ -316,6 +317,7 @@ export function createSubjectDecisionHandler(options: {
           };
           await options.narrative.saveBrief(brief, rendererRunId);
         }
+        brief = await options.narrative.prepareExpression(rendererRunId);
         let render: Awaited<ReturnType<typeof options.roles.invoke>>;
         try {
           render = await options.roles.invoke({
@@ -330,7 +332,34 @@ export function createSubjectDecisionHandler(options: {
             role: "subject.render",
             foreground: run.registration.foreground,
             deadlineAt: input.run.deadlineAt,
-            context: { adoptedDecisionRef: adopted.decisionRef, brief },
+            context: {
+              adoptedDecisionRef: adopted.decisionRef,
+              brief: {
+                ...brief,
+                ...(brief.semanticPreparation
+                  ? {
+                      semanticPreparation: {
+                        ...brief.semanticPreparation,
+                        proposal: {
+                          ...brief.semanticPreparation.proposal,
+                          worldPatch: null,
+                        },
+                      },
+                    }
+                  : {}),
+              },
+              ...(brief.semanticPreparation?.proposal.worldPatch
+                ? {
+                    adoptedWorldDetails: await options.worlds.query({
+                      subjectId: brief.subjectId,
+                      worldId: brief.semanticPreparation.proposal.worldPatch.worldId,
+                      interval: brief.semanticPreparation.proposal.worldPatch.interval,
+                      view: "subject",
+                      limit: 32,
+                    }),
+                  }
+                : {}),
+            },
             contacts: [],
             sourceRefs: run.registration.sourceRefs,
             usage: applied.usage,

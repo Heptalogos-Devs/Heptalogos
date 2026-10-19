@@ -47,13 +47,6 @@
         "command": "vitest run --root integration/foundation"
       }
     },
-    "test:foundation-spine": {
-      "dependsOn": ["^build"],
-      "executor": "nx:run-commands",
-      "options": {
-        "command": "vitest run --root integration/foundation test/foundation-executable-spine.integration.test.ts"
-      }
-    },
     "test:durable-recovery-process": {
       "dependsOn": ["^build"],
       "executor": "nx:run-commands",

@@ -26,6 +26,7 @@ import {
   type ReactorActionReceipt,
   type DecisionCommit,
   type LifeActivity,
+  type createNarrativeService,
 } from "@heptalogos/subject";
 import {
   encodeCognitionUsage,
@@ -70,6 +71,17 @@ function adoptedMessageRoots(activity: LifeActivity): Set<string> {
 }
 /** The adapter reads a body only for a chosen read action; all other directories are metadata. */
 export interface SubjectSituationOptions {
+  narrative: Pick<
+    ReturnType<typeof createNarrativeService>,
+    | "candidatesForActivity"
+    | "adoptRetainedCandidate"
+    | "discardCandidate"
+    | "candidateDelivery"
+  >;
+  sendRetainedExpression: (input: {
+    subjectId: string;
+    briefId: string;
+  }) => Promise<{ status: string }>;
   persistence: PersistenceService;
   settings: () => Promise<ProductSettings>;
   resolveActivity: (
@@ -86,6 +98,7 @@ export interface SubjectSituationOptions {
     | "readTaskPerceptions"
     | "readRun"
     | "readInputState"
+    | "unadoptedDecisions"
     | "readAppliedContext"
     | "readResultRelease"
     | "readRoleResults"
@@ -231,12 +244,27 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
       denied("The actual adopted Activity and WorkContext are unavailable");
     const world = await options.life.worldNow(reaction.subjectId),
       settings = await options.settings();
+    const worldFrame = settings.subject.worldId
+      ? await options.worlds.prepareAdvance(
+          reaction.subjectId,
+          settings.subject.worldId,
+        )
+      : undefined;
+    const socialAllowed =
+      !worldFrame?.currentPolicy ||
+      (worldFrame.currentPolicy.policy.interruptEvents.includes("social") &&
+        Date.parse(world.at) >=
+          Date.parse(worldFrame.currentPolicy.nextInterruptAt.at));
     const living = settings.subject.worldId
       ? await options.worlds.readLivingState({
           subjectId: reaction.subjectId,
           worldId: settings.subject.worldId,
         })
       : undefined;
+    const retainedExpressions = await options.narrative.candidatesForActivity(
+      reaction.subjectId,
+      activity.activityId,
+    );
     const taskRoots = adoptedMessageRoots(activity);
     const bindings = [
       ...new Map(
@@ -249,7 +277,22 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
       (candidate) =>
         candidate.sourceOwner !== "messaging" || !taskRoots.has(candidate.sourceRef),
     );
-    const objects: SituationObject[] = [];
+    const objects: SituationObject[] = retainedExpressions.map((candidate) => ({
+      handle: candidate.candidateRef,
+      owner: "life",
+      kind: "expression_candidate",
+      sourceRef: candidate.candidateRef,
+      sourceRevision: candidate.nativeIntentId,
+      label: "已保存但未发送的表达；可原样采用或放弃",
+      state: "ready",
+      actions: candidate.adopted
+        ? socialAllowed
+          ? ["continue"]
+          : []
+        : socialAllowed
+          ? ["communicate", "discard"]
+          : ["discard"],
+    }));
     for (const candidate of bindings) {
       if (candidate.subjectId !== reaction.subjectId)
         denied("A foreign Subject entered the object directory");
@@ -424,6 +467,10 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
       state: "available",
       actions: ["inspect", "continue", "search", "wait", "rest"],
     });
+    if (!socialAllowed) {
+      for (const object of objects)
+        if (object.owner === "messaging") object.actions = [];
+    }
     const device = living?.device.view;
     const currentRef =
       device?.kind === "conversation"
@@ -514,6 +561,17 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
       }),
       context: {
         situation: frame,
+        retainedExpressions,
+        priorUnadoptedChoices: await options.native.unadoptedDecisions(
+          reaction.subjectId,
+          activity.activityId,
+        ),
+        worldContinuation: worldFrame
+          ? {
+              currentPolicy: worldFrame.currentPolicy,
+              nextOpportunity: worldFrame.nextOpportunity,
+            }
+          : null,
         ...(settings.subject.worldId
           ? {
               pendingWorldActions: await options.worlds.readPendingActions(
@@ -697,7 +755,7 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
         input.reaction.activityId,
       );
       if (!activity?.scope) denied("The actual continuation Activity is unavailable");
-      const continuation = `Reactor ${input.reaction.reactionId}: ${input.reason}; action ${input.lastAction?.actionId ?? "none"}`;
+      const continuation = input.reason;
       const joined = [activity.progress.note, continuation].filter(Boolean).join("\n");
       const progress = {
         ...activity.progress,
@@ -757,6 +815,35 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
         continuationRef,
         ...extra,
       });
+      if (
+        (["open", "read", "communicate"].includes(action) ||
+          (action === "continue" && object?.kind === "expression_candidate")) &&
+        (object?.owner === "messaging" ||
+          object?.kind === "expression_candidate" ||
+          action === "communicate")
+      ) {
+        const worldId = (await options.settings()).subject.worldId;
+        if (worldId) {
+          const frame = await options.worlds.prepareAdvance(
+            reaction.subjectId,
+            worldId,
+          );
+          const policy = frame.currentPolicy;
+          const now = await options.life.worldNow(reaction.subjectId);
+          if (
+            policy &&
+            (!policy.policy.interruptEvents.includes("social") ||
+              Date.parse(now.at) < Date.parse(policy.nextInterruptAt.at))
+          )
+            return result("rejected", [adopted.decisionRef], {
+              yield: true,
+              problem: {
+                code: "world.social_interruption_deferred",
+                detail: "当前已采用活动继续到下个可中断节点；普通社交消息保留待处理。",
+              },
+            });
+        }
+      }
       if (action === "inspect") {
         await adoptView(reaction, actionId, { kind: "notifications" });
         const settings = await options.settings(),
@@ -1047,6 +1134,50 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
         });
         return result("pending", ["role-run:" + execution.runId], { yield: true });
       }
+      if (
+        object?.kind === "expression_candidate" &&
+        (action === "communicate" || action === "discard" || action === "continue")
+      ) {
+        const briefId = object.sourceRef.slice("expression-candidate:".length);
+        const selected = {
+          subjectId: reaction.subjectId,
+          briefId,
+          decisionRef: adopted.decisionRef,
+        };
+        if (action === "discard") {
+          await options.narrative.discardCandidate(selected);
+          return result("completed", [object.sourceRef, adopted.decisionRef]);
+        }
+        const adoptedCandidate =
+          action === "continue"
+            ? await options.narrative.candidateDelivery(selected)
+            : await options.narrative.adoptRetainedCandidate(selected);
+        let sent: { status: string };
+        try {
+          sent = await options.sendRetainedExpression({
+            subjectId: reaction.subjectId,
+            briefId,
+          });
+        } catch {
+          sent = { status: "uncertain" };
+        }
+        return result(
+          sent.status === "sent" ? "completed" : "pending",
+          [object.sourceRef, "behavior:" + adoptedCandidate.reference],
+          {
+            yield: true,
+            ...(sent.status === "sent"
+              ? {}
+              : {
+                  problem: {
+                    code: "communication.delivery_" + sent.status,
+                    detail:
+                      "原生发送状态：" + sent.status + "；保留原发送身份和实际回执。",
+                  },
+                }),
+          },
+        );
+      }
       if (action === "communicate") {
         const expression = await options.decisions.express({
           subjectId: reaction.subjectId,
@@ -1168,7 +1299,8 @@ export function createSubjectSituationRuntime(options: SubjectSituationOptions) 
           (value) =>
             `world-schedule:${worldId}:${value.instanceId}` === object.sourceRef,
         )?.planned;
-        if (!schedule?.ruleRef) return result("rejected", [], { yield: true });
+        if (!schedule?.ruleRef || !adopted.decision.reason)
+          return result("rejected", [], { yield: true });
         const changed = await options.worlds.changeCalendar(
           {
             operationId: actionId,

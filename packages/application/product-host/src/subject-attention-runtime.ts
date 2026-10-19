@@ -6,7 +6,11 @@
  */
 import { digestCanonicalJson } from "@heptalogos/foundation-contracts";
 import type { PersistenceService } from "@heptalogos/persistence";
-import { effectiveReactorPolicy, type ProductSettings } from "@heptalogos/management";
+import {
+  effectiveReactorPolicy,
+  managementProblem,
+  type ProductSettings,
+} from "@heptalogos/management";
 import {
   createSubjectAttentionService,
   type createLifeService,
@@ -21,8 +25,11 @@ import type { createNativeCognitionBridge } from "./native-cognition.js";
 export function createSubjectAttentionRuntime(options: {
   persistence: PersistenceService;
   settings: () => Promise<ProductSettings>;
-  life: Pick<ReturnType<typeof createLifeService>, "schedule" | "worldNow">;
-  worlds: Pick<ReturnType<typeof createWorldLifeService>, "pendingContacts">;
+  life: Pick<ReturnType<typeof createLifeService>, "get" | "schedule" | "worldNow">;
+  worlds: Pick<
+    ReturnType<typeof createWorldLifeService>,
+    "pendingContacts" | "prepareAdvance"
+  >;
   profiles: Pick<ReturnType<typeof createWorldProfileService>, "entryNotice">;
   narrative: Pick<ReturnType<typeof createNarrativeService>, "pendingCommitments">;
   native: Pick<
@@ -40,21 +47,43 @@ export function createSubjectAttentionRuntime(options: {
       const settings = await options.settings();
       if (settings.subject.id !== input.subjectId || !settings.subject.enabled)
         return { candidates: [], more: false };
+      const manualActivity = input.manualActivityId
+        ? await options.life.get(input.subjectId, input.manualActivityId)
+        : undefined;
+      if (
+        input.manualActivityId &&
+        (!manualActivity ||
+          manualActivity.subjectId !== input.subjectId ||
+          manualActivity.state !== "active" ||
+          manualActivity.continuationRequired ||
+          !manualActivity.adoptedBy ||
+          !manualActivity.adoptedAt ||
+          !manualActivity.scope ||
+          !manualActivity.workContextId)
+      )
+        throw managementProblem(
+          "reactor.activity_unavailable",
+          "The requested task cannot receive attention",
+          "Resume the existing adopted Activity under its current scope",
+          "conflict",
+          "after-change",
+        );
       const progress = new Map(
         input.positions.map((position) => [position.sourceKey, position]),
       );
-      const activities = [];
+      const activities = manualActivity ? [manualActivity] : [];
       let afterId: string | undefined;
-      do {
-        const page = await options.life.schedule({
-          subjectId: input.subjectId,
-          states: ["active"],
-          limit: 128,
-          ...(afterId ? { afterId } : {}),
-        });
-        activities.push(...page.activities);
-        afterId = page.nextId ?? undefined;
-      } while (afterId);
+      if (!manualActivity)
+        do {
+          const page = await options.life.schedule({
+            subjectId: input.subjectId,
+            states: ["active"],
+            limit: 128,
+            ...(afterId ? { afterId } : {}),
+          });
+          activities.push(...page.activities);
+          afterId = page.nextId ?? undefined;
+        } while (afterId);
       const candidates: SubjectAttentionCandidate[] = [];
       if (!activities.length) {
         const revision = digestCanonicalJson("subject.enabled-life.v1", {
@@ -76,8 +105,43 @@ export function createSubjectAttentionRuntime(options: {
           metadata: { label: "已启用主体，可开始安排自己的生活" },
         });
       }
+      const world = await options.life.worldNow(input.subjectId);
+      const current = settings.subject.worldId
+        ? await options.worlds.prepareAdvance(input.subjectId, settings.subject.worldId)
+        : undefined;
+      const policy = current?.currentPolicy;
+      if (
+        manualActivity &&
+        policy &&
+        current?.state.schedule.find((item) => item.scheduleId === policy.scheduleId)
+          ?.activityId !== manualActivity.activityId &&
+        (!policy.policy.interruptEvents.includes("important") ||
+          policy.nextInterruptAt.timeDomainRef !== world.timeDomainRef ||
+          Date.parse(world.at) < Date.parse(policy.nextInterruptAt.at))
+      )
+        return { candidates: [], more: false };
+      if (manualActivity)
+        candidates.push({
+          subjectId: input.subjectId,
+          candidateRef: `manual-activity:${manualActivity.activityId}:${manualActivity.revision}`,
+          sourceOwner: "life",
+          sourceKey: "life:" + manualActivity.activityId,
+          sourceRef: "activity:" + manualActivity.activityId,
+          sourceRevision: String(manualActivity.revision),
+          kind: "explicit_subject_intent",
+          activityId: manualActivity.activityId,
+          priorityClass: "important",
+          availableAt: manualActivity.updatedAt,
+          related: true,
+          metadata: { label: ("恢复原任务：" + manualActivity.purpose).slice(0, 1024) },
+        });
+      const socialAllowed =
+        !policy ||
+        (policy.policy.interruptEvents.includes("social") &&
+          policy.nextInterruptAt.timeDomainRef === world.timeDomainRef &&
+          Date.parse(world.at) >= Date.parse(policy.nextInterruptAt.at));
       const qq = settings.qq;
-      if (qq) {
+      if (!manualActivity && qq && socialAllowed) {
         const canonical = await options.messaging.resolveConversations({
           conversations: qq.conversations
             .filter((grant) => grant.receive && grant.observe)
@@ -181,12 +245,13 @@ export function createSubjectAttentionRuntime(options: {
       }
       let ready = await options.native.readyResults({
         subjectId: input.subjectId,
-        limit: Math.min(128, input.perSourceLimit),
-        ...(progress.get("role-results")?.sourcePosition
+        limit: manualActivity ? 128 : Math.min(128, input.perSourceLimit),
+        ...(!manualActivity && progress.get("role-results")?.sourcePosition
           ? { afterRunId: progress.get("role-results")!.sourcePosition! }
           : {}),
       });
       if (
+        !manualActivity &&
         input.naturalOpportunity &&
         !ready.runs.length &&
         progress.get("role-results")?.sourcePosition
@@ -195,6 +260,26 @@ export function createSubjectAttentionRuntime(options: {
           subjectId: input.subjectId,
           limit: Math.min(128, input.perSourceLimit),
         });
+      if (manualActivity) {
+        const runs = ready.runs.filter(
+          (run) => run.activityId === manualActivity.activityId,
+        );
+        while (ready.more && ready.nextRunId && runs.length < input.perSourceLimit) {
+          ready = await options.native.readyResults({
+            subjectId: input.subjectId,
+            limit: 128,
+            afterRunId: ready.nextRunId,
+          });
+          runs.push(
+            ...ready.runs.filter((run) => run.activityId === manualActivity.activityId),
+          );
+        }
+        ready = {
+          ...ready,
+          runs: runs.slice(0, input.perSourceLimit),
+          more: ready.more || runs.length > input.perSourceLimit,
+        };
+      }
       for (const run of ready.runs)
         candidates.push({
           subjectId: input.subjectId,
@@ -213,8 +298,8 @@ export function createSubjectAttentionRuntime(options: {
           ),
           metadata: { label: "已委派的资料或工具工作有结果可查看" },
         });
+      if (manualActivity) return { candidates, more: ready.more };
       // World due comparisons use its declared domain; no real-time substitution is permitted.
-      const world = await options.life.worldNow(input.subjectId);
       const worldActivities = new Map<
         string,
         (typeof activities)[number] | undefined

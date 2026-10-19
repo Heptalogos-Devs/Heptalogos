@@ -19,6 +19,13 @@ const summary = Type.String({ minLength: 1, maxLength: 4096 });
 /** Explicitly adopted communication content does not grant an audience or permission. */
 export const decisionExpressionIntentSchema = Type.Object(
   {
+    semanticRequirement: Type.Optional(
+      Type.Union([
+        Type.Literal("important_conflict"),
+        Type.Literal("world_fact"),
+        Type.Literal("serious_commitment"),
+      ]),
+    ),
     intent: summary,
     stance: summary,
     qualifications: Type.Array(summary, { maxItems: 64 }),
@@ -37,7 +44,7 @@ export const decisionExpressionIntentSchema = Type.Object(
 export const deliberationDecisionSchema = Type.Object(
   {
     ...interactionActionSchema.properties,
-    reason: summary,
+    reason: Type.Optional(summary),
     calendarChange: Type.Optional(Type.Pick(changeCalendarSchema, ["scope", "change"])),
     nextOpportunity: Type.Optional(Type.Union([worldPointSchema, Type.Null()])),
     expressionIntent: Type.Optional(decisionExpressionIntentSchema),

@@ -19,6 +19,7 @@ import {
 } from "@heptalogos/persistence/repository";
 import type { PersistenceService } from "@heptalogos/persistence";
 import type { LifeActivity } from "./contracts.js";
+import { worldScheduleAttendancePolicy } from "./world-contracts.js";
 import type { WorldState, realizeWorldSchema } from "./world-contracts.js";
 import type { Static } from "@heptalogos/schema-runtime/typebox";
 import {
@@ -196,6 +197,63 @@ export function createWorldActionService(options: {
               reason:
                 "The Subject is in transit; view actions remain available until the adopted route ends",
             };
+          const currentPlan = [
+            ...state.schedule,
+            ...expandWorldRoutines(state.definition, {
+              timeDomainRef: world.timeDomainRef,
+              start: world.at,
+              end: Temporal.Instant.from(world.at).add({ minutes: 1 }).toString(),
+            }).map((item) => item.schedule),
+          ].find(
+            (plan) =>
+              plan.status === "planned" &&
+              plan.actorRefs.includes(profile.subjectActorRef) &&
+              Date.parse(plan.interval.start) <= Date.parse(world.at) &&
+              Date.parse(plan.interval.end) > Date.parse(world.at),
+          );
+          if (
+            currentPlan &&
+            !(
+              input.action.kind === "participate" &&
+              input.action.scheduleId === currentPlan.scheduleId
+            )
+          ) {
+            const policy = worldScheduleAttendancePolicy(state.definition, currentPlan);
+            const earliest =
+              policy.mode === "strict"
+                ? Date.parse(currentPlan.interval.end)
+                : Date.parse(currentPlan.interval.start) +
+                  policy.minimumContinuationMinutes * 60000;
+            const exceptions = input.interruptingEventId
+              ? await executeRepositorySql<{
+                  document: Static<typeof realizeWorldSchema>["events"][number];
+                }>(
+                  tx,
+                  "SELECT document FROM heptalogos.world_event WHERE subject_id=$1 AND world_id=$2 AND event_id=$3",
+                  [input.subjectId, input.worldId, input.interruptingEventId],
+                )
+              : [];
+            const exception = exceptions[0]?.document;
+            const permitted =
+              exception?.interruptionKind &&
+              policy.interruptEvents.includes(exception.interruptionKind) &&
+              exception.perceptions.some(
+                (perception) => perception.actorRef === profile.subjectActorRef,
+              ) &&
+              Date.parse(exception.interval.start) <= Date.parse(world.at) &&
+              Date.parse(exception.interval.end) >= Date.parse(world.at);
+            if (Date.parse(world.at) < earliest && !permitted)
+              return {
+                ...base,
+                status: "unavailable",
+                reason:
+                  "The adopted activity continues until its permitted interruption point",
+                nextOpportunity: {
+                  timeDomainRef: world.timeDomainRef,
+                  at: new Date(earliest).toISOString(),
+                },
+              };
+          }
           let end = Temporal.Instant.from(world.at),
             toPlace = base.fromPlaceRef,
             scheduleId: string | null = null;
@@ -270,12 +328,36 @@ export function createWorldActionService(options: {
                 reason:
                   "Participate only from the actual adopted place; move there first",
               };
-            if (Date.parse(target.interval.start) > Date.parse(world.at))
+            const policy = worldScheduleAttendancePolicy(state.definition, target);
+            const delayMinutes =
+              (Date.parse(world.at) - Date.parse(target.interval.start)) / 60000;
+            if (delayMinutes < -policy.earlyMinutes)
               return {
                 ...base,
                 status: "unavailable",
-                reason: "This activity has not started yet",
+                reason: "This activity is outside its adopted early-start allowance",
+                nextOpportunity: {
+                  timeDomainRef: world.timeDomainRef,
+                  at: target.interval.start,
+                },
               };
+            if (policy.mode === "strict" && delayMinutes > policy.startToleranceMinutes)
+              return {
+                ...base,
+                status: "unavailable",
+                reason:
+                  "Strict attendance cannot adopt a late start; use an explicit exception",
+              };
+            if (delayMinutes > policy.startToleranceMinutes)
+              base.reason =
+                "Participation began beyond the adopted start tolerance; the elapsed absence remains recorded";
+            base.interval = {
+              ...base.interval,
+              start: new Date(
+                Math.max(Date.parse(world.at), Date.parse(target.interval.start)),
+              ).toISOString(),
+            };
+            base.realizedThrough = { ...world, at: base.interval.start };
             end = Temporal.Instant.from(target.interval.end);
             scheduleId = target.scheduleId;
           }
@@ -475,8 +557,19 @@ export function createWorldActionService(options: {
                           ? action.fromPlaceRef
                           : action.toPlaceRef,
                       scheduleId: action.scheduleId,
+                      ...(plan
+                        ? {
+                            scheduleOutcome:
+                              Date.parse(action.interval.start) >
+                              Date.parse(plan.interval.start)
+                                ? ("partial" as const)
+                                : ("completed" as const),
+                          }
+                        : {}),
                       parentEventId: null,
-                      causalEventRefs: [],
+                      causalEventRefs: action.interruptingEventId
+                        ? [action.interruptingEventId]
+                        : [],
                       overlap: "exclusive",
                       source: {
                         kind: "rule",

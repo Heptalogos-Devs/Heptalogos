@@ -1,0 +1,23 @@
+{
+  "template": "jci-2025",
+  "startsOn": "2026-10-19",
+  "validThrough": "2026-12-31",
+  "weekdays": ["MO", "WE"],
+  "slots": [
+    {
+      "slot": 1,
+      "title": "操作者明确选择的虚拟课程",
+      "placeRef": "classroom",
+      "actorRefs": ["self"],
+      "attendancePolicy": {
+        "mode": "usual",
+        "startToleranceMinutes": 5,
+        "earlyMinutes": 0,
+        "lateMinutes": 5,
+        "minimumContinuationMinutes": 10,
+        "interruptAfterMinutes": 40,
+        "interruptEvents": ["important", "emergency", "official_change"]
+      }
+    }
+  ]
+}

@@ -47,7 +47,12 @@ function expressionFixture() {
         }),
       }),
     },
-    narrative: { briefForRun, saveBrief, rejectionForRun },
+    narrative: {
+      briefForRun,
+      saveBrief,
+      rejectionForRun,
+      prepareExpression: async () => saveBrief.mock.calls[0]?.[0],
+    },
     now: () => "2026-10-17T06:00:00.000Z",
     roles: { invoke },
     deliveryFor: async () => ({ conversationRef }),
@@ -147,10 +152,10 @@ describe("known pre-effect expression rejection", () => {
       availableCognitionRefs: ["work_context:actual"],
     };
     const invoke = vi.fn(async (_input: unknown) => ({
-      text: JSON.stringify({
+      structuredOutput: {
         action: reaction.stepCount ? "wait" : "communicate",
         reason: "Choose one current action",
-      }),
+      },
     }));
     const finishAction = vi.fn(async (input: Record<string, unknown>) => ({
       ...input,

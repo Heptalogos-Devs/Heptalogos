@@ -39,7 +39,7 @@ export async function currentSubjectContext(
     worlds: ReturnType<typeof createWorldLifeService>;
     narrative: Pick<
       ReturnType<typeof createNarrativeService>,
-      "claimsTo" | "pendingCommitments"
+      "claimsTo" | "pendingCommitments" | "unindexedTo"
     >;
     life: Pick<ReturnType<typeof createLifeService>, "worldNow">;
   },
@@ -52,10 +52,14 @@ export async function currentSubjectContext(
     ? await options.narrative.claimsTo({
         subjectId: input.subjectId,
         conversationRef: audience,
-        limit: 64,
+        limit: 16,
         order: "newest",
+        relatedRefs: [...sourceRefs],
       })
     : { claims: [], more: false };
+  const unindexedStatements = audience
+    ? await options.narrative.unindexedTo(input.subjectId, audience)
+    : [];
   const world = await options.life.worldNow(input.subjectId);
   const roots = (
     await options.worlds.resolveSourceRefs({ subjectId: input.subjectId, sourceRefs })
@@ -100,6 +104,7 @@ export async function currentSubjectContext(
   return {
     world,
     currentClaims: claims,
+    unindexedStatements,
     knownWorldViews: worldViews,
     pendingCommitments,
   };

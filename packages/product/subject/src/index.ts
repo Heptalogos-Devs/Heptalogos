@@ -41,6 +41,7 @@ export {
 } from "./world-lifecycle.js";
 
 export * from "./world-calendar-contracts.js";
+export { worldCalendarWindow } from "./world-calendar-service.js";
 
 export * from "./attention-contracts.js";
 export { createSubjectAttentionService } from "./attention.js";
@@ -50,9 +51,16 @@ export { createSubjectReactorService } from "./reactor.js";
 
 export * from "./world-profile-contracts.js";
 export * from "./world-energy-contracts.js";
-export { createWorldProfileService } from "./world-profile.js";
+export {
+  createWorldProfileService,
+  schoolCalendarTemplate,
+  previewSchoolCalendar,
+} from "./world-profile.js";
 export { integrateWorldEnergy } from "./world-living.js";
 
 export * from "./situation-contracts.js";
 
 export * from "./world-action-contracts.js";
+
+export { readDecisionHistory } from "./deliberation.js";
+export { readActivityStatements } from "./narrative.js";

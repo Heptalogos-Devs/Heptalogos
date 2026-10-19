@@ -39,9 +39,10 @@ mutation stays behind this service boundary.
 
 ## Verification
 
-Run `pnpm nx run persistence:test`, the real PostgreSQL integration target, and
-lint/typecheck. Changes to fencing, transactions, or restart behavior require
-the corresponding persistence and Host qualification scenarios.
+Run `pnpm nx run persistence:test:integration` with the prepared PostgreSQL
+runtime for mutation fencing, concurrent token publication, READ ONLY,
+commit uncertainty and database privileges. Run package lint/typecheck for
+interface changes.
 
 ## Architecture references
 
