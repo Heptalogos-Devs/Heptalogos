@@ -11,6 +11,7 @@ heptalogos status
 heptalogos status --watch
 heptalogos status --json
 heptalogos subject documents
+heptalogos subject documents --import /absolute/path/SOUL.md --reason "明确修订说明"
 heptalogos calendar today
 heptalogos calendar week
 heptalogos calendar template
@@ -23,7 +24,9 @@ heptalogos task <原任务ID> --resume
 
 总览显示实际运行路径与代次、OS自启、自动工作配置、Gateway阻塞、现有任务/保留结果及按角色汇总的已记录token用量。未留存的用量和未核实价格标未知；原生配置中的零价不作为免费依据。总览另外读取Nous生效维护策略，分别显示系统调度与当前Subject的自动维护开关。Ctrl-C只退出watch。没有管理进程时仍显示本地安装/服务状态，不为查询启动服务。
 
-`subject documents`确定性导出IDENTITY、SOUL、RELATIONSHIPS、LANGUAGE、LIFE到安装DATA/subject-documents/<Subject>并返回完整路径。未形成内容显示未形成，保留适用范围和正式修订；文件编辑不会自动写认知。`calendar template`只预览公开学校时间骨架，不采用课程或身份。`task --runs`按原任务列出实际角色登记；`--inputs`明确读取一项原运行的宿主输入与正式Native provider请求，可能包含聊天正文。旧调用没有最终请求记录时保留未知，宿主prompt单列。today/week使用世界时钟和世界时区，无需填写UUID；没有世界时明确显示未配置。任务resume读取新鲜revision恢复同一Activity，不重建任务；自动工作暂停时不启动模型。
+`subject documents`确定性导出IDENTITY、SOUL、RELATIONSHIPS、LANGUAGE、LIFE到安装DATA/subject-documents/<Subject>并返回完整路径。未形成内容显示未形成；Self/Social正文与SDK片段使用同一个Nous域渲染。每条认知的折叠来源中包含`nous-revision`修订块：只编辑其中的`content`，保留原修订、epoch和Subject，再用`--import 文件 --reason 说明`显式提交。导入复用正式Self/Social修订和历史，未改内容跳过；每条独立结果可见，部分失败可沿同一文件和原因继续。再次导出前会将已编辑文件保留到drafts，文件编辑本身不写认知。LIFE的未来安排走Calendar操作。
+
+`calendar template`只预览公开学校时间骨架，不采用课程或身份。`task --runs`按原任务列出实际角色登记及输出问题；`--inputs`明确读取一项原运行的宿主输入与正式Native provider请求，可能包含聊天正文。旧调用没有最终请求记录时保留未知，宿主prompt单列。today/week使用世界时钟和世界时区，无需填写UUID；没有世界时明确显示未配置。任务resume读取新鲜revision恢复同一Activity，不重建任务；自动工作暂停时不启动模型。
 
 ## 安装后使用
 

@@ -51,7 +51,8 @@ import {
   writeManagementEndpointDescriptor,
 } from "./files.js";
 import { createProductHttpApp, closeProductHttpApp } from "./product-http.js";
-import { createOperatorReads } from "./operator.js";
+import { createOperatorOperations } from "./operator.js";
+import { createCalendarMomentOperations } from "./calendar-moment.js";
 import { getNousSubject, createNousSubject, connectProductNous } from "./nous.js";
 import { createWorldClockManagement } from "./world-clock.js";
 import type { ReactorProjection } from "./reactor-http.js";
@@ -407,7 +408,8 @@ export async function startProductHost(
       signal: host.signal,
     });
     app = await createProductHttpApp({
-      operator: createOperatorReads({
+      calendarMoment: createCalendarMomentOperations({ product, gateway, persistence: currentPersistence }),
+      operator: createOperatorOperations({
         anchorRoot: options.anchorRoot,
         product,
         gateway,

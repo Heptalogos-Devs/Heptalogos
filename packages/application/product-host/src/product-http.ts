@@ -39,7 +39,8 @@ import {
 } from "@heptalogos/management";
 import { Type } from "@heptalogos/schema-runtime/typebox";
 import { tokenFromRequest } from "./http-auth.js";
-import { registerOperatorHttp, type createOperatorReads } from "./operator.js";
+import { registerOperatorHttp, type createOperatorOperations } from "./operator.js";
+import { registerCalendarMomentHttp, type createCalendarMomentOperations } from "./calendar-moment.js";
 import { registerPursuitHttp, type PursuitHttpOptions } from "./pursuit-http.js";
 import { registerWorldHttp, type WorldHttpOptions } from "./world-http.js";
 import { registerNarrativeHttp, type NarrativeHttpOptions } from "./narrative-http.js";
@@ -71,7 +72,8 @@ async function withRequestSignal<T>(
 
 /** Configures the one current Management listener, without starting any agent. */
 export interface ProductHttpOptions {
-  readonly operator?: ReturnType<typeof createOperatorReads>;
+  readonly operator?: ReturnType<typeof createOperatorOperations>;
+  readonly calendarMoment?: ReturnType<typeof createCalendarMomentOperations>;
   readonly authentication: ManagementAuthentication;
   readonly product: ProductManagement;
   readonly identity: { readonly installationId: string; readonly bootId: string };
@@ -154,6 +156,10 @@ export async function createProductHttpApp(options: ProductHttpOptions) {
     app,
     (token) => options.authentication.authenticate(token ?? "").then(() => undefined),
     options.operator,
+  );
+  registerCalendarMomentHttp(app,
+    (token) => options.authentication.authenticate(token ?? "").then(() => undefined),
+    options.calendarMoment,
   );
   app.get(
     "/.well-known/heptalogos-management",

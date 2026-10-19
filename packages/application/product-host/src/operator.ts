@@ -1,13 +1,17 @@
 // Copyright 2026 Aravine Zhu
 // SPDX-License-Identifier: AGPL-3.0-only
-/** Deterministic operator views over current owners; no generation or lifecycle mutation.
+/** Operator views and explicit document revisions over the existing owners.
  * @module operator
  */
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createHash } from "node:crypto";
+import { isDeepStrictEqual } from "node:util";
+import { v5 as uuidv5 } from "uuid";
 import type { FastifyInstance } from "fastify";
 import { Type, type Static } from "@heptalogos/schema-runtime/typebox";
+import { compileSchema } from "@heptalogos/schema-runtime";
 import {
   activitySchema,
   calendarResultSchema,
@@ -26,6 +30,12 @@ import type { createGatewayRuntime } from "./gateway-runtime.js";
 import { connectProductNous } from "./nous.js";
 import { createWorldClockManagement } from "./world-clock.js";
 import type { NousClient } from "@nous-wave/client";
+import {
+  encodeSelfContent,
+  decodeSelfContent,
+  encodeSocialContent,
+  decodeSocialContent,
+} from "@nous-wave/client/host-bridge";
 import { PRODUCT_GENERATION_ID } from "./generated/build-identities.js";
 
 const object = { additionalProperties: false } as const;
@@ -99,6 +109,47 @@ export const subjectDocumentsSchema = Type.Object(
   { subjectId: text, generatedAt: text, documents: Type.Record(text, text) },
   object,
 );
+const documentRevisionSchema = Type.Object(
+  {
+    subjectId: text,
+    domain: Type.Union([Type.Literal("self"), Type.Literal("social")]),
+    targetRevision: Type.Object({ kind: text, value: text }, object),
+    expectedObjectEpoch: Type.String({ pattern: "^[0-9]+$" }),
+    content: Type.Record(text, Type.Unknown()),
+  },
+  object,
+);
+const documentRevision =
+  compileSchema<Static<typeof documentRevisionSchema>>(documentRevisionSchema);
+const documentImportSchema = Type.Object(
+  {
+    document: Type.String({ minLength: 1, maxLength: 1_000_000 }),
+    reason: Type.String({ minLength: 1, maxLength: 4096 }),
+  },
+  object,
+);
+const documentImportResultSchema = Type.Object(
+  {
+    subjectId: text,
+    results: Type.Array(
+      Type.Object(
+        {
+          targetRevision: text,
+          status: Type.Union([
+            Type.Literal("unchanged"),
+            Type.Literal("revised"),
+            Type.Literal("failed"),
+          ]),
+          revision: Type.Optional(text),
+          objectEpoch: Type.Optional(text),
+          problem: Type.Optional(text),
+        },
+        object,
+      ),
+    ),
+  },
+  object,
+);
 const calendarViewSchema = Type.Object(
   {
     subjectId: Type.Union([text, Type.Null()]),
@@ -135,6 +186,10 @@ const schoolTemplateSchema = Type.Object(
 const taskViewSchema = Type.Object(
   {
     activity: activitySchema,
+    automaticWorkEnabled: Type.Boolean(),
+    retained: Type.Array(
+      Type.Object({ runId: text, resultCount: Type.Integer({ minimum: 0 }) }, object),
+    ),
     runs: Type.Array(
       Type.Object(
         {
@@ -143,6 +198,10 @@ const taskViewSchema = Type.Object(
           purpose: text,
           recordedAt: text,
           dispatchState: text,
+          outputProblem: Type.Union([
+            Type.Object({ code: text, detail: text }, object),
+            Type.Null(),
+          ]),
           native: Type.Union([
             Type.Object(
               {
@@ -168,114 +227,31 @@ const taskViewSchema = Type.Object(
   },
   object,
 );
+const taskResumeSchema = Type.Object(
+  {
+    activity: activitySchema,
+    automaticWorkEnabled: Type.Boolean(),
+    recoveredCandidates: Type.Integer({ minimum: 0 }),
+    recoveredRunIds: Type.Array(text),
+    blocked: Type.Array(Type.Object({ runId: text, code: text, detail: text }, object)),
+  },
+  object,
+);
 
 /** Installation and existing owner operations used by the authenticated management reads. */
-export interface OperatorReadOptions {
+export interface OperatorOptions {
   anchorRoot: string;
   product: ProductManagement;
   gateway: Awaited<ReturnType<typeof createGatewayRuntime>>;
   readNativeChannels: () => Promise<unknown>;
   readProviderAttempts: (params: Record<string, unknown>) => Promise<unknown>;
 }
-const fieldNames: Record<string, string> = {
-  kind: "类型",
-  statement: "内容",
-  stance: "立场",
-  scope: "适用范围",
-  validTime: "有效时间",
-  epistemicClass: "认识地位",
-  exceptions: "反例与边界",
-  theme: "主题",
-  interpretation: "理解",
-  fromEntityRef: "从",
-  toEntityRef: "至",
-  relationType: "关系",
-  degree: "程度",
-  confidence: "确信",
-  expression: "用语",
-  meaning: "含义",
-  variants: "其他写法",
-  explanation: "说明",
-  from: "从",
-  to: "至",
-  role: "角色",
-  coordinationExpectations: "交往约定",
-  pragmaticUse: "使用情境",
-  judgment: "依据与不确定性",
-  state: "认识状态",
-  estimate: "估计值",
-  estimateMethod: "估计依据",
-  description: "范围说明",
-  purposes: "用途",
-  entities: "相关参与者",
-  entityRefs: "相关参与者",
-  group: "群体",
-  channel: "渠道",
-  conversation: "会话",
-  conversationRef: "会话",
-  workContext: "工作情境",
-  workContextId: "工作情境",
-  timeDomainRef: "时间域",
-  start: "开始",
-  end: "结束",
-  symmetric: "双向关系",
-  caseInsensitive: "忽略大小写",
-};
 type SelfEntry = Awaited<ReturnType<NousClient["self"]["list"]>>["items"][number];
 type SocialEntry = Awaited<ReturnType<NousClient["social"]["list"]>>["items"][number];
 const current = (record: SelfEntry | SocialEntry) =>
   record.acceptanceState === "accepted" &&
   record.integrityState === "valid" &&
   record.suppressionState === "normal";
-const labels: Record<string, string> = {
-  identity: "身份",
-  role: "角色",
-  preference: "偏好",
-  limitation: "认识到的限制",
-  capability_belief: "能力认识",
-  value: "价值倾向",
-  adopted: "已采用",
-  tentative: "暂定",
-  attributed: "他人陈述",
-  observed: "观察所得",
-  hypothesis: "推测",
-  supported: "有来源支持",
-  member_of: "群体成员",
-  subject_deliberation: "主体审议",
-  professional_execution: "专业执行",
-  reflection: "反思",
-  true: "是",
-  false: "否",
-};
-function display(value: unknown): string {
-  if (value === null || value === undefined) return "未指定";
-  if (
-    typeof value === "string" ||
-    typeof value === "boolean" ||
-    typeof value === "number" ||
-    typeof value === "bigint"
-  )
-    return labels[String(value)] ?? String(value);
-  if (typeof value !== "object") return "未指定";
-  if (Array.isArray(value)) return value.map(display).join("；") || "无";
-  const fields = value as Record<string, unknown>;
-  if (fields.$typeName === "google.protobuf.Timestamp")
-    return new Date(
-      Number(fields.seconds) * 1000 + Number(fields.nanos) / 1e6,
-    ).toISOString();
-  if (typeof fields.case === "string" && "value" in fields)
-    return display(fields.value);
-  return (
-    Object.entries(fields)
-      .filter(([key]) => !key.startsWith("$"))
-      .map(([key, item]) =>
-        ["extent", "value"].includes(key)
-          ? display(item)
-          : `${fieldNames[key] ?? key}：${display(item)}`,
-      )
-      .join("；") || "未指定"
-  );
-}
 async function readPages<T>(
   read: (token: string) => Promise<{ items: T[]; nextPageToken: string }>,
 ) {
@@ -289,8 +265,8 @@ async function readPages<T>(
   return records;
 }
 
-/** Composes the actual bound Subject without a provider, pending-work flush or source contact. */
-export function createOperatorReads(options: OperatorReadOptions) {
+/** Reads the bound Subject; document writes require the separate explicit import operation. */
+export function createOperatorOperations(options: OperatorOptions) {
   const configured = async () => {
     const { settings } = await options.product.configuration();
     if (!settings)
@@ -397,21 +373,31 @@ export function createOperatorReads(options: OperatorReadOptions) {
         ...records.map((record) => {
           const body = record.content?.content;
           if (!body?.case) return "";
-          const fields = body.value as unknown as Record<string, unknown>;
           return [
-            `## ${body.case === "facet" ? display(fields.kind) : body.case === "convention" ? display(fields.expression) : body.case === "narrative" ? "自我理解" : "关系认识"}`,
-            ...Object.entries(fields)
-              .filter(
-                ([key]) =>
-                  !key.startsWith("$") &&
-                  !["producer", "basis", "scope", "validTime", "kind"].includes(key),
-              )
-              .map(([key, value]) => `- ${fieldNames[key] ?? key}：${display(value)}`),
-            `\n<details>\n<summary>适用范围、时间与来源</summary>\n`,
-            `适用范围：${display(fields.scope)}`,
-            `\n有效时间：${display(fields.validTime)}`,
-            `\n原始依据：${display(fields.basis)}`,
+            record.contextText,
+            `\n<details>\n<summary>来源与显式修订</summary>\n`,
             `\n精确修订：${record.reference?.kind}:${record.reference?.value}`,
+            `\n显式修订块：只编辑下方 content；保留 Subject、修订与 epoch，然后使用 subject documents --import 文件 --reason 说明。读取与编辑文件本身不会改动认知。`,
+            "\n```nous-revision\n" +
+              JSON.stringify(
+                {
+                  subjectId,
+                  domain: ["facet", "narrative"].includes(body.case)
+                    ? "self"
+                    : "social",
+                  targetRevision: {
+                    kind: record.reference!.kind,
+                    value: record.reference!.value,
+                  },
+                  expectedObjectEpoch: record.objectEpoch.toString(),
+                  content: ["facet", "narrative"].includes(body.case)
+                    ? encodeSelfContent((record as SelfEntry).content!)
+                    : encodeSocialContent((record as SocialEntry).content!),
+                },
+                null,
+                2,
+              ) +
+              "\n```",
             `\n</details>`,
           ].join("\n");
         }),
@@ -477,6 +463,166 @@ export function createOperatorReads(options: OperatorReadOptions) {
   };
   return {
     documents,
+    async resumeTask(activityId: string) {
+      const settings = await configured(),
+        subjectId = settings.subject.id;
+      let activity = subjectId
+        ? await options.gateway.life.get(subjectId, activityId)
+        : undefined;
+      if (!subjectId || !activity || !["active", "paused"].includes(activity.state))
+        throw managementProblem(
+          "life.resume_unavailable",
+          "Original task cannot resume",
+          "Choose an active or paused task from this Subject",
+          "conflict",
+        );
+      if (activity.state === "paused" || activity.continuationRequired)
+        activity = await options.gateway.life.transition({
+          subjectId,
+          activityId,
+          expectedRevision: activity.revision,
+          action: "resume",
+          reason: "操作者从任务详情明确恢复原任务",
+        });
+      const recovered = await options.gateway.recoverRoleOutputs({
+        subjectId,
+        activityId,
+      });
+      const candidates = await options.gateway.recoverCandidates({
+        subjectId,
+        activityId,
+      });
+      if (settings.subject.enabled)
+        await options.gateway.requestReactorOpportunity({
+          subjectId,
+          activityId,
+          operationRef: `operator:task-resume:${activityId}:${activity.revision}`,
+        });
+      return {
+        activity,
+        automaticWorkEnabled: settings.subject.enabled,
+        recoveredCandidates: candidates.recovered,
+        ...recovered,
+      };
+    },
+    async importDocument(input: Static<typeof documentImportSchema>) {
+      const { subjectId, nous } = await readSelf();
+      const blocks = [
+        ...input.document.matchAll(/^```nous-revision\s*\n([\s\S]*?)^```\s*$/gm),
+      ];
+      if (!blocks.length)
+        throw managementProblem(
+          "management.document_revision_missing",
+          "Document has no explicit revision blocks",
+          "Edit the content field in an exported nous-revision block; LIFE changes use Calendar",
+          "validation",
+        );
+      // Decode the whole request before submitting any independent owner mutation.
+      const revisions = blocks.map((block) => {
+        let parsed: ReturnType<typeof documentRevision.validate>;
+        try {
+          parsed = documentRevision.validate(JSON.parse(block[1]!));
+        } catch {
+          throw managementProblem(
+            "management.document_invalid",
+            "Document revision is not JSON",
+            "Edit only content in the exported nous-revision block",
+            "validation",
+          );
+        }
+        if (!parsed.ok || parsed.value.subjectId !== subjectId)
+          throw managementProblem(
+            "management.document_scope_denied",
+            "Document revision is invalid or belongs to another Subject",
+            "Keep the exported Subject, exact revision and epoch unchanged",
+            "validation",
+          );
+        const value = parsed.value;
+        try {
+          return value.domain === "self"
+            ? {
+                ...value,
+                domain: "self" as const,
+                decoded: decodeSelfContent(
+                  value.content as Parameters<typeof decodeSelfContent>[0],
+                ),
+              }
+            : {
+                ...value,
+                domain: "social" as const,
+                decoded: decodeSocialContent(
+                  value.content as Parameters<typeof decodeSocialContent>[0],
+                ),
+              };
+        } catch (error) {
+          throw managementProblem(
+            "management.document_content_invalid",
+            "Document content does not match the official cognition type",
+            error instanceof Error ? error.message : "Use the exported content type",
+            "validation",
+          );
+        }
+      });
+      const digest = createHash("sha256").update(input.document).digest("hex");
+      const results: Static<typeof documentImportResultSchema>["results"] = [];
+      for (const revision of revisions) {
+        const targetRevision = `${revision.targetRevision.kind}:${revision.targetRevision.value}`;
+        try {
+          const request = {
+            subjectId,
+            id: revision.targetRevision.value,
+          };
+          const original =
+            revision.domain === "self"
+              ? await nous.self.getRevision(request)
+              : await nous.social.getRevision(request);
+          const unchanged =
+            revision.domain === "self"
+              ? isDeepStrictEqual(
+                  encodeSelfContent((original as SelfEntry).content!),
+                  encodeSelfContent(revision.decoded),
+                )
+              : isDeepStrictEqual(
+                  encodeSocialContent((original as SocialEntry).content!),
+                  encodeSocialContent(revision.decoded),
+                );
+          if (unchanged) {
+            results.push({ targetRevision, status: "unchanged" });
+            continue;
+          }
+          // A manual edit must not retain the old model's producer signature.
+          if (revision.decoded.content.value)
+            revision.decoded.content.value.producer = undefined;
+          const mutation = {
+            subjectId,
+            operationId: uuidv5(
+              `${digest}:${targetRevision}:${input.reason}`,
+              "3bf12382-b238-480b-a002-9c37108e5e68",
+            ),
+            targetRevision: revision.targetRevision,
+            expectedObjectEpoch: BigInt(revision.expectedObjectEpoch),
+            reason: `Operator document revision (${digest}): ${input.reason}`,
+          };
+          const result =
+            revision.domain === "self"
+              ? await nous.self.revise({ ...mutation, content: revision.decoded })
+              : await nous.social.revise({ ...mutation, content: revision.decoded });
+          results.push({
+            targetRevision,
+            status: "revised",
+            revision: `${result.reference?.kind}:${result.reference?.value}`,
+            objectEpoch: result.objectEpoch.toString(),
+          });
+        } catch (error) {
+          results.push({
+            targetRevision,
+            status: "failed",
+            problem: error instanceof Error ? error.message : String(error),
+          });
+        }
+      }
+      return { subjectId, results };
+    },
     calendar,
     async task(
       activityId: string,
@@ -536,7 +682,18 @@ export function createOperatorReads(options: OperatorReadOptions) {
         }
         runs.push({ ...run, providerAttempts });
       }
-      return { activity, runs, nextRunId: page.nextRunId };
+      const retained = (
+        await options.gateway.native.readyResults({ subjectId, limit: 128 })
+      ).runs
+        .filter((run) => run.activityId === activityId)
+        .map((run) => ({ runId: run.runId, resultCount: run.resultCount }));
+      return {
+        activity,
+        automaticWorkEnabled: settings.subject.enabled,
+        retained,
+        runs,
+        nextRunId: page.nextRunId,
+      };
     },
     async overview() {
       const settings = await configured(),
@@ -566,6 +723,22 @@ export function createOperatorReads(options: OperatorReadOptions) {
         (d) => d.name === "subject_gateway",
       );
       if (!settings.subject.enabled) issues.push("自动付费工作已暂停");
+      if (subjectId)
+        for (const activity of [...tasks.activities]
+          .sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
+          .slice(0, 4)) {
+          const latest = (
+            await options.gateway.native.operatorRuns(
+              subjectId,
+              activity.activityId,
+              false,
+            )
+          ).runs[0];
+          if (latest?.outputProblem)
+            issues.push(
+              `${activity.purpose.slice(0, 48)}：${latest.outputProblem.detail} · task ${activity.activityId}`,
+            );
+        }
       if (gatewayStatus?.state !== "available")
         issues.push(gatewayStatus?.message ?? "Subject Gateway未启动");
       let qqState = settings.qq ? "Gateway已停止或未就绪；登录状态未知" : "未配置";
@@ -674,7 +847,7 @@ export function createOperatorReads(options: OperatorReadOptions) {
 export function registerOperatorHttp(
   app: FastifyInstance,
   authenticate: (token: string | undefined) => Promise<void>,
-  reads?: ReturnType<typeof createOperatorReads>,
+  reads?: ReturnType<typeof createOperatorOperations>,
 ) {
   const available = () =>
     reads ??
@@ -720,6 +893,21 @@ export function registerOperatorHttp(
     },
     () => available().documents(),
   );
+  app.post(
+    "/v1/subject/documents/import",
+    {
+      ...common,
+      bodyLimit: 4 * 1024 * 1024,
+      schema: {
+        operationId: "importSubjectDocument",
+        body: documentImportSchema,
+        security: [{ bearerAuth: [] }],
+        response: { 200: documentImportResultSchema, ...errors },
+      },
+    },
+    (request) =>
+      available().importDocument(request.body as Static<typeof documentImportSchema>),
+  );
   app.get(
     "/v1/tasks/:activityId",
     {
@@ -752,6 +940,20 @@ export function registerOperatorHttp(
         query.runId,
       );
     },
+  );
+  app.post(
+    "/v1/tasks/:activityId/resume",
+    {
+      ...common,
+      schema: {
+        operationId: "resumeTask",
+        params: Type.Object({ activityId: text }, object),
+        security: [{ bearerAuth: [] }],
+        response: { 200: taskResumeSchema, ...errors },
+      },
+    },
+    (request) =>
+      available().resumeTask((request.params as { activityId: string }).activityId),
   );
   app.get(
     "/v1/calendar/template",

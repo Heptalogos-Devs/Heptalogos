@@ -61,6 +61,6 @@
     "typescript": "catalog:",
     "typescript-eslint": "catalog:",
     "vitest": "catalog:",
-    "@nous-wave/openclaw": "file:vendor/nous-wave/nous-wave-openclaw-8bf3a1c3ed3e.tgz"
+    "@nous-wave/openclaw": "file:vendor/nous-wave/nous-wave-openclaw-aa93ede67117.tgz"
   }
 }

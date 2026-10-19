@@ -20,9 +20,12 @@ import {
   createProductSubject,
   getOperatorOverview,
   getSubjectDocuments,
+  importSubjectDocument,
   getDefaultCalendar,
   getSchoolTimeTemplate,
+  getCalendarMoment,
   getTaskDetails,
+  resumeTask,
 } from "./generated/index.js";
 import { createClient } from "./generated/client/index.js";
 import type {
@@ -38,6 +41,7 @@ import type {
   CheckProductConfigurationData,
   BindProductSubjectData,
   CreateProductSubjectData,
+  ImportSubjectDocumentData,
 } from "./generated/types.gen.js";
 
 /** Canonical generated Problem response. */
@@ -140,12 +144,18 @@ export function createManagementClient(options: ManagementClientOptions) {
   return Object.freeze({
     getOverview: () => requestHostData(() => getOperatorOverview(base)),
     getSubjectDocuments: () => requestHostData(() => getSubjectDocuments(base)),
+    importSubjectDocument: (body: ImportSubjectDocumentData["body"]) =>
+      requestHostData(() => importSubjectDocument({ ...base, body })),
     getSchoolTimeTemplate: () => requestHostData(() => getSchoolTimeTemplate(base)),
+    getCalendarMoment: (query: { at: string; to?: string }) =>
+      requestHostData(() => getCalendarMoment({ ...base, query })),
     getTaskDetails: (
       activityId: string,
       query: { inputs?: "true"; before?: string; runId?: string } = {},
     ) =>
       requestHostData(() => getTaskDetails({ ...base, path: { activityId }, query })),
+    resumeTask: (activityId: string) =>
+      requestHostData(() => resumeTask({ ...base, path: { activityId } })),
     getCalendar: (
       query: { period?: "today" | "week" | "range"; from?: string; to?: string } = {},
     ) => requestHostData(() => getDefaultCalendar({ ...base, query })),

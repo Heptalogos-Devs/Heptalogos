@@ -98,7 +98,10 @@ export function renderOperatorOverview(
   );
   for (const issue of current.issues) lines.push(`阻塞：${issue}`);
   lines.push("", "未完成任务：");
-  for (const task of current.tasks.slice(0, 4)) {
+  const recentTasks = [...current.tasks].sort(
+    (a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt),
+  );
+  for (const task of recentTasks.slice(0, 4)) {
     const results = current.retainedResults
       .filter((r) => r.activityId === task.activityId)
       .reduce((n, r) => n + r.resultCount, 0);
@@ -106,6 +109,8 @@ export function renderOperatorOverview(
       `  [${task.state}] ${task.purpose.slice(0, 80)}`,
       `    已存${results}条worker结果/${task.progress.resultRefs.length}个引用；${task.continuationRequired ? "等待明确恢复" : (task.nextOpportunity?.at ?? "下一条件未安排")} · task ${task.activityId}`,
     );
+    const progress = task.progress.note.split("\nReactor ")[0]?.trim();
+    if (progress) lines.push(`    进展：${progress.slice(0, 240)}`);
   }
   if (!current.tasks.length) lines.push("  无");
   if (current.narrativeWork.length) {
