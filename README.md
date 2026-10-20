@@ -1,20 +1,29 @@
 # Heptalogos
 
-Heptalogos 面向真实即时通信中的持续 AI 主体，负责消息、活动、注意和行为。长期认知由独立 Nous Wave 保存；主体模型、工具和子 Agent 使用正式 OpenClaw 原生循环。
+> **INTERRUPTED — 开发已暂停（2026-10-20）。** 当前分支保存未完成施工；最新改动尚未整体验证。详见[中断交接](Session-Handoff-2026-10-20-15-28.md)。恢复须等待用户明确指令。
 
-当前无图形 Product Host 提供独立管理 API/CLI：管理员认领、登录、配置与 Subject 查询、创建及绑定。管理可在 Nous、模型、QQ 和 Gateway 不可用时运行。Linux 独立安装与操作从 [Product Host](packages/application/product-host/README.md) 和 [CLI](packages/application/cli/README.md) 开始；管理可用不代表 QQ 持续主体已经上线。
+Heptalogos 管理持续主体的世界、生活、注意、交往与行动。独立运行时使用角色素材和近期交往；连接 Nous Wave 后，同一 SubjectId 使用长期认识与实际经历。
 
-当前施工范围由 [QQ 持续主体计划](project/plans/qq-continuous-subject.md)决定。QQ 接入、生活与成长、社会语言、动机和跨日运行按完整能力继续交付；实现状态以当前 Specs 和实际运行验证为准。
+当前代码从新 PostgreSQL 数据库启动。业务在 `packages/hept`，正式 Zod 输入在 `packages/contracts`，HTTP 与 CLI 共用 `createHept()`。完整施工依据位于同级 [Specs 快照](https://github.com/Heptalogos-Devs/Nous-Wave/tree/feat/spec-rebuild/docs/construction-specs)。
 
-从 [全局索引](INDEX.md)进入：
+```sh
+corepack pnpm install
+pnpm hept init --database postgresql://localhost/hept --data data/hept
+HEPT_CONFIG=data/config/hept.toml pnpm hept admin-create --email admin@example.test --password-ref env:HEPT_INITIAL_PASSWORD
+HEPT_CONFIG=data/config/hept.toml pnpm serve
+```
 
-- [产品与架构说明](docs/README.md)：概念、实现架构及开发参考。
-- [规范合同](specs/README.md)：当前实现的精确行为。
-- [项目控制](project/README.md)：治理、依赖、计划和验证。
-- [Agent 操作流程](.agents/skills/AGENTS.md)：按需读取的工程技能。
+管理员密码通过所选 SecretRef 提供。`admin-create` 将 CLI API key 写入受限凭据文件；浏览器与服务凭据使用 Better Auth。默认只监听回环地址。
 
-包职责和依赖方向见 [工作区包](packages/README.md)。
+```sh
+HEPT_CONFIG=data/config/hept.toml pnpm hept subject create Alice
+HEPT_CONFIG=data/config/hept.toml pnpm hept --subject <subject-id> model register examples/model.json
+HEPT_CONFIG=data/config/hept.toml pnpm hept --subject <subject-id> settings set examples/settings.json
+HEPT_CONFIG=data/config/hept.toml pnpm hept --subject <subject-id> subject start
+HEPT_CONFIG=data/config/hept.toml pnpm hept --subject <subject-id> chat '今天想聊些什么？'
+HEPT_CONFIG=data/config/hept.toml pnpm hept --subject <subject-id> inbox
+```
 
-## 许可
+模型示例的 `credentialRef` 指向环境或受限文件，先按自己的提供方修改端点和模型 ID。配置不带真实凭据。
 
-本项目采用 AGPL-3.0-only，完整条款见 [LICENSE](LICENSE)，版权及 SPDX 声明见 [NOTICE](NOTICE)。
+[当前设计与操作](docs/INDEX.md)说明目录、模型接触、消息、世界与集成。运行检查为 `pnpm verify`；真实数据库轨迹使用 `HEPT_TEST_DATABASE_URL` 指向专用空库。

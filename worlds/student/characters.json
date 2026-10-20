@@ -1,0 +1,23 @@
+{
+  "characters": [
+    {
+      "key": "teacher",
+      "name": "周老师",
+      "role": "课程教师",
+      "publicFacts": [
+        "按课表授课",
+        "允许课后提问"
+      ],
+      "authorNotes": "缺席需要补上本次作业。"
+    },
+    {
+      "key": "classmate",
+      "name": "林同学",
+      "role": "同班同学",
+      "publicFacts": [
+        "参加同一课程"
+      ],
+      "authorNotes": "今天想邀请主体一起自习，但主体尚未知道。"
+    }
+  ]
+}

@@ -1,0 +1,10 @@
+import { mkdir,writeFile,rm } from 'node:fs/promises';
+import { spawnSync } from 'node:child_process';
+import { resolve } from 'node:path';
+import { createHttp } from '../apps/server/src/http.js';
+const server=await createHttp();
+await mkdir('packages/contracts/openapi',{recursive:true});
+await writeFile('packages/contracts/openapi/hept.json',`${JSON.stringify(server.swagger(),null,2)}\n`);
+await rm('packages/client/src/generated',{recursive:true,force:true});
+const result=spawnSync('docker',['run','--rm','--memory=1g','--cpus=2','--user',`${process.getuid?.()??1000}:${process.getgid?.()??1000}`,'-v',`${resolve('.')}:/local`,'openapitools/openapi-generator-cli:v7.26.0','generate','-i','/local/packages/contracts/openapi/hept.json','-g','typescript-fetch','-o','/local/packages/client/src/generated','--global-property','apis,models,supportingFiles=runtime.ts:index.ts,apiDocs=false,modelDocs=false,apiTests=false,modelTests=false','--additional-properties','importFileExtension=.js,dateLibrary=string,withoutRuntimeChecks=true,hideGenerationTimestamp=true'],{stdio:'inherit'});
+await server.close();if(result.status!==0)throw new Error(`Client generation failed (${result.status})`);

@@ -1,0 +1,4974 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Heptalogos",
+    "version": "0.1.0"
+  },
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "SubjectIdInput": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$"
+      },
+      "ObjectIdInput": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$"
+      },
+      "TimePointInput": {
+        "type": "object",
+        "properties": {
+          "clockId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          }
+        },
+        "required": [
+          "clockId",
+          "at"
+        ]
+      },
+      "TimeRangeInput": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TimePointInput"
+              }
+            ]
+          },
+          "end": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TimePointInput"
+              }
+            ]
+          }
+        }
+      },
+      "SelectorInput": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "text",
+              "page",
+              "image",
+              "media",
+              "part",
+              "node"
+            ]
+          },
+          "start": {
+            "type": "number",
+            "minimum": 0
+          },
+          "end": {
+            "type": "number",
+            "minimum": 0
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          },
+          "partId": {
+            "type": "string"
+          },
+          "nodeId": {
+            "type": "string"
+          },
+          "x": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "y": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "width": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "height": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "within": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SelectorInput"
+              }
+            ]
+          }
+        },
+        "required": [
+          "kind"
+        ]
+      },
+      "RefInput": {
+        "type": "object",
+        "properties": {
+          "product": {
+            "type": "string",
+            "enum": [
+              "nous",
+              "hept"
+            ]
+          },
+          "installationId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "minLength": 1
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          },
+          "selector": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/SelectorInput"
+              }
+            ]
+          }
+        },
+        "required": [
+          "product",
+          "installationId",
+          "kind",
+          "id"
+        ]
+      },
+      "ActorInput": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "human",
+              "subject",
+              "service",
+              "worker",
+              "author"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "grants": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "subjectIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "grants"
+        ]
+      },
+      "CallContextInput": {
+        "type": "object",
+        "properties": {
+          "actor": {
+            "$ref": "#/components/schemas/ActorInput"
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "audience": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "traceContext": {
+            "type": "object",
+            "properties": {
+              "traceId": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{32}$"
+              },
+              "operationId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "traceparent": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "traceId",
+              "operationId"
+            ]
+          }
+        },
+        "required": [
+          "actor",
+          "subjectId",
+          "purpose",
+          "audience",
+          "traceContext"
+        ]
+      },
+      "PolicyInput": {
+        "type": "object",
+        "properties": {
+          "readers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "purposes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "audiences": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "readers",
+          "purposes",
+          "audiences"
+        ]
+      },
+      "ProblemInput": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "detail": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "invalid_input",
+              "forbidden",
+              "not_found",
+              "conflict",
+              "capability_unavailable",
+              "budget_exhausted",
+              "dependency_unavailable",
+              "effect_unknown"
+            ]
+          },
+          "operationId": {
+            "type": "string"
+          },
+          "currentRevision": {
+            "type": "number"
+          },
+          "retryAfter": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "code"
+        ]
+      },
+      "OperationRefInput": {
+        "type": "object",
+        "properties": {
+          "operationId": {
+            "type": "string"
+          },
+          "statusUrl": {
+            "type": "string"
+          },
+          "resourceRef": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/RefInput"
+              }
+            ]
+          }
+        },
+        "required": [
+          "operationId",
+          "statusUrl"
+        ]
+      },
+      "ConsumerInput": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "subject",
+              "worker",
+              "author",
+              "maintenance"
+            ]
+          },
+          "host": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "host",
+          "id"
+        ]
+      },
+      "HeptMessagePartInput": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "partId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "text"
+                ]
+              },
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "partId",
+              "kind",
+              "text"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "partId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "mention"
+                ]
+              },
+              "accountId": {
+                "type": "string"
+              },
+              "displayName": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "partId",
+              "kind",
+              "accountId"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "partId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "reply"
+                ]
+              },
+              "messageRef": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/RefInput"
+                  }
+                ]
+              },
+              "platformMessageId": {
+                "type": "string"
+              },
+              "status": {
+                "default": "pending",
+                "type": "string",
+                "enum": [
+                  "resolved",
+                  "unavailable",
+                  "pending"
+                ]
+              }
+            },
+            "required": [
+              "partId",
+              "kind",
+              "platformMessageId"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "partId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "image",
+                  "sticker",
+                  "audio",
+                  "video",
+                  "file"
+                ]
+              },
+              "materialRef": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/RefInput"
+                  }
+                ]
+              },
+              "url": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "mediaType": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "availability": {
+                "default": "pending",
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "available",
+                  "missing",
+                  "too_large"
+                ]
+              }
+            },
+            "required": [
+              "partId",
+              "kind"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "partId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "link"
+                ]
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "title": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "partId",
+              "kind",
+              "url"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "partId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "card",
+                  "unsupported"
+                ]
+              },
+              "description": {
+                "type": "string"
+              },
+              "raw": {}
+            },
+            "required": [
+              "partId",
+              "kind",
+              "description"
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "partId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "forward"
+                ]
+              },
+              "nodes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "nodeId": {
+                      "type": "string"
+                    },
+                    "authorId": {
+                      "type": "string"
+                    },
+                    "authorName": {
+                      "type": "string"
+                    },
+                    "sentAt": {
+                      "allOf": [
+                        {
+                          "$ref": "#/components/schemas/TimePointInput"
+                        }
+                      ]
+                    },
+                    "sourceRef": {
+                      "allOf": [
+                        {
+                          "$ref": "#/components/schemas/RefInput"
+                        }
+                      ]
+                    },
+                    "parts": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/HeptMessagePartInput"
+                      }
+                    }
+                  },
+                  "required": [
+                    "nodeId",
+                    "authorId",
+                    "parts"
+                  ]
+                }
+              }
+            },
+            "required": [
+              "partId",
+              "kind",
+              "nodes"
+            ]
+          }
+        ]
+      },
+      "SubjectId": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$"
+      },
+      "ObjectId": {
+        "type": "string",
+        "format": "uuid",
+        "pattern": "^([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89abAB][0-9a-fA-F]{3}-[0-9a-fA-F]{12})$"
+      },
+      "TimePoint": {
+        "type": "object",
+        "properties": {
+          "clockId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z|([+-](?:[01]\\d|2[0-3]):[0-5]\\d)))$"
+          }
+        },
+        "required": [
+          "clockId",
+          "at"
+        ],
+        "additionalProperties": false
+      },
+      "TimeRange": {
+        "type": "object",
+        "properties": {
+          "start": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TimePoint"
+              }
+            ]
+          },
+          "end": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/TimePoint"
+              }
+            ]
+          }
+        },
+        "additionalProperties": false
+      },
+      "Selector": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "text",
+              "page",
+              "image",
+              "media",
+              "part",
+              "node"
+            ]
+          },
+          "start": {
+            "type": "number",
+            "minimum": 0
+          },
+          "end": {
+            "type": "number",
+            "minimum": 0
+          },
+          "page": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          },
+          "partId": {
+            "type": "string"
+          },
+          "nodeId": {
+            "type": "string"
+          },
+          "x": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "y": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "width": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "height": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          },
+          "within": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Selector"
+              }
+            ]
+          }
+        },
+        "required": [
+          "kind"
+        ],
+        "additionalProperties": false
+      },
+      "Ref": {
+        "type": "object",
+        "properties": {
+          "product": {
+            "type": "string",
+            "enum": [
+              "nous",
+              "hept"
+            ]
+          },
+          "installationId": {
+            "type": "string",
+            "minLength": 1
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string",
+            "minLength": 1
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "revision": {
+            "type": "integer",
+            "minimum": 0,
+            "exclusiveMinimum": true,
+            "maximum": 9007199254740991
+          },
+          "selector": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Selector"
+              }
+            ]
+          }
+        },
+        "required": [
+          "product",
+          "installationId",
+          "kind",
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "Actor": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "human",
+              "subject",
+              "service",
+              "worker",
+              "author"
+            ]
+          },
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "grants": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "subjectIds": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time",
+            "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+          }
+        },
+        "required": [
+          "kind",
+          "id",
+          "grants"
+        ],
+        "additionalProperties": false
+      },
+      "CallContext": {
+        "type": "object",
+        "properties": {
+          "actor": {
+            "$ref": "#/components/schemas/Actor"
+          },
+          "subjectId": {
+            "type": "string"
+          },
+          "purpose": {
+            "type": "string"
+          },
+          "audience": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "traceContext": {
+            "type": "object",
+            "properties": {
+              "traceId": {
+                "type": "string",
+                "pattern": "^[a-f0-9]{32}$"
+              },
+              "operationId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "traceparent": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "traceId",
+              "operationId"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "actor",
+          "subjectId",
+          "purpose",
+          "audience",
+          "traceContext"
+        ],
+        "additionalProperties": false
+      },
+      "Policy": {
+        "type": "object",
+        "properties": {
+          "readers": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "purposes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "audiences": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "readers",
+          "purposes",
+          "audiences"
+        ],
+        "additionalProperties": false
+      },
+      "Problem": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "type": "integer",
+            "minimum": -9007199254740991,
+            "maximum": 9007199254740991
+          },
+          "detail": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string",
+            "enum": [
+              "invalid_input",
+              "forbidden",
+              "not_found",
+              "conflict",
+              "capability_unavailable",
+              "budget_exhausted",
+              "dependency_unavailable",
+              "effect_unknown"
+            ]
+          },
+          "operationId": {
+            "type": "string"
+          },
+          "currentRevision": {
+            "type": "number"
+          },
+          "retryAfter": {
+            "type": "number"
+          }
+        },
+        "required": [
+          "type",
+          "title",
+          "status",
+          "code"
+        ],
+        "additionalProperties": false
+      },
+      "OperationRef": {
+        "type": "object",
+        "properties": {
+          "operationId": {
+            "type": "string"
+          },
+          "statusUrl": {
+            "type": "string"
+          },
+          "resourceRef": {
+            "allOf": [
+              {
+                "$ref": "#/components/schemas/Ref"
+              }
+            ]
+          }
+        },
+        "required": [
+          "operationId",
+          "statusUrl"
+        ],
+        "additionalProperties": false
+      },
+      "Consumer": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "subject",
+              "worker",
+              "author",
+              "maintenance"
+            ]
+          },
+          "host": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "host",
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "HeptMessagePart": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "partId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "text"
+                ]
+              },
+              "text": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "partId",
+              "kind",
+              "text"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "partId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "mention"
+                ]
+              },
+              "accountId": {
+                "type": "string"
+              },
+              "displayName": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "partId",
+              "kind",
+              "accountId"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "partId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "reply"
+                ]
+              },
+              "messageRef": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Ref"
+                  }
+                ]
+              },
+              "platformMessageId": {
+                "type": "string"
+              },
+              "status": {
+                "default": "pending",
+                "type": "string",
+                "enum": [
+                  "resolved",
+                  "unavailable",
+                  "pending"
+                ]
+              }
+            },
+            "required": [
+              "partId",
+              "kind",
+              "platformMessageId",
+              "status"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "partId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "image",
+                  "sticker",
+                  "audio",
+                  "video",
+                  "file"
+                ]
+              },
+              "materialRef": {
+                "allOf": [
+                  {
+                    "$ref": "#/components/schemas/Ref"
+                  }
+                ]
+              },
+              "url": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "mediaType": {
+                "type": "string"
+              },
+              "description": {
+                "type": "string"
+              },
+              "availability": {
+                "default": "pending",
+                "type": "string",
+                "enum": [
+                  "pending",
+                  "available",
+                  "missing",
+                  "too_large"
+                ]
+              }
+            },
+            "required": [
+              "partId",
+              "kind",
+              "availability"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "partId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "link"
+                ]
+              },
+              "url": {
+                "type": "string",
+                "format": "uri"
+              },
+              "title": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "partId",
+              "kind",
+              "url"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "partId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "card",
+                  "unsupported"
+                ]
+              },
+              "description": {
+                "type": "string"
+              },
+              "raw": {}
+            },
+            "required": [
+              "partId",
+              "kind",
+              "description"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "partId": {
+                "type": "string",
+                "minLength": 1
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "forward"
+                ]
+              },
+              "nodes": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "nodeId": {
+                      "type": "string"
+                    },
+                    "authorId": {
+                      "type": "string"
+                    },
+                    "authorName": {
+                      "type": "string"
+                    },
+                    "sentAt": {
+                      "allOf": [
+                        {
+                          "$ref": "#/components/schemas/TimePoint"
+                        }
+                      ]
+                    },
+                    "sourceRef": {
+                      "allOf": [
+                        {
+                          "$ref": "#/components/schemas/Ref"
+                        }
+                      ]
+                    },
+                    "parts": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/HeptMessagePart"
+                      }
+                    }
+                  },
+                  "required": [
+                    "nodeId",
+                    "authorId",
+                    "parts"
+                  ],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": [
+              "partId",
+              "kind",
+              "nodes"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      }
+    }
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/openapi.json": {
+      "get": {
+        "operationId": "openapi.read",
+        "tags": [
+          "openapi"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects": {
+      "post": {
+        "operationId": "subjects.create",
+        "tags": [
+          "subjects"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/ObjectIdInput"
+                      }
+                    ]
+                  },
+                  "displayName": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "roleMaterial": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "capabilities": {
+                    "default": [
+                      "communication",
+                      "world",
+                      "agency",
+                      "work"
+                    ],
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "clientSubmissionId": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "required": [
+                  "displayName",
+                  "clientSubmissionId"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "subjects.list",
+        "tags": [
+          "subjects"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}": {
+      "get": {
+        "operationId": "subjects.read",
+        "tags": [
+          "subjects"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/bindings": {
+      "post": {
+        "operationId": "subjects.bind",
+        "tags": [
+          "subjects"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "installationId": {
+                    "type": "string"
+                  },
+                  "subjectId": {
+                    "type": "string"
+                  },
+                  "baseURL": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "credentialRef": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "installationId",
+                  "subjectId",
+                  "baseURL",
+                  "credentialRef"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/runtime/start": {
+      "post": {
+        "operationId": "subjects.start",
+        "tags": [
+          "subjects"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/runtime/pause": {
+      "post": {
+        "operationId": "subjects.pause",
+        "tags": [
+          "subjects"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/runtime/stop": {
+      "post": {
+        "operationId": "subjects.stop",
+        "tags": [
+          "subjects"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {},
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/changes": {
+      "get": {
+        "operationId": "subjects.changes",
+        "tags": [
+          "subjects"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/capabilities": {
+      "get": {
+        "operationId": "capabilities.read",
+        "tags": [
+          "capabilities"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/messages": {
+      "post": {
+        "operationId": "messages.receive",
+        "tags": [
+          "messages"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "clientSubmissionId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "conversationId": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/ObjectIdInput"
+                      }
+                    ]
+                  },
+                  "conversationKey": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "channelAccount": {
+                    "default": "local",
+                    "type": "string"
+                  },
+                  "platformMessageId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "authorId": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "authorName": {
+                    "type": "string"
+                  },
+                  "sentAt": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/TimePointInput"
+                      }
+                    ]
+                  },
+                  "parts": {
+                    "minItems": 1,
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/HeptMessagePartInput"
+                    }
+                  },
+                  "raw": {},
+                  "policy": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/PolicyInput"
+                      }
+                    ]
+                  }
+                },
+                "required": [
+                  "clientSubmissionId",
+                  "conversationKey",
+                  "platformMessageId",
+                  "authorId",
+                  "parts"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/conversations": {
+      "get": {
+        "operationId": "conversations.list",
+        "tags": [
+          "conversations"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/conversations/{id}": {
+      "get": {
+        "operationId": "conversations.read",
+        "tags": [
+          "conversations"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/messages/{id}/changes": {
+      "post": {
+        "operationId": "messages.change",
+        "tags": [
+          "messages"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "edit",
+                      "retract",
+                      "feedback"
+                    ]
+                  },
+                  "parts": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/HeptMessagePartInput"
+                    }
+                  },
+                  "expectedRevision": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  },
+                  "sourceEventId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "kind",
+                  "expectedRevision",
+                  "sourceEventId"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/media": {
+      "post": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/media/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/channels": {
+      "post": {
+        "operationId": "channels.connect",
+        "tags": [
+          "channels"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "host": {
+                    "type": "string",
+                    "enum": [
+                      "local",
+                      "astrbot"
+                    ]
+                  },
+                  "accountId": {
+                    "type": "string"
+                  },
+                  "endpoint": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "credentialRef": {
+                    "type": "string"
+                  },
+                  "conversationKeys": {
+                    "default": [
+                      "*"
+                    ],
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "receive": {
+                    "default": true,
+                    "type": "boolean"
+                  },
+                  "participate": {
+                    "default": true,
+                    "type": "boolean"
+                  },
+                  "send": {
+                    "default": true,
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "host",
+                  "accountId"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "channels.list",
+        "tags": [
+          "channels"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/expressions": {
+      "post": {
+        "operationId": "messages.sendExpression",
+        "tags": [
+          "messages"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "intent": {
+                    "type": "object",
+                    "properties": {
+                      "conversationId": {
+                        "$ref": "#/components/schemas/ObjectIdInput"
+                      },
+                      "audience": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "purpose": {
+                        "type": "string"
+                      },
+                      "posture": {
+                        "default": "natural",
+                        "type": "string"
+                      },
+                      "facts": {
+                        "default": [],
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "sourceRefs": {
+                        "default": [],
+                        "type": "array",
+                        "items": {
+                          "$ref": "#/components/schemas/RefInput"
+                        }
+                      },
+                      "commitment": {
+                        "type": "object",
+                        "properties": {
+                          "terms": {
+                            "type": "string"
+                          },
+                          "dueAt": {
+                            "allOf": [
+                              {
+                                "$ref": "#/components/schemas/TimePointInput"
+                              }
+                            ]
+                          }
+                        },
+                        "required": [
+                          "terms"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "conversationId",
+                      "audience",
+                      "purpose"
+                    ]
+                  },
+                  "parts": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/HeptMessagePartInput"
+                    }
+                  },
+                  "clientSubmissionId": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "intent",
+                  "parts",
+                  "clientSubmissionId"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/expressions/{id}": {
+      "get": {
+        "operationId": "expressions.inspect",
+        "tags": [
+          "expressions"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/expressions/{id}/cancel": {
+      "post": {
+        "operationId": "expressions.cancel",
+        "tags": [
+          "expressions"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/effects/{id}/resolution": {
+      "post": {
+        "operationId": "effects.resolve",
+        "tags": [
+          "effects"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "accepted",
+                      "not_sent"
+                    ]
+                  },
+                  "platformMessageId": {
+                    "type": "string"
+                  },
+                  "basis": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status",
+                  "basis"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/worlds/preview": {
+      "post": {
+        "operationId": "worlds.preview",
+        "tags": [
+          "worlds"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "formatVersion": {
+                    "type": "number",
+                    "enum": [
+                      1
+                    ]
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "background": {
+                    "type": "string"
+                  },
+                  "rules": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "clock": {
+                    "type": "object",
+                    "properties": {
+                      "worldAnchor": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                      },
+                      "rate": {
+                        "default": 1,
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "timezone": {
+                        "default": "Asia/Tokyo",
+                        "type": "string"
+                      },
+                      "offlinePolicy": {
+                        "default": "freeze",
+                        "type": "string",
+                        "enum": [
+                          "freeze",
+                          "catch_up"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "worldAnchor"
+                    ]
+                  },
+                  "entryPoint": {
+                    "type": "string"
+                  },
+                  "places": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "key": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "neighbors": {
+                          "default": [],
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "to": {
+                                "type": "string"
+                              },
+                              "minutes": {
+                                "type": "number",
+                                "minimum": 0,
+                                "exclusiveMinimum": true
+                              }
+                            },
+                            "required": [
+                              "to",
+                              "minutes"
+                            ]
+                          }
+                        },
+                        "devices": {
+                          "default": [],
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "key",
+                        "title",
+                        "description"
+                      ]
+                    }
+                  },
+                  "characters": {
+                    "default": [],
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "key": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "place": {
+                          "type": "string"
+                        },
+                        "privateNotes": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "key",
+                        "name",
+                        "description",
+                        "place"
+                      ]
+                    }
+                  },
+                  "calendar": {
+                    "default": [],
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "title": {
+                          "type": "string"
+                        },
+                        "start": {
+                          "type": "string"
+                        },
+                        "timezone": {
+                          "type": "string"
+                        },
+                        "durationMinutes": {
+                          "type": "number",
+                          "minimum": 0,
+                          "exclusiveMinimum": true
+                        },
+                        "rrule": {
+                          "type": "string"
+                        },
+                        "placeId": {
+                          "type": "string"
+                        },
+                        "characterId": {
+                          "type": "string"
+                        },
+                        "adherence": {
+                          "default": "free",
+                          "type": "string",
+                          "enum": [
+                            "free",
+                            "expected",
+                            "binding"
+                          ]
+                        },
+                        "activityKind": {
+                          "default": "other",
+                          "type": "string",
+                          "enum": [
+                            "sleep",
+                            "rest",
+                            "study",
+                            "exercise",
+                            "social",
+                            "travel",
+                            "other"
+                          ]
+                        },
+                        "interruptibility": {
+                          "default": "open",
+                          "type": "string",
+                          "enum": [
+                            "open",
+                            "glance",
+                            "brief",
+                            "closed"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "title",
+                        "start",
+                        "timezone",
+                        "durationMinutes"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "formatVersion",
+                  "title",
+                  "background",
+                  "clock",
+                  "entryPoint",
+                  "places"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/worlds": {
+      "post": {
+        "operationId": "worlds.create",
+        "tags": [
+          "worlds"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "formatVersion": {
+                    "type": "number",
+                    "enum": [
+                      1
+                    ]
+                  },
+                  "title": {
+                    "type": "string"
+                  },
+                  "background": {
+                    "type": "string"
+                  },
+                  "rules": {
+                    "default": "",
+                    "type": "string"
+                  },
+                  "clock": {
+                    "type": "object",
+                    "properties": {
+                      "worldAnchor": {
+                        "type": "string",
+                        "format": "date-time",
+                        "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                      },
+                      "rate": {
+                        "default": 1,
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "timezone": {
+                        "default": "Asia/Tokyo",
+                        "type": "string"
+                      },
+                      "offlinePolicy": {
+                        "default": "freeze",
+                        "type": "string",
+                        "enum": [
+                          "freeze",
+                          "catch_up"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "worldAnchor"
+                    ]
+                  },
+                  "entryPoint": {
+                    "type": "string"
+                  },
+                  "places": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "key": {
+                          "type": "string"
+                        },
+                        "title": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "neighbors": {
+                          "default": [],
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "to": {
+                                "type": "string"
+                              },
+                              "minutes": {
+                                "type": "number",
+                                "minimum": 0,
+                                "exclusiveMinimum": true
+                              }
+                            },
+                            "required": [
+                              "to",
+                              "minutes"
+                            ]
+                          }
+                        },
+                        "devices": {
+                          "default": [],
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "required": [
+                        "key",
+                        "title",
+                        "description"
+                      ]
+                    }
+                  },
+                  "characters": {
+                    "default": [],
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "key": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "description": {
+                          "type": "string"
+                        },
+                        "place": {
+                          "type": "string"
+                        },
+                        "privateNotes": {
+                          "type": "string"
+                        }
+                      },
+                      "required": [
+                        "key",
+                        "name",
+                        "description",
+                        "place"
+                      ]
+                    }
+                  },
+                  "calendar": {
+                    "default": [],
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "title": {
+                          "type": "string"
+                        },
+                        "start": {
+                          "type": "string"
+                        },
+                        "timezone": {
+                          "type": "string"
+                        },
+                        "durationMinutes": {
+                          "type": "number",
+                          "minimum": 0,
+                          "exclusiveMinimum": true
+                        },
+                        "rrule": {
+                          "type": "string"
+                        },
+                        "placeId": {
+                          "type": "string"
+                        },
+                        "characterId": {
+                          "type": "string"
+                        },
+                        "adherence": {
+                          "default": "free",
+                          "type": "string",
+                          "enum": [
+                            "free",
+                            "expected",
+                            "binding"
+                          ]
+                        },
+                        "activityKind": {
+                          "default": "other",
+                          "type": "string",
+                          "enum": [
+                            "sleep",
+                            "rest",
+                            "study",
+                            "exercise",
+                            "social",
+                            "travel",
+                            "other"
+                          ]
+                        },
+                        "interruptibility": {
+                          "default": "open",
+                          "type": "string",
+                          "enum": [
+                            "open",
+                            "glance",
+                            "brief",
+                            "closed"
+                          ]
+                        }
+                      },
+                      "required": [
+                        "title",
+                        "start",
+                        "timezone",
+                        "durationMinutes"
+                      ]
+                    }
+                  }
+                },
+                "required": [
+                  "formatVersion",
+                  "title",
+                  "background",
+                  "clock",
+                  "entryPoint",
+                  "places"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/world": {
+      "get": {
+        "operationId": "world.inspect",
+        "tags": [
+          "world"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/world/clock": {
+      "patch": {
+        "operationId": "world.clock.update",
+        "tags": [
+          "world"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "rate": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "paused": {
+                    "type": "boolean"
+                  },
+                  "timezone": {
+                    "type": "string"
+                  },
+                  "offlinePolicy": {
+                    "type": "string",
+                    "enum": [
+                      "freeze",
+                      "catch_up"
+                    ]
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/world/advance": {
+      "post": {
+        "operationId": "world.advanceTo",
+        "tags": [
+          "world"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "target": {
+                    "type": "string",
+                    "format": "date-time",
+                    "pattern": "^(?:(?:\\d\\d[2468][048]|\\d\\d[13579][26]|\\d\\d0[48]|[02468][048]00|[13579][26]00)-02-29|\\d{4}-(?:(?:0[13578]|1[02])-(?:0[1-9]|[12]\\d|3[01])|(?:0[469]|11)-(?:0[1-9]|[12]\\d|30)|(?:02)-(?:0[1-9]|1\\d|2[0-8])))T(?:(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d+)?(?:Z))$"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/world/timeline": {
+      "get": {
+        "operationId": "world.timeline",
+        "tags": [
+          "world"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/world/percepts": {
+      "post": {
+        "operationId": "world.observe",
+        "tags": [
+          "world"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/world/actions": {
+      "post": {
+        "operationId": "world.act",
+        "tags": [
+          "world"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "kind": {
+                    "type": "string",
+                    "enum": [
+                      "move",
+                      "rest",
+                      "participate",
+                      "talk"
+                    ]
+                  },
+                  "target": {
+                    "type": "string"
+                  },
+                  "minutes": {
+                    "type": "number",
+                    "minimum": 0,
+                    "exclusiveMinimum": true
+                  }
+                },
+                "required": [
+                  "kind",
+                  "target"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/world/events": {
+      "post": {
+        "operationId": "world.realize",
+        "tags": [
+          "world"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/world/events/{id}/corrections": {
+      "post": {
+        "operationId": "world.correct",
+        "tags": [
+          "world"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/calendar": {
+      "get": {
+        "operationId": "calendar.list",
+        "tags": [
+          "calendar"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "calendar.create",
+        "tags": [
+          "calendar"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "start": {
+                    "type": "string"
+                  },
+                  "timezone": {
+                    "type": "string"
+                  },
+                  "durationMinutes": {
+                    "type": "number",
+                    "minimum": 0,
+                    "exclusiveMinimum": true
+                  },
+                  "rrule": {
+                    "type": "string"
+                  },
+                  "placeId": {
+                    "type": "string"
+                  },
+                  "characterId": {
+                    "type": "string"
+                  },
+                  "adherence": {
+                    "default": "free",
+                    "type": "string",
+                    "enum": [
+                      "free",
+                      "expected",
+                      "binding"
+                    ]
+                  },
+                  "activityKind": {
+                    "default": "other",
+                    "type": "string",
+                    "enum": [
+                      "sleep",
+                      "rest",
+                      "study",
+                      "exercise",
+                      "social",
+                      "travel",
+                      "other"
+                    ]
+                  },
+                  "interruptibility": {
+                    "default": "open",
+                    "type": "string",
+                    "enum": [
+                      "open",
+                      "glance",
+                      "brief",
+                      "closed"
+                    ]
+                  }
+                },
+                "required": [
+                  "title",
+                  "start",
+                  "timezone",
+                  "durationMinutes"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/calendar/{id}/changes": {
+      "post": {
+        "operationId": "calendar.change",
+        "tags": [
+          "calendar"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "this",
+                      "future",
+                      "all"
+                    ]
+                  },
+                  "originalStart": {
+                    "type": "string"
+                  },
+                  "cancelled": {
+                    "type": "boolean"
+                  },
+                  "rule": {
+                    "type": "object",
+                    "properties": {
+                      "title": {
+                        "type": "string"
+                      },
+                      "start": {
+                        "type": "string"
+                      },
+                      "timezone": {
+                        "type": "string"
+                      },
+                      "durationMinutes": {
+                        "type": "number",
+                        "minimum": 0,
+                        "exclusiveMinimum": true
+                      },
+                      "rrule": {
+                        "type": "string"
+                      },
+                      "placeId": {
+                        "type": "string"
+                      },
+                      "characterId": {
+                        "type": "string"
+                      },
+                      "adherence": {
+                        "default": "free",
+                        "type": "string",
+                        "enum": [
+                          "free",
+                          "expected",
+                          "binding"
+                        ]
+                      },
+                      "activityKind": {
+                        "default": "other",
+                        "type": "string",
+                        "enum": [
+                          "sleep",
+                          "rest",
+                          "study",
+                          "exercise",
+                          "social",
+                          "travel",
+                          "other"
+                        ]
+                      },
+                      "interruptibility": {
+                        "default": "open",
+                        "type": "string",
+                        "enum": [
+                          "open",
+                          "glance",
+                          "brief",
+                          "closed"
+                        ]
+                      }
+                    },
+                    "required": [
+                      "title",
+                      "start",
+                      "timezone",
+                      "durationMinutes"
+                    ]
+                  },
+                  "start": {
+                    "type": "string"
+                  },
+                  "end": {
+                    "type": "string"
+                  },
+                  "expectedRevision": {
+                    "type": "integer",
+                    "minimum": -9007199254740991,
+                    "maximum": 9007199254740991
+                  }
+                },
+                "required": [
+                  "scope",
+                  "expectedRevision"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/activities/{id}": {
+      "get": {
+        "operationId": "activities.inspect",
+        "tags": [
+          "activities"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/activities/{id}/interrupt": {
+      "post": {
+        "operationId": "activities.interrupt",
+        "tags": [
+          "activities"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "reason"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/activities/{id}/resume": {
+      "post": {
+        "operationId": "activities.resume",
+        "tags": [
+          "activities"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/attention/reconsider": {
+      "post": {
+        "operationId": "agency.react",
+        "tags": [
+          "agency"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/attention/explanation": {
+      "get": {
+        "operationId": "agency.explainAttention",
+        "tags": [
+          "agency"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/decisions/{id}": {
+      "get": {
+        "operationId": "decisions.read",
+        "tags": [
+          "decisions"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/pursuits": {
+      "post": {
+        "operationId": "pursuits.create",
+        "tags": [
+          "pursuits"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string"
+                  },
+                  "plan": {
+                    "type": "string"
+                  },
+                  "motivationRefs": {
+                    "default": [],
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/RefInput"
+                    }
+                  },
+                  "reviewAt": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/TimePointInput"
+                      }
+                    ]
+                  },
+                  "status": {
+                    "default": "active",
+                    "type": "string",
+                    "enum": [
+                      "active",
+                      "paused",
+                      "completed",
+                      "abandoned"
+                    ]
+                  }
+                },
+                "required": [
+                  "title",
+                  "plan"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "pursuits.list",
+        "tags": [
+          "pursuits"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/pursuits/{id}": {
+      "patch": {
+        "operationId": "pursuits.change",
+        "tags": [
+          "pursuits"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/commitments/{id}": {
+      "get": {
+        "operationId": "commitments.read",
+        "tags": [
+          "commitments"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/commitments/{id}/evaluations": {
+      "post": {
+        "operationId": "commitments.evaluate",
+        "tags": [
+          "commitments"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": {
+                    "type": "string",
+                    "enum": [
+                      "fulfilled",
+                      "breached",
+                      "released",
+                      "unknown"
+                    ]
+                  },
+                  "basisRefs": {
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/RefInput"
+                    }
+                  },
+                  "coverage": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "status",
+                  "basisRefs",
+                  "coverage"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/commitments/{id}/changes": {
+      "post": {
+        "operationId": "commitments.proposeChange",
+        "tags": [
+          "commitments"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/tasks": {
+      "post": {
+        "operationId": "tasks.start",
+        "tags": [
+          "tasks"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "clientSubmissionId": {
+                    "type": "string"
+                  },
+                  "goal": {
+                    "type": "string"
+                  },
+                  "pursuitRef": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/RefInput"
+                      }
+                    ]
+                  },
+                  "activityRef": {
+                    "allOf": [
+                      {
+                        "$ref": "#/components/schemas/RefInput"
+                      }
+                    ]
+                  },
+                  "workContextId": {
+                    "type": "string"
+                  },
+                  "inputRefs": {
+                    "default": [],
+                    "type": "array",
+                    "items": {
+                      "$ref": "#/components/schemas/RefInput"
+                    }
+                  },
+                  "allowedTools": {
+                    "default": [],
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "workspaceRef": {
+                    "type": "string"
+                  },
+                  "budget": {
+                    "type": "number",
+                    "minimum": 0
+                  },
+                  "returnTarget": {
+                    "default": {},
+                    "type": "object",
+                    "properties": {
+                      "conversationId": {
+                        "allOf": [
+                          {
+                            "$ref": "#/components/schemas/ObjectIdInput"
+                          }
+                        ]
+                      },
+                      "messageId": {
+                        "allOf": [
+                          {
+                            "$ref": "#/components/schemas/ObjectIdInput"
+                          }
+                        ]
+                      }
+                    }
+                  }
+                },
+                "required": [
+                  "clientSubmissionId",
+                  "goal"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "tasks.list",
+        "tags": [
+          "tasks"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/tasks/{id}": {
+      "get": {
+        "operationId": "tasks.inspect",
+        "tags": [
+          "tasks"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/tasks/{id}/result": {
+      "get": {
+        "operationId": "tasks.readResult",
+        "tags": [
+          "tasks"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/tasks/{id}/pause": {
+      "post": {
+        "operationId": "tasks.pause",
+        "tags": [
+          "tasks"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/tasks/{id}/resume": {
+      "post": {
+        "operationId": "tasks.resume",
+        "tags": [
+          "tasks"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/tasks/{id}/cancel": {
+      "post": {
+        "operationId": "tasks.cancel",
+        "tags": [
+          "tasks"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          },
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/workspaces": {
+      "get": {
+        "operationId": "workspaces.list",
+        "tags": [
+          "workspaces"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "operationId": "workspaces.create",
+        "tags": [
+          "workspaces"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "additionalProperties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/settings/schema": {
+      "get": {
+        "operationId": "settings.describe",
+        "tags": [
+          "settings"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/settings": {
+      "get": {
+        "operationId": "settings.read",
+        "tags": [
+          "settings"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "settings.update",
+        "tags": [
+          "settings"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "scope": {
+                    "type": "string",
+                    "enum": [
+                      "installation",
+                      "subject",
+                      "role"
+                    ]
+                  },
+                  "subjectId": {
+                    "type": "string"
+                  },
+                  "role": {
+                    "type": "string"
+                  },
+                  "values": {
+                    "type": "object",
+                    "additionalProperties": {}
+                  },
+                  "expectedRevision": {
+                    "type": "number"
+                  }
+                },
+                "required": [
+                  "scope",
+                  "values"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/settings/history": {
+      "get": {
+        "operationId": "settings.history",
+        "tags": [
+          "settings"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/settings/reset": {
+      "post": {
+        "operationId": "settings.reset",
+        "tags": [
+          "settings"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "scope": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "scope"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/models": {
+      "post": {
+        "operationId": "models.register",
+        "tags": [
+          "models"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "provider": {
+                    "type": "string",
+                    "enum": [
+                      "openai-compatible"
+                    ]
+                  },
+                  "baseURL": {
+                    "type": "string",
+                    "format": "uri"
+                  },
+                  "modelId": {
+                    "type": "string"
+                  },
+                  "credentialRef": {
+                    "type": "string"
+                  },
+                  "contextLimit": {
+                    "default": 32000,
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991
+                  },
+                  "outputLimit": {
+                    "default": 2048,
+                    "type": "integer",
+                    "minimum": 0,
+                    "exclusiveMinimum": true,
+                    "maximum": 9007199254740991
+                  },
+                  "pricing": {
+                    "type": "object",
+                    "properties": {
+                      "inputPerMillion": {
+                        "type": "number",
+                        "minimum": 0
+                      },
+                      "outputPerMillion": {
+                        "type": "number",
+                        "minimum": 0
+                      }
+                    },
+                    "required": [
+                      "inputPerMillion",
+                      "outputPerMillion"
+                    ]
+                  },
+                  "capabilities": {
+                    "default": [
+                      "text"
+                    ],
+                    "type": "array",
+                    "items": {
+                      "type": "string"
+                    }
+                  },
+                  "providerOptions": {
+                    "default": {},
+                    "type": "object",
+                    "additionalProperties": {}
+                  }
+                },
+                "required": [
+                  "id",
+                  "provider",
+                  "baseURL",
+                  "modelId",
+                  "credentialRef"
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "models.list",
+        "tags": [
+          "models"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/secrets/{ref}": {
+      "put": {
+        "operationId": "secrets.set",
+        "tags": [
+          "secrets"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "value": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "value"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "ref",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "secrets.status",
+        "tags": [
+          "secrets"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "ref",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "operationId": "secrets.delete",
+        "tags": [
+          "secrets"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "ref",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/costs": {
+      "get": {
+        "operationId": "costs.read",
+        "tags": [
+          "costs"
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operations/{id}": {
+      "get": {
+        "operationId": "operations.inspect",
+        "tags": [
+          "operations"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/operations/{id}/events": {
+      "get": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "id",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/policy": {
+      "get": {
+        "operationId": "policy.read",
+        "tags": [
+          "policy"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "patch": {
+        "operationId": "policy.update",
+        "tags": [
+          "policy"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PolicyInput"
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/forks": {
+      "post": {
+        "operationId": "subjects.fork",
+        "tags": [
+          "subjects"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "displayName": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "displayName"
+                ]
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/exports": {
+      "post": {
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/imports": {
+      "post": {
+        "responses": {
+          "200": {
+            "description": "Default Response"
+          }
+        }
+      }
+    },
+    "/v1/subjects/{subjectId}/purge": {
+      "post": {
+        "operationId": "data.purge",
+        "tags": [
+          "data"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {}
+              }
+            }
+          }
+        },
+        "parameters": [
+          {
+            "schema": {
+              "type": "string"
+            },
+            "in": "path",
+            "name": "subjectId",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Default Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "name": "@heptalogos/openclaw",
+  "version": "0.1.0",
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "exports": { ".": "./index.ts", "./client": "./client.ts" },
+  "openclaw": { "extensions": ["./index.ts"] },
+  "dependencies": { "zod": "4.6.5" },
+  "peerDependencies": { "openclaw": ">=2026.10.5" },
+  "peerDependenciesMeta": { "openclaw": { "optional": true } }
+}

@@ -1,0 +1,37 @@
+{
+  "heptURL": {
+    "type": "string",
+    "default": "http://127.0.0.1:8788",
+    "description": "Hept 服务地址"
+  },
+  "heptTokenEnv": {
+    "type": "string",
+    "default": "HEPT_SERVICE_TOKEN",
+    "description": "Hept 服务令牌环境变量"
+  },
+  "controlTokenEnv": {
+    "type": "string",
+    "default": "HEPT_ASTRBOT_TOKEN",
+    "description": "渠道控制令牌环境变量"
+  },
+  "host": {
+    "type": "string",
+    "default": "127.0.0.1",
+    "description": "控制端监听地址"
+  },
+  "port": {
+    "type": "int",
+    "default": 8790,
+    "description": "控制端端口"
+  },
+  "maxMediaBytes": {
+    "type": "int",
+    "default": 52428800,
+    "description": "每项媒体保全上限"
+  },
+  "scopes": {
+    "type": "list",
+    "default": [],
+    "description": "管理范围，JSON 对象列表；subjectId、platformId、selfId、conversations"
+  }
+}

@@ -1,0 +1,1 @@
+{"name":"@heptalogos/hept","version":"0.1.0","type":"module","exports":"./src/index.ts","dependencies":{"@heptalogos/contracts":"workspace:*","@nous-wave/contracts":"link:../../../Nous-Wave/packages/contracts","@nous-wave/client":"link:../../../Nous-Wave/packages/client"}}

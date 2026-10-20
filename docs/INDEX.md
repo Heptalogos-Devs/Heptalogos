@@ -1,11 +1,7 @@
-# Human Knowledge index
+# 当前文档
 
-Use this page to choose the first human-oriented document. The [global
-repository INDEX](../INDEX.md) routes questions about Specs, project control,
-packages, tooling, and Agent Skills.
-
-| Area         | Use when / questions answered                                                               | Primary entry                                   |
-| ------------ | ------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| Product      | Product purpose, durable composition, administrator surfaces, and Control Plane experience. | [Product overview](product/README.md)           |
-| Architecture | Conceptual system shape, ownership relationships, rationale, and cross-domain views.        | [Architecture overview](architecture/README.md) |
-| Reference    | Stable terminology, developer lookup, or generated API documentation.                       | [Reference glossary](reference/glossary.md)     |
+- [应用与事务](design.md)：业务目录、持久执行、权限、调用与数据。
+- [命令与配置](../README.md)：创建安装与主体，配置模型并本地交往。
+- [AstrBot](../integrations/astrbot/README.md)：完整渠道消息与逐物理发送回执。
+- [OpenClaw](../integrations/openclaw/README.md)：专业任务、原生历史、工具与取消。
+- [施工依据](../../Specs/README.md)：本轮完整目标、契约和施工顺序。
