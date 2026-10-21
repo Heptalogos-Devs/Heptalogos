@@ -1,0 +1,2 @@
+import type { Json } from '../platform/database.js';
+export function rankOpportunities(candidates:Json[]):(Json & {score:number})[]{return candidates.map(c=>({...c,score:Number((c.notice as Json)?.mentioned??false)*2+Number(c.relationship??0)*1.2+Number(c.interest??0)+Number(c.responsibility??0)*1.5+Math.min(1,Number(c.waiting??0))*.3-Number(c.interruptionCost??0)*1.5})).sort((a,b)=>b.score-a.score).slice(0,8);}

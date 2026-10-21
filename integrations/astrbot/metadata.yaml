@@ -1,0 +1,8 @@
+name: heptalogos
+display_name: Heptalogos
+author: Heptalogos
+desc: Hept 主体的完整 OneBot 收件、媒体保全与物理发送回执
+version: 0.1.0
+support_platforms:
+  - aiocqhttp
+astrbot_version: '>=4.29.1'

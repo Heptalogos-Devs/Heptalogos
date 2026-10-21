@@ -1,0 +1,32 @@
+{
+  "name": "@heptalogos/cli",
+  "version": "0.2.0-infrastructure.1",
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "commander": "15.0.0",
+    "@clack/prompts": "1.7.0",
+    "uuid": "14.0.2",
+    "@heptalogos/hept": "workspace:*",
+    "@heptalogos/client": "workspace:*",
+    "@heptalogos/server": "workspace:*",
+    "@nous-wave/contracts": "0.2.0-infrastructure.1",
+    "@nous-wave/platform": "0.2.0-infrastructure.1"
+  },
+  "bin": {
+    "hept": "./dist/bin.js"
+  }
+}

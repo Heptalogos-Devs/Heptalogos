@@ -1,0 +1,36 @@
+{
+  "rules": [
+    {
+      "key": "technical-class",
+      "title": "技术课",
+      "place": "classroom",
+      "startLocal": "2026-10-20T08:30:00",
+      "timezone": "Asia/Shanghai",
+      "durationMinutes": 90,
+      "rrule": "FREQ=WEEKLY;BYDAY=TU,TH",
+      "adherence": "expected",
+      "interruptibility": "glance",
+      "demands": {
+        "hearing": "focused",
+        "language": "light",
+        "reasoning": "light"
+      }
+    },
+    {
+      "key": "night-sleep",
+      "title": "睡眠",
+      "place": "dorm",
+      "startLocal": "2026-10-20T23:00:00",
+      "timezone": "Asia/Shanghai",
+      "durationMinutes": 480,
+      "rrule": "FREQ=DAILY",
+      "adherence": "expected",
+      "interruptibility": "closed",
+      "demands": {}
+    }
+  ],
+  "freeWindow": {
+    "enabled": true,
+    "idleIntervalMinutes": 60
+  }
+}

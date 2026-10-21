@@ -1,0 +1,94 @@
+{
+  "id": "hept-worker",
+  "name": "Hept Worker",
+  "categories": [
+    "infrastructure"
+  ],
+  "activation": {
+    "onStartup": true
+  },
+  "configSchema": {
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "type": "object",
+    "properties": {
+      "runtimeId": {
+        "type": "string",
+        "minLength": 1
+      },
+      "subjects": {
+        "type": "object",
+        "propertyNames": {
+          "type": "string"
+        },
+        "additionalProperties": {
+          "type": "object",
+          "properties": {
+            "agentId": {
+              "type": "string"
+            },
+            "tools": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "workspaces": {
+              "default": {},
+              "type": "object",
+              "propertyNames": {
+                "type": "string"
+              },
+              "additionalProperties": {
+                "type": "string"
+              }
+            }
+          },
+          "required": [
+            "agentId",
+            "tools"
+          ]
+        }
+      },
+      "billing": {
+        "type": "object",
+        "properties": {
+          "baseURL": {
+            "type": "string",
+            "format": "uri"
+          },
+          "tokenEnv": {
+            "default": "HEPT_SERVICE_TOKEN",
+            "type": "string"
+          },
+          "modelResources": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "roles": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "baseURL",
+          "modelResources",
+          "roles"
+        ]
+      }
+    },
+    "required": [
+      "runtimeId",
+      "subjects"
+    ]
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@heptalogos/contracts",
+  "version": "0.2.0-infrastructure.1",
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "zod": "4.6.5",
+    "@nous-wave/contracts": "0.2.0-infrastructure.1"
+  }
+}

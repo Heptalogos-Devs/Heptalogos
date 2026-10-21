@@ -1,12 +1,19 @@
 {
   "compilerOptions": {
-    "target": "ESNext",
+    "target": "ES2024",
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
-    "lib": ["ES2025"],
     "strict": true,
-    "verbatimModuleSyntax": true,
-    "forceConsistentCasingInFileNames": true,
-    "skipLibCheck": false
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "sourceMap": true,
+    "resolveJsonModule": true,
+    "types": [
+      "node"
+    ],
+    "customConditions": [
+      "development"
+    ]
   }
 }

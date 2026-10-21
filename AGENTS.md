@@ -1,62 +1,13 @@
-# AGENTS.md
+# Heptalogos
 
-Repository-wide execution contract for Heptalogos.
+从空数据重建，PRE_PRODUCTION。当前建设依据是同级 `Specs/README.md`、`项目宪纲.md`、`施工顺序.md` 和对应领域设计；旧源码与旧计划保留在 Git 历史供查阅。
 
-## Work authorization
+使用已定的两个模块化 TypeScript 服务、产品数据库及模块事务边界。业务入口为 `createHept`；HTTP、CLI、工作流调用同一 owner。正式目录：`apps/server`、`apps/cli`、`packages/hept/src/{identity,communication,world,agency,work,management,platform}`、`packages/contracts`、`packages/client`、`packages/console`、`integrations`、`packages/hept/migrations`。
 
-Implement only the explicitly designated active Plan. A Plan authorizes bounded work; it does not create permanent product semantics. If execution requires a new product owner, durable state distinction, authority rule, failure model or provider role that the Plan does not decide, report `PLAN_GAP`.
+共享纯值从 `@nous-wave/contracts/common` 引入；长期认知只通过 Nous Client。通信保存完整有序 parts、来源身份、实际感知和逐物理调用回执。世界作者私密信息保留在 world，表达输入按实际听众组织。模型 actor、权限、时间和用途由受信宿主提供。
 
-## Design authority
+短修改用 Kysely；完整持久操作使用 DBOS 与官方 Kysely datasource；模型调用采用 AI SDK 和官方 durableCalls。不建立第二套队列、步骤、租约或恢复解释器。通用能力直接采用第三方。上游扩展在实际 owner 的源码改编并构建，安装不搜改 node_modules。
 
-Long-term Heptalogos and Nous Wave target design lives in `Heptalogos-Devs/Architecture-Vault`.
+修改所有当前消费者并删除被替代结构。测试复用少量实际轨迹及必要规则，不为薄转发、生成代码和库机制另建支架。运行 `pnpm typecheck`、受影响测试及构建；当前文档描述实际代码。各包正常编译至 `dist/`，使用 pnpm pack/deploy；新增下载、缓存和安装试验放工作区 `temp/`，已有 `data/` 就地读取。
 
-For architecture work, read the relevant Vault target design, accepted decisions and cross-system contract. For normal coding, read only the design material named by the active Plan; broad architecture research is not default implementation context.
-
-Repository authority for implementation work is:
-
-1. root and scoped `AGENTS.md`;
-2. `project/governance/project-charter.md` and `project/governance/constitution.md`;
-3. the designated active Plan;
-4. current repository Specs and dependency decisions required by that Plan;
-5. current implementation-facing architecture and package documentation;
-6. code, tests and focused verification.
-
-A repository Spec must implement the accepted target design. Existing code or an older Spec does not override Vault target semantics.
-
-## Product split
-
-Heptalogos owns product runtime and agency: interaction, Reaction, Pursuit, behavior review and commit, commitments, messaging effects, system management and runtime reliability.
-
-Nous Wave owns long-term cognition: Memory, Self, Social Cognition, Motivation and cognitive runtime. Cognition reaches Heptalogos through typed queries, context and proposals. Heptalogos does not duplicate the cognition ontology.
-
-## Rapid PRE_PRODUCTION
-
-`DevelopmentMode = RAPID_EVOLUTION` and `CompatibilityEpoch = PRE_PRODUCTION`.
-
-Existing code, tests and documents have no preservation privilege. Remove or rewrite obsolete development shapes directly. Add compatibility only when a current obligation declares it.
-
-## Ownership and mechanics
-
-Canonical mutations stay behind their semantic owner. Use mature libraries and platform facilities for generic mechanics when suitable. Framework objects remain behind owned adapters and do not become product Authority.
-
-Read `project/dependencies/README.md` before changing generic mechanics or Provider routes. The decision ledger records `ADOPTED` roles; `dependency-routing.json` records their machine-readable routes and `USE` directives. Implement the selected route behind its declared adapter; an unresolved foundational Provider choice is `PLAN_GAP`.
-
-Do not let Provider or queue-private pressure thresholds silently decide product admission or degradation. Resource-pressure state and its Authority/Readiness effects belong to the owning product contract.
-
-Do not add speculative state, background workers, rollback paths, recovery machinery, generic abstractions or test seams without a current consumer, invariant, accepted failure model or explicit Plan requirement.
-
-## Evidence
-
-Claims use PASS, FAIL, NOT_RUN or BLOCKED and stay within the boundary actually exercised. Current documents describe current truth. Git history, completed Plans and retained qualification evidence preserve chronology.
-
-## Current execution policy
-
-Ordinary GitHub Actions are not a required execution route. Keep `pnpm verify` runnable and use the verification required by the active Plan.
-
-## Verification and process cost
-
-TDD is optional. Tests must protect a current contract, observed risk, or meaningful uncertainty; do not add tests merely to show that unimplemented behavior is absent. During iteration, use the narrowest check that can falsify the change. Do not add speculative validators, recovery layers, or process gates for hypothetical future work.
-
-## Completion
-
-When the Plan's acceptance conditions and required executable proof are complete, stop. Further cleanup or hardening requires new authorization.
+遵循 AntiRLHF：让用户目标决定下一步，持续保留 Objective、Decisions、Current Work；直接修正式 owner，完成授权工作。默认分支仅集成，提交使用 PR 与 squash merge。

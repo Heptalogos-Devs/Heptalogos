@@ -1,0 +1,12 @@
+Heptalogos — AGPL-3.0-only
+
+Clock authority algorithms in src/time/index.ts and lifecycle.ts are ported from
+Nous-Wave crates/runtime/src/subject_clock.rs at commit
+412b062082afb75ccfae4c3f69fc606d3e3cc862.
+Copyright 2026 Aravine Zhu. Original algorithms Apache-2.0;
+see LICENSES/Apache-2.0.txt. Hept ownership/segments/policy adaptations are AGPL-3.0-only.
+
+World calendar and Host lifecycle behavior are copied/adapted from Heptalogos
+world-calendar.ts, world-lifecycle.ts and world-host-runtime.ts at commit
+21f0080460f3ee639deb9f5ea47282fb6c59df95.
+Copyright 2026 Aravine Zhu. AGPL-3.0-only.

@@ -1,0 +1,20 @@
+formatVersion = 1
+title = "校园生活"
+defaultTimezone = "Asia/Shanghai"
+entryPoint = "dorm"
+background = "background.md"
+places = "places.json"
+characters = "characters.json"
+calendar = "calendar.json"
+rules = "rules.md"
+initialState = "initial-state.json"
+
+[clock]
+mode = "scaled"
+initialTime = "2026-10-20T08:00:00+08:00"
+rate = "1"
+offlinePolicy = { mode = "freeze" }
+
+[visibility]
+publicFiles = ["background.md", "places.json", "calendar.json"]
+authorFiles = ["characters.json", "rules.md"]

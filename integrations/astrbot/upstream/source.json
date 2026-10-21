@@ -1,0 +1,9 @@
+{
+  "repository": "https://github.com/AstrBotDevs/AstrBot",
+  "commit": "fc6b326fc9012873c4adc0183256c90d34a3d912",
+  "version": "4.29.1",
+  "patch": "physical-receipts.patch",
+  "license": "AGPL-3.0-or-later",
+  "modifiedCommit": "347b2a3d9365245656bef7b0ef1f7e0c79f101f2",
+  "patchSha256": "f77fc2b3b6583566525b1e52a64b916fbe4880da193500f112913d3e0c87e9b1"
+}

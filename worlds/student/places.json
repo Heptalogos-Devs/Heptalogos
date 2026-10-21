@@ -1,0 +1,47 @@
+{
+  "places": [
+    {
+      "key": "dorm",
+      "name": "宿舍",
+      "devices": [
+        "phone",
+        "computer"
+      ],
+      "publicDescription": "有桌面、书架和休息空间。"
+    },
+    {
+      "key": "classroom",
+      "name": "教学楼教室",
+      "devices": [
+        "phone",
+        "notebook"
+      ],
+      "publicDescription": "上课时有老师与同学，手机通常保持安静。"
+    },
+    {
+      "key": "garden",
+      "name": "校园步道",
+      "devices": [
+        "phone"
+      ],
+      "publicDescription": "可以散步、听音乐和短暂交谈。"
+    }
+  ],
+  "routes": [
+    {
+      "from": "dorm",
+      "to": "classroom",
+      "durationMinutes": 15
+    },
+    {
+      "from": "dorm",
+      "to": "garden",
+      "durationMinutes": 5
+    },
+    {
+      "from": "garden",
+      "to": "classroom",
+      "durationMinutes": 10
+    }
+  ]
+}

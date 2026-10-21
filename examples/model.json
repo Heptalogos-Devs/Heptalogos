@@ -1,0 +1,14 @@
+{
+  "id": "subject-model",
+  "provider": "openai-compatible",
+  "baseURL": "http://127.0.0.1:3000/v1",
+  "modelId": "your-model-id",
+  "credentialRef": "env:HEPT_MODEL_API_KEY",
+  "contextLimit": 32000,
+  "outputLimit": 1024,
+  "capabilities": [
+    "text",
+    "structured"
+  ],
+  "providerOptions": {}
+}

@@ -1,0 +1,44 @@
+{
+  "name": "@heptalogos/openclaw",
+  "version": "0.2.0-infrastructure.1",
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "files": [
+    "dist",
+    "LICENSE",
+    "openclaw.plugin.json",
+    "README.md"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./client": {
+      "types": "./dist/client.d.ts",
+      "default": "./dist/client.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "zod": "4.6.5",
+    "@nous-wave/contracts": "0.2.0-infrastructure.1",
+    "@heptalogos/client": "workspace:*",
+    "@heptalogos/contracts": "workspace:*"
+  },
+  "openclaw": {
+    "extensions": [
+      "./dist/index.js"
+    ]
+  },
+  "peerDependencies": {
+    "openclaw": ">=2026.10.5"
+  },
+  "peerDependenciesMeta": {
+    "openclaw": {
+      "optional": true
+    }
+  }
+}

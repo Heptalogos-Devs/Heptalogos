@@ -2,94 +2,22 @@
   "files": [],
   "references": [
     {
-      "path": "./packages/foundation/foundation-contracts"
+      "path": "packages/contracts"
     },
     {
-      "path": "./packages/bootstrap/bootstrap-state"
+      "path": "packages/client"
     },
     {
-      "path": "./packages/bootstrap/private-postgres"
+      "path": "integrations/openclaw"
     },
     {
-      "path": "./packages/bootstrap/bootstrap-runtime"
+      "path": "packages/hept"
     },
     {
-      "path": "./packages/bootstrap/host-ownership"
+      "path": "apps/server"
     },
     {
-      "path": "./packages/data/persistence"
-    },
-    {
-      "path": "./packages/data/canonical-schema"
-    },
-    {
-      "path": "./packages/foundation/schema-runtime"
-    },
-    {
-      "path": "./packages/foundation/time-service"
-    },
-    {
-      "path": "./packages/execution/execution-lineage"
-    },
-    {
-      "path": "./packages/execution/evidence"
-    },
-    {
-      "path": "./packages/runtime/runtime-substrate"
-    },
-    {
-      "path": "./packages/runtime/runtime-kernel"
-    },
-    {
-      "path": "./packages/execution/signal"
-    },
-    {
-      "path": "./packages/execution/work-queue"
-    },
-    {
-      "path": "./packages/execution/durable-execution"
-    },
-    {
-      "path": "./packages/product/messaging"
-    },
-    {
-      "path": "./packages/product/subject"
-    },
-    {
-      "path": "./packages/execution/effect-operation"
-    },
-    {
-      "path": "./packages/system/os-credential"
-    },
-    {
-      "path": "./packages/system/management"
-    },
-    {
-      "path": "./packages/application/management-client"
-    },
-    {
-      "path": "./packages/application/product-host"
-    },
-    {
-      "path": "./packages/application/cli"
-    },
-    {
-      "path": "./packages/system/network-access"
-    },
-    {
-      "path": "./packages/system/configuration"
-    },
-    {
-      "path": "./packages/system/ai-runtime"
-    },
-    {
-      "path": "./packages/system/secret"
-    },
-    {
-      "path": "./packages/product/identity"
-    },
-    {
-      "path": "./packages/application/openclaw-host"
+      "path": "apps/cli"
     }
   ]
 }

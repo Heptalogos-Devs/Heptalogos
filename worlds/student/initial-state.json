@@ -1,0 +1,14 @@
+{
+  "place": "dorm",
+  "energy": 0.8,
+  "fatigue": 0.15,
+  "mood": {
+    "valence": 0.2,
+    "arousal": 0.3
+  },
+  "availableDevices": [
+    "phone",
+    "computer"
+  ],
+  "nextActivity": "technical-class"
+}
