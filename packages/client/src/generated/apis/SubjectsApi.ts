@@ -19,7 +19,7 @@ import type {
     SubjectsForkRequest,
 } from '../models/index.js';
 
-export interface SubjectsBindOperationRequest {
+export interface SubjectsApiSubjectsBindOperationRequest {
     /**
      * 
      */
@@ -30,21 +30,21 @@ export interface SubjectsBindOperationRequest {
     subjectsBindRequest: SubjectsBindRequest;
 }
 
-export interface SubjectsChangesRequest {
+export interface SubjectsApiSubjectsChangesRequest {
     /**
      * 
      */
     subjectId: string;
 }
 
-export interface SubjectsCreateOperationRequest {
+export interface SubjectsApiSubjectsCreateOperationRequest {
     /**
      * 
      */
     subjectsCreateRequest: SubjectsCreateRequest;
 }
 
-export interface SubjectsForkOperationRequest {
+export interface SubjectsApiSubjectsForkOperationRequest {
     /**
      * 
      */
@@ -55,7 +55,7 @@ export interface SubjectsForkOperationRequest {
     subjectsForkRequest: SubjectsForkRequest;
 }
 
-export interface SubjectsPauseRequest {
+export interface SubjectsApiSubjectsPauseRequest {
     /**
      * 
      */
@@ -66,14 +66,14 @@ export interface SubjectsPauseRequest {
     requestBody: { [key: string]: any; };
 }
 
-export interface SubjectsReadRequest {
+export interface SubjectsApiSubjectsReadRequest {
     /**
      * 
      */
     subjectId: string;
 }
 
-export interface SubjectsStartRequest {
+export interface SubjectsApiSubjectsStartRequest {
     /**
      * 
      */
@@ -84,7 +84,7 @@ export interface SubjectsStartRequest {
     requestBody: { [key: string]: any; };
 }
 
-export interface SubjectsStopRequest {
+export interface SubjectsApiSubjectsStopRequest {
     /**
      * 
      */
@@ -103,7 +103,7 @@ export class SubjectsApi extends runtime.BaseAPI {
     /**
      * Creates request options for subjectsBind without sending the request
      */
-    async subjectsBindRequestOpts(requestParameters: SubjectsBindOperationRequest): Promise<runtime.RequestOpts> {
+    async subjectsBindRequestOpts(requestParameters: SubjectsApiSubjectsBindOperationRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -147,7 +147,7 @@ export class SubjectsApi extends runtime.BaseAPI {
 
     /**
      */
-    async subjectsBindRaw(requestParameters: SubjectsBindOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async subjectsBindRaw(requestParameters: SubjectsApiSubjectsBindOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.subjectsBindRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -160,7 +160,7 @@ export class SubjectsApi extends runtime.BaseAPI {
 
     /**
      */
-    async subjectsBind(requestParameters: SubjectsBindOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async subjectsBind(requestParameters: SubjectsApiSubjectsBindOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.subjectsBindRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -168,7 +168,7 @@ export class SubjectsApi extends runtime.BaseAPI {
     /**
      * Creates request options for subjectsChanges without sending the request
      */
-    async subjectsChangesRequestOpts(requestParameters: SubjectsChangesRequest): Promise<runtime.RequestOpts> {
+    async subjectsChangesRequestOpts(requestParameters: SubjectsApiSubjectsChangesRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -202,7 +202,7 @@ export class SubjectsApi extends runtime.BaseAPI {
 
     /**
      */
-    async subjectsChangesRaw(requestParameters: SubjectsChangesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async subjectsChangesRaw(requestParameters: SubjectsApiSubjectsChangesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.subjectsChangesRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -215,7 +215,7 @@ export class SubjectsApi extends runtime.BaseAPI {
 
     /**
      */
-    async subjectsChanges(requestParameters: SubjectsChangesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async subjectsChanges(requestParameters: SubjectsApiSubjectsChangesRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.subjectsChangesRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -223,7 +223,7 @@ export class SubjectsApi extends runtime.BaseAPI {
     /**
      * Creates request options for subjectsCreate without sending the request
      */
-    async subjectsCreateRequestOpts(requestParameters: SubjectsCreateOperationRequest): Promise<runtime.RequestOpts> {
+    async subjectsCreateRequestOpts(requestParameters: SubjectsApiSubjectsCreateOperationRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectsCreateRequest'] == null) {
             throw new runtime.RequiredError(
                 'subjectsCreateRequest',
@@ -259,7 +259,7 @@ export class SubjectsApi extends runtime.BaseAPI {
 
     /**
      */
-    async subjectsCreateRaw(requestParameters: SubjectsCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async subjectsCreateRaw(requestParameters: SubjectsApiSubjectsCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.subjectsCreateRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -272,7 +272,7 @@ export class SubjectsApi extends runtime.BaseAPI {
 
     /**
      */
-    async subjectsCreate(requestParameters: SubjectsCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async subjectsCreate(requestParameters: SubjectsApiSubjectsCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.subjectsCreateRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -280,7 +280,7 @@ export class SubjectsApi extends runtime.BaseAPI {
     /**
      * Creates request options for subjectsFork without sending the request
      */
-    async subjectsForkRequestOpts(requestParameters: SubjectsForkOperationRequest): Promise<runtime.RequestOpts> {
+    async subjectsForkRequestOpts(requestParameters: SubjectsApiSubjectsForkOperationRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -324,7 +324,7 @@ export class SubjectsApi extends runtime.BaseAPI {
 
     /**
      */
-    async subjectsForkRaw(requestParameters: SubjectsForkOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async subjectsForkRaw(requestParameters: SubjectsApiSubjectsForkOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.subjectsForkRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -337,7 +337,7 @@ export class SubjectsApi extends runtime.BaseAPI {
 
     /**
      */
-    async subjectsFork(requestParameters: SubjectsForkOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async subjectsFork(requestParameters: SubjectsApiSubjectsForkOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.subjectsForkRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -392,7 +392,7 @@ export class SubjectsApi extends runtime.BaseAPI {
     /**
      * Creates request options for subjectsPause without sending the request
      */
-    async subjectsPauseRequestOpts(requestParameters: SubjectsPauseRequest): Promise<runtime.RequestOpts> {
+    async subjectsPauseRequestOpts(requestParameters: SubjectsApiSubjectsPauseRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -436,7 +436,7 @@ export class SubjectsApi extends runtime.BaseAPI {
 
     /**
      */
-    async subjectsPauseRaw(requestParameters: SubjectsPauseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async subjectsPauseRaw(requestParameters: SubjectsApiSubjectsPauseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.subjectsPauseRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -449,7 +449,7 @@ export class SubjectsApi extends runtime.BaseAPI {
 
     /**
      */
-    async subjectsPause(requestParameters: SubjectsPauseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async subjectsPause(requestParameters: SubjectsApiSubjectsPauseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.subjectsPauseRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -457,7 +457,7 @@ export class SubjectsApi extends runtime.BaseAPI {
     /**
      * Creates request options for subjectsRead without sending the request
      */
-    async subjectsReadRequestOpts(requestParameters: SubjectsReadRequest): Promise<runtime.RequestOpts> {
+    async subjectsReadRequestOpts(requestParameters: SubjectsApiSubjectsReadRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -491,7 +491,7 @@ export class SubjectsApi extends runtime.BaseAPI {
 
     /**
      */
-    async subjectsReadRaw(requestParameters: SubjectsReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async subjectsReadRaw(requestParameters: SubjectsApiSubjectsReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.subjectsReadRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -504,7 +504,7 @@ export class SubjectsApi extends runtime.BaseAPI {
 
     /**
      */
-    async subjectsRead(requestParameters: SubjectsReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async subjectsRead(requestParameters: SubjectsApiSubjectsReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.subjectsReadRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -512,7 +512,7 @@ export class SubjectsApi extends runtime.BaseAPI {
     /**
      * Creates request options for subjectsStart without sending the request
      */
-    async subjectsStartRequestOpts(requestParameters: SubjectsStartRequest): Promise<runtime.RequestOpts> {
+    async subjectsStartRequestOpts(requestParameters: SubjectsApiSubjectsStartRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -556,7 +556,7 @@ export class SubjectsApi extends runtime.BaseAPI {
 
     /**
      */
-    async subjectsStartRaw(requestParameters: SubjectsStartRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async subjectsStartRaw(requestParameters: SubjectsApiSubjectsStartRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.subjectsStartRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -569,7 +569,7 @@ export class SubjectsApi extends runtime.BaseAPI {
 
     /**
      */
-    async subjectsStart(requestParameters: SubjectsStartRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async subjectsStart(requestParameters: SubjectsApiSubjectsStartRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.subjectsStartRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -577,7 +577,7 @@ export class SubjectsApi extends runtime.BaseAPI {
     /**
      * Creates request options for subjectsStop without sending the request
      */
-    async subjectsStopRequestOpts(requestParameters: SubjectsStopRequest): Promise<runtime.RequestOpts> {
+    async subjectsStopRequestOpts(requestParameters: SubjectsApiSubjectsStopRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -621,7 +621,7 @@ export class SubjectsApi extends runtime.BaseAPI {
 
     /**
      */
-    async subjectsStopRaw(requestParameters: SubjectsStopRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async subjectsStopRaw(requestParameters: SubjectsApiSubjectsStopRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.subjectsStopRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -634,7 +634,7 @@ export class SubjectsApi extends runtime.BaseAPI {
 
     /**
      */
-    async subjectsStop(requestParameters: SubjectsStopRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async subjectsStop(requestParameters: SubjectsApiSubjectsStopRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.subjectsStopRaw(requestParameters, initOverrides);
         return await response.value();
     }

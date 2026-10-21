@@ -12,8 +12,8 @@ initialState = "initial-state.json"
 [clock]
 mode = "scaled"
 initialTime = "2026-10-20T08:00:00+08:00"
-rate = 1.0
-offlinePolicy = "freeze"
+rate = "1"
+offlinePolicy = { mode = "freeze" }
 
 [visibility]
 publicFiles = ["background.md", "places.json", "calendar.json"]

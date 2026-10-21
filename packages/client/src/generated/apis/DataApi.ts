@@ -16,7 +16,28 @@ import * as runtime from '../runtime.js';
 import type {
 } from '../models/index.js';
 
-export interface DataPurgeRequest {
+export interface DataApiDataExportRequest {
+    /**
+     * 
+     */
+    subjectId: string;
+}
+
+export interface DataApiDataImportRequest {
+    /**
+     * 
+     */
+    body: BodyInit;
+}
+
+export interface DataApiDataPreviewImportRequest {
+    /**
+     * 
+     */
+    body: BodyInit;
+}
+
+export interface DataApiDataPurgeRequest {
     /**
      * 
      */
@@ -33,9 +54,164 @@ export interface DataPurgeRequest {
 export class DataApi extends runtime.BaseAPI {
 
     /**
+     * Creates request options for dataExport without sending the request
+     */
+    async dataExportRequestOpts(requestParameters: DataApiDataExportRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['subjectId'] == null) {
+            throw new runtime.RequiredError(
+                'subjectId',
+                'Required parameter "subjectId" was null or undefined when calling dataExport().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/subjects/{subjectId}/exports`;
+        urlPath = urlPath.replace('{subjectId}', encodeURIComponent(String(requestParameters['subjectId'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async dataExportRaw(requestParameters: DataApiDataExportRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<runtime.HttpFile>> {
+        const requestOptions = await this.dataExportRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.BlobApiResponse(response);
+    }
+
+    /**
+     */
+    async dataExport(requestParameters: DataApiDataExportRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.HttpFile> {
+        const response = await this.dataExportRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for dataImport without sending the request
+     */
+    async dataImportRequestOpts(requestParameters: DataApiDataImportRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['body'] == null) {
+            throw new runtime.RequiredError(
+                'body',
+                'Required parameter "body" was null or undefined when calling dataImport().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/zip';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/imports`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: requestParameters['body'] as any,
+        };
+    }
+
+    /**
+     */
+    async dataImportRaw(requestParameters: DataApiDataImportRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.dataImportRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async dataImport(requestParameters: DataApiDataImportRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.dataImportRaw(requestParameters, initOverrides);
+    }
+
+    /**
+     * Creates request options for dataPreviewImport without sending the request
+     */
+    async dataPreviewImportRequestOpts(requestParameters: DataApiDataPreviewImportRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['body'] == null) {
+            throw new runtime.RequiredError(
+                'body',
+                'Required parameter "body" was null or undefined when calling dataPreviewImport().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/zip';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/imports/preview`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: requestParameters['body'] as any,
+        };
+    }
+
+    /**
+     */
+    async dataPreviewImportRaw(requestParameters: DataApiDataPreviewImportRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+        const requestOptions = await this.dataPreviewImportRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.VoidApiResponse(response);
+    }
+
+    /**
+     */
+    async dataPreviewImport(requestParameters: DataApiDataPreviewImportRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+        await this.dataPreviewImportRaw(requestParameters, initOverrides);
+    }
+
+    /**
      * Creates request options for dataPurge without sending the request
      */
-    async dataPurgeRequestOpts(requestParameters: DataPurgeRequest): Promise<runtime.RequestOpts> {
+    async dataPurgeRequestOpts(requestParameters: DataApiDataPurgeRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -79,7 +255,7 @@ export class DataApi extends runtime.BaseAPI {
 
     /**
      */
-    async dataPurgeRaw(requestParameters: DataPurgeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async dataPurgeRaw(requestParameters: DataApiDataPurgeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.dataPurgeRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -92,7 +268,7 @@ export class DataApi extends runtime.BaseAPI {
 
     /**
      */
-    async dataPurge(requestParameters: DataPurgeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async dataPurge(requestParameters: DataApiDataPurgeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.dataPurgeRaw(requestParameters, initOverrides);
         return await response.value();
     }

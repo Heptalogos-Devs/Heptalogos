@@ -14,13 +14,42 @@
 
 import * as runtime from '../runtime.js';
 import type {
+    OperationControlInput,
+    OperationTrace,
+    OperationView,
 } from '../models/index.js';
 
-export interface OperationsInspectRequest {
+export interface OperationsApiOperationsInspectRequest {
     /**
      * 
      */
     id: string;
+    /**
+     * 
+     */
+    subjectId?: string;
+}
+
+export interface OperationsApiOperationsResumeRequest {
+    /**
+     * 
+     */
+    id: string;
+    /**
+     * 
+     */
+    operationControlInput: OperationControlInput;
+}
+
+export interface OperationsApiOperationsTraceRequest {
+    /**
+     * 
+     */
+    id: string;
+    /**
+     * 
+     */
+    subjectId?: string;
 }
 
 /**
@@ -31,7 +60,7 @@ export class OperationsApi extends runtime.BaseAPI {
     /**
      * Creates request options for operationsInspect without sending the request
      */
-    async operationsInspectRequestOpts(requestParameters: OperationsInspectRequest): Promise<runtime.RequestOpts> {
+    async operationsInspectRequestOpts(requestParameters: OperationsApiOperationsInspectRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -40,6 +69,10 @@ export class OperationsApi extends runtime.BaseAPI {
         }
 
         const queryParameters: any = {};
+
+        if (requestParameters['subjectId'] != null) {
+            queryParameters['subjectId'] = requestParameters['subjectId'];
+        }
 
         const headerParameters: runtime.HTTPHeaders = {};
 
@@ -65,21 +98,133 @@ export class OperationsApi extends runtime.BaseAPI {
 
     /**
      */
-    async operationsInspectRaw(requestParameters: OperationsInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async operationsInspectRaw(requestParameters: OperationsApiOperationsInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<OperationView>> {
         const requestOptions = await this.operationsInspectRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        if (this.isJsonMime(response.headers.get('content-type'))) {
-            return new runtime.JSONApiResponse<any>(response);
-        } else {
-            return new runtime.TextApiResponse(response) as any;
-        }
+        return new runtime.JSONApiResponse(response);
     }
 
     /**
      */
-    async operationsInspect(requestParameters: OperationsInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async operationsInspect(requestParameters: OperationsApiOperationsInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<OperationView> {
         const response = await this.operationsInspectRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for operationsResume without sending the request
+     */
+    async operationsResumeRequestOpts(requestParameters: OperationsApiOperationsResumeRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling operationsResume().'
+            );
+        }
+
+        if (requestParameters['operationControlInput'] == null) {
+            throw new runtime.RequiredError(
+                'operationControlInput',
+                'Required parameter "operationControlInput" was null or undefined when calling operationsResume().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/operations/{id}/resume`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: requestParameters['operationControlInput'],
+        };
+    }
+
+    /**
+     */
+    async operationsResumeRaw(requestParameters: OperationsApiOperationsResumeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<OperationView>> {
+        const requestOptions = await this.operationsResumeRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     */
+    async operationsResume(requestParameters: OperationsApiOperationsResumeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<OperationView> {
+        const response = await this.operationsResumeRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for operationsTrace without sending the request
+     */
+    async operationsTraceRequestOpts(requestParameters: OperationsApiOperationsTraceRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling operationsTrace().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['subjectId'] != null) {
+            queryParameters['subjectId'] = requestParameters['subjectId'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/operations/{id}/trace`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async operationsTraceRaw(requestParameters: OperationsApiOperationsTraceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<OperationTrace>> {
+        const requestOptions = await this.operationsTraceRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     */
+    async operationsTrace(requestParameters: OperationsApiOperationsTraceRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<OperationTrace> {
+        const response = await this.operationsTraceRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

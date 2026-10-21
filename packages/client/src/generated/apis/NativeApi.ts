@@ -14,10 +14,10 @@
 
 import * as runtime from '../runtime.js';
 import type {
-    EffectsResolveRequest,
+    NativeAuthorityCheckRequest,
 } from '../models/index.js';
 
-export interface EffectsResolveOperationRequest {
+export interface NativeApiNativeAuthorityCheckOperationRequest {
     /**
      * 
      */
@@ -25,40 +25,29 @@ export interface EffectsResolveOperationRequest {
     /**
      * 
      */
-    id: string;
-    /**
-     * 
-     */
-    effectsResolveRequest: EffectsResolveRequest;
+    nativeAuthorityCheckRequest: NativeAuthorityCheckRequest;
 }
 
 /**
  * 
  */
-export class EffectsApi extends runtime.BaseAPI {
+export class NativeApi extends runtime.BaseAPI {
 
     /**
-     * Creates request options for effectsResolve without sending the request
+     * Creates request options for nativeAuthorityCheck without sending the request
      */
-    async effectsResolveRequestOpts(requestParameters: EffectsResolveOperationRequest): Promise<runtime.RequestOpts> {
+    async nativeAuthorityCheckRequestOpts(requestParameters: NativeApiNativeAuthorityCheckOperationRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
-                'Required parameter "subjectId" was null or undefined when calling effectsResolve().'
+                'Required parameter "subjectId" was null or undefined when calling nativeAuthorityCheck().'
             );
         }
 
-        if (requestParameters['id'] == null) {
+        if (requestParameters['nativeAuthorityCheckRequest'] == null) {
             throw new runtime.RequiredError(
-                'id',
-                'Required parameter "id" was null or undefined when calling effectsResolve().'
-            );
-        }
-
-        if (requestParameters['effectsResolveRequest'] == null) {
-            throw new runtime.RequiredError(
-                'effectsResolveRequest',
-                'Required parameter "effectsResolveRequest" was null or undefined when calling effectsResolve().'
+                'nativeAuthorityCheckRequest',
+                'Required parameter "nativeAuthorityCheckRequest" was null or undefined when calling nativeAuthorityCheck().'
             );
         }
 
@@ -77,23 +66,22 @@ export class EffectsApi extends runtime.BaseAPI {
             }
         }
 
-        let urlPath = `/v1/subjects/{subjectId}/effects/{id}/resolution`;
+        let urlPath = `/v1/subjects/{subjectId}/native-authority/check`;
         urlPath = urlPath.replace('{subjectId}', encodeURIComponent(String(requestParameters['subjectId'])));
-        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
 
         return {
             path: urlPath,
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: requestParameters['effectsResolveRequest'],
+            body: requestParameters['nativeAuthorityCheckRequest'],
         };
     }
 
     /**
      */
-    async effectsResolveRaw(requestParameters: EffectsResolveOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
-        const requestOptions = await this.effectsResolveRequestOpts(requestParameters);
+    async nativeAuthorityCheckRaw(requestParameters: NativeApiNativeAuthorityCheckOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+        const requestOptions = await this.nativeAuthorityCheckRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
         if (this.isJsonMime(response.headers.get('content-type'))) {
@@ -105,8 +93,8 @@ export class EffectsApi extends runtime.BaseAPI {
 
     /**
      */
-    async effectsResolve(requestParameters: EffectsResolveOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
-        const response = await this.effectsResolveRaw(requestParameters, initOverrides);
+    async nativeAuthorityCheck(requestParameters: NativeApiNativeAuthorityCheckOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+        const response = await this.nativeAuthorityCheckRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

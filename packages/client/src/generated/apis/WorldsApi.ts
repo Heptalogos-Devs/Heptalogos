@@ -17,7 +17,7 @@ import type {
     WorldsPreviewRequest,
 } from '../models/index.js';
 
-export interface WorldsCreateRequest {
+export interface WorldsApiWorldsCreateRequest {
     /**
      * 
      */
@@ -28,7 +28,7 @@ export interface WorldsCreateRequest {
     worldsPreviewRequest: WorldsPreviewRequest;
 }
 
-export interface WorldsPreviewOperationRequest {
+export interface WorldsApiWorldsPreviewOperationRequest {
     /**
      * 
      */
@@ -47,7 +47,7 @@ export class WorldsApi extends runtime.BaseAPI {
     /**
      * Creates request options for worldsCreate without sending the request
      */
-    async worldsCreateRequestOpts(requestParameters: WorldsCreateRequest): Promise<runtime.RequestOpts> {
+    async worldsCreateRequestOpts(requestParameters: WorldsApiWorldsCreateRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -91,7 +91,7 @@ export class WorldsApi extends runtime.BaseAPI {
 
     /**
      */
-    async worldsCreateRaw(requestParameters: WorldsCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async worldsCreateRaw(requestParameters: WorldsApiWorldsCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.worldsCreateRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -104,7 +104,7 @@ export class WorldsApi extends runtime.BaseAPI {
 
     /**
      */
-    async worldsCreate(requestParameters: WorldsCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async worldsCreate(requestParameters: WorldsApiWorldsCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.worldsCreateRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -112,7 +112,7 @@ export class WorldsApi extends runtime.BaseAPI {
     /**
      * Creates request options for worldsPreview without sending the request
      */
-    async worldsPreviewRequestOpts(requestParameters: WorldsPreviewOperationRequest): Promise<runtime.RequestOpts> {
+    async worldsPreviewRequestOpts(requestParameters: WorldsApiWorldsPreviewOperationRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -156,7 +156,7 @@ export class WorldsApi extends runtime.BaseAPI {
 
     /**
      */
-    async worldsPreviewRaw(requestParameters: WorldsPreviewOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async worldsPreviewRaw(requestParameters: WorldsApiWorldsPreviewOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.worldsPreviewRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -169,7 +169,7 @@ export class WorldsApi extends runtime.BaseAPI {
 
     /**
      */
-    async worldsPreview(requestParameters: WorldsPreviewOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async worldsPreview(requestParameters: WorldsApiWorldsPreviewOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.worldsPreviewRaw(requestParameters, initOverrides);
         return await response.value();
     }

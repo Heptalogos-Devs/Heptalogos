@@ -1,6 +1,6 @@
 {
   "name": "heptalogos",
-  "version": "0.1.0",
+  "version": "0.2.0-infrastructure.1",
   "private": true,
   "type": "module",
   "license": "AGPL-3.0-only",
@@ -9,48 +9,23 @@
     "node": ">=24.21.0"
   },
   "scripts": {
-    "build": "tsx --conditions=development scripts/build.ts",
-    "typecheck": "tsc --noEmit",
-    "test": "tsx --conditions=development --test tests/*.test.ts",
-    "format": "biome format --write apps packages migrations tests scripts",
+    "build": "tsc -b",
+    "typecheck": "tsc -b && tsc -p tsconfig.check.json --noEmit",
+    "test": "tsx --test tests/*.test.ts",
+    "format": "biome format --write apps packages integrations tests scripts",
     "verify": "pnpm typecheck && pnpm test && pnpm build",
-    "hept": "tsx --conditions=development apps/cli/src/index.ts",
-    "serve": "tsx --conditions=development apps/server/src/index.ts",
-    "generate": "tsx --conditions=development scripts/generate.ts",
-    "build:esm": "tsc -p tsconfig.json"
+    "hept": "node apps/cli/dist/bin.js",
+    "serve": "node apps/server/dist/index.js",
+    "generate": "tsx scripts/generate.ts",
+    "clean": "tsc -b --clean",
+    "pack:packages": "pnpm -r --filter \"./packages/**\" --filter \"./apps/**\" --filter \"./integrations/**\" pack"
   },
   "dependencies": {
-    "@ai-sdk/openai-compatible": "3.0.43",
-    "@better-auth/api-key": "1.7.11",
-    "@dbos-inc/dbos-sdk": "5.3.0",
-    "@dbos-inc/kysely-datasource": "5.3.0",
-    "@dbos-inc/vercel-ai": "0.5.4",
-    "@fastify/swagger": "9.8.1",
-    "@heptalogos/client": "workspace:*",
-    "@heptalogos/contracts": "workspace:*",
     "@heptalogos/hept": "workspace:*",
-    "@js-temporal/polyfill": "0.5.1",
-    "@nous-wave/client": "link:../Nous-Wave/packages/client",
-    "@nous-wave/contracts": "link:../Nous-Wave/packages/contracts",
-    "@opentelemetry/api": "1.9.0",
-    "@opentelemetry/sdk-node": "0.208.0",
-    "ai": "7.0.146",
-    "better-auth": "1.7.11",
-    "cacache": "20.0.3",
-    "commander": "14.0.3",
-    "confbox": "0.2.4",
-    "deepmerge-ts": "8.0.2",
-    "env-paths": "4.0.0",
-    "fastify": "5.12.5",
-    "fastify-type-provider-zod": "6.1.0",
-    "fflate": "0.8.2",
-    "jose": "6.2.12",
-    "kysely": "0.29.7",
-    "pg": "8.23.0",
-    "pino": "10.3.1",
-    "rrule-temporal": "2.2.8",
-    "uuid": "14.0.2",
-    "zod": "4.6.5"
+    "@heptalogos/contracts": "workspace:*",
+    "@heptalogos/client": "workspace:*",
+    "@heptalogos/cli": "workspace:*",
+    "@heptalogos/server": "workspace:*"
   },
   "devDependencies": {
     "@biomejs/biome": "2.5.15",
@@ -58,6 +33,10 @@
     "@types/node": "24.19.1",
     "@types/pg": "8.23.1",
     "tsx": "4.23.13",
-    "typescript": "7.0.2"
+    "typescript": "7.0.2",
+    "@dbos-inc/dbos-sdk": "5.3.0",
+    "uuid": "14.0.2",
+    "@nous-wave/platform": "0.2.0-infrastructure.1",
+    "@nous-wave/contracts": "0.2.0-infrastructure.1"
   }
 }

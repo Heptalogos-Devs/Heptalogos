@@ -31,7 +31,7 @@ from .contracts import Config, Scope, SendExpression
 
 def timepoint(timestamp: float | None = None) -> dict:
     value = datetime.fromtimestamp(timestamp, timezone.utc) if timestamp is not None else datetime.now(timezone.utc)
-    return {"clockId": "real", "at": value.isoformat(timespec="milliseconds").replace("+00:00", "Z")}
+    return {"domainId": "real", "at": value.isoformat(timespec="microseconds").replace("+00:00", "Z")}
 
 
 @register("heptalogos", "Heptalogos", "Hept 主体渠道与实际发送回执", "0.1.0")
@@ -90,7 +90,7 @@ class HeptChannel(Star):
 
     async def hept(self, scope: Scope, resource: str, **kwargs):
         assert self.http is not None
-        headers = {"Authorization": f"Bearer {self.hept_token}", **kwargs.pop("headers", {})}
+        headers = {"Authorization": f"Bearer {self.hept_token}", "x-purpose": "ingress", **kwargs.pop("headers", {})}
         async with self.http.post(
             f"{self.settings.heptURL.rstrip('/')}/v1/subjects/{scope.subjectId}/{resource}",
             headers=headers, **kwargs,
@@ -112,7 +112,7 @@ class HeptChannel(Star):
         raw = dict(event.message_obj.raw_message or {})
         await self.accept_raw(scope, conversation, raw, event.message_obj.message)
 
-    async def preserve_media(self, scope: Scope, component, part: dict, source_key: str):
+    async def preserve_media(self, scope: Scope, conversation: str, component, part: dict, source_key: str):
         try:
             path = await component.get_file() if isinstance(component, File) else await component.convert_to_file_path()
             size = await asyncio.to_thread(lambda: Path(path).stat().st_size)
@@ -122,13 +122,13 @@ class HeptChannel(Star):
             name = part.get("name") or Path(path).name
             media_type = mimetypes.guess_type(name)[0] or "application/octet-stream"
             with open(path, "rb") as stream:
-                material = await self.hept(scope, "media", data=stream, headers={"Content-Type": "application/octet-stream", "x-filename": name, "x-media-type": media_type, "idempotency-key": f"{source_key}:{part['partId']}"})
+                material = await self.hept(scope, "media", params={"channelAccount": scope.account, "conversationKey": conversation}, data=stream, headers={"Content-Type": "application/octet-stream", "x-filename": name, "x-media-type": media_type, "idempotency-key": f"{source_key}:{part['partId']}"})
             part.update(materialRef=material["ref"], availability="available", mediaType=media_type)
             part.pop("url", None)
         except Exception as error:
-            part.update(availability="missing", description=str(error))
+            part.update(availability="missing", description="Media preservation unavailable")
 
-    async def incoming_parts(self, scope: Scope, segments: list, native: list | None = None, prefix: str = "p", media_source_key: str = "") -> list[dict]:
+    async def incoming_parts(self, scope: Scope, conversation: str, segments: list, native: list | None = None, prefix: str = "p", media_source_key: str = "") -> list[dict]:
         parts: list[dict] = []
         media = [component for component in native or [] if isinstance(component, (Image, Record, Video, File))]
         for index, segment in enumerate(segments):
@@ -156,7 +156,7 @@ class HeptChannel(Star):
                     if source:
                         component = {"image": Image, "sticker": Image, "audio": Record, "video": Video, "file": lambda file: File(name=part.get("name", "file"), url=file)}[hept_kind](file=source)
                 if component:
-                    await self.preserve_media(scope, component, part, media_source_key)
+                    await self.preserve_media(scope, conversation, component, part, media_source_key)
                 else:
                     part["availability"] = "missing"
             elif kind in ("forward", "node"):
@@ -172,7 +172,7 @@ class HeptChannel(Star):
                         content = node.get("content", node.get("message", []))
                         if isinstance(content, str):
                             content = [{"type": "text", "data": {"text": content}}]
-                        converted = {"nodeId": str(node.get("message_id", f"{part['partId']}n{node_index}")), "authorId": str(sender.get("user_id", node.get("user_id", "unknown"))), "authorName": sender.get("nickname", node.get("nickname", "")), "parts": await self.incoming_parts(scope, content, prefix=f"{part['partId']}n{node_index}p", media_source_key=media_source_key)}
+                        converted = {"nodeId": str(node.get("message_id", f"{part['partId']}n{node_index}")), "authorId": str(sender.get("user_id", node.get("user_id", "unknown"))), "authorName": sender.get("nickname", node.get("nickname", "")), "parts": await self.incoming_parts(scope, conversation, content, prefix=f"{part['partId']}n{node_index}p", media_source_key=media_source_key)}
                         if node.get("time"):
                             converted["sentAt"] = timepoint(node["time"])
                         part["nodes"].append(converted)
@@ -194,10 +194,10 @@ class HeptChannel(Star):
                 "raw": raw,
             }
             if changes[notice] == "edit":
-                change["parts"] = await self.incoming_parts(scope, raw.get("message", []), native, media_source_key=f"{scope.account}:{conversation}:{change['sourceEventId']}")
+                change["parts"] = await self.incoming_parts(scope, conversation, raw.get("message", []), native, media_source_key=f"{scope.account}:{conversation}:{change['sourceEventId']}")
             return await self.hept(scope, "message-changes", json=change)
         message_id = str(raw.get("message_id") or raw.get("operator_id") or uuid4())
-        parts = await self.incoming_parts(scope, raw.get("message", []), native, media_source_key=f"{scope.account}:{conversation}:{message_id}")
+        parts = await self.incoming_parts(scope, conversation, raw.get("message", []), native, media_source_key=f"{scope.account}:{conversation}:{message_id}")
         if not parts:
             parts = [{"partId": "event", "kind": "unsupported", "description": f"OneBot {raw.get('notice_type', raw.get('post_type', 'event'))}", "raw": raw}]
         sender = raw.get("sender", {})
@@ -250,7 +250,7 @@ class HeptChannel(Star):
         result = []
         for receipt in receipts:
             native = receipt.get("result")
-            delivery = {"partId": str(uuid4()), "expressionPartRefs": [parts[index]["partId"] for index in receipt["component_indexes"]], "attemptedAt": {"clockId": "real", "at": receipt["attempted_at"]}, "status": receipt["status"]}
+            delivery = {"partId": str(uuid4()), "expressionPartRefs": [parts[index]["partId"] for index in receipt["component_indexes"]], "attemptedAt": {"domainId": "real", "at": receipt["attempted_at"]}, "status": receipt["status"]}
             if isinstance(native, dict) and native.get("message_id") is not None:
                 delivery["platformMessageId"] = str(native["message_id"])
             if receipt.get("error"):
@@ -263,7 +263,7 @@ class HeptChannel(Star):
         accounts = []
         for scope in self.settings.scopes:
             info = await self.adapter(scope).bot.call_action("get_login_info", self_id=scope.selfId)
-            accounts.append({"accountId": scope.account, "subjectId": scope.subjectId, "conversations": scope.conversations, "native": info})
+            accounts.append({"adapterId": f"astrbot:{scope.platformId}", "accountId": scope.account, "subjectId": scope.subjectId, "conversations": scope.conversations, "native": info})
         return web.json_response({"accounts": accounts})
 
     async def capabilities(self, request: web.Request):

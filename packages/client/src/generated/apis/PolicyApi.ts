@@ -17,14 +17,14 @@ import type {
     PolicyInput,
 } from '../models/index.js';
 
-export interface PolicyReadRequest {
+export interface PolicyApiPolicyReadRequest {
     /**
      * 
      */
     subjectId: string;
 }
 
-export interface PolicyUpdateRequest {
+export interface PolicyApiPolicyUpdateRequest {
     /**
      * 
      */
@@ -43,7 +43,7 @@ export class PolicyApi extends runtime.BaseAPI {
     /**
      * Creates request options for policyRead without sending the request
      */
-    async policyReadRequestOpts(requestParameters: PolicyReadRequest): Promise<runtime.RequestOpts> {
+    async policyReadRequestOpts(requestParameters: PolicyApiPolicyReadRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -77,7 +77,7 @@ export class PolicyApi extends runtime.BaseAPI {
 
     /**
      */
-    async policyReadRaw(requestParameters: PolicyReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async policyReadRaw(requestParameters: PolicyApiPolicyReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.policyReadRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -90,7 +90,7 @@ export class PolicyApi extends runtime.BaseAPI {
 
     /**
      */
-    async policyRead(requestParameters: PolicyReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async policyRead(requestParameters: PolicyApiPolicyReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.policyReadRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -98,7 +98,7 @@ export class PolicyApi extends runtime.BaseAPI {
     /**
      * Creates request options for policyUpdate without sending the request
      */
-    async policyUpdateRequestOpts(requestParameters: PolicyUpdateRequest): Promise<runtime.RequestOpts> {
+    async policyUpdateRequestOpts(requestParameters: PolicyApiPolicyUpdateRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -142,7 +142,7 @@ export class PolicyApi extends runtime.BaseAPI {
 
     /**
      */
-    async policyUpdateRaw(requestParameters: PolicyUpdateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async policyUpdateRaw(requestParameters: PolicyApiPolicyUpdateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.policyUpdateRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -155,7 +155,7 @@ export class PolicyApi extends runtime.BaseAPI {
 
     /**
      */
-    async policyUpdate(requestParameters: PolicyUpdateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async policyUpdate(requestParameters: PolicyApiPolicyUpdateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.policyUpdateRaw(requestParameters, initOverrides);
         return await response.value();
     }

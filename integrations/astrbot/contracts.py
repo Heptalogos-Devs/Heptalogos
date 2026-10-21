@@ -12,7 +12,7 @@ class Model(BaseModel):
 
 
 class TimePoint(Model):
-    clockId: str = "real"
+    domainId: str = "real"
     at: str
 
 

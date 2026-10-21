@@ -16,10 +16,9 @@ import * as runtime from '../runtime.js';
 import type {
     WorldActRequest,
     WorldAdvanceToRequest,
-    WorldClockUpdateRequest,
 } from '../models/index.js';
 
-export interface WorldActOperationRequest {
+export interface WorldApiWorldActOperationRequest {
     /**
      * 
      */
@@ -30,7 +29,7 @@ export interface WorldActOperationRequest {
     worldActRequest: WorldActRequest;
 }
 
-export interface WorldAdvanceToOperationRequest {
+export interface WorldApiWorldAdvanceToOperationRequest {
     /**
      * 
      */
@@ -41,18 +40,7 @@ export interface WorldAdvanceToOperationRequest {
     worldAdvanceToRequest: WorldAdvanceToRequest;
 }
 
-export interface WorldClockUpdateOperationRequest {
-    /**
-     * 
-     */
-    subjectId: string;
-    /**
-     * 
-     */
-    worldClockUpdateRequest: WorldClockUpdateRequest;
-}
-
-export interface WorldCorrectRequest {
+export interface WorldApiWorldCorrectRequest {
     /**
      * 
      */
@@ -67,14 +55,14 @@ export interface WorldCorrectRequest {
     requestBody: { [key: string]: any; };
 }
 
-export interface WorldInspectRequest {
+export interface WorldApiWorldInspectRequest {
     /**
      * 
      */
     subjectId: string;
 }
 
-export interface WorldObserveRequest {
+export interface WorldApiWorldObserveRequest {
     /**
      * 
      */
@@ -85,7 +73,7 @@ export interface WorldObserveRequest {
     body: object;
 }
 
-export interface WorldRealizeRequest {
+export interface WorldApiWorldRealizeRequest {
     /**
      * 
      */
@@ -96,7 +84,7 @@ export interface WorldRealizeRequest {
     requestBody: { [key: string]: any; };
 }
 
-export interface WorldTimelineRequest {
+export interface WorldApiWorldTimelineRequest {
     /**
      * 
      */
@@ -111,7 +99,7 @@ export class WorldApi extends runtime.BaseAPI {
     /**
      * Creates request options for worldAct without sending the request
      */
-    async worldActRequestOpts(requestParameters: WorldActOperationRequest): Promise<runtime.RequestOpts> {
+    async worldActRequestOpts(requestParameters: WorldApiWorldActOperationRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -155,7 +143,7 @@ export class WorldApi extends runtime.BaseAPI {
 
     /**
      */
-    async worldActRaw(requestParameters: WorldActOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async worldActRaw(requestParameters: WorldApiWorldActOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.worldActRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -168,7 +156,7 @@ export class WorldApi extends runtime.BaseAPI {
 
     /**
      */
-    async worldAct(requestParameters: WorldActOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async worldAct(requestParameters: WorldApiWorldActOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.worldActRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -176,7 +164,7 @@ export class WorldApi extends runtime.BaseAPI {
     /**
      * Creates request options for worldAdvanceTo without sending the request
      */
-    async worldAdvanceToRequestOpts(requestParameters: WorldAdvanceToOperationRequest): Promise<runtime.RequestOpts> {
+    async worldAdvanceToRequestOpts(requestParameters: WorldApiWorldAdvanceToOperationRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -220,7 +208,7 @@ export class WorldApi extends runtime.BaseAPI {
 
     /**
      */
-    async worldAdvanceToRaw(requestParameters: WorldAdvanceToOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async worldAdvanceToRaw(requestParameters: WorldApiWorldAdvanceToOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.worldAdvanceToRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -233,80 +221,15 @@ export class WorldApi extends runtime.BaseAPI {
 
     /**
      */
-    async worldAdvanceTo(requestParameters: WorldAdvanceToOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async worldAdvanceTo(requestParameters: WorldApiWorldAdvanceToOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.worldAdvanceToRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for worldClockUpdate without sending the request
-     */
-    async worldClockUpdateRequestOpts(requestParameters: WorldClockUpdateOperationRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['subjectId'] == null) {
-            throw new runtime.RequiredError(
-                'subjectId',
-                'Required parameter "subjectId" was null or undefined when calling worldClockUpdate().'
-            );
-        }
-
-        if (requestParameters['worldClockUpdateRequest'] == null) {
-            throw new runtime.RequiredError(
-                'worldClockUpdateRequest',
-                'Required parameter "worldClockUpdateRequest" was null or undefined when calling worldClockUpdate().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        headerParameters['Content-Type'] = 'application/json';
-
-        if (this.configuration && this.configuration.accessToken) {
-            const token = this.configuration.accessToken;
-            const tokenString = await token("bearerAuth", []);
-
-            if (tokenString) {
-                headerParameters["Authorization"] = `Bearer ${tokenString}`;
-            }
-        }
-
-        let urlPath = `/v1/subjects/{subjectId}/world/clock`;
-        urlPath = urlPath.replace('{subjectId}', encodeURIComponent(String(requestParameters['subjectId'])));
-
-        return {
-            path: urlPath,
-            method: 'PATCH',
-            headers: headerParameters,
-            query: queryParameters,
-            body: requestParameters['worldClockUpdateRequest'],
-        };
-    }
-
-    /**
-     */
-    async worldClockUpdateRaw(requestParameters: WorldClockUpdateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
-        const requestOptions = await this.worldClockUpdateRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        if (this.isJsonMime(response.headers.get('content-type'))) {
-            return new runtime.JSONApiResponse<any>(response);
-        } else {
-            return new runtime.TextApiResponse(response) as any;
-        }
-    }
-
-    /**
-     */
-    async worldClockUpdate(requestParameters: WorldClockUpdateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
-        const response = await this.worldClockUpdateRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
      * Creates request options for worldCorrect without sending the request
      */
-    async worldCorrectRequestOpts(requestParameters: WorldCorrectRequest): Promise<runtime.RequestOpts> {
+    async worldCorrectRequestOpts(requestParameters: WorldApiWorldCorrectRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -358,7 +281,7 @@ export class WorldApi extends runtime.BaseAPI {
 
     /**
      */
-    async worldCorrectRaw(requestParameters: WorldCorrectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async worldCorrectRaw(requestParameters: WorldApiWorldCorrectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.worldCorrectRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -371,7 +294,7 @@ export class WorldApi extends runtime.BaseAPI {
 
     /**
      */
-    async worldCorrect(requestParameters: WorldCorrectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async worldCorrect(requestParameters: WorldApiWorldCorrectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.worldCorrectRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -379,7 +302,7 @@ export class WorldApi extends runtime.BaseAPI {
     /**
      * Creates request options for worldInspect without sending the request
      */
-    async worldInspectRequestOpts(requestParameters: WorldInspectRequest): Promise<runtime.RequestOpts> {
+    async worldInspectRequestOpts(requestParameters: WorldApiWorldInspectRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -413,7 +336,7 @@ export class WorldApi extends runtime.BaseAPI {
 
     /**
      */
-    async worldInspectRaw(requestParameters: WorldInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async worldInspectRaw(requestParameters: WorldApiWorldInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.worldInspectRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -426,7 +349,7 @@ export class WorldApi extends runtime.BaseAPI {
 
     /**
      */
-    async worldInspect(requestParameters: WorldInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async worldInspect(requestParameters: WorldApiWorldInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.worldInspectRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -434,7 +357,7 @@ export class WorldApi extends runtime.BaseAPI {
     /**
      * Creates request options for worldObserve without sending the request
      */
-    async worldObserveRequestOpts(requestParameters: WorldObserveRequest): Promise<runtime.RequestOpts> {
+    async worldObserveRequestOpts(requestParameters: WorldApiWorldObserveRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -478,7 +401,7 @@ export class WorldApi extends runtime.BaseAPI {
 
     /**
      */
-    async worldObserveRaw(requestParameters: WorldObserveRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async worldObserveRaw(requestParameters: WorldApiWorldObserveRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.worldObserveRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -491,7 +414,7 @@ export class WorldApi extends runtime.BaseAPI {
 
     /**
      */
-    async worldObserve(requestParameters: WorldObserveRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async worldObserve(requestParameters: WorldApiWorldObserveRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.worldObserveRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -499,7 +422,7 @@ export class WorldApi extends runtime.BaseAPI {
     /**
      * Creates request options for worldRealize without sending the request
      */
-    async worldRealizeRequestOpts(requestParameters: WorldRealizeRequest): Promise<runtime.RequestOpts> {
+    async worldRealizeRequestOpts(requestParameters: WorldApiWorldRealizeRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -543,7 +466,7 @@ export class WorldApi extends runtime.BaseAPI {
 
     /**
      */
-    async worldRealizeRaw(requestParameters: WorldRealizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async worldRealizeRaw(requestParameters: WorldApiWorldRealizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.worldRealizeRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -556,7 +479,7 @@ export class WorldApi extends runtime.BaseAPI {
 
     /**
      */
-    async worldRealize(requestParameters: WorldRealizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async worldRealize(requestParameters: WorldApiWorldRealizeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.worldRealizeRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -564,7 +487,7 @@ export class WorldApi extends runtime.BaseAPI {
     /**
      * Creates request options for worldTimeline without sending the request
      */
-    async worldTimelineRequestOpts(requestParameters: WorldTimelineRequest): Promise<runtime.RequestOpts> {
+    async worldTimelineRequestOpts(requestParameters: WorldApiWorldTimelineRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -598,7 +521,7 @@ export class WorldApi extends runtime.BaseAPI {
 
     /**
      */
-    async worldTimelineRaw(requestParameters: WorldTimelineRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async worldTimelineRaw(requestParameters: WorldApiWorldTimelineRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.worldTimelineRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -611,7 +534,7 @@ export class WorldApi extends runtime.BaseAPI {
 
     /**
      */
-    async worldTimeline(requestParameters: WorldTimelineRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async worldTimeline(requestParameters: WorldApiWorldTimelineRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.worldTimelineRaw(requestParameters, initOverrides);
         return await response.value();
     }

@@ -1,8 +1,11 @@
+import {ModelBudgetSchema} from '@nous-wave/contracts/models';
+import {InstantInputSchema} from '@nous-wave/contracts/common';
+import {ClockRateSchema,ClockOfflinePolicySchema} from '@nous-wave/contracts/time';
 import { z } from 'zod';
 export type { Actor, CallContext, Ref, TimePoint, Policy } from '@nous-wave/contracts/common';
-import { ObjectIdSchema, TimePointSchema, RefSchema, PolicySchema } from '@nous-wave/contracts/common';
+import { ConsumerSchema,JsonValueSchema,ObjectIdSchema, TimePointInputSchema, RefSchema, PolicySchema } from '@nous-wave/contracts/common';
 export const id = ObjectIdSchema;
-export const time = TimePointSchema;
+export const time = TimePointInputSchema;
 export const ref = RefSchema;
 export const policy = PolicySchema;
 export const defaultPolicy = {readers:['*'],purposes:['*'],audiences:['*']};
@@ -33,33 +36,56 @@ export const decision=z.object({focus:z.string(),actions:z.array(action),interna
 export const decisionDraft=decision.extend({actions:z.array(z.discriminatedUnion('kind',[action.options[0].extend({messageIds:z.array(z.string())}),...action.options.slice(1)] as any)),expressionIntent:expressionIntent.omit({audience:true}).extend({conversationId:z.string()}).optional()});
 export const expressionDraft=z.object({parts:z.array(messagePart).min(1),semanticChanges:z.array(z.object({partId:z.string(),kind:z.enum(['world_detail','commitment','correction']),body:z.string(),sourceRefs:z.array(ref).default([])})).default([])});
 export const deliveryPart=z.object({partId:id,expressionPartRefs:z.array(z.string()),platformMessageId:z.string().optional(),attemptedAt:time,status:z.enum(['accepted','not_sent','unknown']),error:z.string().optional(),nativeReceiptRef:z.string().optional()});
-export const channelSchema=z.object({host:z.enum(['local','astrbot']),accountId:z.string(),endpoint:z.url().optional(),credentialRef:z.string().optional(),conversationKeys:z.array(z.string()).default(['*']),receive:z.boolean().default(true),participate:z.boolean().default(true),send:z.boolean().default(true)});
-export const modelResource=z.object({id:z.string().min(1),provider:z.literal('openai-compatible'),baseURL:z.url(),modelId:z.string(),credentialRef:z.string(),contextLimit:z.number().int().positive().default(32000),outputLimit:z.number().int().positive().default(2048),pricing:z.object({inputPerMillion:z.number().nonnegative(),outputPerMillion:z.number().nonnegative()}).optional(),capabilities:z.array(z.string()).default(['text']),providerOptions:z.record(z.string(),z.record(z.string(),z.json())).default({})});
-const settingMeta=(scopes:string[],effect:string,permission='settings.write')=>({'x-scopes':scopes,'x-effect':effect,'x-permission':permission,'x-level':'Standard'});
-export const settingsSchema=z.object({
- deliberationModel:z.string().optional().meta(settingMeta(['installation','subject','role'],'next_call')),
- expressionModel:z.string().optional().meta(settingMeta(['installation','subject','role'],'next_call')),
- authorModel:z.string().optional().meta(settingMeta(['installation','subject','role'],'next_call')),
- growthModel:z.string().optional().meta(settingMeta(['installation','subject','role'],'next_call')),
- nous:z.object({baseURL:z.url(),credentialRef:z.string()}).strict().optional().meta(settingMeta(['installation','subject'],'next_call','installation.manage')),
- budget:z.object({dailyCalls:z.number().int().nonnegative().default(100),dailyUsd:z.number().nonnegative().optional()}).strict().default({dailyCalls:100}).meta(settingMeta(['installation','subject','role'],'next_call')),
- attention:z.object({aggregationMs:z.number().nonnegative().default(1500),freeMinutes:z.number().positive().default(60),dailyAutonomousCalls:z.number().int().nonnegative().default(12)}).strict().default({aggregationMs:1500,freeMinutes:60,dailyAutonomousCalls:12}).meta(settingMeta(['installation','subject'],'hot')),
- behavior:z.object({receive:z.boolean().default(true),participate:z.boolean().default(true),proactive:z.boolean().default(false),allowedConversations:z.array(z.string()).default(['*'])}).strict().default({receive:true,participate:true,proactive:false,allowedConversations:['*']}).meta(settingMeta(['installation','subject'],'hot')),
- world:z.object({timezone:z.string().default('Asia/Tokyo'),offlinePolicy:z.enum(['freeze','catch_up']).default('freeze')}).strict().default({timezone:'Asia/Tokyo',offlinePolicy:'freeze'}).meta(settingMeta(['installation','subject'],'hot')),
- media:z.object({maxBytes:z.number().positive().default(52428800),dailyBytes:z.number().positive().default(1073741824)}).strict().default({maxBytes:52428800,dailyBytes:1073741824}).meta(settingMeta(['installation','subject'],'next_call')),
-}).strict();
-
+export const resourceNetwork=z.strictObject({profileId:z.string().default('default'),addressScope:z.enum(['public','configured_private']).default('public'),allowedPrivateRanges:z.array(z.string()).default([])});
+export const channelSchema=z.object({host:z.enum(['local','astrbot']),adapterId:z.string().min(1),accountId:z.string().min(1),endpoint:z.url().optional(),credentialRef:z.string().optional(),conversationKeys:z.array(z.string()).default(['*']),receive:z.boolean().default(true),participate:z.boolean().default(true),send:z.boolean().default(true),network:resourceNetwork.default({profileId:'default',addressScope:'public',allowedPrivateRanges:[]})});
+export const channelConfiguration=channelSchema.extend({id:id.optional(),expectedRevision:z.number().int().nonnegative().safe()}).meta({id:'ChannelConfiguration'});
+export const mediaCaptureSource=z.object({channelAccount:z.string().min(1),conversationKey:z.string().min(1)}).meta({id:'MediaCaptureSource'});
+export const mediaCaptureQuery=mediaCaptureSource.partial().refine(value=>Boolean(value.channelAccount)===Boolean(value.conversationKey),'Provide both account and conversation').meta({id:'MediaCaptureQuery'});
+export const mediaCaptureResult=z.object({ref,bytes:z.number().int().nonnegative().safe(),mediaType:z.string(),name:z.string()}).meta({id:'MediaCaptureResult'});
+export {ModelTestInputSchema as modelTestInput} from '@nous-wave/contracts/models';
+export type {ModelTestInput} from '@nous-wave/contracts/models';
+const cognitionCredential=z.strictObject({credentialRef:z.string().min(1),consumer:ConsumerSchema});
+export const cognitionSettings=z.strictObject({nous:z.strictObject({baseURL:z.url(),subject:cognitionCredential,workerHost:cognitionCredential.optional(),network:resourceNetwork.default({profileId:'default',addressScope:'public',allowedPrivateRanges:[]})}).optional()});
+export const executionSettings=z.strictObject({runtimes:z.record(z.string().min(1),z.strictObject({endpoint:z.url(),credentialRef:z.string().min(1),network:resourceNetwork.default({profileId:'default',addressScope:'public',allowedPrivateRanges:[]})}))});
+export const attentionSettings=z.strictObject({aggregationMs:z.number().nonnegative(),freeMinutes:z.number().positive(),dailyAutonomousCalls:z.number().int().nonnegative()});
+export const communicationSettings=z.strictObject({behavior:z.strictObject({receive:z.boolean(),participate:z.boolean(),proactive:z.boolean(),allowedConversations:z.array(z.string())}),media:z.strictObject({maxBytes:z.number().positive(),dailyBytes:z.number().positive()})});
+export const worldSettings=z.strictObject({timezone:z.string()});
+export type CognitionSettings=z.infer<typeof cognitionSettings>;
+export type ExecutionSettings=z.infer<typeof executionSettings>;
+export type AttentionSettings=z.infer<typeof attentionSettings>;
+export type CommunicationSettings=z.infer<typeof communicationSettings>;
+export type WorldSettings=z.infer<typeof worldSettings>;
 export const demands=z.partialRecord(z.enum(['vision','hearing','language','reasoning','hands','mobility']),z.enum(['none','light','focused']));
-export const calendarRule=z.object({title:z.string(),start:z.string(),timezone:z.string(),durationMinutes:z.number().positive(),rrule:z.string().optional(),placeId:z.string().optional(),characterId:z.string().optional(),demands:demands.default({}),adherence:z.enum(['free','expected','binding']).default('free'),activityKind:z.enum(['sleep','rest','study','exercise','social','travel','other']).default('other'),interruptibility:z.enum(['open','glance','brief','closed']).default('open')});
-export const worldPackage=z.object({formatVersion:z.literal(1),title:z.string(),background:z.string(),rules:z.string().default(''),visibility:z.object({publicFiles:z.array(z.string()),authorFiles:z.array(z.string())}).optional(),initialState:z.object({place:z.string(),energy:z.number().min(0).max(1).default(1),fatigue:z.number().min(0).max(1).default(0),mood:z.unknown().optional(),availableDevices:z.array(z.string()).default([]),nextActivity:z.string().optional()}).optional(),clock:z.object({worldAnchor:z.iso.datetime(),rate:z.number().nonnegative().default(1),timezone:z.string().default('Asia/Tokyo'),offlinePolicy:z.enum(['freeze','catch_up']).default('freeze')}),entryPoint:z.string(),places:z.array(z.object({id:id.optional(),key:z.string(),title:z.string(),description:z.string(),neighbors:z.array(z.object({to:z.string(),minutes:z.number().positive()})).default([]),devices:z.array(z.string()).default([])})),characters:z.array(z.object({id:id.optional(),key:z.string(),name:z.string(),description:z.string(),place:z.string(),privateNotes:z.string().optional()})).default([]),calendar:z.array(calendarRule).default([])});
-export const taskBudget=z.object({maxCalls:z.number().int().positive().optional(),maxTokens:z.number().int().positive().optional(),maxUsd:z.number().nonnegative().optional(),perCallUsd:z.number().nonnegative().optional()});
-export const taskRequest=z.object({clientSubmissionId:z.string(),goal:z.string(),pursuitRef:ref.optional(),activityRef:ref.optional(),workContextId:z.string().optional(),inputRefs:z.array(ref).default([]),allowedTools:z.array(z.string()).default([]),workspaceRef:z.string().optional(),budget:taskBudget.optional(),returnTarget:z.object({conversationId:id.optional(),messageId:id.optional()}).default({})});
+export const calendarRule=z.object({title:z.string(),start:z.string(),timezone:z.string(),durationMinutes:z.number().positive(),rrule:z.string().optional(),rdates:z.array(z.string()).default([]),exdates:z.array(z.string()).default([]),disambiguation:z.enum(['compatible','earlier','later','reject']).default('compatible'),startShiftSeconds:z.number().int().default(0),placeId:z.string().optional(),characterId:z.string().optional(),demands:demands.default({}),adherence:z.enum(['free','expected','binding']).default('free'),activityKind:z.enum(['sleep','rest','study','exercise','social','travel','other']).default('other'),interruptibility:z.enum(['open','glance','brief','closed']).default('open')});
+export const worldPackage=z.object({formatVersion:z.literal(1),title:z.string(),background:z.string(),rules:z.string().default(''),visibility:z.object({publicFiles:z.array(z.string()),authorFiles:z.array(z.string())}).optional(),initialState:z.object({place:z.string(),energy:z.number().min(0).max(1).default(1),fatigue:z.number().min(0).max(1).default(0),mood:z.unknown().optional(),availableDevices:z.array(z.string()).default([]),nextActivity:z.string().optional()}).optional(),clock:z.object({initialAt:InstantInputSchema,rate:ClockRateSchema,timezone:z.string().default('Asia/Tokyo'),offlinePolicy:ClockOfflinePolicySchema}),entryPoint:z.string(),places:z.array(z.object({id:id.optional(),key:z.string(),title:z.string(),description:z.string(),neighbors:z.array(z.object({to:z.string(),minutes:z.number().positive()})).default([]),devices:z.array(z.string()).default([])})),characters:z.array(z.object({id:id.optional(),key:z.string(),name:z.string(),description:z.string(),place:z.string(),privateNotes:z.string().optional()})).default([]),calendar:z.array(calendarRule).default([])});
+export const taskBudget=ModelBudgetSchema;
+export const taskRequest=z.object({clientSubmissionId:z.string().min(1),goal:z.string().min(1),pursuitRef:ref.optional(),activityRef:ref.optional(),workContextId:z.string().optional(),inputRefs:z.array(ref).default([]),allowedTools:z.array(z.string()).default([]),workspaceRef:ref.optional(),budget:taskBudget.optional(),expiresAt:time.refine(value=>value.domainId==='real','Task authority expiry uses the real domain').optional(),returnTarget:z.object({conversationId:id.optional(),messageId:id.optional()}).default({})});
 export const pursuitInput=z.object({title:z.string(),plan:z.string(),motivationRefs:z.array(ref).default([]),reviewAt:time.optional(),status:z.enum(['active','paused','completed','abandoned']).default('active')});
-export const bootstrapSchema=z.object({databaseURL:z.string(),installationId:z.string(),dataRoot:z.string(),host:z.string().default('127.0.0.1'),port:z.number().int().default(8788),publicURL:z.url().optional(),authSecretRef:z.string(),clientCredentialRef:z.string().default('administrator'),openclaw:z.object({endpoint:z.url(),credentialRef:z.string()}).optional()});
 export type ReceiveMessage=z.infer<typeof receiveMessage>;
 export type Decision=z.infer<typeof decision>;
 export type ExpressionIntent=z.infer<typeof expressionIntent>;
-export type ModelResource=z.infer<typeof modelResource>;
-export type Settings=z.infer<typeof settingsSchema>;
 export type WorldPackage=z.infer<typeof worldPackage>;
 export type TaskRequest=z.infer<typeof taskRequest>;
+export const taskContinuation=z.strictObject({expectedRevision:z.number().int().positive().safe(),goal:z.string().min(1).optional()}).meta({id:'HeptTaskContinuation'});
+export type TaskContinuation=z.infer<typeof taskContinuation>;
+export const taskRecoveryPlanInput=z.strictObject({invocationId:id.optional()}).meta({id:'HeptTaskRecoveryPlanInput'});
+export const taskRecovery=taskRecoveryPlanInput.extend({expectedRevision:z.number().int().positive().safe()}).meta({id:'HeptTaskRecovery'});
+
+export const hostPhase=z.enum(['initialized','running','draining','stopped']);
+const componentState=z.enum(['available','degraded','unavailable']);
+export const hostStatus=z.object({
+ product:z.literal('hept'),installationId:z.string(),state:hostPhase,
+ process:z.object({state:componentState,acceptingWork:z.boolean()}),
+ database:z.object({state:componentState}),auth:z.object({state:componentState}),
+ native:z.object({state:componentState,required:z.boolean(),reason:z.string()}),
+ models:z.object({state:componentState,required:z.boolean(),configured:z.string(),reason:z.string()}),
+ index:z.object({state:componentState,required:z.boolean(),reason:z.string()}),
+ channels:z.object({local:z.object({state:componentState}),configured:z.string(),externalProbe:z.string()}),
+ subjects:z.object({count:z.string(),running:z.string()}),
+}).meta({id:'HeptHostStatus'});
+export const hostStop=z.object({mode:z.enum(['graceful','force']).default('graceful')});
+export type HostStatus=z.infer<typeof hostStatus>;
+
+export * from './native.js';
+
+export type MediaCaptureSource=z.infer<typeof mediaCaptureSource>;

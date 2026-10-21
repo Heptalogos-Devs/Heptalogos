@@ -17,7 +17,7 @@ import type {
     CommitmentsEvaluateRequest,
 } from '../models/index.js';
 
-export interface CommitmentsEvaluateOperationRequest {
+export interface CommitmentsApiCommitmentsEvaluateOperationRequest {
     /**
      * 
      */
@@ -32,7 +32,7 @@ export interface CommitmentsEvaluateOperationRequest {
     commitmentsEvaluateRequest: CommitmentsEvaluateRequest;
 }
 
-export interface CommitmentsProposeChangeRequest {
+export interface CommitmentsApiCommitmentsProposeChangeRequest {
     /**
      * 
      */
@@ -47,7 +47,7 @@ export interface CommitmentsProposeChangeRequest {
     requestBody: { [key: string]: any; };
 }
 
-export interface CommitmentsReadRequest {
+export interface CommitmentsApiCommitmentsReadRequest {
     /**
      * 
      */
@@ -66,7 +66,7 @@ export class CommitmentsApi extends runtime.BaseAPI {
     /**
      * Creates request options for commitmentsEvaluate without sending the request
      */
-    async commitmentsEvaluateRequestOpts(requestParameters: CommitmentsEvaluateOperationRequest): Promise<runtime.RequestOpts> {
+    async commitmentsEvaluateRequestOpts(requestParameters: CommitmentsApiCommitmentsEvaluateOperationRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -118,7 +118,7 @@ export class CommitmentsApi extends runtime.BaseAPI {
 
     /**
      */
-    async commitmentsEvaluateRaw(requestParameters: CommitmentsEvaluateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async commitmentsEvaluateRaw(requestParameters: CommitmentsApiCommitmentsEvaluateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.commitmentsEvaluateRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -131,7 +131,7 @@ export class CommitmentsApi extends runtime.BaseAPI {
 
     /**
      */
-    async commitmentsEvaluate(requestParameters: CommitmentsEvaluateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async commitmentsEvaluate(requestParameters: CommitmentsApiCommitmentsEvaluateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.commitmentsEvaluateRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -139,7 +139,7 @@ export class CommitmentsApi extends runtime.BaseAPI {
     /**
      * Creates request options for commitmentsProposeChange without sending the request
      */
-    async commitmentsProposeChangeRequestOpts(requestParameters: CommitmentsProposeChangeRequest): Promise<runtime.RequestOpts> {
+    async commitmentsProposeChangeRequestOpts(requestParameters: CommitmentsApiCommitmentsProposeChangeRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -191,7 +191,7 @@ export class CommitmentsApi extends runtime.BaseAPI {
 
     /**
      */
-    async commitmentsProposeChangeRaw(requestParameters: CommitmentsProposeChangeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async commitmentsProposeChangeRaw(requestParameters: CommitmentsApiCommitmentsProposeChangeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.commitmentsProposeChangeRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -204,7 +204,7 @@ export class CommitmentsApi extends runtime.BaseAPI {
 
     /**
      */
-    async commitmentsProposeChange(requestParameters: CommitmentsProposeChangeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async commitmentsProposeChange(requestParameters: CommitmentsApiCommitmentsProposeChangeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.commitmentsProposeChangeRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -212,7 +212,7 @@ export class CommitmentsApi extends runtime.BaseAPI {
     /**
      * Creates request options for commitmentsRead without sending the request
      */
-    async commitmentsReadRequestOpts(requestParameters: CommitmentsReadRequest): Promise<runtime.RequestOpts> {
+    async commitmentsReadRequestOpts(requestParameters: CommitmentsApiCommitmentsReadRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -254,7 +254,7 @@ export class CommitmentsApi extends runtime.BaseAPI {
 
     /**
      */
-    async commitmentsReadRaw(requestParameters: CommitmentsReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async commitmentsReadRaw(requestParameters: CommitmentsApiCommitmentsReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.commitmentsReadRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -267,7 +267,7 @@ export class CommitmentsApi extends runtime.BaseAPI {
 
     /**
      */
-    async commitmentsRead(requestParameters: CommitmentsReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async commitmentsRead(requestParameters: CommitmentsApiCommitmentsReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.commitmentsReadRaw(requestParameters, initOverrides);
         return await response.value();
     }

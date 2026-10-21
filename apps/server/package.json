@@ -1,0 +1,46 @@
+{
+  "name": "@heptalogos/server",
+  "version": "0.2.0-infrastructure.1",
+  "type": "module",
+  "license": "AGPL-3.0-only",
+  "files": [
+    "dist",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/main.d.ts",
+      "default": "./dist/main.js"
+    },
+    "./http": {
+      "types": "./dist/http.d.ts",
+      "default": "./dist/http.js"
+    },
+    "./run": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -b"
+  },
+  "dependencies": {
+    "@fastify/swagger": "9.8.1",
+    "fastify": "5.12.5",
+    "fastify-type-provider-zod": "7.0.0",
+    "zod": "4.6.5",
+    "@heptalogos/hept": "workspace:*",
+    "@heptalogos/contracts": "workspace:*",
+    "@nous-wave/contracts": "0.2.0-infrastructure.1",
+    "@nous-wave/platform": "0.2.0-infrastructure.1",
+    "commander": "15.0.0",
+    "qs": "6.16.1",
+    "@heptalogos/openclaw": "workspace:*"
+  },
+  "bin": {
+    "hept-host": "./dist/index.js"
+  },
+  "devDependencies": {
+    "@types/qs": "6.15.1"
+  }
+}

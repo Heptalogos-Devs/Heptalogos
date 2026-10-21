@@ -16,21 +16,14 @@ import * as runtime from '../runtime.js';
 import type {
 } from '../models/index.js';
 
-export interface V1OperationsIdEventsGetRequest {
+export interface DefaultApiV1OperationsIdEventsGetRequest {
     /**
      * 
      */
     id: string;
 }
 
-export interface V1SubjectsSubjectIdExportsPostRequest {
-    /**
-     * 
-     */
-    subjectId: string;
-}
-
-export interface V1SubjectsSubjectIdMediaIdGetRequest {
+export interface DefaultApiV1SubjectsSubjectIdMediaIdGetRequest {
     /**
      * 
      */
@@ -39,13 +32,6 @@ export interface V1SubjectsSubjectIdMediaIdGetRequest {
      * 
      */
     id: string;
-}
-
-export interface V1SubjectsSubjectIdMediaPostRequest {
-    /**
-     * 
-     */
-    subjectId: string;
 }
 
 /**
@@ -96,51 +82,9 @@ export class DefaultApi extends runtime.BaseAPI {
     }
 
     /**
-     * Creates request options for v1ImportsPost without sending the request
-     */
-    async v1ImportsPostRequestOpts(): Promise<runtime.RequestOpts> {
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        if (this.configuration && this.configuration.accessToken) {
-            const token = this.configuration.accessToken;
-            const tokenString = await token("bearerAuth", []);
-
-            if (tokenString) {
-                headerParameters["Authorization"] = `Bearer ${tokenString}`;
-            }
-        }
-
-        let urlPath = `/v1/imports`;
-
-        return {
-            path: urlPath,
-            method: 'POST',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     */
-    async v1ImportsPostRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
-        const requestOptions = await this.v1ImportsPostRequestOpts();
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.VoidApiResponse(response);
-    }
-
-    /**
-     */
-    async v1ImportsPost(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-        await this.v1ImportsPostRaw(initOverrides);
-    }
-
-    /**
      * Creates request options for v1OperationsIdEventsGet without sending the request
      */
-    async v1OperationsIdEventsGetRequestOpts(requestParameters: V1OperationsIdEventsGetRequest): Promise<runtime.RequestOpts> {
+    async v1OperationsIdEventsGetRequestOpts(requestParameters: DefaultApiV1OperationsIdEventsGetRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
                 'id',
@@ -174,7 +118,7 @@ export class DefaultApi extends runtime.BaseAPI {
 
     /**
      */
-    async v1OperationsIdEventsGetRaw(requestParameters: V1OperationsIdEventsGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async v1OperationsIdEventsGetRaw(requestParameters: DefaultApiV1OperationsIdEventsGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
         const requestOptions = await this.v1OperationsIdEventsGetRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -183,64 +127,14 @@ export class DefaultApi extends runtime.BaseAPI {
 
     /**
      */
-    async v1OperationsIdEventsGet(requestParameters: V1OperationsIdEventsGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+    async v1OperationsIdEventsGet(requestParameters: DefaultApiV1OperationsIdEventsGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
         await this.v1OperationsIdEventsGetRaw(requestParameters, initOverrides);
-    }
-
-    /**
-     * Creates request options for v1SubjectsSubjectIdExportsPost without sending the request
-     */
-    async v1SubjectsSubjectIdExportsPostRequestOpts(requestParameters: V1SubjectsSubjectIdExportsPostRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['subjectId'] == null) {
-            throw new runtime.RequiredError(
-                'subjectId',
-                'Required parameter "subjectId" was null or undefined when calling v1SubjectsSubjectIdExportsPost().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        if (this.configuration && this.configuration.accessToken) {
-            const token = this.configuration.accessToken;
-            const tokenString = await token("bearerAuth", []);
-
-            if (tokenString) {
-                headerParameters["Authorization"] = `Bearer ${tokenString}`;
-            }
-        }
-
-        let urlPath = `/v1/subjects/{subjectId}/exports`;
-        urlPath = urlPath.replace('{subjectId}', encodeURIComponent(String(requestParameters['subjectId'])));
-
-        return {
-            path: urlPath,
-            method: 'POST',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     */
-    async v1SubjectsSubjectIdExportsPostRaw(requestParameters: V1SubjectsSubjectIdExportsPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
-        const requestOptions = await this.v1SubjectsSubjectIdExportsPostRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.VoidApiResponse(response);
-    }
-
-    /**
-     */
-    async v1SubjectsSubjectIdExportsPost(requestParameters: V1SubjectsSubjectIdExportsPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-        await this.v1SubjectsSubjectIdExportsPostRaw(requestParameters, initOverrides);
     }
 
     /**
      * Creates request options for v1SubjectsSubjectIdMediaIdGet without sending the request
      */
-    async v1SubjectsSubjectIdMediaIdGetRequestOpts(requestParameters: V1SubjectsSubjectIdMediaIdGetRequest): Promise<runtime.RequestOpts> {
+    async v1SubjectsSubjectIdMediaIdGetRequestOpts(requestParameters: DefaultApiV1SubjectsSubjectIdMediaIdGetRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -282,7 +176,7 @@ export class DefaultApi extends runtime.BaseAPI {
 
     /**
      */
-    async v1SubjectsSubjectIdMediaIdGetRaw(requestParameters: V1SubjectsSubjectIdMediaIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
+    async v1SubjectsSubjectIdMediaIdGetRaw(requestParameters: DefaultApiV1SubjectsSubjectIdMediaIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
         const requestOptions = await this.v1SubjectsSubjectIdMediaIdGetRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -291,58 +185,8 @@ export class DefaultApi extends runtime.BaseAPI {
 
     /**
      */
-    async v1SubjectsSubjectIdMediaIdGet(requestParameters: V1SubjectsSubjectIdMediaIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
+    async v1SubjectsSubjectIdMediaIdGet(requestParameters: DefaultApiV1SubjectsSubjectIdMediaIdGetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
         await this.v1SubjectsSubjectIdMediaIdGetRaw(requestParameters, initOverrides);
-    }
-
-    /**
-     * Creates request options for v1SubjectsSubjectIdMediaPost without sending the request
-     */
-    async v1SubjectsSubjectIdMediaPostRequestOpts(requestParameters: V1SubjectsSubjectIdMediaPostRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['subjectId'] == null) {
-            throw new runtime.RequiredError(
-                'subjectId',
-                'Required parameter "subjectId" was null or undefined when calling v1SubjectsSubjectIdMediaPost().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        if (this.configuration && this.configuration.accessToken) {
-            const token = this.configuration.accessToken;
-            const tokenString = await token("bearerAuth", []);
-
-            if (tokenString) {
-                headerParameters["Authorization"] = `Bearer ${tokenString}`;
-            }
-        }
-
-        let urlPath = `/v1/subjects/{subjectId}/media`;
-        urlPath = urlPath.replace('{subjectId}', encodeURIComponent(String(requestParameters['subjectId'])));
-
-        return {
-            path: urlPath,
-            method: 'POST',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     */
-    async v1SubjectsSubjectIdMediaPostRaw(requestParameters: V1SubjectsSubjectIdMediaPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<void>> {
-        const requestOptions = await this.v1SubjectsSubjectIdMediaPostRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        return new runtime.VoidApiResponse(response);
-    }
-
-    /**
-     */
-    async v1SubjectsSubjectIdMediaPost(requestParameters: V1SubjectsSubjectIdMediaPostRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<void> {
-        await this.v1SubjectsSubjectIdMediaPostRaw(requestParameters, initOverrides);
     }
 
 }

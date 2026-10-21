@@ -14,7 +14,35 @@
 
 import * as runtime from '../runtime.js';
 import type {
+    ModelInvocationPage,
 } from '../models/index.js';
+
+export interface CostsApiCostsReadRequest {
+    /**
+     * 
+     */
+    logicalOperationId?: string;
+    /**
+     * 
+     */
+    subjectId?: string;
+    /**
+     * 
+     */
+    roleId?: string;
+    /**
+     * 
+     */
+    status?: CostsReadStatusEnum;
+    /**
+     * 
+     */
+    cursor?: string;
+    /**
+     * 
+     */
+    limit?: number;
+}
 
 /**
  * 
@@ -24,8 +52,32 @@ export class CostsApi extends runtime.BaseAPI {
     /**
      * Creates request options for costsRead without sending the request
      */
-    async costsReadRequestOpts(): Promise<runtime.RequestOpts> {
+    async costsReadRequestOpts(requestParameters: CostsApiCostsReadRequest): Promise<runtime.RequestOpts> {
         const queryParameters: any = {};
+
+        if (requestParameters['logicalOperationId'] != null) {
+            queryParameters['logicalOperationId'] = requestParameters['logicalOperationId'];
+        }
+
+        if (requestParameters['subjectId'] != null) {
+            queryParameters['subjectId'] = requestParameters['subjectId'];
+        }
+
+        if (requestParameters['roleId'] != null) {
+            queryParameters['roleId'] = requestParameters['roleId'];
+        }
+
+        if (requestParameters['status'] != null) {
+            queryParameters['status'] = requestParameters['status'];
+        }
+
+        if (requestParameters['cursor'] != null) {
+            queryParameters['cursor'] = requestParameters['cursor'];
+        }
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
 
         const headerParameters: runtime.HTTPHeaders = {};
 
@@ -50,22 +102,30 @@ export class CostsApi extends runtime.BaseAPI {
 
     /**
      */
-    async costsReadRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
-        const requestOptions = await this.costsReadRequestOpts();
+    async costsReadRaw(requestParameters: CostsApiCostsReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<ModelInvocationPage>> {
+        const requestOptions = await this.costsReadRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        if (this.isJsonMime(response.headers.get('content-type'))) {
-            return new runtime.JSONApiResponse<any>(response);
-        } else {
-            return new runtime.TextApiResponse(response) as any;
-        }
+        return new runtime.JSONApiResponse(response);
     }
 
     /**
      */
-    async costsRead(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
-        const response = await this.costsReadRaw(initOverrides);
+    async costsRead(requestParameters: CostsApiCostsReadRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<ModelInvocationPage> {
+        const response = await this.costsReadRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
 }
+
+/**
+ * @export
+ */
+export const CostsReadStatusEnum = {
+    Prepared: 'prepared',
+    Dispatched: 'dispatched',
+    Completed: 'completed',
+    NotSent: 'not_sent',
+    Unknown: 'unknown',
+} as const;
+export type CostsReadStatusEnum = typeof CostsReadStatusEnum[keyof typeof CostsReadStatusEnum];

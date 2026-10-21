@@ -1,14 +1,21 @@
 packages:
   - apps/*
   - packages/*
+  - integrations/*
 allowBuilds:
   esbuild: true
+  protobufjs: true
 autoInstallPeers: false
 minimumReleaseAgeExclude:
   - '@ai-sdk/gateway@4.0.119'
-  - '@ai-sdk/provider-utils@5.0.64'
+  - '@ai-sdk/provider-utils@5.0.64 || 5.0.65'
   - '@ai-sdk/provider@4.0.31'
   - ai@7.0.146
+  - '@ai-sdk/cohere@4.0.66'
+  - '@ai-sdk/openai@4.0.99'
 
 overrides:
   kysely: 0.29.7
+
+patchedDependencies:
+  fastify-type-provider-zod@7.0.0: patches/fastify-type-provider-zod@7.0.0.patch

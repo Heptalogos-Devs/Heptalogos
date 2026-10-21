@@ -1,28 +1,23 @@
 {
-  "compilerOptions": {
-    "target": "ES2023",
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "declaration": true,
-    "sourceMap": true,
-    "outDir": "data/build",
-    "rootDir": ".",
-    "resolveJsonModule": true,
-    "types": [
-      "node"
-    ],
-    "customConditions": [
-      "development"
-    ]
-  },
-  "include": [
-    "apps/**/*.ts",
-    "packages/**/*.ts",
-    "migrations/**/*.ts",
-    "scripts/**/*.ts",
-    "tests/**/*.ts"
+  "files": [],
+  "references": [
+    {
+      "path": "packages/contracts"
+    },
+    {
+      "path": "packages/client"
+    },
+    {
+      "path": "integrations/openclaw"
+    },
+    {
+      "path": "packages/hept"
+    },
+    {
+      "path": "apps/server"
+    },
+    {
+      "path": "apps/cli"
+    }
   ]
 }

@@ -14,32 +14,46 @@
 
 import * as runtime from '../runtime.js';
 import type {
-    SecretsSetRequest,
+    SecretsCreate200Response,
+    SecretsCreateRequest,
+    SecretsRevokeRequest,
+    SecretsRotateRequest,
 } from '../models/index.js';
 
-export interface SecretsDeleteRequest {
+export interface SecretsApiSecretsCreateOperationRequest {
     /**
      * 
      */
-    ref: string;
+    secretsCreateRequest: SecretsCreateRequest;
 }
 
-export interface SecretsSetOperationRequest {
+export interface SecretsApiSecretsRevokeOperationRequest {
     /**
      * 
      */
-    ref: string;
+    id: string;
     /**
      * 
      */
-    secretsSetRequest: SecretsSetRequest;
+    secretsRevokeRequest: SecretsRevokeRequest;
 }
 
-export interface SecretsStatusRequest {
+export interface SecretsApiSecretsRotateOperationRequest {
     /**
      * 
      */
-    ref: string;
+    id: string;
+    /**
+     * 
+     */
+    secretsRotateRequest: SecretsRotateRequest;
+}
+
+export interface SecretsApiSecretsStatusRequest {
+    /**
+     * 
+     */
+    id: string;
 }
 
 /**
@@ -48,75 +62,13 @@ export interface SecretsStatusRequest {
 export class SecretsApi extends runtime.BaseAPI {
 
     /**
-     * Creates request options for secretsDelete without sending the request
+     * Creates request options for secretsCreate without sending the request
      */
-    async secretsDeleteRequestOpts(requestParameters: SecretsDeleteRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['ref'] == null) {
+    async secretsCreateRequestOpts(requestParameters: SecretsApiSecretsCreateOperationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['secretsCreateRequest'] == null) {
             throw new runtime.RequiredError(
-                'ref',
-                'Required parameter "ref" was null or undefined when calling secretsDelete().'
-            );
-        }
-
-        const queryParameters: any = {};
-
-        const headerParameters: runtime.HTTPHeaders = {};
-
-        if (this.configuration && this.configuration.accessToken) {
-            const token = this.configuration.accessToken;
-            const tokenString = await token("bearerAuth", []);
-
-            if (tokenString) {
-                headerParameters["Authorization"] = `Bearer ${tokenString}`;
-            }
-        }
-
-        let urlPath = `/v1/secrets/{ref}`;
-        urlPath = urlPath.replace('{ref}', encodeURIComponent(String(requestParameters['ref'])));
-
-        return {
-            path: urlPath,
-            method: 'DELETE',
-            headers: headerParameters,
-            query: queryParameters,
-        };
-    }
-
-    /**
-     */
-    async secretsDeleteRaw(requestParameters: SecretsDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
-        const requestOptions = await this.secretsDeleteRequestOpts(requestParameters);
-        const response = await this.request(requestOptions, initOverrides);
-
-        if (this.isJsonMime(response.headers.get('content-type'))) {
-            return new runtime.JSONApiResponse<any>(response);
-        } else {
-            return new runtime.TextApiResponse(response) as any;
-        }
-    }
-
-    /**
-     */
-    async secretsDelete(requestParameters: SecretsDeleteRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
-        const response = await this.secretsDeleteRaw(requestParameters, initOverrides);
-        return await response.value();
-    }
-
-    /**
-     * Creates request options for secretsSet without sending the request
-     */
-    async secretsSetRequestOpts(requestParameters: SecretsSetOperationRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['ref'] == null) {
-            throw new runtime.RequiredError(
-                'ref',
-                'Required parameter "ref" was null or undefined when calling secretsSet().'
-            );
-        }
-
-        if (requestParameters['secretsSetRequest'] == null) {
-            throw new runtime.RequiredError(
-                'secretsSetRequest',
-                'Required parameter "secretsSetRequest" was null or undefined when calling secretsSet().'
+                'secretsCreateRequest',
+                'Required parameter "secretsCreateRequest" was null or undefined when calling secretsCreate().'
             );
         }
 
@@ -135,46 +87,163 @@ export class SecretsApi extends runtime.BaseAPI {
             }
         }
 
-        let urlPath = `/v1/secrets/{ref}`;
-        urlPath = urlPath.replace('{ref}', encodeURIComponent(String(requestParameters['ref'])));
+        let urlPath = `/v1/secrets`;
 
         return {
             path: urlPath,
-            method: 'PUT',
+            method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: requestParameters['secretsSetRequest'],
+            body: requestParameters['secretsCreateRequest'],
         };
     }
 
     /**
      */
-    async secretsSetRaw(requestParameters: SecretsSetOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
-        const requestOptions = await this.secretsSetRequestOpts(requestParameters);
+    async secretsCreateRaw(requestParameters: SecretsApiSecretsCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SecretsCreate200Response>> {
+        const requestOptions = await this.secretsCreateRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        if (this.isJsonMime(response.headers.get('content-type'))) {
-            return new runtime.JSONApiResponse<any>(response);
-        } else {
-            return new runtime.TextApiResponse(response) as any;
-        }
+        return new runtime.JSONApiResponse(response);
     }
 
     /**
      */
-    async secretsSet(requestParameters: SecretsSetOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
-        const response = await this.secretsSetRaw(requestParameters, initOverrides);
+    async secretsCreate(requestParameters: SecretsApiSecretsCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SecretsCreate200Response> {
+        const response = await this.secretsCreateRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for secretsRevoke without sending the request
+     */
+    async secretsRevokeRequestOpts(requestParameters: SecretsApiSecretsRevokeOperationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling secretsRevoke().'
+            );
+        }
+
+        if (requestParameters['secretsRevokeRequest'] == null) {
+            throw new runtime.RequiredError(
+                'secretsRevokeRequest',
+                'Required parameter "secretsRevokeRequest" was null or undefined when calling secretsRevoke().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/secrets/{id}/revoke`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: requestParameters['secretsRevokeRequest'],
+        };
+    }
+
+    /**
+     */
+    async secretsRevokeRaw(requestParameters: SecretsApiSecretsRevokeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SecretsCreate200Response>> {
+        const requestOptions = await this.secretsRevokeRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     */
+    async secretsRevoke(requestParameters: SecretsApiSecretsRevokeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SecretsCreate200Response> {
+        const response = await this.secretsRevokeRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for secretsRotate without sending the request
+     */
+    async secretsRotateRequestOpts(requestParameters: SecretsApiSecretsRotateOperationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling secretsRotate().'
+            );
+        }
+
+        if (requestParameters['secretsRotateRequest'] == null) {
+            throw new runtime.RequiredError(
+                'secretsRotateRequest',
+                'Required parameter "secretsRotateRequest" was null or undefined when calling secretsRotate().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/secrets/{id}/rotate`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: requestParameters['secretsRotateRequest'],
+        };
+    }
+
+    /**
+     */
+    async secretsRotateRaw(requestParameters: SecretsApiSecretsRotateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SecretsCreate200Response>> {
+        const requestOptions = await this.secretsRotateRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     */
+    async secretsRotate(requestParameters: SecretsApiSecretsRotateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SecretsCreate200Response> {
+        const response = await this.secretsRotateRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
      * Creates request options for secretsStatus without sending the request
      */
-    async secretsStatusRequestOpts(requestParameters: SecretsStatusRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['ref'] == null) {
+    async secretsStatusRequestOpts(requestParameters: SecretsApiSecretsStatusRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['id'] == null) {
             throw new runtime.RequiredError(
-                'ref',
-                'Required parameter "ref" was null or undefined when calling secretsStatus().'
+                'id',
+                'Required parameter "id" was null or undefined when calling secretsStatus().'
             );
         }
 
@@ -191,8 +260,8 @@ export class SecretsApi extends runtime.BaseAPI {
             }
         }
 
-        let urlPath = `/v1/secrets/{ref}`;
-        urlPath = urlPath.replace('{ref}', encodeURIComponent(String(requestParameters['ref'])));
+        let urlPath = `/v1/secrets/{id}`;
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
 
         return {
             path: urlPath,
@@ -204,20 +273,16 @@ export class SecretsApi extends runtime.BaseAPI {
 
     /**
      */
-    async secretsStatusRaw(requestParameters: SecretsStatusRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async secretsStatusRaw(requestParameters: SecretsApiSecretsStatusRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SecretsCreate200Response>> {
         const requestOptions = await this.secretsStatusRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        if (this.isJsonMime(response.headers.get('content-type'))) {
-            return new runtime.JSONApiResponse<any>(response);
-        } else {
-            return new runtime.TextApiResponse(response) as any;
-        }
+        return new runtime.JSONApiResponse(response);
     }
 
     /**
      */
-    async secretsStatus(requestParameters: SecretsStatusRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async secretsStatus(requestParameters: SecretsApiSecretsStatusRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SecretsCreate200Response> {
         const response = await this.secretsStatusRaw(requestParameters, initOverrides);
         return await response.value();
     }

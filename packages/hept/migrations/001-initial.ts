@@ -1,6 +1,6 @@
 import { sql, type Kysely } from 'kysely';
 export async function up(db:Kysely<any>){
- for(const table of ['media','subjects','subjectBindings','conversations','messages','messageRevisions','expressions','deliveryParts','statements','channels','people','worlds','worldClockSegments','calendarRules','calendarExceptions','realizedEvents','activities','lifeState','pursuits','commitments','decisions','opportunities','nextNodes','tasks','workspaces','settingsOverrides','settingsHistory','modelInvocations','modelResources']){
+ for(const table of ['modelArtifacts','media','subjects','subjectBindings','conversations','messages','messageRevisions','expressions','deliveryParts','statements','channels','people','worlds','calendarRules','calendarExceptions','realizedEvents','activities','lifeState','pursuits','commitments','decisions','opportunities','nextNodes','tasks','workspaces']){
   await db.schema.createTable(table).addColumn('id','text',c=>c.primaryKey()).addColumn('subjectId','text',c=>c.notNull()).addColumn('revision','integer',c=>c.notNull().defaultTo(1)).addColumn('document','jsonb',c=>c.notNull()).addColumn('createdAt','timestamptz',c=>c.notNull().defaultTo(sql`now()`)).addColumn('updatedAt','timestamptz',c=>c.notNull().defaultTo(sql`now()`)).execute();
   await db.schema.createIndex(`${table}_subject`).on(table).column('subjectId').execute();
  }

@@ -16,7 +16,7 @@ import * as runtime from '../runtime.js';
 import type {
 } from '../models/index.js';
 
-export interface ExpressionsCancelRequest {
+export interface ExpressionsApiExpressionsCancelRequest {
     /**
      * 
      */
@@ -31,7 +31,7 @@ export interface ExpressionsCancelRequest {
     body: object;
 }
 
-export interface ExpressionsInspectRequest {
+export interface ExpressionsApiExpressionsInspectRequest {
     /**
      * 
      */
@@ -50,7 +50,7 @@ export class ExpressionsApi extends runtime.BaseAPI {
     /**
      * Creates request options for expressionsCancel without sending the request
      */
-    async expressionsCancelRequestOpts(requestParameters: ExpressionsCancelRequest): Promise<runtime.RequestOpts> {
+    async expressionsCancelRequestOpts(requestParameters: ExpressionsApiExpressionsCancelRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -102,7 +102,7 @@ export class ExpressionsApi extends runtime.BaseAPI {
 
     /**
      */
-    async expressionsCancelRaw(requestParameters: ExpressionsCancelRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async expressionsCancelRaw(requestParameters: ExpressionsApiExpressionsCancelRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.expressionsCancelRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -115,7 +115,7 @@ export class ExpressionsApi extends runtime.BaseAPI {
 
     /**
      */
-    async expressionsCancel(requestParameters: ExpressionsCancelRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async expressionsCancel(requestParameters: ExpressionsApiExpressionsCancelRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.expressionsCancelRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -123,7 +123,7 @@ export class ExpressionsApi extends runtime.BaseAPI {
     /**
      * Creates request options for expressionsInspect without sending the request
      */
-    async expressionsInspectRequestOpts(requestParameters: ExpressionsInspectRequest): Promise<runtime.RequestOpts> {
+    async expressionsInspectRequestOpts(requestParameters: ExpressionsApiExpressionsInspectRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -165,7 +165,7 @@ export class ExpressionsApi extends runtime.BaseAPI {
 
     /**
      */
-    async expressionsInspectRaw(requestParameters: ExpressionsInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async expressionsInspectRaw(requestParameters: ExpressionsApiExpressionsInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.expressionsInspectRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -178,7 +178,7 @@ export class ExpressionsApi extends runtime.BaseAPI {
 
     /**
      */
-    async expressionsInspect(requestParameters: ExpressionsInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async expressionsInspect(requestParameters: ExpressionsApiExpressionsInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.expressionsInspectRaw(requestParameters, initOverrides);
         return await response.value();
     }

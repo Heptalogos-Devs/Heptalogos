@@ -17,9 +17,54 @@ import type {
     MessagesChangeRequest,
     MessagesReceiveRequest,
     MessagesSendExpressionRequest,
+    MessagesUpdatePolicyRequest,
 } from '../models/index.js';
 
-export interface MessagesChangeOperationRequest {
+export interface MessagesApiMessagesChangeOperationRequest {
+    /**
+     * 
+     */
+    subjectId: string;
+    /**
+     * 
+     */
+    messagesChangeRequest: MessagesChangeRequest;
+}
+
+export interface MessagesApiMessagesReadRequest {
+    /**
+     * 
+     */
+    subjectId: string;
+    /**
+     * 
+     */
+    id: string;
+}
+
+export interface MessagesApiMessagesReceiveOperationRequest {
+    /**
+     * 
+     */
+    subjectId: string;
+    /**
+     * 
+     */
+    messagesReceiveRequest: MessagesReceiveRequest;
+}
+
+export interface MessagesApiMessagesSendExpressionOperationRequest {
+    /**
+     * 
+     */
+    subjectId: string;
+    /**
+     * 
+     */
+    messagesSendExpressionRequest: MessagesSendExpressionRequest;
+}
+
+export interface MessagesApiMessagesUpdatePolicyOperationRequest {
     /**
      * 
      */
@@ -31,29 +76,7 @@ export interface MessagesChangeOperationRequest {
     /**
      * 
      */
-    messagesChangeRequest: MessagesChangeRequest;
-}
-
-export interface MessagesReceiveOperationRequest {
-    /**
-     * 
-     */
-    subjectId: string;
-    /**
-     * 
-     */
-    messagesReceiveRequest: MessagesReceiveRequest;
-}
-
-export interface MessagesSendExpressionOperationRequest {
-    /**
-     * 
-     */
-    subjectId: string;
-    /**
-     * 
-     */
-    messagesSendExpressionRequest: MessagesSendExpressionRequest;
+    messagesUpdatePolicyRequest: MessagesUpdatePolicyRequest;
 }
 
 /**
@@ -64,18 +87,11 @@ export class MessagesApi extends runtime.BaseAPI {
     /**
      * Creates request options for messagesChange without sending the request
      */
-    async messagesChangeRequestOpts(requestParameters: MessagesChangeOperationRequest): Promise<runtime.RequestOpts> {
+    async messagesChangeRequestOpts(requestParameters: MessagesApiMessagesChangeOperationRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
                 'Required parameter "subjectId" was null or undefined when calling messagesChange().'
-            );
-        }
-
-        if (requestParameters['id'] == null) {
-            throw new runtime.RequiredError(
-                'id',
-                'Required parameter "id" was null or undefined when calling messagesChange().'
             );
         }
 
@@ -101,9 +117,8 @@ export class MessagesApi extends runtime.BaseAPI {
             }
         }
 
-        let urlPath = `/v1/subjects/{subjectId}/messages/{id}/changes`;
+        let urlPath = `/v1/subjects/{subjectId}/message-changes`;
         urlPath = urlPath.replace('{subjectId}', encodeURIComponent(String(requestParameters['subjectId'])));
-        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
 
         return {
             path: urlPath,
@@ -116,7 +131,7 @@ export class MessagesApi extends runtime.BaseAPI {
 
     /**
      */
-    async messagesChangeRaw(requestParameters: MessagesChangeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async messagesChangeRaw(requestParameters: MessagesApiMessagesChangeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.messagesChangeRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -129,15 +144,78 @@ export class MessagesApi extends runtime.BaseAPI {
 
     /**
      */
-    async messagesChange(requestParameters: MessagesChangeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async messagesChange(requestParameters: MessagesApiMessagesChangeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.messagesChangeRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for messagesRead without sending the request
+     */
+    async messagesReadRequestOpts(requestParameters: MessagesApiMessagesReadRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['subjectId'] == null) {
+            throw new runtime.RequiredError(
+                'subjectId',
+                'Required parameter "subjectId" was null or undefined when calling messagesRead().'
+            );
+        }
+
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling messagesRead().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/subjects/{subjectId}/messages/{id}`;
+        urlPath = urlPath.replace('{subjectId}', encodeURIComponent(String(requestParameters['subjectId'])));
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async messagesReadRaw(requestParameters: MessagesApiMessagesReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+        const requestOptions = await this.messagesReadRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        if (this.isJsonMime(response.headers.get('content-type'))) {
+            return new runtime.JSONApiResponse<any>(response);
+        } else {
+            return new runtime.TextApiResponse(response) as any;
+        }
+    }
+
+    /**
+     */
+    async messagesRead(requestParameters: MessagesApiMessagesReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+        const response = await this.messagesReadRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
      * Creates request options for messagesReceive without sending the request
      */
-    async messagesReceiveRequestOpts(requestParameters: MessagesReceiveOperationRequest): Promise<runtime.RequestOpts> {
+    async messagesReceiveRequestOpts(requestParameters: MessagesApiMessagesReceiveOperationRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -181,7 +259,7 @@ export class MessagesApi extends runtime.BaseAPI {
 
     /**
      */
-    async messagesReceiveRaw(requestParameters: MessagesReceiveOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async messagesReceiveRaw(requestParameters: MessagesApiMessagesReceiveOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.messagesReceiveRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -194,7 +272,7 @@ export class MessagesApi extends runtime.BaseAPI {
 
     /**
      */
-    async messagesReceive(requestParameters: MessagesReceiveOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async messagesReceive(requestParameters: MessagesApiMessagesReceiveOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.messagesReceiveRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -202,7 +280,7 @@ export class MessagesApi extends runtime.BaseAPI {
     /**
      * Creates request options for messagesSendExpression without sending the request
      */
-    async messagesSendExpressionRequestOpts(requestParameters: MessagesSendExpressionOperationRequest): Promise<runtime.RequestOpts> {
+    async messagesSendExpressionRequestOpts(requestParameters: MessagesApiMessagesSendExpressionOperationRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -246,7 +324,7 @@ export class MessagesApi extends runtime.BaseAPI {
 
     /**
      */
-    async messagesSendExpressionRaw(requestParameters: MessagesSendExpressionOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async messagesSendExpressionRaw(requestParameters: MessagesApiMessagesSendExpressionOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.messagesSendExpressionRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -259,8 +337,81 @@ export class MessagesApi extends runtime.BaseAPI {
 
     /**
      */
-    async messagesSendExpression(requestParameters: MessagesSendExpressionOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async messagesSendExpression(requestParameters: MessagesApiMessagesSendExpressionOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.messagesSendExpressionRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for messagesUpdatePolicy without sending the request
+     */
+    async messagesUpdatePolicyRequestOpts(requestParameters: MessagesApiMessagesUpdatePolicyOperationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['subjectId'] == null) {
+            throw new runtime.RequiredError(
+                'subjectId',
+                'Required parameter "subjectId" was null or undefined when calling messagesUpdatePolicy().'
+            );
+        }
+
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling messagesUpdatePolicy().'
+            );
+        }
+
+        if (requestParameters['messagesUpdatePolicyRequest'] == null) {
+            throw new runtime.RequiredError(
+                'messagesUpdatePolicyRequest',
+                'Required parameter "messagesUpdatePolicyRequest" was null or undefined when calling messagesUpdatePolicy().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/subjects/{subjectId}/messages/{id}/policy`;
+        urlPath = urlPath.replace('{subjectId}', encodeURIComponent(String(requestParameters['subjectId'])));
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
+            method: 'PATCH',
+            headers: headerParameters,
+            query: queryParameters,
+            body: requestParameters['messagesUpdatePolicyRequest'],
+        };
+    }
+
+    /**
+     */
+    async messagesUpdatePolicyRaw(requestParameters: MessagesApiMessagesUpdatePolicyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+        const requestOptions = await this.messagesUpdatePolicyRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        if (this.isJsonMime(response.headers.get('content-type'))) {
+            return new runtime.JSONApiResponse<any>(response);
+        } else {
+            return new runtime.TextApiResponse(response) as any;
+        }
+    }
+
+    /**
+     */
+    async messagesUpdatePolicy(requestParameters: MessagesApiMessagesUpdatePolicyOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+        const response = await this.messagesUpdatePolicyRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

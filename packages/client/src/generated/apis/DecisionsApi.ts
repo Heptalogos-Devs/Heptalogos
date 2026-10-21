@@ -16,7 +16,7 @@ import * as runtime from '../runtime.js';
 import type {
 } from '../models/index.js';
 
-export interface DecisionsReadRequest {
+export interface DecisionsApiDecisionsReadRequest {
     /**
      * 
      */
@@ -35,7 +35,7 @@ export class DecisionsApi extends runtime.BaseAPI {
     /**
      * Creates request options for decisionsRead without sending the request
      */
-    async decisionsReadRequestOpts(requestParameters: DecisionsReadRequest): Promise<runtime.RequestOpts> {
+    async decisionsReadRequestOpts(requestParameters: DecisionsApiDecisionsReadRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -77,7 +77,7 @@ export class DecisionsApi extends runtime.BaseAPI {
 
     /**
      */
-    async decisionsReadRaw(requestParameters: DecisionsReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async decisionsReadRaw(requestParameters: DecisionsApiDecisionsReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.decisionsReadRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -90,7 +90,7 @@ export class DecisionsApi extends runtime.BaseAPI {
 
     /**
      */
-    async decisionsRead(requestParameters: DecisionsReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async decisionsRead(requestParameters: DecisionsApiDecisionsReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.decisionsReadRaw(requestParameters, initOverrides);
         return await response.value();
     }

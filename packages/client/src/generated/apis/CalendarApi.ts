@@ -18,7 +18,7 @@ import type {
     WorldsPreviewRequestCalendarInner,
 } from '../models/index.js';
 
-export interface CalendarChangeOperationRequest {
+export interface CalendarApiCalendarChangeOperationRequest {
     /**
      * 
      */
@@ -33,7 +33,7 @@ export interface CalendarChangeOperationRequest {
     calendarChangeRequest: CalendarChangeRequest;
 }
 
-export interface CalendarCreateRequest {
+export interface CalendarApiCalendarCreateRequest {
     /**
      * 
      */
@@ -44,7 +44,7 @@ export interface CalendarCreateRequest {
     worldsPreviewRequestCalendarInner: WorldsPreviewRequestCalendarInner;
 }
 
-export interface CalendarListRequest {
+export interface CalendarApiCalendarListRequest {
     /**
      * 
      */
@@ -59,7 +59,7 @@ export class CalendarApi extends runtime.BaseAPI {
     /**
      * Creates request options for calendarChange without sending the request
      */
-    async calendarChangeRequestOpts(requestParameters: CalendarChangeOperationRequest): Promise<runtime.RequestOpts> {
+    async calendarChangeRequestOpts(requestParameters: CalendarApiCalendarChangeOperationRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -111,7 +111,7 @@ export class CalendarApi extends runtime.BaseAPI {
 
     /**
      */
-    async calendarChangeRaw(requestParameters: CalendarChangeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async calendarChangeRaw(requestParameters: CalendarApiCalendarChangeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.calendarChangeRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -124,7 +124,7 @@ export class CalendarApi extends runtime.BaseAPI {
 
     /**
      */
-    async calendarChange(requestParameters: CalendarChangeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async calendarChange(requestParameters: CalendarApiCalendarChangeOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.calendarChangeRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -132,7 +132,7 @@ export class CalendarApi extends runtime.BaseAPI {
     /**
      * Creates request options for calendarCreate without sending the request
      */
-    async calendarCreateRequestOpts(requestParameters: CalendarCreateRequest): Promise<runtime.RequestOpts> {
+    async calendarCreateRequestOpts(requestParameters: CalendarApiCalendarCreateRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -176,7 +176,7 @@ export class CalendarApi extends runtime.BaseAPI {
 
     /**
      */
-    async calendarCreateRaw(requestParameters: CalendarCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async calendarCreateRaw(requestParameters: CalendarApiCalendarCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.calendarCreateRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -189,7 +189,7 @@ export class CalendarApi extends runtime.BaseAPI {
 
     /**
      */
-    async calendarCreate(requestParameters: CalendarCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async calendarCreate(requestParameters: CalendarApiCalendarCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.calendarCreateRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -197,7 +197,7 @@ export class CalendarApi extends runtime.BaseAPI {
     /**
      * Creates request options for calendarList without sending the request
      */
-    async calendarListRequestOpts(requestParameters: CalendarListRequest): Promise<runtime.RequestOpts> {
+    async calendarListRequestOpts(requestParameters: CalendarApiCalendarListRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -231,7 +231,7 @@ export class CalendarApi extends runtime.BaseAPI {
 
     /**
      */
-    async calendarListRaw(requestParameters: CalendarListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async calendarListRaw(requestParameters: CalendarApiCalendarListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.calendarListRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -244,7 +244,7 @@ export class CalendarApi extends runtime.BaseAPI {
 
     /**
      */
-    async calendarList(requestParameters: CalendarListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async calendarList(requestParameters: CalendarApiCalendarListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.calendarListRaw(requestParameters, initOverrides);
         return await response.value();
     }

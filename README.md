@@ -1,29 +1,33 @@
 # Heptalogos
 
-> **INTERRUPTED — 开发已暂停（2026-10-20）。** 当前分支保存未完成施工；最新改动尚未整体验证。详见[中断交接](Session-Handoff-2026-10-20-15-28.md)。恢复须等待用户明确指令。
+Heptalogos 管理持续主体的世界、生活、交往与行动。当前正在按同级 [Specs](../Specs/README.md) 重建基础设施；领域能力继续施工，进度见[当前施工](docs/construction.md)。
 
-Heptalogos 管理持续主体的世界、生活、注意、交往与行动。独立运行时使用角色素材和近期交往；连接 Nous Wave 后，同一 SubjectId 使用长期认识与实际经历。
+产品使用独立 TypeScript 服务与 PostgreSQL 数据库。`createHept` 组合领域与正式 `@nous-wave/platform` 发行包，HTTP 和 CLI 调用相同 owner。Node 24、TypeScript 7、pnpm 12；各包编译到标准 `dist/`，使用 pnpm pack/deploy。
 
-当前代码从新 PostgreSQL 数据库启动。业务在 `packages/hept`，正式 Zod 输入在 `packages/contracts`，HTTP 与 CLI 共用 `createHept()`。完整施工依据位于同级 [Specs 快照](https://github.com/Heptalogos-Devs/Nous-Wave/tree/feat/spec-rebuild/docs/construction-specs)。
-
-```sh
-corepack pnpm install
-pnpm hept init --database postgresql://localhost/hept --data data/hept
-HEPT_CONFIG=data/config/hept.toml pnpm hept admin-create --email admin@example.test --password-ref env:HEPT_INITIAL_PASSWORD
-HEPT_CONFIG=data/config/hept.toml pnpm serve
-```
-
-管理员密码通过所选 SecretRef 提供。`admin-create` 将 CLI API key 写入受限凭据文件；浏览器与服务凭据使用 Better Auth。默认只监听回环地址。
+先准备外部空库，并在进程环境配置 `HEPT_DATABASE_URL`。环境变量值由引导 SecretRef 读取；命令行只保存变量名。
 
 ```sh
-HEPT_CONFIG=data/config/hept.toml pnpm hept subject create Alice
-HEPT_CONFIG=data/config/hept.toml pnpm hept --subject <subject-id> model register examples/model.json
-HEPT_CONFIG=data/config/hept.toml pnpm hept --subject <subject-id> settings set examples/settings.json
-HEPT_CONFIG=data/config/hept.toml pnpm hept --subject <subject-id> subject start
-HEPT_CONFIG=data/config/hept.toml pnpm hept --subject <subject-id> chat '今天想聊些什么？'
-HEPT_CONFIG=data/config/hept.toml pnpm hept --subject <subject-id> inbox
+pnpm install
+pnpm build
+pnpm hept --instance-home /path/to/instance init --database-mode external --database-url-env HEPT_DATABASE_URL
+pnpm hept --instance-home /path/to/instance admin-create --email admin@example.test
+pnpm hept --instance-home /path/to/instance host start
 ```
 
-模型示例的 `credentialRef` 指向环境或受限文件，先按自己的提供方修改端点和模型 ID。配置不带真实凭据。
+`admin-create` 从受保护交互读取密码，建立真实 Better Auth 管理员并保存本机受限 CLI key。自动化可用 `--password-env VARIABLE` 或 `--password-stdin`。独立机器安装数据库时，选择 `init --database-mode managed`，显式执行 `runtime acquire postgres` 后再运行 `init`；Host 启动不下载运行时。
 
-[当前设计与操作](docs/INDEX.md)说明目录、模型接触、消息、世界与集成。运行检查为 `pnpm verify`；真实数据库轨迹使用 `HEPT_TEST_DATABASE_URL` 指向专用空库。
+另一个终端可运行：
+
+```sh
+pnpm hept --instance-home /path/to/instance host status
+pnpm hept --instance-home /path/to/instance login --email admin@example.test
+pnpm hept --instance-home /path/to/instance doctor
+pnpm hept --instance-home /path/to/instance subject create Alice
+pnpm hept --instance-home /path/to/instance host stop
+```
+
+模型与 Provider 通过 `provider create`、`model create`、`settings update` 配置；秘密单独由 `secret create` 登记，配置只引用 SecretRef。`model test` 使用同一实际 SDK、预算、时间捕获、原件与调用账本；金额未知保存为空。`hept.execution` 登记原生 OpenClaw 连接，原生执行、工具、Skills 与历史继续由 OpenClaw 持有。
+
+`time` 提供域、Clock 修订、读钟、捕获、绑定与截止点投影；输入使用正式合同 JSON 文件。`data export/preview/import/purge` 传输主体资料，当前 restore 要求原安装身份。Subject fork 的新时钟与历史来源计划仍待完成，当前入口明确不可用。
+
+[操作与事务](docs/design.md)说明当前 owner；[文档目录](docs/INDEX.md)列出接入说明。`pnpm typecheck`、`pnpm test`、`pnpm build` 是当前检查；真实产品场景以 `HEPT_TEST_DATABASE_URL` 指向专用空库，测试临时目录放工作区 `temp/`。

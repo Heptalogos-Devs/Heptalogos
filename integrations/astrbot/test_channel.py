@@ -29,10 +29,12 @@ async def test_full_inbound_media_and_partial_physical_receipts(monkeypatch, tmp
     async def message(request):
         received.append(await request.json())
         assert request.headers["Authorization"] == "Bearer service-test"
+        assert request.headers["x-purpose"] == "ingress"
         return web.json_response({"operationId": "received"})
 
     async def preserve(request):
         media.append(await request.read())
+        assert request.query == {"channelAccount": "qq:456", "conversationKey": "group:123"}
         assert request.headers["idempotency-key"] == "qq:456:group:123:99:p1"
         return web.json_response({"ref": {"product": "hept", "installationId": "test", "kind": "media", "id": "image"}, "bytes": len(media[-1]), "mediaType": "image/png", "name": "photo.png"})
 

@@ -17,7 +17,7 @@ import type {
     ActivitiesInterruptRequest,
 } from '../models/index.js';
 
-export interface ActivitiesInspectRequest {
+export interface ActivitiesApiActivitiesInspectRequest {
     /**
      * 
      */
@@ -28,7 +28,7 @@ export interface ActivitiesInspectRequest {
     id: string;
 }
 
-export interface ActivitiesInterruptOperationRequest {
+export interface ActivitiesApiActivitiesInterruptOperationRequest {
     /**
      * 
      */
@@ -43,7 +43,7 @@ export interface ActivitiesInterruptOperationRequest {
     activitiesInterruptRequest: ActivitiesInterruptRequest;
 }
 
-export interface ActivitiesResumeRequest {
+export interface ActivitiesApiActivitiesResumeRequest {
     /**
      * 
      */
@@ -66,7 +66,7 @@ export class ActivitiesApi extends runtime.BaseAPI {
     /**
      * Creates request options for activitiesInspect without sending the request
      */
-    async activitiesInspectRequestOpts(requestParameters: ActivitiesInspectRequest): Promise<runtime.RequestOpts> {
+    async activitiesInspectRequestOpts(requestParameters: ActivitiesApiActivitiesInspectRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -108,7 +108,7 @@ export class ActivitiesApi extends runtime.BaseAPI {
 
     /**
      */
-    async activitiesInspectRaw(requestParameters: ActivitiesInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async activitiesInspectRaw(requestParameters: ActivitiesApiActivitiesInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.activitiesInspectRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -121,7 +121,7 @@ export class ActivitiesApi extends runtime.BaseAPI {
 
     /**
      */
-    async activitiesInspect(requestParameters: ActivitiesInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async activitiesInspect(requestParameters: ActivitiesApiActivitiesInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.activitiesInspectRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -129,7 +129,7 @@ export class ActivitiesApi extends runtime.BaseAPI {
     /**
      * Creates request options for activitiesInterrupt without sending the request
      */
-    async activitiesInterruptRequestOpts(requestParameters: ActivitiesInterruptOperationRequest): Promise<runtime.RequestOpts> {
+    async activitiesInterruptRequestOpts(requestParameters: ActivitiesApiActivitiesInterruptOperationRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -181,7 +181,7 @@ export class ActivitiesApi extends runtime.BaseAPI {
 
     /**
      */
-    async activitiesInterruptRaw(requestParameters: ActivitiesInterruptOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async activitiesInterruptRaw(requestParameters: ActivitiesApiActivitiesInterruptOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.activitiesInterruptRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -194,7 +194,7 @@ export class ActivitiesApi extends runtime.BaseAPI {
 
     /**
      */
-    async activitiesInterrupt(requestParameters: ActivitiesInterruptOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async activitiesInterrupt(requestParameters: ActivitiesApiActivitiesInterruptOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.activitiesInterruptRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -202,7 +202,7 @@ export class ActivitiesApi extends runtime.BaseAPI {
     /**
      * Creates request options for activitiesResume without sending the request
      */
-    async activitiesResumeRequestOpts(requestParameters: ActivitiesResumeRequest): Promise<runtime.RequestOpts> {
+    async activitiesResumeRequestOpts(requestParameters: ActivitiesApiActivitiesResumeRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -254,7 +254,7 @@ export class ActivitiesApi extends runtime.BaseAPI {
 
     /**
      */
-    async activitiesResumeRaw(requestParameters: ActivitiesResumeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async activitiesResumeRaw(requestParameters: ActivitiesApiActivitiesResumeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.activitiesResumeRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -267,7 +267,7 @@ export class ActivitiesApi extends runtime.BaseAPI {
 
     /**
      */
-    async activitiesResume(requestParameters: ActivitiesResumeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async activitiesResume(requestParameters: ActivitiesApiActivitiesResumeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.activitiesResumeRaw(requestParameters, initOverrides);
         return await response.value();
     }

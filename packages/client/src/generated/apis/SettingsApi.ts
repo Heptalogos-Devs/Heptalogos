@@ -14,22 +14,92 @@
 
 import * as runtime from '../runtime.js';
 import type {
-    SettingsResetRequest,
-    SettingsUpdateRequest,
+    ConfigScopeInput,
+    ConsumerAppliedView,
+    EffectiveSettingsView,
+    ModuleDescription,
+    SettingsChangeInput,
+    SettingsChangeResult,
+    SettingsHistoryPage,
+    SettingsResetInput,
+    SettingsRestoreInput,
 } from '../models/index.js';
 
-export interface SettingsResetOperationRequest {
+export interface SettingsApiSettingsAppliedRequest {
     /**
      * 
      */
-    settingsResetRequest: SettingsResetRequest;
+    namespaces: Array<string>;
+    /**
+     * 
+     */
+    scope: ConfigScopeInput;
 }
 
-export interface SettingsUpdateOperationRequest {
+export interface SettingsApiSettingsDescribeRequest {
     /**
      * 
      */
-    settingsUpdateRequest: SettingsUpdateRequest;
+    namespace?: string;
+    /**
+     * 
+     */
+    scope?: ConfigScopeInput;
+    /**
+     * 
+     */
+    definitionRevision?: string;
+}
+
+export interface SettingsApiSettingsHistoryRequest {
+    /**
+     * 
+     */
+    namespace: string;
+    /**
+     * 
+     */
+    scope: ConfigScopeInput;
+    /**
+     * 
+     */
+    cursor?: string;
+    /**
+     * 
+     */
+    limit?: number;
+}
+
+export interface SettingsApiSettingsReadRequest {
+    /**
+     * 
+     */
+    namespaces: Array<string>;
+    /**
+     * 
+     */
+    scope: ConfigScopeInput;
+}
+
+export interface SettingsApiSettingsResetRequest {
+    /**
+     * 
+     */
+    settingsResetInput: SettingsResetInput;
+}
+
+export interface SettingsApiSettingsRestoreRequest {
+    /**
+     * 
+     */
+    settingsRestoreInput: SettingsRestoreInput;
+}
+
+export interface SettingsApiSettingsUpdateRequest {
+    /**
+     * 
+     */
+    settingsChangeInput: SettingsChangeInput;
 }
 
 /**
@@ -38,10 +108,87 @@ export interface SettingsUpdateOperationRequest {
 export class SettingsApi extends runtime.BaseAPI {
 
     /**
+     * Creates request options for settingsApplied without sending the request
+     */
+    async settingsAppliedRequestOpts(requestParameters: SettingsApiSettingsAppliedRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['namespaces'] == null) {
+            throw new runtime.RequiredError(
+                'namespaces',
+                'Required parameter "namespaces" was null or undefined when calling settingsApplied().'
+            );
+        }
+
+        if (requestParameters['scope'] == null) {
+            throw new runtime.RequiredError(
+                'scope',
+                'Required parameter "scope" was null or undefined when calling settingsApplied().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        if (requestParameters['namespaces'] != null) {
+            queryParameters['namespaces'] = requestParameters['namespaces'];
+        }
+
+        if (requestParameters['scope'] != null) {
+            queryParameters['scope'] = requestParameters['scope'];
+        }
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/settings/applied`;
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async settingsAppliedRaw(requestParameters: SettingsApiSettingsAppliedRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<ConsumerAppliedView>>> {
+        const requestOptions = await this.settingsAppliedRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     */
+    async settingsApplied(requestParameters: SettingsApiSettingsAppliedRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<ConsumerAppliedView>> {
+        const response = await this.settingsAppliedRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
      * Creates request options for settingsDescribe without sending the request
      */
-    async settingsDescribeRequestOpts(): Promise<runtime.RequestOpts> {
+    async settingsDescribeRequestOpts(requestParameters: SettingsApiSettingsDescribeRequest): Promise<runtime.RequestOpts> {
         const queryParameters: any = {};
+
+        if (requestParameters['namespace'] != null) {
+            queryParameters['namespace'] = requestParameters['namespace'];
+        }
+
+        if (requestParameters['scope'] != null) {
+            queryParameters['scope'] = requestParameters['scope'];
+        }
+
+        if (requestParameters['definitionRevision'] != null) {
+            queryParameters['definitionRevision'] = requestParameters['definitionRevision'];
+        }
 
         const headerParameters: runtime.HTTPHeaders = {};
 
@@ -66,29 +213,55 @@ export class SettingsApi extends runtime.BaseAPI {
 
     /**
      */
-    async settingsDescribeRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
-        const requestOptions = await this.settingsDescribeRequestOpts();
+    async settingsDescribeRaw(requestParameters: SettingsApiSettingsDescribeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<Array<ModuleDescription>>> {
+        const requestOptions = await this.settingsDescribeRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        if (this.isJsonMime(response.headers.get('content-type'))) {
-            return new runtime.JSONApiResponse<any>(response);
-        } else {
-            return new runtime.TextApiResponse(response) as any;
-        }
+        return new runtime.JSONApiResponse(response);
     }
 
     /**
      */
-    async settingsDescribe(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
-        const response = await this.settingsDescribeRaw(initOverrides);
+    async settingsDescribe(requestParameters: SettingsApiSettingsDescribeRequest = {}, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<Array<ModuleDescription>> {
+        const response = await this.settingsDescribeRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
      * Creates request options for settingsHistory without sending the request
      */
-    async settingsHistoryRequestOpts(): Promise<runtime.RequestOpts> {
+    async settingsHistoryRequestOpts(requestParameters: SettingsApiSettingsHistoryRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['namespace'] == null) {
+            throw new runtime.RequiredError(
+                'namespace',
+                'Required parameter "namespace" was null or undefined when calling settingsHistory().'
+            );
+        }
+
+        if (requestParameters['scope'] == null) {
+            throw new runtime.RequiredError(
+                'scope',
+                'Required parameter "scope" was null or undefined when calling settingsHistory().'
+            );
+        }
+
         const queryParameters: any = {};
+
+        if (requestParameters['namespace'] != null) {
+            queryParameters['namespace'] = requestParameters['namespace'];
+        }
+
+        if (requestParameters['scope'] != null) {
+            queryParameters['scope'] = requestParameters['scope'];
+        }
+
+        if (requestParameters['cursor'] != null) {
+            queryParameters['cursor'] = requestParameters['cursor'];
+        }
+
+        if (requestParameters['limit'] != null) {
+            queryParameters['limit'] = requestParameters['limit'];
+        }
 
         const headerParameters: runtime.HTTPHeaders = {};
 
@@ -113,29 +286,47 @@ export class SettingsApi extends runtime.BaseAPI {
 
     /**
      */
-    async settingsHistoryRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
-        const requestOptions = await this.settingsHistoryRequestOpts();
+    async settingsHistoryRaw(requestParameters: SettingsApiSettingsHistoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SettingsHistoryPage>> {
+        const requestOptions = await this.settingsHistoryRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        if (this.isJsonMime(response.headers.get('content-type'))) {
-            return new runtime.JSONApiResponse<any>(response);
-        } else {
-            return new runtime.TextApiResponse(response) as any;
-        }
+        return new runtime.JSONApiResponse(response);
     }
 
     /**
      */
-    async settingsHistory(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
-        const response = await this.settingsHistoryRaw(initOverrides);
+    async settingsHistory(requestParameters: SettingsApiSettingsHistoryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SettingsHistoryPage> {
+        const response = await this.settingsHistoryRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
      * Creates request options for settingsRead without sending the request
      */
-    async settingsReadRequestOpts(): Promise<runtime.RequestOpts> {
+    async settingsReadRequestOpts(requestParameters: SettingsApiSettingsReadRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['namespaces'] == null) {
+            throw new runtime.RequiredError(
+                'namespaces',
+                'Required parameter "namespaces" was null or undefined when calling settingsRead().'
+            );
+        }
+
+        if (requestParameters['scope'] == null) {
+            throw new runtime.RequiredError(
+                'scope',
+                'Required parameter "scope" was null or undefined when calling settingsRead().'
+            );
+        }
+
         const queryParameters: any = {};
+
+        if (requestParameters['namespaces'] != null) {
+            queryParameters['namespaces'] = requestParameters['namespaces'];
+        }
+
+        if (requestParameters['scope'] != null) {
+            queryParameters['scope'] = requestParameters['scope'];
+        }
 
         const headerParameters: runtime.HTTPHeaders = {};
 
@@ -160,32 +351,28 @@ export class SettingsApi extends runtime.BaseAPI {
 
     /**
      */
-    async settingsReadRaw(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
-        const requestOptions = await this.settingsReadRequestOpts();
+    async settingsReadRaw(requestParameters: SettingsApiSettingsReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<EffectiveSettingsView>> {
+        const requestOptions = await this.settingsReadRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        if (this.isJsonMime(response.headers.get('content-type'))) {
-            return new runtime.JSONApiResponse<any>(response);
-        } else {
-            return new runtime.TextApiResponse(response) as any;
-        }
+        return new runtime.JSONApiResponse(response);
     }
 
     /**
      */
-    async settingsRead(initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
-        const response = await this.settingsReadRaw(initOverrides);
+    async settingsRead(requestParameters: SettingsApiSettingsReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<EffectiveSettingsView> {
+        const response = await this.settingsReadRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
      * Creates request options for settingsReset without sending the request
      */
-    async settingsResetRequestOpts(requestParameters: SettingsResetOperationRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['settingsResetRequest'] == null) {
+    async settingsResetRequestOpts(requestParameters: SettingsApiSettingsResetRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['settingsResetInput'] == null) {
             throw new runtime.RequiredError(
-                'settingsResetRequest',
-                'Required parameter "settingsResetRequest" was null or undefined when calling settingsReset().'
+                'settingsResetInput',
+                'Required parameter "settingsResetInput" was null or undefined when calling settingsReset().'
             );
         }
 
@@ -211,38 +398,87 @@ export class SettingsApi extends runtime.BaseAPI {
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: requestParameters['settingsResetRequest'],
+            body: requestParameters['settingsResetInput'],
         };
     }
 
     /**
      */
-    async settingsResetRaw(requestParameters: SettingsResetOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async settingsResetRaw(requestParameters: SettingsApiSettingsResetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SettingsChangeResult>> {
         const requestOptions = await this.settingsResetRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        if (this.isJsonMime(response.headers.get('content-type'))) {
-            return new runtime.JSONApiResponse<any>(response);
-        } else {
-            return new runtime.TextApiResponse(response) as any;
-        }
+        return new runtime.JSONApiResponse(response);
     }
 
     /**
      */
-    async settingsReset(requestParameters: SettingsResetOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async settingsReset(requestParameters: SettingsApiSettingsResetRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SettingsChangeResult> {
         const response = await this.settingsResetRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for settingsRestore without sending the request
+     */
+    async settingsRestoreRequestOpts(requestParameters: SettingsApiSettingsRestoreRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['settingsRestoreInput'] == null) {
+            throw new runtime.RequiredError(
+                'settingsRestoreInput',
+                'Required parameter "settingsRestoreInput" was null or undefined when calling settingsRestore().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/settings/restore`;
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: requestParameters['settingsRestoreInput'],
+        };
+    }
+
+    /**
+     */
+    async settingsRestoreRaw(requestParameters: SettingsApiSettingsRestoreRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SettingsChangeResult>> {
+        const requestOptions = await this.settingsRestoreRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     */
+    async settingsRestore(requestParameters: SettingsApiSettingsRestoreRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SettingsChangeResult> {
+        const response = await this.settingsRestoreRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
      * Creates request options for settingsUpdate without sending the request
      */
-    async settingsUpdateRequestOpts(requestParameters: SettingsUpdateOperationRequest): Promise<runtime.RequestOpts> {
-        if (requestParameters['settingsUpdateRequest'] == null) {
+    async settingsUpdateRequestOpts(requestParameters: SettingsApiSettingsUpdateRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['settingsChangeInput'] == null) {
             throw new runtime.RequiredError(
-                'settingsUpdateRequest',
-                'Required parameter "settingsUpdateRequest" was null or undefined when calling settingsUpdate().'
+                'settingsChangeInput',
+                'Required parameter "settingsChangeInput" was null or undefined when calling settingsUpdate().'
             );
         }
 
@@ -268,26 +504,22 @@ export class SettingsApi extends runtime.BaseAPI {
             method: 'PATCH',
             headers: headerParameters,
             query: queryParameters,
-            body: requestParameters['settingsUpdateRequest'],
+            body: requestParameters['settingsChangeInput'],
         };
     }
 
     /**
      */
-    async settingsUpdateRaw(requestParameters: SettingsUpdateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async settingsUpdateRaw(requestParameters: SettingsApiSettingsUpdateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<SettingsChangeResult>> {
         const requestOptions = await this.settingsUpdateRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
-        if (this.isJsonMime(response.headers.get('content-type'))) {
-            return new runtime.JSONApiResponse<any>(response);
-        } else {
-            return new runtime.TextApiResponse(response) as any;
-        }
+        return new runtime.JSONApiResponse(response);
     }
 
     /**
      */
-    async settingsUpdate(requestParameters: SettingsUpdateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async settingsUpdate(requestParameters: SettingsApiSettingsUpdateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<SettingsChangeResult> {
         const response = await this.settingsUpdateRaw(requestParameters, initOverrides);
         return await response.value();
     }

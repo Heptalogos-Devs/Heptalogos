@@ -16,14 +16,14 @@ import * as runtime from '../runtime.js';
 import type {
 } from '../models/index.js';
 
-export interface AgencyExplainAttentionRequest {
+export interface AgencyApiAgencyExplainAttentionRequest {
     /**
      * 
      */
     subjectId: string;
 }
 
-export interface AgencyReactRequest {
+export interface AgencyApiAgencyReactRequest {
     /**
      * 
      */
@@ -42,7 +42,7 @@ export class AgencyApi extends runtime.BaseAPI {
     /**
      * Creates request options for agencyExplainAttention without sending the request
      */
-    async agencyExplainAttentionRequestOpts(requestParameters: AgencyExplainAttentionRequest): Promise<runtime.RequestOpts> {
+    async agencyExplainAttentionRequestOpts(requestParameters: AgencyApiAgencyExplainAttentionRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -76,7 +76,7 @@ export class AgencyApi extends runtime.BaseAPI {
 
     /**
      */
-    async agencyExplainAttentionRaw(requestParameters: AgencyExplainAttentionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async agencyExplainAttentionRaw(requestParameters: AgencyApiAgencyExplainAttentionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.agencyExplainAttentionRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -89,7 +89,7 @@ export class AgencyApi extends runtime.BaseAPI {
 
     /**
      */
-    async agencyExplainAttention(requestParameters: AgencyExplainAttentionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async agencyExplainAttention(requestParameters: AgencyApiAgencyExplainAttentionRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.agencyExplainAttentionRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -97,7 +97,7 @@ export class AgencyApi extends runtime.BaseAPI {
     /**
      * Creates request options for agencyReact without sending the request
      */
-    async agencyReactRequestOpts(requestParameters: AgencyReactRequest): Promise<runtime.RequestOpts> {
+    async agencyReactRequestOpts(requestParameters: AgencyApiAgencyReactRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -141,7 +141,7 @@ export class AgencyApi extends runtime.BaseAPI {
 
     /**
      */
-    async agencyReactRaw(requestParameters: AgencyReactRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async agencyReactRaw(requestParameters: AgencyApiAgencyReactRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.agencyReactRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -154,7 +154,7 @@ export class AgencyApi extends runtime.BaseAPI {
 
     /**
      */
-    async agencyReact(requestParameters: AgencyReactRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async agencyReact(requestParameters: AgencyApiAgencyReactRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.agencyReactRaw(requestParameters, initOverrides);
         return await response.value();
     }

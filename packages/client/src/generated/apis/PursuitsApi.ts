@@ -17,7 +17,7 @@ import type {
     PursuitsCreateRequest,
 } from '../models/index.js';
 
-export interface PursuitsChangeRequest {
+export interface PursuitsApiPursuitsChangeRequest {
     /**
      * 
      */
@@ -32,7 +32,7 @@ export interface PursuitsChangeRequest {
     requestBody: { [key: string]: any; };
 }
 
-export interface PursuitsCreateOperationRequest {
+export interface PursuitsApiPursuitsCreateOperationRequest {
     /**
      * 
      */
@@ -43,7 +43,7 @@ export interface PursuitsCreateOperationRequest {
     pursuitsCreateRequest: PursuitsCreateRequest;
 }
 
-export interface PursuitsListRequest {
+export interface PursuitsApiPursuitsListRequest {
     /**
      * 
      */
@@ -58,7 +58,7 @@ export class PursuitsApi extends runtime.BaseAPI {
     /**
      * Creates request options for pursuitsChange without sending the request
      */
-    async pursuitsChangeRequestOpts(requestParameters: PursuitsChangeRequest): Promise<runtime.RequestOpts> {
+    async pursuitsChangeRequestOpts(requestParameters: PursuitsApiPursuitsChangeRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -110,7 +110,7 @@ export class PursuitsApi extends runtime.BaseAPI {
 
     /**
      */
-    async pursuitsChangeRaw(requestParameters: PursuitsChangeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async pursuitsChangeRaw(requestParameters: PursuitsApiPursuitsChangeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.pursuitsChangeRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -123,7 +123,7 @@ export class PursuitsApi extends runtime.BaseAPI {
 
     /**
      */
-    async pursuitsChange(requestParameters: PursuitsChangeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async pursuitsChange(requestParameters: PursuitsApiPursuitsChangeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.pursuitsChangeRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -131,7 +131,7 @@ export class PursuitsApi extends runtime.BaseAPI {
     /**
      * Creates request options for pursuitsCreate without sending the request
      */
-    async pursuitsCreateRequestOpts(requestParameters: PursuitsCreateOperationRequest): Promise<runtime.RequestOpts> {
+    async pursuitsCreateRequestOpts(requestParameters: PursuitsApiPursuitsCreateOperationRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -175,7 +175,7 @@ export class PursuitsApi extends runtime.BaseAPI {
 
     /**
      */
-    async pursuitsCreateRaw(requestParameters: PursuitsCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async pursuitsCreateRaw(requestParameters: PursuitsApiPursuitsCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.pursuitsCreateRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -188,7 +188,7 @@ export class PursuitsApi extends runtime.BaseAPI {
 
     /**
      */
-    async pursuitsCreate(requestParameters: PursuitsCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async pursuitsCreate(requestParameters: PursuitsApiPursuitsCreateOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.pursuitsCreateRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -196,7 +196,7 @@ export class PursuitsApi extends runtime.BaseAPI {
     /**
      * Creates request options for pursuitsList without sending the request
      */
-    async pursuitsListRequestOpts(requestParameters: PursuitsListRequest): Promise<runtime.RequestOpts> {
+    async pursuitsListRequestOpts(requestParameters: PursuitsApiPursuitsListRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -230,7 +230,7 @@ export class PursuitsApi extends runtime.BaseAPI {
 
     /**
      */
-    async pursuitsListRaw(requestParameters: PursuitsListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async pursuitsListRaw(requestParameters: PursuitsApiPursuitsListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.pursuitsListRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -243,7 +243,7 @@ export class PursuitsApi extends runtime.BaseAPI {
 
     /**
      */
-    async pursuitsList(requestParameters: PursuitsListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async pursuitsList(requestParameters: PursuitsApiPursuitsListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.pursuitsListRaw(requestParameters, initOverrides);
         return await response.value();
     }

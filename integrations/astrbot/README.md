@@ -25,7 +25,9 @@ uv pip install data/native/astrbot/astrbot-4.29.1-py3-none-any.whl
 }
 ```
 
-服务令牌与控制令牌从运行环境供给。先启动 Hept，再启用负责会话；Hept 暂停主体时继续收件。Hept 服务停止时该范围保持暂停处理，恢复后通过平台公开历史补读。
+服务令牌与控制令牌从运行环境供给。Hept 侧先调用 `POST /v1/subjects/{id}/channels` 离线配置渠道：`host:astrbot`、`adapterId:astrbot:<platformId>`、`accountId:<platformId>:<selfId>`、会话列表与 `expectedRevision:0`。用返回的真实 Channel 身份登记控制 SecretRef，再以当前 `id/expectedRevision` 更新凭据，最后调用 `POST /channels/{channelId}/connect` 核验原生账号。配置变更需要重新连接。
+
+入站服务凭据通过现有委派接口签发，使用有限到期时间、`principalKind:service`、`operations:[messages.receive]`、`purposes:[ingress]`、唯一 Subject audience 和精确 conversation targets。每次使用都检查渠道当前接收开关与会话范围。媒体上传同时携带账号、会话来源；插件统一发送 `x-purpose:ingress`。Hept 暂停主体时继续收件，服务停止后沿平台公开历史补读。
 
 ## 正式边界
 
@@ -42,6 +44,6 @@ uv pip install data/native/astrbot/astrbot-4.29.1-py3-none-any.whl
 
 出站媒体由 Hept 解析 materialRef，提供受授权的 URL。插件只进行一次 Hept parts 到原生组件的转换，使用 AstrBot 原有 CQHttp 客户端发送。每次物理调用返回 accepted、not_sent 或 unknown，并保留组件与表达部分的对应关系；返回值不会触发自动重发。
 
-`accepted` 是平台接受消息。后续送达、阅读、回应或撤回由各自平台事实继续进入交往记录。补读结果带可取得范围，平台没有返回的历史仍显示缺口。
+`accepted` 表示平台确认接纳这次物理操作。文件上传等操作可以没有平台消息 ID；回执保留实际操作事实，不创建虚构消息。后续送达、阅读、回应或撤回由各自平台事实继续进入交往记录。补读结果带可取得范围，平台没有返回的历史仍显示缺口。
 
 连续场景 `test_channel.py` 使用实际 AstrBot CQHTTP 组件与发送 owner，验证媒体保存、稳定重投、撤回来源、四次物理发送及成功/失败/未知结果；平台客户端与 Hept HTTP 在场景内受控。实际 QQ 账号联调需要已启用的 NapCat 连接。

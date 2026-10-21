@@ -1,40 +1,7 @@
-import type { CallContext } from '@nous-wave/contracts/common';
-import { modelResource,settingsSchema,type Settings } from '@heptalogos/contracts';
-import { sql,type Kysely } from 'kysely';
-import { deepmergeCustom } from 'deepmerge-ts';
-import { readFile,writeFile,mkdir,unlink } from 'node:fs/promises';
-import path from 'node:path';
-import { authorize,read,list,put,problem } from '../platform/runtime.js';
-import type { Database,Json } from '../platform/database.js';
-const merge=deepmergeCustom({mergeArrays:false});
-export function management(db:Kysely<Database>,dataRoot:string){
- const secretPath=(name:string)=>{if(!/^[a-zA-Z0-9._-]+$/.test(name))problem('invalid_input','Invalid secret reference');return path.join(dataRoot,'secrets',name);};
- async function secret(name:string){if(name.startsWith('file:'))name=name.slice(5);if(name.startsWith('env:')){const value=process.env[name.slice(4)];if(!value)problem('dependency_unavailable',`Secret ${name} not configured`,503);return value;}return (await readFile(secretPath(name),'utf8')).trim();}
- function scopeId(ctx:CallContext,scope:string,role?:string){if(scope==='installation')return 'installation';if(ctx.subjectId==='installation')problem('invalid_input','Installation settings require installation scope');if(scope==='role'&&!role)problem('invalid_input','Role scope requires a role');return scope==='role'?`${ctx.subjectId}:${role}`:ctx.subjectId;}
- function checkPatch(ctx:CallContext,scope:string,values:Json){authorize(ctx,scope==='installation'?'installation.manage':'settings.write');for(const key of Object.keys(values)){const field=settingsSchema.shape[key as keyof typeof settingsSchema.shape];if(!field)problem('invalid_input',`Unknown setting ${key}`);const meta=field.meta() as Record<string,unknown>;if(!(meta['x-scopes'] as string[]).includes(scope))problem('invalid_input',`Setting ${key} is unavailable in ${scope} scope`);if(meta['x-permission']==='installation.manage')authorize(ctx,'installation.manage');}}
- function origins(value:Json,source:Json,result:Json,prefix=''){for(const [key,entry]of Object.entries(value)){const field=prefix?`${prefix}.${key}`:key;if(entry&&typeof entry==='object'&&!Array.isArray(entry))origins(entry as Json,source,result,field);else result[field]=source;}}
- async function effective(subjectId:string,role?:string):Promise<{effective:Settings;sources:Json;overrides:Json;revision:number}>{
-  let values:Json=settingsSchema.parse({}),sources:Json={},overrides:Json={},revision=0;origins(values,{scope:'product_default',revision:0},sources);let parentBudget:Settings['budget']|undefined;
-  for(const scope of [...new Set(['installation',subjectId,...(role?[`${subjectId}:${role}`]:[])])]){const row=(await list(db,'settingsOverrides',scope))[0];const parentSources={...sources};if(row){values=merge(values,row.values as Json) as Json;origins(row.values as Json,{scope,revision:row.revision},sources);overrides[scope]=row.values;revision=Math.max(revision,row.revision as number);}const parsed=settingsSchema.parse(values);if(scope!=='installation'&&parentBudget){if(parsed.budget.dailyCalls>parentBudget.dailyCalls){parsed.budget.dailyCalls=parentBudget.dailyCalls;sources['budget.dailyCalls']=parentSources['budget.dailyCalls'];}if(parentBudget.dailyUsd!==undefined&&(parsed.budget.dailyUsd===undefined||parsed.budget.dailyUsd>parentBudget.dailyUsd)){parsed.budget.dailyUsd=parentBudget.dailyUsd;sources['budget.dailyUsd']=parentSources['budget.dailyUsd'];}}parentBudget=parsed.budget;values=parsed as unknown as Json;}
-  return {effective:settingsSchema.parse(values),sources,overrides,revision};
- }
- async function save(ctx:CallContext,input:{scope:'installation'|'subject'|'role';role?:string;values:Json;expectedRevision?:number;replace?:boolean}){
-  const scope=scopeId(ctx,input.scope,input.role);const current=(await effective(ctx.subjectId,input.role)).effective;
-  const row=await db.transaction().execute(async tx=>{await sql`select pg_advisory_xact_lock(hashtextextended(${`hept:settings:${scope}`},0))`.execute(tx);const previous=(await list(tx,'settingsOverrides',scope))[0];const next=input.replace?input.values:merge(previous?.values as Json??{},input.values) as Json;settingsSchema.parse(merge(current,next));const saved=await put(tx,'settingsOverrides',scope,{values:next},previous?.id as string|undefined,input.expectedRevision??previous?.revision as number|undefined);await put(tx,'settingsHistory',scope,{before:previous?.values??{},after:next,actor:ctx.actor,scope,settingsRevision:saved.revision});return saved;});
-  return {...await effective(ctx.subjectId,input.role),savedRevision:row.revision,runningRevision:row.revision,effect:'next_call'};
- }
- return {secret,effective,
- async read(ctx:CallContext,role?:string){authorize(ctx,ctx.subjectId==='installation'?'installation.manage':'settings.read');return effective(ctx.subjectId,role);},
- async update(ctx:CallContext,input:{scope:'installation'|'subject'|'role';role?:string;values:Json;expectedRevision?:number}){checkPatch(ctx,input.scope,input.values);return save(ctx,input);},
- async reset(ctx:CallContext,input:{scope:'installation'|'subject'|'role';role?:string;fields?:string[];expectedRevision?:number}){checkPatch(ctx,input.scope,{});const scope=scopeId(ctx,input.scope,input.role);const previous=(await list(db,'settingsOverrides',scope))[0];const values=structuredClone(previous?.values??{}) as Json;if(input.fields){for(const field of input.fields){const keys=field.split('.');checkPatch(ctx,input.scope,{[keys[0]]:undefined});let parent:any=values;for(const key of keys.slice(0,-1)){if(!Object.hasOwn(parent,key))problem('invalid_input','Reset field is not overridden');parent=parent[key];}delete parent[keys.at(-1)!];}}else {checkPatch(ctx,input.scope,values);for(const key of Object.keys(values))delete values[key];}return save(ctx,{...input,values,replace:true});},
- async history(ctx:CallContext,scope:'installation'|'subject'|'role'='subject',role?:string){authorize(ctx,scope==='installation'?'installation.manage':'settings.read');return {items:await list(db,'settingsHistory',scopeId(ctx,scope,role))};},
- async restore(ctx:CallContext,input:{historyId:string;scope:'installation'|'subject'|'role';role?:string;expectedRevision?:number}){checkPatch(ctx,input.scope,{});const scope=scopeId(ctx,input.scope,input.role),history=await read(db,'settingsHistory',scope,input.historyId);checkPatch(ctx,input.scope,history.after as Json);return save(ctx,{...input,values:history.after as Json,replace:true});},
- async models(ctx:CallContext){authorize(ctx,'models.read');return {items:await list(db,'modelResources','installation')};},
- async registerModel(ctx:CallContext,input:unknown){authorize(ctx,'installation.manage');const parsed=modelResource.parse(input);const old=(await list(db,'modelResources','installation')).find(x=>x.id===parsed.id);return db.transaction().execute(tx=>put(tx,'modelResources','installation',parsed,parsed.id,old?.revision as number|undefined));},
- async setSecret(ctx:CallContext,name:string,value:string){authorize(ctx,'installation.manage');await mkdir(path.dirname(secretPath(name)),{recursive:true,mode:0o700});await writeFile(secretPath(name),value,{mode:0o600});return {ref:name,configured:true};},
- async secretStatus(ctx:CallContext,name:string){authorize(ctx,'installation.manage');try{await secret(name);return {ref:name,configured:true};}catch{return {ref:name,configured:false};}},
- async deleteSecret(ctx:CallContext,name:string){authorize(ctx,'installation.manage');await unlink(secretPath(name));return {ref:name,configured:false};},
- async costs(ctx:CallContext){authorize(ctx,'costs.read');const items=await list(db,'modelInvocations',ctx.subjectId);const unknown=items.filter(r=>r.costUsd===null).length;const knownTotalUsd=items.reduce((sum,r)=>sum+(typeof r.costUsd==='number'?r.costUsd:0),0);return {items,totalUsd:unknown?null:knownTotalUsd,knownTotalUsd,unknown};},
- async policy(ctx:CallContext,input?:Json){authorize(ctx,input?'policy.write':'policy.read');const subject=await read(db,'subjects',ctx.subjectId,ctx.subjectId);if(!input)return subject.policy??{readers:['*'],purposes:['*'],audiences:['*']};return db.transaction().execute(tx=>put(tx,'subjects',ctx.subjectId,{...subject,policy:input},ctx.subjectId,subject.revision as number));}
- };
-}
+import type {CallContext} from '@nous-wave/contracts/common';
+import type {Kysely} from '@nous-wave/platform/storage';
+import {type Authorization,read,list,put} from '../platform/runtime.js';
+import type {Database,Json} from '../platform/database.js';
+export function management(db:Kysely<Database>,authorize:Authorization){return {
+ async policy(ctx:CallContext,input?:Json){await authorize(ctx,input?'policy.write':'policy.read');const sid=ctx.subjectId;if(!sid)throw new Error('Subject required');const subject=await read(db,'subjects',sid,sid);if(!input)return subject.policy??{readers:['*'],purposes:['*'],audiences:['*']};return db.transaction().execute(tx=>put(tx,'subjects',sid,{...subject,policy:input},sid,subject.revision as number));},
+};}

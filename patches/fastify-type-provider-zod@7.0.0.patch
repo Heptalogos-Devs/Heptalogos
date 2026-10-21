@@ -1,0 +1,59 @@
+diff --git a/dist/cjs/core.cjs b/dist/cjs/core.cjs
+index 7aa41cc0b7a32e4b32885013da54c0101bdf1562..b57daabeda59b4b71f040a133c0059fa42b49c32 100644
+--- a/dist/cjs/core.cjs
++++ b/dist/cjs/core.cjs
+@@ -47,7 +47,7 @@ var createJsonSchemaTransform = ({ skipList = defaultSkipList, schemaRegistry =
+ 		};
+ 		for (const prop in zodSchemas) {
+ 			const zodSchema = zodSchemas[prop];
+-			if (zodSchema) transformed[prop] = require_zod_to_json.zodSchemaToJson(zodSchema, inputRegistry, "input", config);
++			if (zodSchema) transformed[prop] = require_zod_to_json.zodSchemaToJson(prop === "body" ? zodSchema : zod_v4_core.clone(zodSchema, zodSchema._zod.def), inputRegistry, "input", config);
+ 		}
+ 		if (response) {
+ 			transformed.response = {};
+diff --git a/dist/esm/core.js b/dist/esm/core.js
+index 168486d9e440633570eb74b9e707b87234811d71..c35585918aea8b0820dfd106b1bc31c6ff39f2f0 100644
+--- a/dist/esm/core.js
++++ b/dist/esm/core.js
+@@ -2,7 +2,7 @@ import { InvalidSchemaError, ResponseSerializationError, createValidationError }
+ import { createIORegistriesProvider, generateIORegistries } from "./registry.js";
+ import { assertIsOpenAPIObject, getJSONSchemaTarget } from "./utils.js";
+ import { zodRegistryToJson, zodSchemaToJson } from "./zod-to-json.js";
+-import { $ZodType, globalRegistry, safeEncode, safeParse } from "zod/v4/core";
++import { $ZodType, clone, globalRegistry, safeEncode, safeParse } from "zod/v4/core";
+ //#region src/core.ts
+ var isContentTypeResponse = (maybeSchema) => {
+ 	return typeof maybeSchema === "object" && maybeSchema !== null && "content" in maybeSchema && typeof maybeSchema.content === "object" && maybeSchema.content !== null;
+@@ -47,7 +47,7 @@ var createJsonSchemaTransform = ({ skipList = defaultSkipList, schemaRegistry =
+ 		};
+ 		for (const prop in zodSchemas) {
+ 			const zodSchema = zodSchemas[prop];
+-			if (zodSchema) transformed[prop] = zodSchemaToJson(zodSchema, inputRegistry, "input", config);
++			if (zodSchema) transformed[prop] = zodSchemaToJson(prop === "body" ? zodSchema : clone(zodSchema, zodSchema._zod.def), inputRegistry, "input", config);
+ 		}
+ 		if (response) {
+ 			transformed.response = {};
+diff --git a/src/core.ts b/src/core.ts
+index 5b99c262e2ec0ae46ef5e6e89c334469a13779bb..e6fc847227e5e9e05ca1034a4d0a1a4ee1621fe0 100644
+--- a/src/core.ts
++++ b/src/core.ts
+@@ -11,7 +11,7 @@ import type {
+   RawServerDefault,
+ } from 'fastify'
+ import type { $ZodRegistry, output } from 'zod/v4/core'
+-import { $ZodType, globalRegistry, safeEncode, safeParse } from 'zod/v4/core'
++import { $ZodType, clone, globalRegistry, safeEncode, safeParse } from 'zod/v4/core'
+ import { createValidationError, InvalidSchemaError, ResponseSerializationError } from './errors'
+ import {
+   createIORegistriesProvider,
+@@ -104,7 +104,9 @@ export const createJsonSchemaTransform = ({
+     for (const prop in zodSchemas) {
+       const zodSchema = zodSchemas[prop]
+       if (zodSchema) {
+-        transformed[prop] = zodSchemaToJson(zodSchema, inputRegistry, 'input', config)
++        // OpenAPI parameter containers must be inline; their nested schemas retain registry refs.
++        const parameterSchema = prop === 'body' ? zodSchema : clone(zodSchema, zodSchema._zod.def)
++        transformed[prop] = zodSchemaToJson(parameterSchema, inputRegistry, 'input', config)
+       }
+     }
+ 

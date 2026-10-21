@@ -11,6 +11,10 @@
     "$schema": "https://json-schema.org/draft/2020-12/schema",
     "type": "object",
     "properties": {
+      "runtimeId": {
+        "type": "string",
+        "minLength": 1
+      },
       "subjects": {
         "type": "object",
         "propertyNames": {
@@ -56,10 +60,16 @@
             "default": "HEPT_SERVICE_TOKEN",
             "type": "string"
           },
-          "installationId": {
-            "type": "string"
-          },
           "modelResources": {
+            "type": "object",
+            "propertyNames": {
+              "type": "string"
+            },
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "roles": {
             "type": "object",
             "propertyNames": {
               "type": "string"
@@ -71,12 +81,13 @@
         },
         "required": [
           "baseURL",
-          "installationId",
-          "modelResources"
+          "modelResources",
+          "roles"
         ]
       }
     },
     "required": [
+      "runtimeId",
       "subjects"
     ]
   }

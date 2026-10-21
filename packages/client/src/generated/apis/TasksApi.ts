@@ -14,10 +14,14 @@
 
 import * as runtime from '../runtime.js';
 import type {
+    HeptTaskContinuationInput,
+    HeptTaskRecoveryInput,
+    HeptTaskRecoveryPlanInputInput,
+    TasksPlanRecovery200Response,
     TasksStartRequest,
 } from '../models/index.js';
 
-export interface TasksCancelRequest {
+export interface TasksApiTasksCancelRequest {
     /**
      * 
      */
@@ -32,25 +36,7 @@ export interface TasksCancelRequest {
     body: object;
 }
 
-export interface TasksInspectRequest {
-    /**
-     * 
-     */
-    subjectId: string;
-    /**
-     * 
-     */
-    id: string;
-}
-
-export interface TasksListRequest {
-    /**
-     * 
-     */
-    subjectId: string;
-}
-
-export interface TasksPauseRequest {
+export interface TasksApiTasksCreateContinuationRequest {
     /**
      * 
      */
@@ -62,10 +48,10 @@ export interface TasksPauseRequest {
     /**
      * 
      */
-    body: object;
+    heptTaskContinuationInput: HeptTaskContinuationInput;
 }
 
-export interface TasksReadResultRequest {
+export interface TasksApiTasksInspectRequest {
     /**
      * 
      */
@@ -76,7 +62,14 @@ export interface TasksReadResultRequest {
     id: string;
 }
 
-export interface TasksResumeRequest {
+export interface TasksApiTasksListRequest {
+    /**
+     * 
+     */
+    subjectId: string;
+}
+
+export interface TasksApiTasksPauseRequest {
     /**
      * 
      */
@@ -91,7 +84,48 @@ export interface TasksResumeRequest {
     body: object;
 }
 
-export interface TasksStartOperationRequest {
+export interface TasksApiTasksPlanRecoveryRequest {
+    /**
+     * 
+     */
+    subjectId: string;
+    /**
+     * 
+     */
+    id: string;
+    /**
+     * 
+     */
+    heptTaskRecoveryPlanInputInput: HeptTaskRecoveryPlanInputInput;
+}
+
+export interface TasksApiTasksReadResultRequest {
+    /**
+     * 
+     */
+    subjectId: string;
+    /**
+     * 
+     */
+    id: string;
+}
+
+export interface TasksApiTasksResumeRequest {
+    /**
+     * 
+     */
+    subjectId: string;
+    /**
+     * 
+     */
+    id: string;
+    /**
+     * 
+     */
+    heptTaskRecoveryInput: HeptTaskRecoveryInput;
+}
+
+export interface TasksApiTasksStartOperationRequest {
     /**
      * 
      */
@@ -102,6 +136,17 @@ export interface TasksStartOperationRequest {
     tasksStartRequest: TasksStartRequest;
 }
 
+export interface TasksApiTasksTranscriptRequest {
+    /**
+     * 
+     */
+    subjectId: string;
+    /**
+     * 
+     */
+    id: string;
+}
+
 /**
  * 
  */
@@ -110,7 +155,7 @@ export class TasksApi extends runtime.BaseAPI {
     /**
      * Creates request options for tasksCancel without sending the request
      */
-    async tasksCancelRequestOpts(requestParameters: TasksCancelRequest): Promise<runtime.RequestOpts> {
+    async tasksCancelRequestOpts(requestParameters: TasksApiTasksCancelRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -162,7 +207,7 @@ export class TasksApi extends runtime.BaseAPI {
 
     /**
      */
-    async tasksCancelRaw(requestParameters: TasksCancelRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async tasksCancelRaw(requestParameters: TasksApiTasksCancelRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.tasksCancelRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -175,15 +220,88 @@ export class TasksApi extends runtime.BaseAPI {
 
     /**
      */
-    async tasksCancel(requestParameters: TasksCancelRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async tasksCancel(requestParameters: TasksApiTasksCancelRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.tasksCancelRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for tasksCreateContinuation without sending the request
+     */
+    async tasksCreateContinuationRequestOpts(requestParameters: TasksApiTasksCreateContinuationRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['subjectId'] == null) {
+            throw new runtime.RequiredError(
+                'subjectId',
+                'Required parameter "subjectId" was null or undefined when calling tasksCreateContinuation().'
+            );
+        }
+
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling tasksCreateContinuation().'
+            );
+        }
+
+        if (requestParameters['heptTaskContinuationInput'] == null) {
+            throw new runtime.RequiredError(
+                'heptTaskContinuationInput',
+                'Required parameter "heptTaskContinuationInput" was null or undefined when calling tasksCreateContinuation().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/subjects/{subjectId}/tasks/{id}/continuations`;
+        urlPath = urlPath.replace('{subjectId}', encodeURIComponent(String(requestParameters['subjectId'])));
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: requestParameters['heptTaskContinuationInput'],
+        };
+    }
+
+    /**
+     */
+    async tasksCreateContinuationRaw(requestParameters: TasksApiTasksCreateContinuationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+        const requestOptions = await this.tasksCreateContinuationRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        if (this.isJsonMime(response.headers.get('content-type'))) {
+            return new runtime.JSONApiResponse<any>(response);
+        } else {
+            return new runtime.TextApiResponse(response) as any;
+        }
+    }
+
+    /**
+     */
+    async tasksCreateContinuation(requestParameters: TasksApiTasksCreateContinuationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+        const response = await this.tasksCreateContinuationRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
      * Creates request options for tasksInspect without sending the request
      */
-    async tasksInspectRequestOpts(requestParameters: TasksInspectRequest): Promise<runtime.RequestOpts> {
+    async tasksInspectRequestOpts(requestParameters: TasksApiTasksInspectRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -225,7 +343,7 @@ export class TasksApi extends runtime.BaseAPI {
 
     /**
      */
-    async tasksInspectRaw(requestParameters: TasksInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async tasksInspectRaw(requestParameters: TasksApiTasksInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.tasksInspectRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -238,7 +356,7 @@ export class TasksApi extends runtime.BaseAPI {
 
     /**
      */
-    async tasksInspect(requestParameters: TasksInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async tasksInspect(requestParameters: TasksApiTasksInspectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.tasksInspectRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -246,7 +364,7 @@ export class TasksApi extends runtime.BaseAPI {
     /**
      * Creates request options for tasksList without sending the request
      */
-    async tasksListRequestOpts(requestParameters: TasksListRequest): Promise<runtime.RequestOpts> {
+    async tasksListRequestOpts(requestParameters: TasksApiTasksListRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -280,7 +398,7 @@ export class TasksApi extends runtime.BaseAPI {
 
     /**
      */
-    async tasksListRaw(requestParameters: TasksListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async tasksListRaw(requestParameters: TasksApiTasksListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.tasksListRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -293,7 +411,7 @@ export class TasksApi extends runtime.BaseAPI {
 
     /**
      */
-    async tasksList(requestParameters: TasksListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async tasksList(requestParameters: TasksApiTasksListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.tasksListRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -301,7 +419,7 @@ export class TasksApi extends runtime.BaseAPI {
     /**
      * Creates request options for tasksPause without sending the request
      */
-    async tasksPauseRequestOpts(requestParameters: TasksPauseRequest): Promise<runtime.RequestOpts> {
+    async tasksPauseRequestOpts(requestParameters: TasksApiTasksPauseRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -353,7 +471,7 @@ export class TasksApi extends runtime.BaseAPI {
 
     /**
      */
-    async tasksPauseRaw(requestParameters: TasksPauseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async tasksPauseRaw(requestParameters: TasksApiTasksPauseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.tasksPauseRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -366,15 +484,84 @@ export class TasksApi extends runtime.BaseAPI {
 
     /**
      */
-    async tasksPause(requestParameters: TasksPauseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async tasksPause(requestParameters: TasksApiTasksPauseRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.tasksPauseRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for tasksPlanRecovery without sending the request
+     */
+    async tasksPlanRecoveryRequestOpts(requestParameters: TasksApiTasksPlanRecoveryRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['subjectId'] == null) {
+            throw new runtime.RequiredError(
+                'subjectId',
+                'Required parameter "subjectId" was null or undefined when calling tasksPlanRecovery().'
+            );
+        }
+
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling tasksPlanRecovery().'
+            );
+        }
+
+        if (requestParameters['heptTaskRecoveryPlanInputInput'] == null) {
+            throw new runtime.RequiredError(
+                'heptTaskRecoveryPlanInputInput',
+                'Required parameter "heptTaskRecoveryPlanInputInput" was null or undefined when calling tasksPlanRecovery().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/subjects/{subjectId}/tasks/{id}/recovery-plan`;
+        urlPath = urlPath.replace('{subjectId}', encodeURIComponent(String(requestParameters['subjectId'])));
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: requestParameters['heptTaskRecoveryPlanInputInput'],
+        };
+    }
+
+    /**
+     */
+    async tasksPlanRecoveryRaw(requestParameters: TasksApiTasksPlanRecoveryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<TasksPlanRecovery200Response>> {
+        const requestOptions = await this.tasksPlanRecoveryRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        return new runtime.JSONApiResponse(response);
+    }
+
+    /**
+     */
+    async tasksPlanRecovery(requestParameters: TasksApiTasksPlanRecoveryRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<TasksPlanRecovery200Response> {
+        const response = await this.tasksPlanRecoveryRaw(requestParameters, initOverrides);
         return await response.value();
     }
 
     /**
      * Creates request options for tasksReadResult without sending the request
      */
-    async tasksReadResultRequestOpts(requestParameters: TasksReadResultRequest): Promise<runtime.RequestOpts> {
+    async tasksReadResultRequestOpts(requestParameters: TasksApiTasksReadResultRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -416,7 +603,7 @@ export class TasksApi extends runtime.BaseAPI {
 
     /**
      */
-    async tasksReadResultRaw(requestParameters: TasksReadResultRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async tasksReadResultRaw(requestParameters: TasksApiTasksReadResultRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.tasksReadResultRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -429,7 +616,7 @@ export class TasksApi extends runtime.BaseAPI {
 
     /**
      */
-    async tasksReadResult(requestParameters: TasksReadResultRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async tasksReadResult(requestParameters: TasksApiTasksReadResultRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.tasksReadResultRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -437,7 +624,7 @@ export class TasksApi extends runtime.BaseAPI {
     /**
      * Creates request options for tasksResume without sending the request
      */
-    async tasksResumeRequestOpts(requestParameters: TasksResumeRequest): Promise<runtime.RequestOpts> {
+    async tasksResumeRequestOpts(requestParameters: TasksApiTasksResumeRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -452,10 +639,10 @@ export class TasksApi extends runtime.BaseAPI {
             );
         }
 
-        if (requestParameters['body'] == null) {
+        if (requestParameters['heptTaskRecoveryInput'] == null) {
             throw new runtime.RequiredError(
-                'body',
-                'Required parameter "body" was null or undefined when calling tasksResume().'
+                'heptTaskRecoveryInput',
+                'Required parameter "heptTaskRecoveryInput" was null or undefined when calling tasksResume().'
             );
         }
 
@@ -483,13 +670,13 @@ export class TasksApi extends runtime.BaseAPI {
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: requestParameters['body'] as any,
+            body: requestParameters['heptTaskRecoveryInput'],
         };
     }
 
     /**
      */
-    async tasksResumeRaw(requestParameters: TasksResumeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async tasksResumeRaw(requestParameters: TasksApiTasksResumeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.tasksResumeRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -502,7 +689,7 @@ export class TasksApi extends runtime.BaseAPI {
 
     /**
      */
-    async tasksResume(requestParameters: TasksResumeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async tasksResume(requestParameters: TasksApiTasksResumeRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.tasksResumeRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -510,7 +697,7 @@ export class TasksApi extends runtime.BaseAPI {
     /**
      * Creates request options for tasksStart without sending the request
      */
-    async tasksStartRequestOpts(requestParameters: TasksStartOperationRequest): Promise<runtime.RequestOpts> {
+    async tasksStartRequestOpts(requestParameters: TasksApiTasksStartOperationRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -554,7 +741,7 @@ export class TasksApi extends runtime.BaseAPI {
 
     /**
      */
-    async tasksStartRaw(requestParameters: TasksStartOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async tasksStartRaw(requestParameters: TasksApiTasksStartOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.tasksStartRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -567,8 +754,71 @@ export class TasksApi extends runtime.BaseAPI {
 
     /**
      */
-    async tasksStart(requestParameters: TasksStartOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async tasksStart(requestParameters: TasksApiTasksStartOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.tasksStartRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for tasksTranscript without sending the request
+     */
+    async tasksTranscriptRequestOpts(requestParameters: TasksApiTasksTranscriptRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['subjectId'] == null) {
+            throw new runtime.RequiredError(
+                'subjectId',
+                'Required parameter "subjectId" was null or undefined when calling tasksTranscript().'
+            );
+        }
+
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling tasksTranscript().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/subjects/{subjectId}/tasks/{id}/transcript`;
+        urlPath = urlPath.replace('{subjectId}', encodeURIComponent(String(requestParameters['subjectId'])));
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
+            method: 'GET',
+            headers: headerParameters,
+            query: queryParameters,
+        };
+    }
+
+    /**
+     */
+    async tasksTranscriptRaw(requestParameters: TasksApiTasksTranscriptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+        const requestOptions = await this.tasksTranscriptRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        if (this.isJsonMime(response.headers.get('content-type'))) {
+            return new runtime.JSONApiResponse<any>(response);
+        } else {
+            return new runtime.TextApiResponse(response) as any;
+        }
+    }
+
+    /**
+     */
+    async tasksTranscript(requestParameters: TasksApiTasksTranscriptRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+        const response = await this.tasksTranscriptRaw(requestParameters, initOverrides);
         return await response.value();
     }
 

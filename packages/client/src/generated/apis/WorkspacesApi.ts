@@ -16,7 +16,7 @@ import * as runtime from '../runtime.js';
 import type {
 } from '../models/index.js';
 
-export interface WorkspacesCreateRequest {
+export interface WorkspacesApiWorkspacesCreateRequest {
     /**
      * 
      */
@@ -27,7 +27,7 @@ export interface WorkspacesCreateRequest {
     requestBody: { [key: string]: any; };
 }
 
-export interface WorkspacesListRequest {
+export interface WorkspacesApiWorkspacesListRequest {
     /**
      * 
      */
@@ -42,7 +42,7 @@ export class WorkspacesApi extends runtime.BaseAPI {
     /**
      * Creates request options for workspacesCreate without sending the request
      */
-    async workspacesCreateRequestOpts(requestParameters: WorkspacesCreateRequest): Promise<runtime.RequestOpts> {
+    async workspacesCreateRequestOpts(requestParameters: WorkspacesApiWorkspacesCreateRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -86,7 +86,7 @@ export class WorkspacesApi extends runtime.BaseAPI {
 
     /**
      */
-    async workspacesCreateRaw(requestParameters: WorkspacesCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async workspacesCreateRaw(requestParameters: WorkspacesApiWorkspacesCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.workspacesCreateRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -99,7 +99,7 @@ export class WorkspacesApi extends runtime.BaseAPI {
 
     /**
      */
-    async workspacesCreate(requestParameters: WorkspacesCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async workspacesCreate(requestParameters: WorkspacesApiWorkspacesCreateRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.workspacesCreateRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -107,7 +107,7 @@ export class WorkspacesApi extends runtime.BaseAPI {
     /**
      * Creates request options for workspacesList without sending the request
      */
-    async workspacesListRequestOpts(requestParameters: WorkspacesListRequest): Promise<runtime.RequestOpts> {
+    async workspacesListRequestOpts(requestParameters: WorkspacesApiWorkspacesListRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -141,7 +141,7 @@ export class WorkspacesApi extends runtime.BaseAPI {
 
     /**
      */
-    async workspacesListRaw(requestParameters: WorkspacesListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async workspacesListRaw(requestParameters: WorkspacesApiWorkspacesListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.workspacesListRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -154,7 +154,7 @@ export class WorkspacesApi extends runtime.BaseAPI {
 
     /**
      */
-    async workspacesList(requestParameters: WorkspacesListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async workspacesList(requestParameters: WorkspacesApiWorkspacesListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.workspacesListRaw(requestParameters, initOverrides);
         return await response.value();
     }

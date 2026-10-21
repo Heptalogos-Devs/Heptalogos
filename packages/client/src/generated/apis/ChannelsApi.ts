@@ -14,10 +14,10 @@
 
 import * as runtime from '../runtime.js';
 import type {
-    ChannelsConnectRequest,
+    ChannelConfigurationInput,
 } from '../models/index.js';
 
-export interface ChannelsConnectOperationRequest {
+export interface ChannelsApiChannelsConfigureRequest {
     /**
      * 
      */
@@ -25,10 +25,25 @@ export interface ChannelsConnectOperationRequest {
     /**
      * 
      */
-    channelsConnectRequest: ChannelsConnectRequest;
+    channelConfigurationInput: ChannelConfigurationInput;
 }
 
-export interface ChannelsListRequest {
+export interface ChannelsApiChannelsConnectRequest {
+    /**
+     * 
+     */
+    subjectId: string;
+    /**
+     * 
+     */
+    id: string;
+    /**
+     * 
+     */
+    body: object;
+}
+
+export interface ChannelsApiChannelsListRequest {
     /**
      * 
      */
@@ -41,20 +56,20 @@ export interface ChannelsListRequest {
 export class ChannelsApi extends runtime.BaseAPI {
 
     /**
-     * Creates request options for channelsConnect without sending the request
+     * Creates request options for channelsConfigure without sending the request
      */
-    async channelsConnectRequestOpts(requestParameters: ChannelsConnectOperationRequest): Promise<runtime.RequestOpts> {
+    async channelsConfigureRequestOpts(requestParameters: ChannelsApiChannelsConfigureRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
-                'Required parameter "subjectId" was null or undefined when calling channelsConnect().'
+                'Required parameter "subjectId" was null or undefined when calling channelsConfigure().'
             );
         }
 
-        if (requestParameters['channelsConnectRequest'] == null) {
+        if (requestParameters['channelConfigurationInput'] == null) {
             throw new runtime.RequiredError(
-                'channelsConnectRequest',
-                'Required parameter "channelsConnectRequest" was null or undefined when calling channelsConnect().'
+                'channelConfigurationInput',
+                'Required parameter "channelConfigurationInput" was null or undefined when calling channelsConfigure().'
             );
         }
 
@@ -81,13 +96,86 @@ export class ChannelsApi extends runtime.BaseAPI {
             method: 'POST',
             headers: headerParameters,
             query: queryParameters,
-            body: requestParameters['channelsConnectRequest'],
+            body: requestParameters['channelConfigurationInput'],
         };
     }
 
     /**
      */
-    async channelsConnectRaw(requestParameters: ChannelsConnectOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async channelsConfigureRaw(requestParameters: ChannelsApiChannelsConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+        const requestOptions = await this.channelsConfigureRequestOpts(requestParameters);
+        const response = await this.request(requestOptions, initOverrides);
+
+        if (this.isJsonMime(response.headers.get('content-type'))) {
+            return new runtime.JSONApiResponse<any>(response);
+        } else {
+            return new runtime.TextApiResponse(response) as any;
+        }
+    }
+
+    /**
+     */
+    async channelsConfigure(requestParameters: ChannelsApiChannelsConfigureRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+        const response = await this.channelsConfigureRaw(requestParameters, initOverrides);
+        return await response.value();
+    }
+
+    /**
+     * Creates request options for channelsConnect without sending the request
+     */
+    async channelsConnectRequestOpts(requestParameters: ChannelsApiChannelsConnectRequest): Promise<runtime.RequestOpts> {
+        if (requestParameters['subjectId'] == null) {
+            throw new runtime.RequiredError(
+                'subjectId',
+                'Required parameter "subjectId" was null or undefined when calling channelsConnect().'
+            );
+        }
+
+        if (requestParameters['id'] == null) {
+            throw new runtime.RequiredError(
+                'id',
+                'Required parameter "id" was null or undefined when calling channelsConnect().'
+            );
+        }
+
+        if (requestParameters['body'] == null) {
+            throw new runtime.RequiredError(
+                'body',
+                'Required parameter "body" was null or undefined when calling channelsConnect().'
+            );
+        }
+
+        const queryParameters: any = {};
+
+        const headerParameters: runtime.HTTPHeaders = {};
+
+        headerParameters['Content-Type'] = 'application/json';
+
+        if (this.configuration && this.configuration.accessToken) {
+            const token = this.configuration.accessToken;
+            const tokenString = await token("bearerAuth", []);
+
+            if (tokenString) {
+                headerParameters["Authorization"] = `Bearer ${tokenString}`;
+            }
+        }
+
+        let urlPath = `/v1/subjects/{subjectId}/channels/{id}/connect`;
+        urlPath = urlPath.replace('{subjectId}', encodeURIComponent(String(requestParameters['subjectId'])));
+        urlPath = urlPath.replace('{id}', encodeURIComponent(String(requestParameters['id'])));
+
+        return {
+            path: urlPath,
+            method: 'POST',
+            headers: headerParameters,
+            query: queryParameters,
+            body: requestParameters['body'] as any,
+        };
+    }
+
+    /**
+     */
+    async channelsConnectRaw(requestParameters: ChannelsApiChannelsConnectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.channelsConnectRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -100,7 +188,7 @@ export class ChannelsApi extends runtime.BaseAPI {
 
     /**
      */
-    async channelsConnect(requestParameters: ChannelsConnectOperationRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async channelsConnect(requestParameters: ChannelsApiChannelsConnectRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.channelsConnectRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -108,7 +196,7 @@ export class ChannelsApi extends runtime.BaseAPI {
     /**
      * Creates request options for channelsList without sending the request
      */
-    async channelsListRequestOpts(requestParameters: ChannelsListRequest): Promise<runtime.RequestOpts> {
+    async channelsListRequestOpts(requestParameters: ChannelsApiChannelsListRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -142,7 +230,7 @@ export class ChannelsApi extends runtime.BaseAPI {
 
     /**
      */
-    async channelsListRaw(requestParameters: ChannelsListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async channelsListRaw(requestParameters: ChannelsApiChannelsListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.channelsListRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -155,7 +243,7 @@ export class ChannelsApi extends runtime.BaseAPI {
 
     /**
      */
-    async channelsList(requestParameters: ChannelsListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async channelsList(requestParameters: ChannelsApiChannelsListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.channelsListRaw(requestParameters, initOverrides);
         return await response.value();
     }

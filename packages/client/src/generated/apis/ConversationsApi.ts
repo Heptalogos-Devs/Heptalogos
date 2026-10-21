@@ -16,14 +16,14 @@ import * as runtime from '../runtime.js';
 import type {
 } from '../models/index.js';
 
-export interface ConversationsListRequest {
+export interface ConversationsApiConversationsListRequest {
     /**
      * 
      */
     subjectId: string;
 }
 
-export interface ConversationsReadRequest {
+export interface ConversationsApiConversationsReadRequest {
     /**
      * 
      */
@@ -42,7 +42,7 @@ export class ConversationsApi extends runtime.BaseAPI {
     /**
      * Creates request options for conversationsList without sending the request
      */
-    async conversationsListRequestOpts(requestParameters: ConversationsListRequest): Promise<runtime.RequestOpts> {
+    async conversationsListRequestOpts(requestParameters: ConversationsApiConversationsListRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -76,7 +76,7 @@ export class ConversationsApi extends runtime.BaseAPI {
 
     /**
      */
-    async conversationsListRaw(requestParameters: ConversationsListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async conversationsListRaw(requestParameters: ConversationsApiConversationsListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.conversationsListRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -89,7 +89,7 @@ export class ConversationsApi extends runtime.BaseAPI {
 
     /**
      */
-    async conversationsList(requestParameters: ConversationsListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async conversationsList(requestParameters: ConversationsApiConversationsListRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.conversationsListRaw(requestParameters, initOverrides);
         return await response.value();
     }
@@ -97,7 +97,7 @@ export class ConversationsApi extends runtime.BaseAPI {
     /**
      * Creates request options for conversationsRead without sending the request
      */
-    async conversationsReadRequestOpts(requestParameters: ConversationsReadRequest): Promise<runtime.RequestOpts> {
+    async conversationsReadRequestOpts(requestParameters: ConversationsApiConversationsReadRequest): Promise<runtime.RequestOpts> {
         if (requestParameters['subjectId'] == null) {
             throw new runtime.RequiredError(
                 'subjectId',
@@ -139,7 +139,7 @@ export class ConversationsApi extends runtime.BaseAPI {
 
     /**
      */
-    async conversationsReadRaw(requestParameters: ConversationsReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
+    async conversationsReadRaw(requestParameters: ConversationsApiConversationsReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<runtime.ApiResponse<any>> {
         const requestOptions = await this.conversationsReadRequestOpts(requestParameters);
         const response = await this.request(requestOptions, initOverrides);
 
@@ -152,7 +152,7 @@ export class ConversationsApi extends runtime.BaseAPI {
 
     /**
      */
-    async conversationsRead(requestParameters: ConversationsReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
+    async conversationsRead(requestParameters: ConversationsApiConversationsReadRequest, initOverrides?: RequestInit | runtime.InitOverrideFunction): Promise<any> {
         const response = await this.conversationsReadRaw(requestParameters, initOverrides);
         return await response.value();
     }
